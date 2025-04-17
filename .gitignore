@@ -25,4 +25,27 @@ Homestead.json
 
 # Archivos de sistema
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# Certificados y claves
+*.pem
+*.crt
+*.key
+*.csr
+*.srl
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.cer
+*.der
+
+# Configuraciones sensibles
+**/*.env*
+**/*config*local*.php
+**/ldap*credentials*.php
+**/*password*.txt
+**/credentials.json
+**/auth.json
+**/secrets.yaml
+**/secret*.yml 
