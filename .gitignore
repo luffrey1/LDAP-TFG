@@ -48,4 +48,48 @@ Thumbs.db
 **/credentials.json
 **/auth.json
 **/secrets.yaml
-**/secret*.yml 
+**/secret*.yml
+
+# Ignorar la carpeta de certificados
+certs/
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# Archivos de configuración sensibles
+.env
+.env.*
+config.php
+*.config.js
+*config.json
+*settings.json
+*credentials*
+
+# Ignorar archivos de dependencias
+/node_modules
+/vendor
+/.pnp
+.pnp.js
+
+# Ignorar archivos de compilación
+/build
+/dist
+/public/hot
+
+# Ignorar archivos de caché y temporales
+.cache
+.tmp
+.DS_Store
+Thumbs.db
+
+# Ignorar logs
+/logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log* 
