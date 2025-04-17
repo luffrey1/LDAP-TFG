@@ -1,0 +1,19 @@
+#
+# CAUTION: this file gas automatically generated running make.sh. Do not edit.
+#
+# ldapadd -Y EXTERNAL -H ldapi:/// -f 13-uniqueMember-index.ldif
+#
+# Original indexes: uid mail memberOf entryCSN entryUUID objectClass
+# https://github.com/osixia/docker-openldap/blob/master/image/service/slapd/assets/config/bootstrap/ldif/05-index.ldif
+#
+# Check:
+# /usr/sbin/slapcat -n 0 | grep olcDbIndex
+#
+dn: olcDatabase={1}mdb,cn=config
+changetype: modify
+add: olcDbIndex
+olcDbIndex: uniqueMember eq
+olcDbIndex: sudoHost eq
+olcDbIndex: cn eq
+olcDbIndex: memberUid eq
+

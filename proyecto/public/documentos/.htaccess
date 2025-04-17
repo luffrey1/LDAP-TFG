@@ -1,0 +1,19 @@
+# Desactivar índice de directorios
+Options -Indexes
+
+# Impedir bucle de redirección entre carpeta física y ruta web
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Permitir acceso directo al index.html
+    RewriteCond %{THE_REQUEST} /index\.html [NC]
+    RewriteRule ^ - [L]
+    
+    # Permitir acceso a archivos específicos cuando se solicitan explícitamente
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+    
+    # Mostrar index.html para el acceso al directorio
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^$ index.html [L]
+</IfModule> 

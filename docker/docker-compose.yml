@@ -1,0 +1,84 @@
+services:
+  ldap:
+    image: osixia/openldap:latest
+    container_name: openldap-osixia
+    command: ["--copy-service"]
+    ports:
+      - "389:389"
+      - "636:636"
+    environment:
+      - LDAP_ORGANISATION=informatica
+      - LDAP_DOMAIN=test.tierno.es
+      - LDAP_ADMIN_PASSWORD=admin
+      - LDAP_REMOVE_CONFIG_AFTER_SETUP=false
+    volumes:
+      - ../ldap/ldif-clean:/container/service/slapd/assets/config/bootstrap/ldif/custom
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    container_name: laravel-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: laravel
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: password
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  laravel:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: laravel-app
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    environment:
+      - LDAP_HOST=openldap-osixia
+      - LDAP_PORT=389
+      - LDAP_BASE_DN=dc=test,dc=tierno,dc=es
+      - LDAP_USERNAME=cn=admin,dc=test,dc=tierno,dc=es
+      - LDAP_PASSWORD=admin
+      - LDAP_AUTH_LOGIN_FALLBACK=false
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=laravel
+      - DB_USERNAME=laravel
+      - DB_PASSWORD=password
+    volumes:
+      - ../proyecto:/var/www/html
+      - document_data:/var/www/html/public/documentos
+    depends_on:
+      - ldap
+      - mysql
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  document_data:
+    driver: local

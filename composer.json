@@ -1,0 +1,5 @@
+{
+    "require": {
+        "directorytree/ldaprecord-laravel": "^3.4"
+    }
+}

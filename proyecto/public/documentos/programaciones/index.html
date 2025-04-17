@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso Restringido</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card {
+            max-width: 500px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">Acceso Restringido</h5>
+        </div>
+        <div class="card-body text-center">
+            <h4 class="card-title mb-4">Esta carpeta no es accesible directamente</h4>
+            <p class="card-text mb-4">Para acceder y gestionar los documentos, por favor utilice la interfaz de la aplicación.</p>
+            <a href="/documentos" class="btn btn-primary">Ir al Gestor de Documentos</a>
+        </div>
+    </div>
+</body>
+</html>

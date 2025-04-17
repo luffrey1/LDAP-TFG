@@ -1,0 +1,10 @@
+#
+# CAUTION: this file gas automatically generated running make.sh. Do not edit.
+#
+dn: cn=profesores,ou=groups,dc=test,dc=tierno,dc=es
+objectClass: top
+objectClass: posixGroup
+objectClass: groupOfUniqueNames
+cn: profesores
+uniqueMember: uid=profesor,ou=people,dc=test,dc=tierno,dc=es
+gidNumber: 10000
