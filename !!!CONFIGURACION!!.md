@@ -198,8 +198,4 @@ docker exec -it laravel-app php artisan route:clear
 docker exec -it laravel-app php artisan view:clear
 ```
 
-### Acceso a Carpetas de Documentos
-
-Para resolver problemas con la carpeta física `/documentos` y la ruta de Laravel `/gestion-documental`, se ha realizado un cambio en la configuración para evitar conflictos. Esta modificación permite que la aplicación funcione correctamente mientras mantiene la estructura de carpetas física para almacenamiento.
-
 
