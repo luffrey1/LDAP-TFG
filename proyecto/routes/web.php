@@ -156,3 +156,102 @@ Route::get('/check-permissions', function() {
 Route::get('/debug-session', function() {
     return view('debug_session');
 })->name('debug.session');
+
+// Ruta de prueba para verificar autenticación LDAP directamente
+Route::get('/test-ldap-auth', function () {
+    // Configurar conexión LDAP
+    $ldapConfig = [
+        'hosts' => [env('LDAP_HOST', 'openldap-osixia')],
+        'port' => env('LDAP_PORT', 389),
+        'base_dn' => env('LDAP_BASE_DN', 'dc=test,dc=tierno,dc=es'),
+        'username' => env('LDAP_USERNAME', 'cn=admin,dc=test,dc=tierno,dc=es'),
+        'password' => env('LDAP_PASSWORD', 'admin'),
+        'use_ssl' => false,
+        'use_tls' => false,
+        'timeout' => 5,
+        'options' => [
+            LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+            LDAP_OPT_REFERRALS => 0,
+        ],
+    ];
+    
+    $username = 'ldap-admin';
+    $password = 'admin';
+    $userDn = "uid={$username},ou=people," . $ldapConfig['base_dn'];
+    
+    // Resultado final
+    $result = [
+        'success' => false,
+        'native_php' => false,
+        'ldaprecord' => false,
+        'errors' => [],
+        'user_info' => null
+    ];
+    
+    // 1. Probar autenticación nativa PHP
+    try {
+        $ldapConn = ldap_connect($ldapConfig['hosts'][0], $ldapConfig['port']);
+        ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
+        ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
+        
+        $bindResult = @ldap_bind($ldapConn, $userDn, $password);
+        if ($bindResult) {
+            $result['native_php'] = true;
+        } else {
+            $result['errors'][] = "Error PHP nativo: " . ldap_error($ldapConn);
+        }
+        
+        // Buscar información del usuario
+        if ($bindResult) {
+            // Primero reconectar como admin para buscar
+            ldap_unbind($ldapConn);
+            $ldapConn = ldap_connect($ldapConfig['hosts'][0], $ldapConfig['port']);
+            ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
+            ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
+            ldap_bind($ldapConn, $ldapConfig['username'], $ldapConfig['password']);
+            
+            // Buscar usuario
+            $searchResult = ldap_search($ldapConn, $ldapConfig['base_dn'], "(uid=$username)");
+            $entries = ldap_get_entries($ldapConn, $searchResult);
+            
+            if ($entries['count'] > 0) {
+                $result['user_info'] = [
+                    'dn' => $entries[0]['dn'],
+                    'cn' => $entries[0]['cn'][0] ?? 'No disponible',
+                    'uid' => $entries[0]['uid'][0] ?? 'No disponible',
+                    'groups' => []
+                ];
+                
+                // Buscar grupos
+                $groupSearchResult = ldap_search($ldapConn, "ou=groups," . $ldapConfig['base_dn'], "(&(objectClass=posixGroup)(memberUid=$username))");
+                $groups = ldap_get_entries($ldapConn, $groupSearchResult);
+                
+                for ($i = 0; $i < $groups['count']; $i++) {
+                    $result['user_info']['groups'][] = $groups[$i]['cn'][0] ?? 'Grupo sin nombre';
+                }
+            }
+        }
+        
+        ldap_unbind($ldapConn);
+    } catch (\Exception $e) {
+        $result['errors'][] = "Excepción PHP nativo: " . $e->getMessage();
+    }
+    
+    // 2. Probar con LdapRecord
+    try {
+        $ldap = new LdapRecord\Connection($ldapConfig);
+        $ldap->connect();
+        
+        if ($ldap->auth()->attempt($userDn, $password)) {
+            $result['ldaprecord'] = true;
+        } else {
+            $result['errors'][] = "Error LdapRecord: autenticación fallida";
+        }
+    } catch (\Exception $e) {
+        $result['errors'][] = "Excepción LdapRecord: " . $e->getMessage();
+    }
+    
+    $result['success'] = $result['native_php'] || $result['ldaprecord'];
+    
+    return response()->json($result);
+});

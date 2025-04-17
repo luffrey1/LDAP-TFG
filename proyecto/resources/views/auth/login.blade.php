@@ -115,7 +115,7 @@
             </div>
             
             <div class="login-footer">
-                <p class="mb-0">Para acceder como administrador: <br>usuario: <strong>admin</strong>, contraseña: <strong>admin</strong></p>
+                <p class="mb-0">Para acceder como administrador: <br>usuario: <strong>ldap-admin</strong>, contraseña: <strong>admin(o la que tengas configurada)</strong></p>
             </div>
         </div>
     </div>

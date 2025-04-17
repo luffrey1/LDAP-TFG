@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use App\Models\User;
 use LdapRecord\Connection;
+use LdapRecord\Container;
+use LdapRecord\Models\OpenLDAP\User as LdapUser;
 use Illuminate\Support\Facades\Config;
 
 class AuthController extends Controller
@@ -38,7 +40,7 @@ class AuthController extends Controller
         try {
             Log::info('Intento de login para usuario: ' . $credentials['username']);
             
-            // Intentar autenticación exclusivamente con LDAP
+            // Intentar autenticación exclusivamente con LDAP usando LdapRecord
             if ($this->attemptLdapAuth($credentials)) {
                 Log::info('Usuario autenticado via LDAP: ' . $credentials['username']);
                 return redirect()->route('dashboard.index');
@@ -51,6 +53,7 @@ class AuthController extends Controller
             
         } catch (\Exception $e) {
             Log::error('Error en autenticación: ' . $e->getMessage());
+            Log::error('Traza: ' . $e->getTraceAsString());
             
             return back()->withErrors([
                 'error' => 'Error al procesar la autenticación. Por favor, inténtelo de nuevo.',
@@ -59,82 +62,89 @@ class AuthController extends Controller
     }
     
     /**
-     * Intentar autenticación LDAP
+     * Intentar autenticación LDAP usando LdapRecord
      */
     private function attemptLdapAuth($credentials)
     {
         try {
-            // Verificar si LDAP está configurado
-            if (!Config::get('ldap.connections.default.hosts')) {
-                Log::warning('LDAP no está configurado correctamente: no hay hosts definidos');
-                return false;
-            }
+            // Mostrar la configuración que estamos usando para depuración
+            $config = Container::getDefaultConnection()->getConfiguration();
+            $hosts = $config->get('hosts');
+            $basedn = $config->get('base_dn');
+            $adminDn = $config->get('username');
             
-            // Configurar conexión LDAP - Usar directamente valores del entorno para depuración
-            $ldapConfig = [
-                'hosts' => [env('LDAP_HOST', 'openldap-osixia')],
-                'port' => env('LDAP_PORT', 389),
-                'base_dn' => env('LDAP_BASE_DN', 'dc=test,dc=tierno,dc=es'),
-                'username' => env('LDAP_USERNAME', 'cn=admin,dc=test,dc=tierno,dc=es'),
-                'password' => env('LDAP_PASSWORD', 'admin'),
-                'use_ssl' => false,
-                'use_tls' => false,
-                'timeout' => 5,
+            Log::debug("Usando configuración LdapRecord: hosts=" . json_encode($hosts) . 
+                     ", base_dn={$basedn}, admin_dn={$adminDn}");
+            
+            // Construir DN de usuario
+            $userDn = "uid={$credentials['username']},ou=people," . $basedn;
+            Log::debug("Intentando autenticar usuario con DN: {$userDn}");
+            
+            // Crear conexión manual para el usuario
+            $connection = new Connection([
+                'hosts' => $hosts,
+                'base_dn' => $basedn,
+                'username' => $userDn,
+                'password' => $credentials['password'],
+                'port' => $config->get('port', 389),
+                'use_ssl' => $config->get('use_ssl', false),
+                'use_tls' => $config->get('use_tls', false),
+                'timeout' => $config->get('timeout', 5),
                 'options' => [
                     LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
                     LDAP_OPT_REFERRALS => 0,
                 ],
-            ];
+            ]);
             
-            Log::debug('Intento de conexión LDAP con: ' . json_encode($ldapConfig));
-            
-            $ldap = new Connection($ldapConfig);
-            
-            // Intentar conectar
-            Log::debug('Intentando conectar al servidor LDAP: ' . $ldapConfig['hosts'][0]);
-            $ldap->connect();
-            Log::debug('Conexión LDAP establecida exitosamente');
-            
-            // Construir DN de usuario
-            $baseDn = $ldapConfig['base_dn'];
-            $userDn = "uid={$credentials['username']},ou=people," . $baseDn;
-            
-            Log::debug("Intentando autenticar con DN: {$userDn} y contraseña proporcionada");
-            
-            // Intentar bind con las credenciales
-            if ($ldap->auth()->attempt($userDn, $credentials['password'])) {
-                Log::debug("Bind exitoso para {$userDn}");
+            // Intentar conexión con credenciales de usuario
+            try {
+                $connection->connect();
+                Log::debug("Conexión LdapRecord exitosa para usuario: {$credentials['username']}");
                 
-                // Buscar o crear usuario en la base de datos local
-                Log::debug("Buscando usuario LDAP con uid={$credentials['username']}");
-                
-                // Tenemos que volver a conectar con el admin para buscar información del usuario
-                $ldap->connect();
-                $ldap->auth()->bind($ldapConfig['username'], $ldapConfig['password']);
-                
-                $ldapUser = $ldap->query()
-                    ->where('uid', '=', $credentials['username'])
-                    ->first();
-                
-                if ($ldapUser) {
-                    // Verificar si es objeto o array para obtener información correctamente
-                    $userInfo = is_object($ldapUser) && method_exists($ldapUser, 'getDn') 
-                        ? "DN: " . $ldapUser->getDn() 
-                        : "UID: " . $credentials['username'];
+                // Usuario autenticado, buscar información adicional usando admin
+                try {
+                    // Crear conexión como admin para buscar información del usuario
+                    $adminConnection = new Connection([
+                        'hosts' => $hosts,
+                        'base_dn' => $basedn,
+                        'username' => $adminDn,
+                        'password' => $config->get('password'),
+                        'port' => $config->get('port', 389),
+                        'use_ssl' => $config->get('use_ssl', false),
+                        'use_tls' => $config->get('use_tls', false),
+                        'timeout' => $config->get('timeout', 5),
+                        'options' => [
+                            LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                            LDAP_OPT_REFERRALS => 0,
+                        ],
+                    ]);
                     
-                    Log::debug("Usuario LDAP encontrado: " . $userInfo);
-                    return $this->processLdapUser($ldapUser, $credentials);
-                } else {
-                    Log::error("Usuario autenticado en LDAP pero no se pudo recuperar información: {$credentials['username']}");
+                    $adminConnection->connect();
+                    Log::debug("Conexión admin LdapRecord exitosa");
+                    
+                    // Buscar usuario con la conexión admin
+                    $query = $adminConnection->query();
+                    $results = $query->where('objectClass', 'inetOrgPerson')
+                                    ->where('uid', $credentials['username'])
+                                    ->first();
+                    
+                    if ($results) {
+                        Log::debug("Información de usuario encontrada: " . json_encode(array_keys($results)));
+                        return $this->processLdapUser($results, $credentials);
+                    } else {
+                        Log::warning("Usuario autenticado pero no encontrado en búsqueda LDAP: {$credentials['username']}");
+                        return false;
+                    }
+                } catch (\Exception $e) {
+                    Log::warning("Error al buscar información con admin: " . $e->getMessage());
                     return false;
                 }
-            } else {
-                Log::warning("Fallo en autenticación LDAP para usuario: {$credentials['username']} - Credenciales incorrectas");
+            } catch (\Exception $e) {
+                Log::warning("Fallo en autenticación de usuario: " . $e->getMessage());
                 return false;
             }
         } catch (\Exception $e) {
-            Log::error('Error LDAP: ' . $e->getMessage());
-            Log::error('Traza de error: ' . $e->getTraceAsString());
+            Log::error("Error LdapRecord: " . $e->getMessage());
             return false;
         }
     }
@@ -145,38 +155,17 @@ class AuthController extends Controller
     private function processLdapUser($ldapUser, $credentials)
     {
         try {
-            // Verificar si $ldapUser es un array u objeto y obtener los datos adecuadamente
-            $userData = is_object($ldapUser) && method_exists($ldapUser, 'toArray') 
-                ? $ldapUser->toArray() 
-                : (is_array($ldapUser) ? $ldapUser : []);
-            
-            Log::debug("Datos de usuario LDAP: " . json_encode(array_map(function($attr) {
-                return is_array($attr) ? implode(', ', $attr) : $attr;
-            }, $userData)));
+            // Los datos del usuario vienen de ldap_get_entries, que utiliza un formato específico
+            Log::debug("Procesando datos de usuario LDAP: " . json_encode(array_keys($ldapUser)));
             
             // Determinar rol basado en grupos LDAP
             $role = $this->determineRoleFromLdapGroups($ldapUser, $credentials['username']);
             Log::debug("Rol asignado al usuario: {$role}");
             
-            // Obtener valores seguros de los atributos LDAP
-            $cn = null;
-            $mail = null;
-            $uid = null;
-            
-            if (is_object($ldapUser)) {
-                $cn = $ldapUser->getFirstAttribute('cn');
-                $mail = $ldapUser->getFirstAttribute('mail');
-                $uid = $ldapUser->getFirstAttribute('uid');
-            } else if (is_array($ldapUser)) {
-                $cn = $ldapUser['cn'][0] ?? null;
-                $mail = $ldapUser['mail'][0] ?? null;
-                $uid = $ldapUser['uid'][0] ?? null;
-            }
-            
-            // Usar valores predeterminados si no se encuentran
-            $cn = $cn ?: $credentials['username'];
-            $mail = $mail ?: $credentials['username'] . '@test.tierno.es';
-            $uid = $uid ?: $credentials['username'];
+            // Obtener valores de los atributos LDAP en formato nativo
+            $cn = isset($ldapUser['cn'][0]) ? $ldapUser['cn'][0] : $credentials['username'];
+            $mail = isset($ldapUser['mail'][0]) ? $ldapUser['mail'][0] : $credentials['username'] . '@test.tierno.es';
+            $uid = isset($ldapUser['uid'][0]) ? $ldapUser['uid'][0] : $credentials['username'];
             
             Log::debug("Valores extraídos: CN=$cn, Mail=$mail, UID=$uid");
             
@@ -188,17 +177,21 @@ class AuthController extends Controller
                 $user = new User();
                 $user->name = $cn;
                 $user->email = $mail;
+                $user->username = $uid; // Asegurarnos de guardar el username
                 $user->password = Hash::make(Str::random(16));
                 $user->guid = $uid;
                 $user->domain = env('LDAP_BASE_DN', 'dc=test,dc=tierno,dc=es');
+                $user->role = $role; // Establecer el rol correcto
                 $user->save();
                 
                 Log::debug("Usuario creado en base de datos: " . $user->id);
             } else {
                 // Actualizar usuario existente
                 $user->name = $cn;
+                $user->username = $uid; // Asegurarnos de tener username
                 $user->guid = $uid;
                 $user->domain = env('LDAP_BASE_DN', 'dc=test,dc=tierno,dc=es');
+                $user->role = $role; // Actualizar el rol
                 $user->save();
                 
                 Log::debug("Usuario actualizado en base de datos: " . $user->id);
@@ -265,13 +258,20 @@ class AuthController extends Controller
                 return 'admin';
             }
             
-            // Configurar conexión LDAP usando directamente variables de entorno para depuración
+            // Configurar conexión LDAP usando variables del entorno
+            // Obtener los mismos valores que en attemptLdapAuth para consistencia
+            $ldapHost = env('LDAP_HOST', '172.19.0.4');
+            $ldapPort = (int)env('LDAP_PORT', 389);
+            $baseDn = env('LDAP_BASE_DN', 'dc=test,dc=tierno,dc=es');
+            $adminDn = env('LDAP_USERNAME', 'cn=admin,dc=test,dc=tierno,dc=es');
+            $adminPassword = env('LDAP_PASSWORD', 'admin');
+            
             $ldapConfig = [
-                'hosts' => [env('LDAP_HOST', 'openldap-osixia')],
-                'port' => env('LDAP_PORT', 389),
-                'base_dn' => env('LDAP_BASE_DN', 'dc=test,dc=tierno,dc=es'),
-                'username' => env('LDAP_USERNAME', 'cn=admin,dc=test,dc=tierno,dc=es'),
-                'password' => env('LDAP_PASSWORD', 'admin'),
+                'hosts' => [$ldapHost],
+                'port' => $ldapPort,
+                'base_dn' => $baseDn,
+                'username' => $adminDn,
+                'password' => $adminPassword,
                 'use_ssl' => false,
                 'use_tls' => false,
                 'timeout' => 5,
@@ -280,6 +280,8 @@ class AuthController extends Controller
                     LDAP_OPT_REFERRALS => 0,
                 ],
             ];
+            
+            Log::debug("Usando configuración LDAP para buscar grupos: host={$ldapHost}, port={$ldapPort}");
             
             $ldap = new Connection($ldapConfig);
             $ldap->connect();

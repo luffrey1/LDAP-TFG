@@ -47,19 +47,14 @@ Thumbs.db
 **/*password*.txt
 **/credentials.json
 **/auth.json
-**/secrets.yaml
-**/secret*.yml
+**/*.yaml
+**/*.yml
 
-# Ignorar la carpeta de certificados
+# Ignorar la carpeta de certificados, pero permitir el README
 certs/
-*.pem
-*.key
-*.crt
-*.cer
-*.p12
-*.pfx
-*.jks
-*.keystore
+!certs/README.md
+ldap/certs/*
+!ldap/certs/README.md
 
 # Archivos de configuración sensibles
 .env
