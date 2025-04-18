@@ -22,13 +22,27 @@ class LdapUserController extends Controller
     
     public function __construct()
     {
+        // Usar la configuración del archivo config/ldap.php
+        $config = config('ldap.connections.default');
+        
         $this->connection = new Connection([
-            'hosts' => [env('LDAP_HOST', 'ldap-server')],
-            'port' => env('LDAP_PORT', 389),
-            'base_dn' => $this->baseDn,
-            'username' => env('LDAP_USERNAME', 'cn=admin,dc=test,dc=tierno,dc=es'),
-            'password' => env('LDAP_PASSWORD', 'admin'),
+            'hosts' => $config['hosts'],
+            'port' => $config['port'],
+            'base_dn' => $config['base_dn'],
+            'username' => $config['username'],
+            'password' => $config['password'],
+            'use_ssl' => $config['use_ssl'],
+            'use_tls' => $config['use_tls'],
+            'timeout' => $config['timeout'],
+            'options' => [
+                LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                LDAP_OPT_REFERRALS => 0,
+            ],
         ]);
+        
+        // Añadir debug para ver qué valores se están usando realmente
+        Log::debug("Conexión LDAP configurada con: host=" . json_encode($config['hosts']) . 
+                 ", port={$config['port']}, username={$config['username']}");
     }
 
     /**
@@ -40,7 +54,32 @@ class LdapUserController extends Controller
             Log::debug("Iniciando método index en LdapUserController");
             Log::debug("Sesión actual: " . json_encode(session('auth_user')));
             
-            $this->connection->connect();
+            // Intentar conectar con LDAP
+            try {
+                $this->connection->connect();
+                Log::debug("Conexión con LDAP establecida correctamente");
+            } catch (\Exception $connectException) {
+                Log::error("Error al conectar con el servidor LDAP: " . $connectException->getMessage());
+                Log::error("Traza: " . $connectException->getTraceAsString());
+                
+                // Devolver vista con mensaje de error pero sin datos
+                return view('admin.users.index', [
+                    'users' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10),
+                    'userGroups' => [],
+                    'adminUsers' => [],
+                    'search' => $request->input('search', ''),
+                    'selectedGroup' => $request->input('group', ''),
+                    'connectionError' => true,
+                    'errorMessage' => 'No se pudo conectar al servidor LDAP. Por favor, verifique la conexión e inténtelo de nuevo.',
+                    'diagnostico' => [
+                        'error' => $connectException->getMessage(),
+                        'hosts' => config('ldap.connections.default.hosts'),
+                        'port' => config('ldap.connections.default.port'),
+                        'base_dn' => config('ldap.connections.default.base_dn'),
+                        'username' => config('ldap.connections.default.username'),
+                    ]
+                ]);
+            }
             
             $search = $request->input('search', '');
             $filter = $request->input('group', '');
@@ -54,8 +93,16 @@ class LdapUserController extends Controller
                 
             Log::debug("¿Existe la OU de personas?: " . ($peopleOuExists ? 'Sí' : 'No'));
             
-            // Filtrar usuarios en ou=people
-            $query->in($this->peopleOu);
+            if (!$peopleOuExists) {
+                // Si la OU de personas no existe, buscar en toda la base
+                Log::warning("La OU de personas no existe, buscando en toda la base...");
+                $query->in($this->baseDn);
+            } else {
+                // Buscar usuarios en la OU de people
+                $query->in($this->peopleOu);
+            }
+            
+            // Buscar inetOrgPerson
             $query->where('objectclass', '=', 'inetOrgPerson');
             
             // Aplicar búsqueda si existe
@@ -65,6 +112,7 @@ class LdapUserController extends Controller
                     ->orWhereContains('mail', $search);
             }
             
+            // Ejecutar la consulta
             $users = $query->get();
             Log::debug("Usuarios encontrados: " . count($users));
             
@@ -79,12 +127,34 @@ class LdapUserController extends Controller
                 Log::warning("No se encontró el grupo de administradores en: " . $this->adminGroupDn);
             }
             
+            // Buscar con una consulta más genérica si no se encuentra el grupo de admins específico
             $adminUsers = [];
             if ($adminGroup && isset($adminGroup['uniquemember'])) {
                 $adminUsers = is_array($adminGroup['uniquemember']) 
                     ? $adminGroup['uniquemember'] 
                     : [$adminGroup['uniquemember']];
                 Log::debug("Administradores encontrados: " . count($adminUsers));
+            } else {
+                // Buscar cualquier grupo de admins en toda la base
+                Log::debug("Buscando grupos de administradores en toda la base...");
+                $possibleAdminGroups = $this->connection->query()
+                    ->in($this->baseDn)
+                    ->whereContains('cn', 'admin')
+                    ->get();
+                    
+                foreach ($possibleAdminGroups as $group) {
+                    $groupDn = is_array($group) ? $group['dn'] : $group->getDn();
+                    $groupCn = is_array($group) ? ($group['cn'][0] ?? 'Sin CN') : $group->getFirstAttribute('cn');
+                    Log::debug("Posible grupo de admins: {$groupCn} ({$groupDn})");
+                    
+                    if (isset($group['uniquemember'])) {
+                        $members = is_array($group['uniquemember']) 
+                            ? $group['uniquemember'] 
+                            : [$group['uniquemember']];
+                        $adminUsers = array_merge($adminUsers, $members);
+                    }
+                }
+                Log::debug("Total de posibles administradores encontrados: " . count($adminUsers));
             }
             
             // Obtener todos los grupos disponibles para verificación
@@ -167,12 +237,18 @@ class LdapUserController extends Controller
             
             Log::debug("Enviando a la vista: " . count($filteredUsers) . " usuarios");
             
+            // También enviar la lista de grupos para el selector
+            $groupList = collect($allGroups)->map(function($group) {
+                return is_array($group) ? ($group['cn'][0] ?? '') : $group->getFirstAttribute('cn');
+            })->filter()->unique()->values()->all();
+            
             return view('admin.users.index', [
                 'users' => $paginator,
                 'userGroups' => $userGroups,
                 'adminUsers' => $adminUsers,
                 'search' => $search,
-                'selectedGroup' => $filter
+                'selectedGroup' => $filter,
+                'groupList' => $groupList
             ]);
             
         } catch (Exception $e) {

@@ -23,20 +23,7 @@ class LdapUserController extends Controller
      */
     public function __construct()
     {
-        try {
-            // Inicializar conexión LDAP con el administrador del directorio
-            $this->ldap = new Connection([
-                'hosts' => [env('LDAP_HOST', 'openldap-osixia')],
-                'port' => env('LDAP_PORT', 389),
-                'base_dn' => env('LDAP_BASE_DN', 'dc=test,dc=tierno,dc=es'),
-                'username' => env('LDAP_USERNAME', 'cn=admin,dc=test,dc=tierno,dc=es'), 
-                'password' => env('LDAP_PASSWORD', 'admin'),
-            ]);
-            $this->ldap->connect();
-            Log::info('Conexión LDAP establecida correctamente con el administrador');
-        } catch (\Exception $e) {
-            Log::error('Error conectando a LDAP: ' . $e->getMessage());
-        }
+        // No inicializar la conexión en el constructor, para evitar errores
     }
 
     /**
@@ -45,19 +32,58 @@ class LdapUserController extends Controller
     public function index()
     {
         try {
-            // Verificar la conexión LDAP
-            if (!$this->ldap || !$this->ldap->isConnected()) {
-                throw new \Exception('No se pudo establecer conexión con el servidor LDAP');
-            }
+            // Usar el mismo patrón que AuthController
+            // Mostrar la configuración que estamos usando para depuración
+            $config = \LdapRecord\Container::getDefaultConnection()->getConfiguration();
+            $hosts = $config->get('hosts');
+            $basedn = $config->get('base_dn');
+            $adminDn = $config->get('username');
+            
+            Log::debug("Usando configuración LdapRecord: hosts=" . json_encode($hosts) . 
+                    ", base_dn={$basedn}, admin_dn={$adminDn}");
+            
+            // Crear conexión como admin para buscar usuarios, igual que en AuthController
+            $adminConnection = new Connection([
+                'hosts' => $hosts,
+                'base_dn' => $basedn,
+                'username' => $adminDn,
+                'password' => $config->get('password'),
+                'port' => $config->get('port', 389),
+                'use_ssl' => $config->get('use_ssl', false),
+                'use_tls' => $config->get('use_tls', false),
+                'timeout' => $config->get('timeout', 5),
+                'options' => [
+                    LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                    LDAP_OPT_REFERRALS => 0,
+                ],
+            ]);
+            
+            // Conectar explícitamente
+            $adminConnection->connect();
+            Log::debug("Conexión admin LdapRecord exitosa");
             
             // Buscar usuarios en LDAP en la unidad organizativa people
-            $baseDn = env('LDAP_BASE_DN', 'dc=test,dc=tierno,dc=es');
-            $peopleDn = "ou=people," . $baseDn;
+            $peopleDn = "ou=people," . $basedn;
+            Log::debug("Buscando usuarios en: {$peopleDn}");
             
-            $ldapUsers = $this->ldap->query()
-                ->in($peopleDn)
-                ->whereHas('objectclass')
-                ->get();
+            // Verificar si la OU de personas existe
+            $peopleOuExists = $adminConnection->query()
+                ->in($basedn)
+                ->where('dn', '=', $peopleDn)
+                ->exists();
+                
+            Log::debug("¿Existe la OU de personas?: " . ($peopleOuExists ? 'Sí' : 'No'));
+            
+            if (!$peopleOuExists) {
+                Log::warning("La OU de personas no existe: {$peopleDn}");
+            }
+            
+            // Buscar usuarios que sean inetOrgPerson
+            $query = $adminConnection->query();
+            $query->in($peopleDn);
+            $query->where('objectclass', '=', 'inetOrgPerson');
+            
+            $ldapUsers = $query->get();
             
             Log::debug("Usuarios LDAP encontrados: " . count($ldapUsers));
             
@@ -65,18 +91,43 @@ class LdapUserController extends Controller
             
             foreach ($ldapUsers as $ldapUser) {
                 // Verificar si es una persona
-                if (!in_array('person', $ldapUser['objectclass'])) {
+                $objectClasses = [];
+                if (is_array($ldapUser) && isset($ldapUser['objectclass'])) {
+                    $objectClasses = (array)$ldapUser['objectclass'];
+                } elseif (method_exists($ldapUser, 'getObjectClasses')) {
+                    $objectClasses = $ldapUser->getObjectClasses();
+                }
+                
+                if (!in_array('person', $objectClasses) && !in_array('inetOrgPerson', $objectClasses)) {
+                    Log::debug("Omitiendo objeto que no es persona/inetOrgPerson");
                     continue;
                 }
                 
-                $username = $ldapUser['uid'][0] ?? '';
-                $groups = $this->getUserGroups($username);
+                $username = '';
+                $userDn = '';
+                
+                if (is_array($ldapUser)) {
+                    $username = isset($ldapUser['uid']) ? (is_array($ldapUser['uid']) ? $ldapUser['uid'][0] : $ldapUser['uid']) : '';
+                    $userDn = $ldapUser['dn'];
+                } else {
+                    $username = $ldapUser->getFirstAttribute('uid');
+                    $userDn = $ldapUser->getDn();
+                }
+                
+                if (empty($username)) {
+                    Log::warning("Usuario LDAP sin UID: " . $userDn);
+                    continue;
+                }
+                
+                Log::debug("Procesando usuario LDAP: {$username}");
+                
+                $groups = $this->getUserGroups($username, $adminConnection, $basedn);
                 
                 $users[] = [
-                    'dn' => $ldapUser['dn'],
+                    'dn' => $userDn,
                     'username' => $username,
-                    'name' => $ldapUser['cn'][0] ?? $username,
-                    'email' => $ldapUser['mail'][0] ?? '',
+                    'name' => is_array($ldapUser) ? ($ldapUser['cn'][0] ?? $username) : $ldapUser->getFirstAttribute('cn', $username),
+                    'email' => is_array($ldapUser) ? ($ldapUser['mail'][0] ?? '') : $ldapUser->getFirstAttribute('mail', ''),
                     'groups' => $groups,
                     'last_login' => null,
                     'enabled' => true
@@ -86,7 +137,30 @@ class LdapUserController extends Controller
             return view('admin.users.index', compact('users'));
         } catch (\Exception $e) {
             Log::error('Error al obtener usuarios LDAP: ' . $e->getMessage());
-            return view('admin.users.index', ['users' => [], 'error' => $e->getMessage()]);
+            Log::error('Traza: ' . $e->getTraceAsString());
+            
+            // Recopilar información de diagnóstico para mostrar en la vista
+            $diagnostico = [
+                'error' => $e->getMessage(),
+                'traza' => $e->getTraceAsString(),
+            ];
+            
+            // Si tenemos configuración, mostrar más detalles
+            try {
+                $config = \LdapRecord\Container::getDefaultConnection()->getConfiguration();
+                $diagnostico['hosts'] = $config->get('hosts');
+                $diagnostico['base_dn'] = $config->get('base_dn');
+                $diagnostico['username'] = $config->get('username');
+                $diagnostico['port'] = $config->get('port', 389);
+            } catch (\Exception $configError) {
+                $diagnostico['error_config'] = $configError->getMessage();
+            }
+            
+            return view('admin.users.index', [
+                'users' => [],
+                'error' => $e->getMessage(),
+                'diagnostico' => $diagnostico
+            ]);
         }
     }
 
@@ -642,14 +716,13 @@ class LdapUserController extends Controller
     /**
      * Obtener los grupos a los que pertenece un usuario
      */
-    private function getUserGroups($username)
+    private function getUserGroups($username, $adminConnection, $basedn)
     {
         try {
-            $baseDn = env('LDAP_BASE_DN', 'dc=test,dc=tierno,dc=es');
-            $groupsDn = "ou=groups," . $baseDn;
-            $userDn = "uid=$username,ou=people,$baseDn";
+            $groupsDn = "ou=groups," . $basedn;
+            $userDn = "uid=$username,ou=people,$basedn";
             
-            $groups = $this->ldap->query()
+            $groups = $adminConnection->query()
                 ->in($groupsDn)
                 ->whereHas('objectclass')
                 ->where('uniqueMember', $userDn)

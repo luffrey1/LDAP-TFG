@@ -29,6 +29,18 @@
                         </div>
                     @endif
 
+                    @if (isset($connectionError) && $connectionError)
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i> {{ $errorMessage ?? 'Error de conexión con el servidor LDAP' }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        <div class="mb-3 d-flex justify-content-end">
+                            <button class="btn btn-primary" onclick="window.location.reload()">
+                                <i class="fas fa-sync-alt me-2"></i> Reintentar conexión
+                            </button>
+                        </div>
+                    @endif
+
                     <form action="{{ route('admin.users.index') }}" method="GET" class="mb-4">
                         <div class="row g-3">
                             <div class="col-md-6">
@@ -150,7 +162,11 @@
                                     <tr>
                                         <td colspan="6" class="text-center py-4">
                                             <div class="alert alert-info mb-0">
-                                                <i class="fas fa-info-circle me-2"></i> {{ __('No se encontraron usuarios') }}
+                                                @if (isset($connectionError) && $connectionError)
+                                                    <i class="fas fa-exclamation-triangle me-2"></i> {{ __('No se pueden mostrar usuarios debido a un error de conexión') }}
+                                                @else
+                                                    <i class="fas fa-info-circle me-2"></i> {{ __('No se encontraron usuarios') }}
+                                                @endif
                                             </div>
                                         </td>
                                     </tr>
