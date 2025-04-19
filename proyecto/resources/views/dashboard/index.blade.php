@@ -120,35 +120,41 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($recentDocuments as $doc)
-                                <tr>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            @if($doc['extension'] == 'pdf')
-                                            <div class="icon-circle bg-danger text-white me-2">
-                                                <i class="fas fa-file-pdf"></i>
+                                @if(count($recentDocuments) > 0)
+                                    @foreach($recentDocuments as $doc)
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                @if($doc['extension'] == 'pdf')
+                                                <div class="icon-circle bg-danger text-white me-2">
+                                                    <i class="fas fa-file-pdf"></i>
+                                                </div>
+                                                @elseif(in_array($doc['extension'], ['docx', 'doc']))
+                                                <div class="icon-circle bg-primary text-white me-2">
+                                                    <i class="fas fa-file-word"></i>
+                                                </div>
+                                                @elseif(in_array($doc['extension'], ['xlsx', 'xls']))
+                                                <div class="icon-circle bg-success text-white me-2">
+                                                    <i class="fas fa-file-excel"></i>
+                                                </div>
+                                                @else
+                                                <div class="icon-circle bg-secondary text-white me-2">
+                                                    <i class="fas fa-file"></i>
+                                                </div>
+                                                @endif
+                                                <span class="text-truncate">{{ $doc['nombre'] }}</span>
                                             </div>
-                                            @elseif(in_array($doc['extension'], ['docx', 'doc']))
-                                            <div class="icon-circle bg-primary text-white me-2">
-                                                <i class="fas fa-file-word"></i>
-                                            </div>
-                                            @elseif(in_array($doc['extension'], ['xlsx', 'xls']))
-                                            <div class="icon-circle bg-success text-white me-2">
-                                                <i class="fas fa-file-excel"></i>
-                                            </div>
-                                            @else
-                                            <div class="icon-circle bg-secondary text-white me-2">
-                                                <i class="fas fa-file"></i>
-                                            </div>
-                                            @endif
-                                            <span class="text-truncate">{{ $doc['nombre'] }}</span>
-                                        </div>
-                                    </td>
-                                    <td>{{ $doc['subido_por_nombre'] }}</td>
-                                    <td>{{ date('d/m/Y', strtotime($doc['fecha_subida'])) }}</td>
-                                    <td>{{ $doc['tamaño'] }}</td>
-                                </tr>
-                                @endforeach
+                                        </td>
+                                        <td>{{ $doc['subido_por_nombre'] }}</td>
+                                        <td>{{ date('d/m/Y', strtotime($doc['fecha_subida'])) }}</td>
+                                        <td>{{ $doc['tamaño'] }}</td>
+                                    </tr>
+                                    @endforeach
+                                @else
+                                    <tr>
+                                        <td colspan="4" class="text-center">No hay documentos recientes</td>
+                                    </tr>
+                                @endif
                             </tbody>
                         </table>
                     </div>
@@ -168,31 +174,31 @@
                     </a>
                 </div>
                 <div class="card-body p-0">
-                    @if(isset($recentMessages) && count($recentMessages) > 0)
-                    <div class="list-group list-group-flush">
-                        @foreach($recentMessages as $mensaje)
-                        <a href="{{ route('dashboard.mensajes.ver', $mensaje['id']) }}" class="list-group-item list-group-item-action px-4 py-3 {{ $mensaje['leido'] ? '' : 'bg-light' }}">
-                            <div class="d-flex w-100 justify-content-between align-items-center">
-                                <h6 class="mb-1 {{ $mensaje['leido'] ? '' : 'fw-bold' }}">{{ $mensaje['asunto'] }}</h6>
-                                <small class="text-muted">{{ date('d/m/Y', strtotime($mensaje['fecha'])) }}</small>
-                            </div>
-                            <p class="mb-1 text-truncate text-muted small">{{ $mensaje['contenido'] }}</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-primary">
-                                    <i class="fas fa-user-circle me-1"></i>{{ $mensaje['remitente_nombre'] }}
-                                </small>
-                                @if(!$mensaje['leido'])
-                                <span class="badge bg-primary">Nuevo</span>
-                                @endif
-                            </div>
-                        </a>
-                        @endforeach
-                    </div>
+                    @if(count($recentMessages) > 0)
+                        <div class="list-group list-group-flush">
+                            @foreach($recentMessages as $mensaje)
+                            <a href="{{ route('dashboard.mensajes.ver', $mensaje['id']) }}" class="list-group-item list-group-item-action px-4 py-3 {{ $mensaje['leido'] ? '' : 'bg-light' }}">
+                                <div class="d-flex w-100 justify-content-between align-items-center">
+                                    <h6 class="mb-1 {{ $mensaje['leido'] ? '' : 'fw-bold' }}">{{ $mensaje['asunto'] }}</h6>
+                                    <small class="text-muted">{{ date('d/m/Y', strtotime($mensaje['fecha'])) }}</small>
+                                </div>
+                                <p class="mb-1 text-truncate text-muted small">{{ $mensaje['contenido'] }}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-primary">
+                                        <i class="fas fa-user-circle me-1"></i>{{ $mensaje['remitente_nombre'] }}
+                                    </small>
+                                    @if(!$mensaje['leido'])
+                                    <span class="badge bg-primary">Nuevo</span>
+                                    @endif
+                                </div>
+                            </a>
+                            @endforeach
+                        </div>
                     @else
-                    <div class="text-center py-5">
-                        <i class="fas fa-inbox fa-3x text-gray-300 mb-3"></i>
-                        <p>No hay mensajes recientes.</p>
-                    </div>
+                        <div class="text-center py-5">
+                            <i class="fas fa-inbox fa-3x text-gray-300 mb-3"></i>
+                            <p>No hay mensajes recientes.</p>
+                        </div>
                     @endif
                 </div>
             </div>

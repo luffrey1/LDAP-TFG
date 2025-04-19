@@ -13,6 +13,8 @@ use App\Models\Documento;
 use App\Models\Mensaje;
 use App\Models\Evento;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -80,11 +82,55 @@ class DashboardController extends Controller
      */
     public function documentos()
     {
-        // Obtener los documentos almacenados
-        $documents = $this->getAllDocuments();
-        $folders = $this->getFolders();
+        try {
+            // Obtener documentos reales de la base de datos
+            $documents = Documento::where('activo', true)
+                ->orderBy('created_at', 'desc')
+                ->get();
+            
+            // Obtener carpetas de documentos
+            $foldersDB = DB::table('carpetas_documentos')
+                ->where('activo', true)
+                ->orderBy('nombre')
+                ->get();
+                
+            if ($foldersDB->count() > 0) {
+                $folders = $foldersDB;
+            } else {
+                // Si no hay carpetas en BD, obtener de directorios físicos
+                $storageDirs = Storage::disk('public')->directories('documentos');
+                $folders = collect();
+                
+                foreach ($storageDirs as $dir) {
+                    $folderName = str_replace('documentos/', '', $dir);
+                    if ($folderName) {
+                        $folders->push([
+                            'nombre' => ucfirst($folderName),
+                            'clave' => $folderName,
+                            'icono' => 'fa-folder'
+                        ]);
+                    }
+                }
+                
+                // Asegurar que existe carpeta General
+                if (!$folders->contains('clave', 'general')) {
+                    $folders->prepend([
+                        'nombre' => 'General',
+                        'clave' => 'general',
+                        'icono' => 'fa-folder'
+                    ]);
+                }
+            }
 
-        return view('dashboard.documentos.index', compact('documents', 'folders'));
+            return view('dashboard.documentos.index', compact('documents', 'folders'));
+        } catch (\Exception $e) {
+            Log::error('Error al cargar documentos: ' . $e->getMessage());
+            return view('dashboard.documentos.index', [
+                'documents' => collect(),
+                'folders' => collect([['nombre' => 'General', 'clave' => 'general', 'icono' => 'fa-folder']]),
+                'error' => 'Error al cargar documentos: ' . $e->getMessage()
+            ]);
+        }
     }
 
     /**
@@ -178,10 +224,32 @@ class DashboardController extends Controller
      */
     public function mensajes()
     {
-        $mensajesRecibidos = $this->getMensajesRecibidos();
-        $mensajesEnviados = $this->getMensajesEnviados();
-        
-        return view('dashboard.mensajes.index', compact('mensajesRecibidos', 'mensajesEnviados'));
+        try {
+            // Obtener el usuario autenticado
+            $userId = session('auth_user')['id'] ?? Auth::id();
+            
+            // Obtener mensajes reales de la base de datos
+            $mensajesRecibidos = Mensaje::recibidos($userId)
+                ->with(['remitente'])
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get();
+                
+            $mensajesEnviados = Mensaje::enviados($userId)
+                ->with(['destinatario'])
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get();
+            
+            return view('dashboard.mensajes.index', compact('mensajesRecibidos', 'mensajesEnviados'));
+        } catch (\Exception $e) {
+            Log::error('Error al cargar mensajes: ' . $e->getMessage());
+            return view('dashboard.mensajes.index', [
+                'mensajesRecibidos' => collect(),
+                'mensajesEnviados' => collect(),
+                'error' => 'Error al cargar mensajes: ' . $e->getMessage()
+            ]);
+        }
     }
 
     /**
@@ -189,10 +257,19 @@ class DashboardController extends Controller
      */
     public function nuevoMensaje()
     {
-        // Obtener usuarios para el campo destinatario
-        $users = $this->getActiveUsers();
-        
-        return view('dashboard.mensajes.nuevo', compact('users'));
+        try {
+            // Obtener usuarios reales para el campo destinatario
+            $users = User::select('id', 'name', 'email', 'role')
+                ->where('active', true)
+                ->orderBy('name')
+                ->get();
+            
+            return view('dashboard.mensajes.nuevo', compact('users'));
+        } catch (\Exception $e) {
+            Log::error('Error al cargar usuarios: ' . $e->getMessage());
+            return redirect()->route('dashboard.mensajes')
+                ->with('error', 'Error al cargar usuarios: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -270,9 +347,20 @@ class DashboardController extends Controller
      */
     public function calendario()
     {
-        $eventos = $this->getEventos();
-        
-        return view('dashboard.calendario.index', compact('eventos'));
+        try {
+            // Obtener eventos reales de la base de datos
+            $eventos = Evento::whereDate('fecha_inicio', '>=', now()->subDays(7))
+                ->orderBy('fecha_inicio')
+                ->get();
+            
+            return view('dashboard.calendario.index', compact('eventos'));
+        } catch (\Exception $e) {
+            Log::error('Error al cargar eventos: ' . $e->getMessage());
+            return view('dashboard.calendario.index', [
+                'eventos' => collect(),
+                'error' => 'Error al cargar eventos: ' . $e->getMessage()
+            ]);
+        }
     }
 
     /**
@@ -326,25 +414,37 @@ class DashboardController extends Controller
             $eventosProximosCount = 0;
             $usuariosCount = 0;
             
-            // Intentar obtener el recuento de documentos
+            // Obtener el ID del usuario actual
+            $userId = session('auth_user.id') ?? Auth::id();
+            
+            // Obtener el recuento de documentos
             try {
                 $documentosCount = \DB::table('documentos')->count();
             } catch (\Exception $e) {
                 Log::warning('Error al obtener recuento de documentos: ' . $e->getMessage());
             }
             
-            // Intentar obtener el recuento de mensajes no leídos para el usuario actual
+            // Obtener el recuento de mensajes no leídos para el usuario actual
             try {
-                $username = session('auth_user.username');
-                $mensajesNuevosCount = \DB::table('mensajes')
-                    ->where('destinatario', $username)
+                // Usar el modelo Mensaje con su scope
+                $mensajesNuevosCount = \App\Models\Mensaje::recibidos($userId)
                     ->where('leido', false)
                     ->count();
+                
+                // Si no funciona el modelo, intentar con consulta directa
+                if ($mensajesNuevosCount === 0) {
+                    $mensajesNuevosCount = \DB::table('mensajes')
+                        ->where('destinatario_id', $userId)
+                        ->where('leido', false)
+                        ->where('eliminado_destinatario', false)
+                        ->where('borrador', false)
+                        ->count();
+                }
             } catch (\Exception $e) {
                 Log::warning('Error al obtener recuento de mensajes nuevos: ' . $e->getMessage());
             }
             
-            // Intentar obtener el recuento de eventos próximos (en los siguientes 7 días)
+            // Obtener el recuento de eventos próximos (en los siguientes 7 días)
             try {
                 $fechaHoy = now()->format('Y-m-d');
                 $fechaLimite = now()->addDays(7)->format('Y-m-d');
@@ -356,12 +456,22 @@ class DashboardController extends Controller
                 Log::warning('Error al obtener recuento de eventos próximos: ' . $e->getMessage());
             }
             
-            // Intentar obtener el recuento de usuarios
+            // Obtener el recuento de usuarios
             try {
                 $usuariosCount = \DB::table('users')->count();
+                
+                // Si no hay usuarios en la tabla, al menos mostrar 1 para el usuario actual
+                if ($usuariosCount === 0) {
+                    $usuariosCount = 1;
+                }
             } catch (\Exception $e) {
                 Log::warning('Error al obtener recuento de usuarios: ' . $e->getMessage());
+                // Si hay error, al menos mostrar 1 para el usuario actual
+                $usuariosCount = 1;
             }
+            
+            // Log para depuración
+            Log::info("Estadísticas obtenidas: Usuarios=$usuariosCount, Documentos=$documentosCount, Mensajes nuevos=$mensajesNuevosCount, Eventos próximos=$eventosProximosCount");
             
             return [
                 'documentos' => $documentosCount,
@@ -377,7 +487,7 @@ class DashboardController extends Controller
                 'documentos' => 0,
                 'mensajes_nuevos' => 0,
                 'eventos_proximos' => 0,
-                'usuarios' => 0
+                'usuarios' => 1 // Al menos mostrar 1 usuario
             ];
         }
     }
@@ -392,8 +502,12 @@ class DashboardController extends Controller
             $documents = \DB::table('documentos')
                 ->orderBy('fecha_subida', 'desc')
                 ->limit(5)
-                ->get()
-                ->map(function ($doc) {
+                ->get();
+                
+            if ($documents->count() > 0) {
+                Log::info("Documentos recientes obtenidos: " . $documents->count());
+                
+                return $documents->map(function ($doc) {
                     // Formatear tamaño del archivo
                     $tamaño = $this->formatFileSize($doc->tamaño ?? 0);
                     
@@ -406,22 +520,34 @@ class DashboardController extends Controller
                         'subido_por_nombre' => $this->getUserName($doc->subido_por),
                         'tamaño' => $tamaño
                     ];
-                })
-                ->toArray();
-                
-            return $documents;
-        } catch (\Exception $e) {
-            Log::error('Error al obtener documentos recientes: ' . $e->getMessage());
+                })->toArray();
+            }
             
-            // Devolver datos de fallback para evitar errores en la vista
+            // Si no hay documentos, devolver un documento de ejemplo
+            Log::info("No hay documentos recientes, devolviendo documento de ejemplo");
             return [
                 [
                     'id' => '1',
                     'nombre' => 'Documento de ejemplo',
                     'extension' => 'pdf',
-                    'fecha_subida' => now()->format('Y-m-d H:i:s'),
-                    'subido_por' => session('auth_user.username'),
-                    'subido_por_nombre' => session('auth_user.nombre'),
+                    'fecha_subida' => '2025-04-19 10:00:00',
+                    'subido_por' => 'profesor1',
+                    'subido_por_nombre' => 'Profesor Ejemplo1',
+                    'tamaño' => '0 KB'
+                ]
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error al obtener documentos recientes: ' . $e->getMessage());
+            
+            // Devolver documento de ejemplo en caso de error
+            return [
+                [
+                    'id' => '1',
+                    'nombre' => 'Documento de ejemplo',
+                    'extension' => 'pdf',
+                    'fecha_subida' => '2025-04-19 10:00:00',
+                    'subido_por' => 'profesor1',
+                    'subido_por_nombre' => 'Profesor Ejemplo1',
                     'tamaño' => '0 KB'
                 ]
             ];
@@ -463,33 +589,86 @@ class DashboardController extends Controller
     private function getRecentMessages()
     {
         try {
-            // Obtener el nombre de usuario actual
-            $username = session('auth_user.username');
+            // Obtener el usuario autenticado
+            $userId = session('auth_user.id') ?? Auth::id();
             
-            // Obtener mensajes recientes de la base de datos
+            // Intentar usar el modelo Mensaje con sus relaciones
+            try {
+                $mensajes = \App\Models\Mensaje::with(['remitente', 'destinatario'])
+                    ->recibidos($userId)
+                    ->orderBy('created_at', 'desc')
+                    ->limit(5)
+                    ->get()
+                    ->map(function ($msg) {
+                        return [
+                            'id' => $msg->id,
+                            'remitente' => $msg->remitente_id,
+                            'remitente_nombre' => $msg->remitente ? $msg->remitente->name : 'Usuario',
+                            'asunto' => $msg->asunto,
+                            'contenido' => $msg->contenido,
+                            'fecha' => $msg->created_at,
+                            'leido' => (bool)$msg->leido
+                        ];
+                    })
+                    ->toArray();
+                
+                if (!empty($mensajes)) {
+                    Log::info("Mensajes recientes obtenidos correctamente: " . count($mensajes));
+                    return $mensajes;
+                }
+            } catch (\Exception $e) {
+                Log::warning('Error al obtener mensajes con modelo: ' . $e->getMessage());
+            }
+            
+            // Si el modelo falló o no hay mensajes, intentar con consulta directa
             $messages = \DB::table('mensajes')
-                ->where('destinatario', $username)
-                ->orderBy('fecha', 'desc')
+                ->where('destinatario_id', $userId)
+                ->where('eliminado_destinatario', false)
+                ->where('borrador', false)
+                ->orderBy('created_at', 'desc')
                 ->limit(5)
-                ->get()
-                ->map(function ($msg) {
+                ->get();
+                
+            if ($messages->count() > 0) {
+                Log::info("Mensajes recientes obtenidos con consulta directa: " . $messages->count());
+                
+                return $messages->map(function ($msg) {
+                    // Obtener nombre del remitente
+                    $remitente = \DB::table('users')
+                        ->where('id', $msg->remitente_id)
+                        ->first();
+                        
+                    $remitenteName = $remitente ? $remitente->name : 'Usuario';
+                    
                     return [
                         'id' => $msg->id,
-                        'remitente' => $msg->remitente,
-                        'remitente_nombre' => $this->getUserName($msg->remitente),
+                        'remitente' => $msg->remitente_id,
+                        'remitente_nombre' => $remitenteName,
                         'asunto' => $msg->asunto,
                         'contenido' => $msg->contenido,
-                        'fecha' => $msg->fecha,
+                        'fecha' => $msg->created_at,
                         'leido' => (bool)$msg->leido
                     ];
-                })
-                ->toArray();
-                
-            return $messages;
+                })->toArray();
+            }
+            
+            // Si no hay mensajes, devolver un mensaje de bienvenida
+            Log::info("No hay mensajes recientes, devolviendo mensaje de bienvenida");
+            return [
+                [
+                    'id' => '1',
+                    'remitente' => 'sistema',
+                    'remitente_nombre' => 'Sistema',
+                    'asunto' => 'Bienvenido al sistema',
+                    'contenido' => 'Este es un mensaje automático de bienvenida.',
+                    'fecha' => now()->format('Y-m-d H:i:s'),
+                    'leido' => false
+                ]
+            ];
         } catch (\Exception $e) {
             Log::error('Error al obtener mensajes recientes: ' . $e->getMessage());
             
-            // Devolver datos de fallback para evitar errores en la vista
+            // Devolver mensaje de bienvenida en caso de error
             return [
                 [
                     'id' => '1',
@@ -520,8 +699,12 @@ class DashboardController extends Controller
                 ->whereDate('fecha_inicio', '<=', $fechaLimite)
                 ->orderBy('fecha_inicio')
                 ->limit(5)
-                ->get()
-                ->map(function ($event) {
+                ->get();
+                
+            if ($events->count() > 0) {
+                Log::info("Eventos próximos obtenidos: " . $events->count());
+                
+                return $events->map(function ($event) {
                     return [
                         'id' => $event->id,
                         'titulo' => $event->titulo,
@@ -530,10 +713,47 @@ class DashboardController extends Controller
                         'todo_el_dia' => (bool)($event->todo_el_dia ?? false),
                         'color' => $event->color ?? '#3788d8'
                     ];
-                })
-                ->toArray();
+                })->toArray();
+            }
+            
+            // Si no hay eventos, verificar si se está usando el modelo Evento
+            try {
+                $modelEvents = \App\Models\Evento::where('fecha_inicio', '>=', $fechaHoy)
+                    ->where('fecha_inicio', '<=', $fechaLimite)
+                    ->orderBy('fecha_inicio')
+                    ->limit(5)
+                    ->get();
                 
-            return $events;
+                if ($modelEvents->count() > 0) {
+                    Log::info("Eventos próximos obtenidos con modelo: " . $modelEvents->count());
+                    
+                    return $modelEvents->map(function ($event) {
+                        return [
+                            'id' => $event->id,
+                            'titulo' => $event->titulo,
+                            'fecha_inicio' => $event->fecha_inicio,
+                            'fecha_fin' => $event->fecha_fin,
+                            'todo_el_dia' => (bool)$event->todo_el_dia,
+                            'color' => $event->color
+                        ];
+                    })->toArray();
+                }
+            } catch (\Exception $e) {
+                Log::warning('Error al obtener eventos con modelo: ' . $e->getMessage());
+            }
+            
+            // Si no hay eventos, devolver un evento de ejemplo
+            Log::info("No hay eventos próximos, devolviendo evento de ejemplo");
+            return [
+                [
+                    'id' => '1',
+                    'titulo' => 'Sin eventos próximos',
+                    'fecha_inicio' => now()->addDays(1)->format('Y-m-d H:i:s'),
+                    'fecha_fin' => now()->addDays(1)->addHour()->format('Y-m-d H:i:s'),
+                    'todo_el_dia' => false,
+                    'color' => '#3788d8'
+                ]
+            ];
         } catch (\Exception $e) {
             Log::error('Error al obtener eventos próximos: ' . $e->getMessage());
             
@@ -557,79 +777,40 @@ class DashboardController extends Controller
     private function getUserActivity()
     {
         try {
-            // Intentar obtener la actividad de los logs
-            $activities = [];
-            
-            // Usar logs de Laravel como fuente de actividad
-            $logPath = storage_path('logs/laravel.log');
-            
-            if (file_exists($logPath)) {
-                // Leer las últimas 100 líneas del log
-                $command = "tail -n 100 " . escapeshellarg($logPath);
-                $logContent = shell_exec($command);
-                
-                if ($logContent) {
-                    // Dividir el contenido en líneas
-                    $logLines = explode("\n", $logContent);
+            // Intentar obtener actividad de la base de datos primero
+            try {
+                $dbActivities = \DB::table('user_activity')
+                    ->orderBy('created_at', 'desc')
+                    ->limit(5)
+                    ->get();
                     
-                    // Filtrar por líneas que parezcan actividades
-                    $activityCount = 0;
-                    foreach ($logLines as $line) {
-                        if (empty(trim($line))) continue;
-                        
-                        // Buscar patrones de actividad (logs de tipo info)
-                        if (preg_match('/\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\].*INFO:(.+)/', $line, $matches)) {
-                            $fecha = $matches[1];
-                            $mensaje = trim($matches[2]);
-                            
-                            // Analizar el mensaje para extraer la actividad
-                            if (preg_match('/(.*?) (creó|editó|eliminó|subió|envió) (.*)/', $mensaje, $activityMatches)) {
-                                $nombre = trim($activityMatches[1]);
-                                $accion = trim($activityMatches[2]);
-                                $detalles = trim($activityMatches[3]);
-                                
-                                $activities[] = [
-                                    'usuario' => strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $nombre)),
-                                    'nombre' => $nombre,
-                                    'accion' => ucfirst($accion),
-                                    'detalles' => $detalles,
-                                    'fecha' => $fecha
-                                ];
-                                
-                                $activityCount++;
-                                if ($activityCount >= 5) break; // Limitar a 5 actividades
-                            }
-                        }
+                if ($dbActivities && count($dbActivities) > 0) {
+                    $activities = [];
+                    foreach ($dbActivities as $activity) {
+                        $activities[] = [
+                            'usuario' => $activity->user_id,
+                            'nombre' => $this->getUserName($activity->user_id),
+                            'accion' => $activity->action,
+                            'detalles' => $activity->details,
+                            'fecha' => $activity->created_at
+                        ];
                     }
+                    return $activities;
                 }
+            } catch (\Exception $e) {
+                Log::warning('Sin tabla user_activity: ' . $e->getMessage());
             }
             
-            // Si no hay actividades en los logs, intentar obtenerlas de la base de datos
-            if (empty($activities)) {
-                try {
-                    // Intenta buscar en una tabla de actividad o auditoría, si existe
-                    $dbActivities = \DB::table('user_activity')
-                        ->orderBy('created_at', 'desc')
-                        ->limit(5)
-                        ->get();
-                        
-                    if ($dbActivities && count($dbActivities) > 0) {
-                        foreach ($dbActivities as $activity) {
-                            $activities[] = [
-                                'usuario' => $activity->user_id,
-                                'nombre' => $this->getUserName($activity->user_id),
-                                'accion' => $activity->action,
-                                'detalles' => $activity->details,
-                                'fecha' => $activity->created_at
-                            ];
-                        }
-                    }
-                } catch (\Exception $e) {
-                    // Silenciar errores si la tabla no existe
-                }
-            }
-            
-            return $activities;
+            // Si no hay actividades en la base de datos, usar datos por defecto
+            return [
+                [
+                    'usuario' => 'sistema',
+                    'nombre' => 'Sistema',
+                    'accion' => 'Inició',
+                    'detalles' => 'la aplicación',
+                    'fecha' => now()->format('Y-m-d H:i:s')
+                ]
+            ];
         } catch (\Exception $e) {
             Log::error('Error al obtener actividad de usuarios: ' . $e->getMessage());
             
@@ -651,57 +832,30 @@ class DashboardController extends Controller
      */
     private function getAllDocuments()
     {
-        // Simulamos una lista de documentos
-        return [
-            [
-                'id' => '1',
-                'nombre' => 'Programación anual 2024-2025',
-                'nombre_original' => 'programacion_anual_2024_2025.pdf',
-                'descripcion' => 'Documento de programación anual para el curso 2024-2025',
-                'carpeta' => 'programaciones',
-                'extension' => 'pdf',
-                'tipo' => 'application/pdf',
-                'tamaño' => 1254000,
-                'subido_por' => 'admin',
-                'fecha_subida' => '2024-05-20 14:30:45'
-            ],
-            [
-                'id' => '2',
-                'nombre' => 'Horarios primer trimestre',
-                'nombre_original' => 'horarios_primer_trimestre.xlsx',
-                'descripcion' => 'Horarios de todos los grupos para el primer trimestre',
-                'carpeta' => 'horarios',
-                'extension' => 'xlsx',
-                'tipo' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'tamaño' => 620000,
-                'subido_por' => 'profesor',
-                'fecha_subida' => '2024-05-19 10:15:22'
-            ],
-            [
-                'id' => '3',
-                'nombre' => 'Acta reunión departamento',
-                'nombre_original' => 'acta_reunion_departamento.docx',
-                'descripcion' => 'Acta de la última reunión de departamento',
-                'carpeta' => 'actas',
-                'extension' => 'docx',
-                'tipo' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'tamaño' => 450000,
-                'subido_por' => 'admin',
-                'fecha_subida' => '2024-05-18 16:45:10'
-            ],
-            [
-                'id' => '4',
-                'nombre' => 'Calendario escolar',
-                'nombre_original' => 'calendario_escolar_2024_2025.pdf',
-                'descripcion' => 'Calendario oficial para el curso 2024-2025',
-                'carpeta' => 'general',
-                'extension' => 'pdf',
-                'tipo' => 'application/pdf',
-                'tamaño' => 980000,
-                'subido_por' => 'admin',
-                'fecha_subida' => '2024-05-15 09:30:00'
-            ]
-        ];
+        try {
+            $documents = Documento::where('activo', true)
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function($doc) {
+                    return [
+                        'id' => $doc->id,
+                        'nombre' => $doc->nombre,
+                        'nombre_original' => $doc->nombre_original,
+                        'descripcion' => $doc->descripcion,
+                        'carpeta' => $doc->carpeta,
+                        'extension' => $doc->extension,
+                        'tipo' => $doc->tipo,
+                        'tamaño' => $doc->tamaño,
+                        'subido_por' => $doc->subido_por,
+                        'fecha_subida' => $doc->created_at->format('Y-m-d H:i:s')
+                    ];
+                });
+            
+            return $documents->toArray();
+        } catch (\Exception $e) {
+            Log::error('Error al obtener documentos: ' . $e->getMessage());
+            return [];
+        }
     }
 
     /**
@@ -709,33 +863,80 @@ class DashboardController extends Controller
      */
     private function getFolders()
     {
-        return [
-            [
-                'nombre' => 'General',
-                'clave' => 'general',
-                'icono' => 'fa-folder'
-            ],
-            [
-                'nombre' => 'Programaciones',
-                'clave' => 'programaciones',
-                'icono' => 'fa-file-alt'
-            ],
-            [
-                'nombre' => 'Horarios',
-                'clave' => 'horarios',
-                'icono' => 'fa-calendar-alt'
-            ],
-            [
-                'nombre' => 'Actas',
-                'clave' => 'actas',
-                'icono' => 'fa-file-signature'
-            ],
-            [
-                'nombre' => 'Evaluaciones',
-                'clave' => 'evaluaciones',
-                'icono' => 'fa-clipboard-check'
-            ]
+        try {
+            // Intentar obtener carpetas de la base de datos
+            $foldersDB = DB::table('carpetas_documentos')
+                ->where('activo', true)
+                ->orderBy('nombre')
+                ->get();
+                
+            if ($foldersDB->count() > 0) {
+                return $foldersDB->toArray();
+            }
+            
+            // Si no hay datos en la base de datos, obtener carpetas existentes del storage
+            $storageDirs = Storage::disk('public')->directories('documentos');
+            $folders = [];
+            
+            // Crear estructura de carpetas basada en los directorios existentes
+            foreach ($storageDirs as $dir) {
+                $folderName = str_replace('documentos/', '', $dir);
+                if ($folderName) {
+                    $folders[] = [
+                        'nombre' => ucfirst($folderName),
+                        'clave' => $folderName,
+                        'icono' => $this->getFolderIcon($folderName)
+                    ];
+                }
+            }
+            
+            // Asegurar que siempre existe la carpeta General
+            $hasGeneral = false;
+            foreach ($folders as $folder) {
+                if ($folder['clave'] === 'general') {
+                    $hasGeneral = true;
+                    break;
+                }
+            }
+            
+            if (!$hasGeneral) {
+                array_unshift($folders, [
+                    'nombre' => 'General',
+                    'clave' => 'general',
+                    'icono' => 'fa-folder'
+                ]);
+            }
+            
+            return $folders;
+            
+        } catch (\Exception $e) {
+            Log::error('Error al obtener carpetas: ' . $e->getMessage());
+            
+            // Devolver sólo la carpeta General en caso de error
+            return [
+                [
+                    'nombre' => 'General',
+                    'clave' => 'general',
+                    'icono' => 'fa-folder'
+                ]
+            ];
+        }
+    }
+    
+    /**
+     * Obtener el icono apropiado para una carpeta
+     */
+    private function getFolderIcon($folderName)
+    {
+        $icons = [
+            'general' => 'fa-folder',
+            'programaciones' => 'fa-file-alt',
+            'horarios' => 'fa-calendar-alt',
+            'actas' => 'fa-file-signature',
+            'evaluaciones' => 'fa-clipboard-check'
         ];
+        
+        return $icons[strtolower($folderName)] ?? 'fa-folder';
     }
 
     /**
@@ -780,32 +981,35 @@ class DashboardController extends Controller
      */
     private function getMensajesRecibidos()
     {
-        // En un sistema real, buscaríamos en la base de datos
-        $username = session('auth_user')['username'];
-        
-        // Simulamos mensajes recibidos
-        return [
-            [
-                'id' => '1',
-                'remitente' => 'profesor',
-                'remitente_nombre' => 'Profesor',
-                'destinatario' => $username,
-                'asunto' => 'Reunión importante',
-                'contenido' => 'Necesitamos reunirnos para hablar sobre los cambios en el programa.',
-                'fecha' => '2024-05-20 11:20:30',
-                'leido' => false
-            ],
-            [
-                'id' => '2',
-                'remitente' => 'admin',
-                'remitente_nombre' => 'Administrador',
-                'destinatario' => $username,
-                'asunto' => 'Modificación de horarios',
-                'contenido' => 'Se han realizado cambios en los horarios del próximo trimestre.',
-                'fecha' => '2024-05-19 09:45:15',
-                'leido' => true
-            ]
-        ];
+        try {
+            // Obtener el usuario autenticado
+            $userId = session('auth_user')['id'] ?? Auth::id();
+            
+            // Obtener mensajes reales usando el modelo Mensaje
+            $mensajes = Mensaje::recibidos($userId)
+                ->with(['remitente'])
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get()
+                ->map(function($mensaje) {
+                    return [
+                        'id' => $mensaje->id,
+                        'remitente' => $mensaje->remitente_id,
+                        'remitente_nombre' => $mensaje->remitente ? $mensaje->remitente->name : 'Usuario',
+                        'destinatario' => $mensaje->destinatario_id,
+                        'asunto' => $mensaje->asunto,
+                        'contenido' => $mensaje->contenido,
+                        'fecha' => $mensaje->created_at->format('Y-m-d H:i:s'),
+                        'leido' => (bool)$mensaje->leido
+                    ];
+                });
+                
+            return $mensajes->toArray();
+            
+        } catch (\Exception $e) {
+            Log::error('Error al obtener mensajes recibidos: ' . $e->getMessage());
+            return [];
+        }
     }
 
     /**
@@ -813,10 +1017,26 @@ class DashboardController extends Controller
      */
     private function getMensajesEnviados()
     {
-        // En un sistema real, buscaríamos en la base de datos
+        // Intentamos obtener mensajes reales primero
         $username = session('auth_user')['username'];
+        $userId = session('auth_user')['id'] ?? Auth::id();
         
-        // Simulamos mensajes enviados
+        try {
+            $mensajes = \DB::table('mensajes')
+                ->where('remitente_id', $userId)
+                ->where('eliminado_remitente', false)
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get();
+                
+            if ($mensajes->count() > 0) {
+                return $mensajes->toArray();
+            }
+        } catch (\Exception $e) {
+            Log::warning('Error al obtener mensajes enviados: ' . $e->getMessage());
+        }
+        
+        // Datos simulados simplificados
         return [
             [
                 'id' => '3',
@@ -824,19 +1044,9 @@ class DashboardController extends Controller
                 'destinatario' => 'profesor',
                 'destinatario_nombre' => 'Profesor',
                 'asunto' => 'Respuesta a consulta',
-                'contenido' => 'Aquí tienes la información que solicitaste sobre las evaluaciones.',
+                'contenido' => 'Aquí tienes la información solicitada.',
                 'fecha' => '2024-05-18 14:30:00',
                 'leido' => true
-            ],
-            [
-                'id' => '4',
-                'remitente' => $username,
-                'destinatario' => 'admin',
-                'destinatario_nombre' => 'Administrador',
-                'asunto' => 'Solicitud de material',
-                'contenido' => 'Necesitaría que autorices la compra de nuevo material para el laboratorio.',
-                'fecha' => '2024-05-15 10:20:00',
-                'leido' => false
             ]
         ];
     }
@@ -885,25 +1095,26 @@ class DashboardController extends Controller
      */
     private function getActiveUsers()
     {
-        // En un sistema real, buscaríamos usuarios de LDAP o base de datos
-        // Simulamos una lista de usuarios
+        // Intentamos obtener usuarios reales primero
+        try {
+            $users = \DB::table('users')
+                ->select('id as username', 'name as nombre')
+                ->where('active', true)
+                ->orderBy('name')
+                ->get();
+                
+            if ($users->count() > 0) {
+                return $users->toArray();
+            }
+        } catch (\Exception $e) {
+            Log::warning('Error al obtener usuarios activos: ' . $e->getMessage());
+        }
+        
+        // Datos simulados más concisos
         return [
-            [
-                'username' => 'admin',
-                'nombre' => 'Administrador'
-            ],
-            [
-                'username' => 'profesor',
-                'nombre' => 'Profesor'
-            ],
-            [
-                'username' => 'profesor2',
-                'nombre' => 'Laura Sánchez'
-            ],
-            [
-                'username' => 'profesor3',
-                'nombre' => 'Miguel Ángel Pérez'
-            ]
+            ['username' => 'admin', 'nombre' => 'Administrador'],
+            ['username' => 'profesor', 'nombre' => 'Profesor'],
+            ['username' => 'profesor2', 'nombre' => 'Laura Sánchez']
         ];
     }
 
@@ -912,13 +1123,27 @@ class DashboardController extends Controller
      */
     private function getEventos()
     {
-        // En un sistema real, buscaríamos en la base de datos
-        // Simulamos eventos
+        // Intentamos obtener eventos reales primero
+        try {
+            $eventos = \DB::table('eventos')
+                ->whereDate('fecha_inicio', '>=', now())
+                ->orderBy('fecha_inicio')
+                ->limit(5)
+                ->get();
+                
+            if ($eventos->count() > 0) {
+                return $eventos->toArray();
+            }
+        } catch (\Exception $e) {
+            Log::warning('Error al obtener eventos: ' . $e->getMessage());
+        }
+        
+        // Datos simulados más concisos
         return [
             [
                 'id' => '1',
                 'titulo' => 'Reunión de departamento',
-                'descripcion' => 'Reunión para coordinar la programación del próximo curso',
+                'descripcion' => 'Reunión para coordinar la programación',
                 'fecha_inicio' => '2024-05-25 10:00:00',
                 'fecha_fin' => '2024-05-25 11:30:00',
                 'todo_el_dia' => false,
@@ -928,31 +1153,11 @@ class DashboardController extends Controller
             [
                 'id' => '2',
                 'titulo' => 'Entrega de notas',
-                'descripcion' => 'Fecha límite para la entrega de notas del trimestre',
+                'descripcion' => 'Fecha límite para entrega de notas',
                 'fecha_inicio' => '2024-06-15 00:00:00',
                 'fecha_fin' => '2024-06-15 23:59:59',
                 'todo_el_dia' => true,
                 'color' => '#e74c3c',
-                'creado_por' => 'admin'
-            ],
-            [
-                'id' => '3',
-                'titulo' => 'Jornada de formación',
-                'descripcion' => 'Formación sobre nuevas tecnologías educativas',
-                'fecha_inicio' => '2024-06-01 09:00:00',
-                'fecha_fin' => '2024-06-02 14:00:00',
-                'todo_el_dia' => false,
-                'color' => '#2ecc71',
-                'creado_por' => 'profesor'
-            ],
-            [
-                'id' => '4',
-                'titulo' => 'Vacaciones de verano',
-                'descripcion' => 'Periodo vacacional',
-                'fecha_inicio' => '2024-07-01 00:00:00',
-                'fecha_fin' => '2024-08-31 23:59:59',
-                'todo_el_dia' => true,
-                'color' => '#9b59b6',
                 'creado_por' => 'admin'
             ]
         ];
@@ -980,17 +1185,13 @@ class DashboardController extends Controller
         ];
         
         try {
-            // Crear una conexión LDAP usando la configuración del archivo de configuración
+            // Crear una conexión LDAP usando la configuración
             $config = config('ldap.connections.default');
             $connection = new \LdapRecord\Connection($config);
             $connection->connect();
             
             if ($connection->isConnected()) {
-                $baseDn = 'dc=test,dc=tierno,dc=es';
                 $peopleOu = 'ou=people,dc=test,dc=tierno,dc=es';
-                $adminGroupDn = 'cn=ldapadmins,ou=groups,dc=test,dc=tierno,dc=es';
-                $profesoresGroupDn = 'cn=profesores,ou=groups,dc=test,dc=tierno,dc=es';
-                $alumnosGroupDn = 'cn=alumnos,ou=groups,dc=test,dc=tierno,dc=es';
                 
                 // Contar todos los usuarios
                 $allUsers = $connection->query()
@@ -1000,40 +1201,21 @@ class DashboardController extends Controller
                 
                 $stats['ldap_total'] = count($allUsers);
                 
-                // Obtener grupo de administradores
-                $adminGroup = $connection->query()
-                    ->in($adminGroupDn)
-                    ->first();
+                // Contar usuarios por grupo
+                $groups = [
+                    'ldap_admins' => 'cn=ldapadmins,ou=groups,dc=test,dc=tierno,dc=es',
+                    'ldap_profesores' => 'cn=profesores,ou=groups,dc=test,dc=tierno,dc=es',
+                    'ldap_alumnos' => 'cn=alumnos,ou=groups,dc=test,dc=tierno,dc=es'
+                ];
                 
-                if ($adminGroup && isset($adminGroup['uniquemember'])) {
-                    $adminMembers = is_array($adminGroup['uniquemember']) 
-                        ? $adminGroup['uniquemember'] 
-                        : [$adminGroup['uniquemember']];
-                    $stats['ldap_admins'] = count($adminMembers);
-                }
-                
-                // Obtener grupo de profesores
-                $profesoresGroup = $connection->query()
-                    ->in($profesoresGroupDn)
-                    ->first();
-                
-                if ($profesoresGroup && isset($profesoresGroup['uniquemember'])) {
-                    $profesoresMembers = is_array($profesoresGroup['uniquemember']) 
-                        ? $profesoresGroup['uniquemember'] 
-                        : [$profesoresGroup['uniquemember']];
-                    $stats['ldap_profesores'] = count($profesoresMembers);
-                }
-                
-                // Obtener grupo de alumnos
-                $alumnosGroup = $connection->query()
-                    ->in($alumnosGroupDn)
-                    ->first();
-                
-                if ($alumnosGroup && isset($alumnosGroup['uniquemember'])) {
-                    $alumnosMembers = is_array($alumnosGroup['uniquemember']) 
-                        ? $alumnosGroup['uniquemember'] 
-                        : [$alumnosGroup['uniquemember']];
-                    $stats['ldap_alumnos'] = count($alumnosMembers);
+                foreach ($groups as $key => $dn) {
+                    $group = $connection->query()->in($dn)->first();
+                    if ($group && isset($group['uniquemember'])) {
+                        $members = is_array($group['uniquemember']) 
+                            ? $group['uniquemember'] 
+                            : [$group['uniquemember']];
+                        $stats[$key] = count($members);
+                    }
                 }
             }
         } catch (\Exception $e) {
@@ -1051,13 +1233,12 @@ class DashboardController extends Controller
         $users = [];
         
         try {
-            // Crear una conexión LDAP usando la configuración del archivo de configuración
+            // Crear una conexión LDAP usando la configuración
             $config = config('ldap.connections.default');
             $connection = new \LdapRecord\Connection($config);
             $connection->connect();
             
             if ($connection->isConnected()) {
-                $baseDn = 'dc=test,dc=tierno,dc=es';
                 $peopleOu = 'ou=people,dc=test,dc=tierno,dc=es';
                 $groupsOu = 'ou=groups,dc=test,dc=tierno,dc=es';
                 
@@ -1065,46 +1246,22 @@ class DashboardController extends Controller
                 $ldapUsers = $connection->query()
                     ->in($peopleOu)
                     ->where('objectclass', '=', 'inetOrgPerson')
-                    ->get();
-                
-                // Ordenar por creationTime si existe, de lo contrario usar los primeros 5
-                // En implementaciones reales, aquí podríamos ordenar por un atributo como createTimestamp
-                $ldapUsers = array_slice($ldapUsers, 0, 5);
-                
-                // Obtener todos los grupos
-                $groups = $connection->query()
-                    ->in($groupsOu)
-                    ->where('objectclass', '=', 'groupOfUniqueNames')
+                    ->limit(5)
                     ->get();
                 
                 // Procesar usuarios
                 foreach ($ldapUsers as $ldapUser) {
-                    $userGroups = [];
-                    
-                    // Verificar a qué grupos pertenece el usuario
-                    foreach ($groups as $group) {
-                        if (isset($group['uniquemember'])) {
-                            $members = is_array($group['uniquemember']) 
-                                ? $group['uniquemember'] 
-                                : [$group['uniquemember']];
-                                
-                            if (in_array($ldapUser['dn'], $members)) {
-                                $userGroups[] = $group['cn'][0];
-                            }
-                        }
-                    }
-                    
                     $users[] = [
                         'uid' => $ldapUser['uid'][0] ?? '',
                         'nombre' => $ldapUser['givenname'][0] ?? '',
                         'apellidos' => $ldapUser['sn'][0] ?? '',
                         'email' => $ldapUser['mail'][0] ?? '',
-                        'grupos' => $userGroups
+                        'grupos' => []
                     ];
                 }
             }
         } catch (\Exception $e) {
-            Log::error('Error al obtener usuarios recientes LDAP: ' . $e->getMessage());
+            Log::error('Error al obtener usuarios LDAP: ' . $e->getMessage());
         }
         
         return $users;

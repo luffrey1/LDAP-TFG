@@ -58,18 +58,63 @@
                 
                 <!-- Destinatarios -->
                 <div class="form-group">
-                    <label for="destinatarios">Para:</label>
-                    <select class="selectpicker form-control" id="destinatarios" name="destinatarios[]" data-live-search="true" multiple data-actions-box="true" required>
-                        @foreach($usuarios as $usuario)
-                            <option value="{{ $usuario['id'] }}" 
-                                @if(isset($destinatarios_seleccionados) && in_array($usuario['id'], $destinatarios_seleccionados)) selected @endif
-                                data-subtext="{{ $usuario['email'] }}">
-                                {{ $usuario['nombre'] }}
-                                @if(isset($usuario['departamento'])) ({{ $usuario['departamento'] }}) @endif
-                            </option>
-                        @endforeach
+                    <label for="destinatario">Para:</label>
+                    <select class="form-control" id="destinatario" name="destinatario" required>
+                        <option value="">Seleccione un destinatario</option>
+                        
+                        <!-- Grupos -->
+                        @if(isset($usuariosAgrupados['grupos']) && count($usuariosAgrupados['grupos']) > 0)
+                            <optgroup label="Grupos">
+                                @foreach($usuariosAgrupados['grupos'] as $grupo)
+                                    <option value="{{ $grupo['id'] }}">{{ $grupo['nombre'] }}</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+                        
+                        <!-- Profesores -->
+                        @if(isset($usuariosAgrupados['profesores']) && count($usuariosAgrupados['profesores']) > 0)
+                            <optgroup label="Profesores">
+                                @foreach($usuariosAgrupados['profesores'] as $profesor)
+                                    <option value="{{ $profesor['id'] }}">{{ $profesor['name'] }} ({{ $profesor['email'] }})</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+                        
+                        <!-- Alumnos -->
+                        @if(isset($usuariosAgrupados['alumnos']) && count($usuariosAgrupados['alumnos']) > 0)
+                            <optgroup label="Alumnos">
+                                @foreach($usuariosAgrupados['alumnos'] as $alumno)
+                                    <option value="{{ $alumno['id'] }}">{{ $alumno['name'] }} ({{ $alumno['email'] }})</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+                        
+                        <!-- Administradores -->
+                        @if(isset($usuariosAgrupados['admins']) && count($usuariosAgrupados['admins']) > 0)
+                            <optgroup label="Administradores">
+                                @foreach($usuariosAgrupados['admins'] as $admin)
+                                    <option value="{{ $admin['id'] }}">{{ $admin['name'] }} ({{ $admin['email'] }})</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+                        
+                        <!-- Otros usuarios -->
+                        @if(isset($usuariosAgrupados['otros']) && count($usuariosAgrupados['otros']) > 0)
+                            <optgroup label="Otros usuarios">
+                                @foreach($usuariosAgrupados['otros'] as $otro)
+                                    <option value="{{ $otro['id'] }}">{{ $otro['name'] }} ({{ $otro['email'] }})</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+                        
+                        <!-- Mostrar todos los usuarios si no hay agrupación -->
+                        @if(!isset($usuariosAgrupados))
+                            @foreach($usuarios as $usuario)
+                                <option value="{{ $usuario['id'] }}">{{ $usuario['name'] }} ({{ $usuario['email'] }})</option>
+                            @endforeach
+                        @endif
                     </select>
-                    <small class="text-muted">Busque y seleccione uno o más destinatarios</small>
+                    <small class="text-muted">Seleccione un destinatario individual o un grupo</small>
                 </div>
                 
                 <!-- CC -->
@@ -79,17 +124,41 @@
                         <a href="#" class="text-muted small toggle-cc">Mostrar CC</a>
                     </label>
                     <div class="cc-field d-none">
-                        <select class="selectpicker form-control" id="cc" name="cc[]" data-live-search="true" multiple data-actions-box="true">
-                            @foreach($usuarios as $usuario)
-                                <option value="{{ $usuario['id'] }}" 
-                                    @if(isset($cc_seleccionados) && in_array($usuario['id'], $cc_seleccionados)) selected @endif
-                                    data-subtext="{{ $usuario['email'] }}">
-                                    {{ $usuario['nombre'] }}
-                                    @if(isset($usuario['departamento'])) ({{ $usuario['departamento'] }}) @endif
-                                </option>
-                            @endforeach
+                        <select class="form-control" id="cc" name="cc[]" multiple>
+                            @if(isset($usuariosAgrupados))
+                                <!-- Profesores -->
+                                @if(isset($usuariosAgrupados['profesores']) && count($usuariosAgrupados['profesores']) > 0)
+                                    <optgroup label="Profesores">
+                                        @foreach($usuariosAgrupados['profesores'] as $profesor)
+                                            <option value="{{ $profesor['id'] }}">{{ $profesor['name'] }} ({{ $profesor['email'] }})</option>
+                                        @endforeach
+                                    </optgroup>
+                                @endif
+                                
+                                <!-- Alumnos -->
+                                @if(isset($usuariosAgrupados['alumnos']) && count($usuariosAgrupados['alumnos']) > 0)
+                                    <optgroup label="Alumnos">
+                                        @foreach($usuariosAgrupados['alumnos'] as $alumno)
+                                            <option value="{{ $alumno['id'] }}">{{ $alumno['name'] }} ({{ $alumno['email'] }})</option>
+                                        @endforeach
+                                    </optgroup>
+                                @endif
+                                
+                                <!-- Administradores -->
+                                @if(isset($usuariosAgrupados['admins']) && count($usuariosAgrupados['admins']) > 0)
+                                    <optgroup label="Administradores">
+                                        @foreach($usuariosAgrupados['admins'] as $admin)
+                                            <option value="{{ $admin['id'] }}">{{ $admin['name'] }} ({{ $admin['email'] }})</option>
+                                        @endforeach
+                                    </optgroup>
+                                @endif
+                            @else
+                                @foreach($usuarios as $usuario)
+                                    <option value="{{ $usuario['id'] }}">{{ $usuario['name'] }} ({{ $usuario['email'] }})</option>
+                                @endforeach
+                            @endif
                         </select>
-                        <small class="text-muted">Enviar copia a estos destinatarios</small>
+                        <small class="text-muted">Enviar copia a estos destinatarios (mantenga CTRL presionado para seleccionar varios)</small>
                     </div>
                 </div>
                 
@@ -100,17 +169,41 @@
                         <a href="#" class="text-muted small toggle-bcc">Mostrar BCC</a>
                     </label>
                     <div class="bcc-field d-none">
-                        <select class="selectpicker form-control" id="bcc" name="bcc[]" data-live-search="true" multiple data-actions-box="true">
-                            @foreach($usuarios as $usuario)
-                                <option value="{{ $usuario['id'] }}" 
-                                    @if(isset($bcc_seleccionados) && in_array($usuario['id'], $bcc_seleccionados)) selected @endif
-                                    data-subtext="{{ $usuario['email'] }}">
-                                    {{ $usuario['nombre'] }}
-                                    @if(isset($usuario['departamento'])) ({{ $usuario['departamento'] }}) @endif
-                                </option>
-                            @endforeach
+                        <select class="form-control" id="bcc" name="bcc[]" multiple>
+                            @if(isset($usuariosAgrupados))
+                                <!-- Profesores -->
+                                @if(isset($usuariosAgrupados['profesores']) && count($usuariosAgrupados['profesores']) > 0)
+                                    <optgroup label="Profesores">
+                                        @foreach($usuariosAgrupados['profesores'] as $profesor)
+                                            <option value="{{ $profesor['id'] }}">{{ $profesor['name'] }} ({{ $profesor['email'] }})</option>
+                                        @endforeach
+                                    </optgroup>
+                                @endif
+                                
+                                <!-- Alumnos -->
+                                @if(isset($usuariosAgrupados['alumnos']) && count($usuariosAgrupados['alumnos']) > 0)
+                                    <optgroup label="Alumnos">
+                                        @foreach($usuariosAgrupados['alumnos'] as $alumno)
+                                            <option value="{{ $alumno['id'] }}">{{ $alumno['name'] }} ({{ $alumno['email'] }})</option>
+                                        @endforeach
+                                    </optgroup>
+                                @endif
+                                
+                                <!-- Administradores -->
+                                @if(isset($usuariosAgrupados['admins']) && count($usuariosAgrupados['admins']) > 0)
+                                    <optgroup label="Administradores">
+                                        @foreach($usuariosAgrupados['admins'] as $admin)
+                                            <option value="{{ $admin['id'] }}">{{ $admin['name'] }} ({{ $admin['email'] }})</option>
+                                        @endforeach
+                                    </optgroup>
+                                @endif
+                            @else
+                                @foreach($usuarios as $usuario)
+                                    <option value="{{ $usuario['id'] }}">{{ $usuario['name'] }} ({{ $usuario['email'] }})</option>
+                                @endforeach
+                            @endif
                         </select>
-                        <small class="text-muted">Enviar copia oculta a estos destinatarios</small>
+                        <small class="text-muted">Enviar copia oculta a estos destinatarios (mantenga CTRL presionado para seleccionar varios)</small>
                     </div>
                 </div>
                 
@@ -123,7 +216,7 @@
                 <!-- Contenido del mensaje -->
                 <div class="form-group">
                     <label for="contenido">Mensaje:</label>
-                    <textarea class="form-control editor" id="contenido" name="contenido" rows="15">{{ $contenido ?? old('contenido') }}</textarea>
+                    <textarea class="form-control" id="contenido" name="contenido" rows="15" style="color: #333 !important;">{{ $contenido ?? old('contenido') }}</textarea>
                 </div>
                 
                 <!-- Cita de mensaje anterior (si es respuesta) -->
@@ -251,8 +344,6 @@
 @endsection
 
 @section('styles')
-<link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-bs4.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/css/bootstrap-select.min.css">
 <style>
     /* Estilo para la lista de adjuntos */
     .adjunto-item {
@@ -285,54 +376,37 @@
         cursor: pointer;
     }
     
-    /* Estilo para el editor de texto */
-    .note-editor {
-        border-color: #d1d3e2 !important;
+    /* Estilo para textarea del mensaje */
+    #contenido {
+        color: #333 !important;
+        background-color: #fff !important;
+        min-height: 200px;
     }
     
-    .note-statusbar {
-        background-color: #f8f9fc !important;
+    /* Estilo para selects nativos */
+    select[multiple] {
+        height: 150px !important;
     }
     
-    /* Estilo para campos de destinatarios */
-    .bootstrap-select .dropdown-toggle {
-        border-color: #d1d3e2 !important;
+    /* Mejorar la apariencia de los option groups */
+    optgroup {
+        font-weight: bold;
+        color: #4e73df;
     }
     
-    .bootstrap-select .dropdown-toggle:focus {
-        border-color: #bac8f3 !important;
-        box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25) !important;
+    optgroup option {
+        font-weight: normal;
+        color: #333;
+        padding-left: 15px;
     }
 </style>
 @endsection
 
 @section('scripts')
-<script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-bs4.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/js/bootstrap-select.min.js"></script>
 <script>
     $(document).ready(function() {
-        // Inicializar el editor de texto
-        $('.editor').summernote({
-            placeholder: 'Escriba su mensaje aquí...',
-            height: 250,
-            toolbar: [
-                ['style', ['style']],
-                ['font', ['bold', 'underline', 'clear']],
-                ['color', ['color']],
-                ['para', ['ul', 'ol', 'paragraph']],
-                ['table', ['table']],
-                ['insert', ['link']],
-                ['view', ['fullscreen', 'codeview', 'help']]
-            ],
-            callbacks: {
-                onImageUpload: function(files) {
-                    alert('Por favor, adjunte las imágenes como archivos en lugar de insertarlas directamente.');
-                }
-            }
-        });
-        
-        // Inicializar selectpicker para los destinatarios
-        $('.selectpicker').selectpicker();
+        // Ya no estamos usando Summernote
+        // Por lo que no necesitamos inicializarlo
         
         // Mostrar/ocultar campos CC y BCC
         $('.toggle-cc').click(function(e) {
@@ -445,11 +519,11 @@
         
         // Verificar destinatarios antes de enviar
         $('#form-mensaje').on('submit', function(e) {
-            const destinatarios = $('#destinatarios').val();
+            const destinatario = $('#destinatario').val();
             
-            if (!destinatarios || destinatarios.length === 0) {
+            if (!destinatario || destinatario === '') {
                 e.preventDefault();
-                alert('Debe seleccionar al menos un destinatario.');
+                alert('Debe seleccionar un destinatario.');
                 return false;
             }
             

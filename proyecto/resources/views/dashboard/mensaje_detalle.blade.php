@@ -7,14 +7,14 @@
     <!-- Botones de navegación y acciones -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <a href="{{ route('mensajes.index', ['tipo' => 'recibidos']) }}" class="btn btn-outline-primary">
+            <a href="{{ route('dashboard.mensajes', ['tipo' => 'recibidos']) }}" class="btn btn-outline-primary">
                 <i class="fas fa-arrow-left mr-1"></i> Volver
             </a>
         </div>
         <div>
             <div class="btn-group">
                 @if(!$mensaje['en_papelera'])
-                    <form action="{{ route('mensajes.destroy', $mensaje['id']) }}" method="POST" class="d-inline">
+                    <form action="{{ route('dashboard.mensajes.eliminar', $mensaje['id']) }}" method="POST" class="d-inline">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-outline-danger" onclick="return confirm('¿Estás seguro de mover este mensaje a la papelera?')">
@@ -22,13 +22,13 @@
                         </button>
                     </form>
                 @else
-                    <form action="{{ route('mensajes.restore', $mensaje['id']) }}" method="POST" class="d-inline">
+                    <form action="{{ route('dashboard.mensajes.restaurar', $mensaje['id']) }}" method="POST" class="d-inline">
                         @csrf
                         <button type="submit" class="btn btn-outline-success">
                             <i class="fas fa-trash-restore mr-1"></i> Restaurar
                         </button>
                     </form>
-                    <form action="{{ route('mensajes.destroy', $mensaje['id']) }}" method="POST" class="d-inline ml-2">
+                    <form action="{{ route('dashboard.mensajes.eliminar', $mensaje['id']) }}" method="POST" class="d-inline ml-2">
                         @csrf
                         @method('DELETE')
                         <input type="hidden" name="permanent" value="1">
@@ -48,7 +48,7 @@
                 {{ $mensaje['asunto'] }}
             </h6>
             <div>
-                <form action="{{ route('mensajes.toggle-starred', $mensaje['id']) }}" method="POST" class="d-inline">
+                <form action="{{ route('dashboard.mensajes.destacar', $mensaje['id']) }}" method="POST" class="d-inline">
                     @csrf
                     <button type="submit" class="btn btn-link text-warning" title="{{ $mensaje['destacado'] ? 'Quitar de destacados' : 'Añadir a destacados' }}">
                         <i class="fas fa-star {{ $mensaje['destacado'] ? '' : 'text-muted' }}"></i>
@@ -59,10 +59,10 @@
                         <i class="fas fa-ellipsis-v"></i>
                     </button>
                     <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton">
-                        <a class="dropdown-item" href="{{ route('mensajes.reply', $mensaje['id']) }}">
+                        <a class="dropdown-item" href="{{ route('dashboard.mensajes.responder', $mensaje['id']) }}">
                             <i class="fas fa-reply mr-2"></i> Responder
                         </a>
-                        <a class="dropdown-item" href="{{ route('mensajes.forward', $mensaje['id']) }}">
+                        <a class="dropdown-item" href="{{ route('dashboard.mensajes.reenviar', $mensaje['id']) }}">
                             <i class="fas fa-share mr-2"></i> Reenviar
                         </a>
                         <div class="dropdown-divider"></div>
@@ -218,10 +218,10 @@
         <div class="card-footer bg-white py-3">
             <div class="row">
                 <div class="col-md-6">
-                    <a href="{{ route('mensajes.reply', $mensaje['id']) }}" class="btn btn-primary">
+                    <a href="{{ route('dashboard.mensajes.responder', $mensaje['id']) }}" class="btn btn-primary">
                         <i class="fas fa-reply mr-1"></i> Responder
                     </a>
-                    <a href="{{ route('mensajes.forward', $mensaje['id']) }}" class="btn btn-secondary ml-2">
+                    <a href="{{ route('dashboard.mensajes.reenviar', $mensaje['id']) }}" class="btn btn-secondary ml-2">
                         <i class="fas fa-share mr-1"></i> Reenviar
                     </a>
                 </div>
@@ -283,7 +283,7 @@
 <script>
     $(document).ready(function() {
         // Marcar el mensaje como leído
-        $.post('{{ route("mensajes.mark-read", $mensaje["id"]) }}');
+        $.post('{{ route("dashboard.mensajes.leido", $mensaje["id"]) }}');
         
         // Animación para el historial
         $('[data-toggle="collapse"]').click(function() {

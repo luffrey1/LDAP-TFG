@@ -85,28 +85,80 @@ class DocumentoController extends Controller
      */
     private function getFolders()
     {
-        return [
-            [
-                'nombre' => 'General',
-                'clave' => 'general',
-                'icono' => 'fa-folder'
-            ],
-            [
-                'nombre' => 'Programaciones',
-                'clave' => 'programaciones',
-                'icono' => 'fa-file-alt'
-            ],
-            [
-                'nombre' => 'Horarios',
-                'clave' => 'horarios',
-                'icono' => 'fa-calendar-alt'
-            ],
-            [
-                'nombre' => 'Actas',
-                'clave' => 'actas',
-                'icono' => 'fa-file-signature'
-            ]
+        try {
+            // Intentar obtener carpetas de la base de datos
+            $foldersDB = DB::table('carpetas_documentos')
+                ->where('activo', true)
+                ->orderBy('nombre')
+                ->get();
+                
+            if ($foldersDB->count() > 0) {
+                return $foldersDB->toArray();
+            }
+            
+            // Si no hay datos en la base de datos, obtener carpetas existentes del storage
+            $storageDirs = Storage::disk('public')->directories('documentos');
+            $folders = [];
+            
+            // Crear estructura de carpetas basada en los directorios existentes
+            foreach ($storageDirs as $dir) {
+                $folderName = str_replace('documentos/', '', $dir);
+                if ($folderName) {
+                    $folders[] = [
+                        'nombre' => ucfirst($folderName),
+                        'clave' => $folderName,
+                        'icono' => $this->getFolderIcon($folderName)
+                    ];
+                }
+            }
+            
+            // Asegurar que siempre existe la carpeta General
+            $hasGeneral = false;
+            foreach ($folders as $folder) {
+                if ($folder['clave'] === 'general') {
+                    $hasGeneral = true;
+                    break;
+                }
+            }
+            
+            if (!$hasGeneral) {
+                array_unshift($folders, [
+                    'nombre' => 'General',
+                    'clave' => 'general',
+                    'icono' => 'fa-folder'
+                ]);
+            }
+            
+            return $folders;
+            
+        } catch (\Exception $e) {
+            Log::error('Error al obtener carpetas: ' . $e->getMessage());
+            
+            // Devolver sólo la carpeta General en caso de error
+            return [
+                [
+                    'nombre' => 'General',
+                    'clave' => 'general',
+                    'icono' => 'fa-folder'
+                ]
+            ];
+        }
+    }
+    
+    /**
+     * Obtener el icono apropiado para una carpeta
+     */
+    private function getFolderIcon($folderName)
+    {
+        $icons = [
+            'general' => 'fa-folder',
+            'programaciones' => 'fa-file-alt',
+            'horarios' => 'fa-calendar-alt',
+            'actas' => 'fa-file-signature',
+            'evaluaciones' => 'fa-clipboard-check'
         ];
+        
+        return $icons[strtolower($folderName)] ?? 'fa-folder';
     }
     
     /**

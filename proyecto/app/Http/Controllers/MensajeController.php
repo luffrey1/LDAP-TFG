@@ -46,11 +46,46 @@ class MensajeController extends Controller
     {
         // Obtener lista de usuarios para destinatarios
         try {
-            $usuarios = User::select('id', 'name', 'email')
+            // Obtenemos todos los usuarios
+            $usuarios = User::select('id', 'name', 'email', 'role')
                 ->orderBy('name')
                 ->get();
             
-            return view('dashboard.redactar_mensaje', compact('usuarios'));
+            // Agrupar usuarios por roles
+            $profesores = $usuarios->where('role', 'profesor')->all();
+            $alumnos = $usuarios->where('role', 'alumno')->all();
+            $admins = $usuarios->where('role', 'admin')->all();
+            $otros = $usuarios->whereNotIn('role', ['profesor', 'alumno', 'admin'])->all();
+            
+            // Generamos un array para los grupos
+            $grupos = [
+                [
+                    'id' => 'grupo_profesores',
+                    'nombre' => 'Todos los profesores',
+                    'tipo' => 'grupo'
+                ],
+                [
+                    'id' => 'grupo_alumnos',
+                    'nombre' => 'Todos los alumnos',
+                    'tipo' => 'grupo'
+                ],
+                [
+                    'id' => 'grupo_todos',
+                    'nombre' => 'Todos los usuarios',
+                    'tipo' => 'grupo'
+                ]
+            ];
+            
+            // Organizamos usuarios
+            $usuariosAgrupados = [
+                'grupos' => $grupos,
+                'profesores' => $profesores,
+                'alumnos' => $alumnos,
+                'admins' => $admins,
+                'otros' => $otros
+            ];
+            
+            return view('dashboard.redactar_mensaje', compact('usuarios', 'usuariosAgrupados'));
         } catch (\Exception $e) {
             Log::error('Error al cargar usuarios para mensaje: ' . $e->getMessage());
             return redirect()->route('dashboard.mensajes')
@@ -64,7 +99,7 @@ class MensajeController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'destinatario' => 'required|exists:users,id',
+            'destinatario' => 'required',
             'asunto' => 'required|string|max:255',
             'contenido' => 'required|string'
         ]);
@@ -75,37 +110,82 @@ class MensajeController extends Controller
             // Obtener el ID del remitente
             $remitenteId = session('auth_user')['id'] ?? Auth::id();
             
-            // Crear el mensaje
-            $mensaje = Mensaje::create([
-                'remitente_id' => $remitenteId,
-                'destinatario_id' => $request->destinatario,
-                'asunto' => $request->asunto,
-                'contenido' => $request->contenido,
-                'leido' => false,
-                'destacado' => false,
-                'borrador' => false,
-                'eliminado_remitente' => false,
-                'eliminado_destinatario' => false
-            ]);
+            // Procesar destinatario
+            $destinatarioId = $request->destinatario;
+            $esGrupo = false;
             
-            // Si hay archivos adjuntos, procesarlos
-            if ($request->hasFile('adjuntos')) {
-                foreach ($request->file('adjuntos') as $file) {
-                    $path = $file->store('adjuntos/mensajes', 'public');
-                    
-                    MensajeAdjunto::create([
-                        'mensaje_id' => $mensaje->id,
-                        'nombre' => $file->getClientOriginalName(),
-                        'ruta' => $path,
-                        'tipo' => $file->getMimeType(),
-                        'tamaño' => $file->getSize()
+            // Verificar si es un grupo
+            if (substr($destinatarioId, 0, 6) === 'grupo_') {
+                $esGrupo = true;
+                $tipoGrupo = substr($destinatarioId, 6);
+                
+                // Obtenemos los usuarios según el grupo
+                $usuariosGrupo = [];
+                
+                if ($tipoGrupo === 'profesores') {
+                    $usuariosGrupo = User::where('role', 'profesor')->pluck('id')->toArray();
+                } elseif ($tipoGrupo === 'alumnos') {
+                    $usuariosGrupo = User::where('role', 'alumno')->pluck('id')->toArray();
+                } elseif ($tipoGrupo === 'todos') {
+                    $usuariosGrupo = User::where('id', '!=', $remitenteId)->pluck('id')->toArray();
+                }
+                
+                // Verificar que hay destinatarios
+                if (empty($usuariosGrupo)) {
+                    throw new \Exception('No hay usuarios en el grupo seleccionado');
+                }
+                
+                // Enviar mensaje a cada usuario del grupo
+                foreach ($usuariosGrupo as $userId) {
+                    // Crear el mensaje
+                    Mensaje::create([
+                        'remitente_id' => $remitenteId,
+                        'destinatario_id' => $userId,
+                        'asunto' => $request->asunto,
+                        'contenido' => $request->contenido,
+                        'leido' => false,
+                        'destacado' => false,
+                        'borrador' => false,
+                        'eliminado_remitente' => false,
+                        'eliminado_destinatario' => false
                     ]);
                 }
+                
+                Log::info('Mensaje enviado por usuario ' . $remitenteId . ' al grupo ' . $tipoGrupo . ' (' . count($usuariosGrupo) . ' destinatarios)');
+            } else {
+                // Mensaje individual
+                // Crear el mensaje
+                $mensaje = Mensaje::create([
+                    'remitente_id' => $remitenteId,
+                    'destinatario_id' => $destinatarioId,
+                    'asunto' => $request->asunto,
+                    'contenido' => $request->contenido,
+                    'leido' => false,
+                    'destacado' => false,
+                    'borrador' => false,
+                    'eliminado_remitente' => false,
+                    'eliminado_destinatario' => false
+                ]);
+                
+                // Si hay archivos adjuntos, procesarlos
+                if ($request->hasFile('adjuntos')) {
+                    foreach ($request->file('adjuntos') as $file) {
+                        $path = $file->store('adjuntos/mensajes', 'public');
+                        
+                        MensajeAdjunto::create([
+                            'mensaje_id' => $mensaje->id,
+                            'nombre' => $file->getClientOriginalName(),
+                            'ruta' => $path,
+                            'tipo' => $file->getMimeType(),
+                            'tamaño' => $file->getSize()
+                        ]);
+                    }
+                }
+                
+                Log::info('Mensaje enviado por usuario ' . $remitenteId . ' a usuario ' . $destinatarioId);
             }
             
             DB::commit();
-            
-            Log::info('Mensaje enviado por usuario ' . $remitenteId . ' a usuario ' . $request->destinatario);
             
             return redirect()->route('dashboard.mensajes')
                 ->with('success', 'Mensaje enviado correctamente.');
@@ -127,23 +207,59 @@ class MensajeController extends Controller
             $userId = session('auth_user')['id'] ?? Auth::id();
             
             // Buscar el mensaje
-            $mensaje = Mensaje::with(['remitente', 'destinatario', 'adjuntos'])
+            $mensajeObj = Mensaje::with(['remitente', 'destinatario', 'adjuntos'])
                 ->findOrFail($id);
             
             // Verificar permiso para ver el mensaje
-            if ($mensaje->destinatario_id != $userId && 
-                $mensaje->remitente_id != $userId && 
+            if ($mensajeObj->destinatario_id != $userId && 
+                $mensajeObj->remitente_id != $userId && 
                 !$this->isAdmin()) {
                 return redirect()->route('dashboard.mensajes')
                     ->with('error', 'No tienes permiso para ver este mensaje.');
             }
             
             // Marcar como leído si es el destinatario y no lo ha leído aún
-            if ($mensaje->destinatario_id == $userId && !$mensaje->leido) {
-                $mensaje->leido = true;
-                $mensaje->save();
+            if ($mensajeObj->destinatario_id == $userId && !$mensajeObj->leido) {
+                $mensajeObj->leido = true;
+                $mensajeObj->save();
                 Log::info('Mensaje marcado como leído: ' . $id);
             }
+            
+            // Transformar el objeto Mensaje en un array con la estructura necesaria para la vista
+            $mensaje = [
+                'id' => $mensajeObj->id,
+                'asunto' => $mensajeObj->asunto,
+                'contenido' => $mensajeObj->contenido,
+                'fecha' => $mensajeObj->created_at,
+                'destacado' => $mensajeObj->destacado,
+                'leido' => $mensajeObj->leido,
+                'en_papelera' => ($mensajeObj->eliminado_remitente || $mensajeObj->eliminado_destinatario),
+                'remitente' => [
+                    'id' => $mensajeObj->remitente->id,
+                    'nombre' => $mensajeObj->remitente->name,
+                    'email' => $mensajeObj->remitente->email,
+                    'departamento' => $mensajeObj->remitente->departamento ?? null,
+                    'avatar' => $mensajeObj->remitente->avatar ?? null,
+                ],
+                'destinatarios' => [
+                    [
+                        'id' => $mensajeObj->destinatario->id,
+                        'nombre' => $mensajeObj->destinatario->name,
+                        'email' => $mensajeObj->destinatario->email,
+                    ]
+                ],
+                'adjuntos' => $mensajeObj->adjuntos->map(function($adjunto) {
+                    return [
+                        'id' => $adjunto->id,
+                        'nombre' => $adjunto->nombre,
+                        'ruta' => $adjunto->ruta,
+                        'tipo' => pathinfo($adjunto->nombre, PATHINFO_EXTENSION),
+                        'tamano' => $this->formatoTamano($adjunto->tamaño)
+                    ];
+                })->toArray(),
+                'cc' => [],
+                'historial' => []
+            ];
             
             return view('dashboard.mensaje_detalle', compact('mensaje'));
         } catch (\Exception $e) {
@@ -220,6 +336,9 @@ class MensajeController extends Controller
             
             // Verificar permiso
             if ($mensaje->destinatario_id != $userId && !$this->isAdmin()) {
+                if (request()->ajax()) {
+                    return response()->json(['success' => false, 'message' => 'No tienes permiso para modificar este mensaje.'], 403);
+                }
                 return redirect()->route('dashboard.mensajes')
                     ->with('error', 'No tienes permiso para modificar este mensaje.');
             }
@@ -231,11 +350,20 @@ class MensajeController extends Controller
             $estado = $mensaje->leido ? 'leído' : 'no leído';
             Log::info('Mensaje marcado como ' . $estado . ': ' . $id);
             
+            if (request()->ajax()) {
+                return response()->json(['success' => true, 'message' => 'Mensaje marcado como ' . $estado, 'estado' => $mensaje->leido]);
+            }
+            
             return redirect()->back()
                 ->with('success', 'Mensaje marcado como ' . $estado . '.');
                 
         } catch (\Exception $e) {
             Log::error('Error al actualizar estado de lectura: ' . $e->getMessage());
+            
+            if (request()->ajax()) {
+                return response()->json(['success' => false, 'message' => 'Error al actualizar el mensaje: ' . $e->getMessage()], 500);
+            }
+            
             return back()->with('error', 'Error al actualizar el mensaje: ' . $e->getMessage());
         }
     }
@@ -328,7 +456,8 @@ class MensajeController extends Controller
                 'no_leidos' => Mensaje::recibidos($userId)->where('leido', false)->count(),
                 'destacados' => Mensaje::destacados($userId)->count(),
                 'enviados' => Mensaje::enviados($userId)->count(),
-                'papelera' => Mensaje::papelera($userId)->count()
+                'papelera' => Mensaje::papelera($userId)->count(),
+                'recientes' => Mensaje::recibidos($userId)->where('created_at', '>=', now()->subDays(5))->count()
             ];
         } catch (\Exception $e) {
             Log::error('Error al obtener contadores de mensajes: ' . $e->getMessage());
@@ -337,7 +466,8 @@ class MensajeController extends Controller
                 'no_leidos' => 0,
                 'destacados' => 0,
                 'enviados' => 0,
-                'papelera' => 0
+                'papelera' => 0,
+                'recientes' => 0
             ];
         }
     }
@@ -363,6 +493,19 @@ class MensajeController extends Controller
             default:
                 $query = Mensaje::recibidos($userId);
                 break;
+        }
+        
+        // Aplicar filtros adicionales
+        $filtro = request('filter');
+        if ($filtro) {
+            switch($filtro) {
+                case 'no_leidos':
+                    $query->where('leido', false);
+                    break;
+                case 'recientes':
+                    $query->where('created_at', '>=', now()->subDays(5));
+                    break;
+            }
         }
         
         return $query->with(['remitente', 'destinatario'])
@@ -393,6 +536,206 @@ class MensajeController extends Controller
             }
         } catch (\Exception $e) {
             Log::error('Error al eliminar archivo adjunto: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Mostrar formulario para responder a un mensaje
+     */
+    public function reply($id)
+    {
+        try {
+            // Obtener el usuario autenticado
+            $userId = session('auth_user')['id'] ?? Auth::id();
+            
+            // Buscar el mensaje original
+            $mensaje = Mensaje::with(['remitente', 'destinatario', 'adjuntos'])
+                ->findOrFail($id);
+            
+            // Verificar permiso
+            if ($mensaje->destinatario_id != $userId && !$this->isAdmin()) {
+                return redirect()->route('dashboard.mensajes')
+                    ->with('error', 'No tienes permiso para responder a este mensaje.');
+            }
+            
+            // Obtener lista de usuarios para destinatarios
+            $usuarios = User::select('id', 'name', 'email', 'role')
+                ->orderBy('name')
+                ->get();
+            
+            // Agrupar usuarios por roles
+            $profesores = $usuarios->where('role', 'profesor')->all();
+            $alumnos = $usuarios->where('role', 'alumno')->all();
+            $admins = $usuarios->where('role', 'admin')->all();
+            $otros = $usuarios->whereNotIn('role', ['profesor', 'alumno', 'admin'])->all();
+            
+            // Generamos un array para los grupos
+            $grupos = [
+                [
+                    'id' => 'grupo_profesores',
+                    'nombre' => 'Todos los profesores',
+                    'tipo' => 'grupo'
+                ],
+                [
+                    'id' => 'grupo_alumnos',
+                    'nombre' => 'Todos los alumnos',
+                    'tipo' => 'grupo'
+                ],
+                [
+                    'id' => 'grupo_todos',
+                    'nombre' => 'Todos los usuarios',
+                    'tipo' => 'grupo'
+                ]
+            ];
+            
+            // Organizamos usuarios
+            $usuariosAgrupados = [
+                'grupos' => $grupos,
+                'profesores' => $profesores,
+                'alumnos' => $alumnos,
+                'admins' => $admins,
+                'otros' => $otros
+            ];
+            
+            // Preparar datos para la vista
+            $destinatario = $mensaje->remitente_id;
+            $asunto = 'RE: ' . $mensaje->asunto;
+            $contenido = '<br><br><hr><p>En ' . $mensaje->created_at->format('d/m/Y H:i') . ', ' . $mensaje->remitente->name . ' escribió:</p><blockquote>' . $mensaje->contenido . '</blockquote>';
+            
+            // Preparar el mensaje original para la vista
+            $mensajeOriginal = [
+                'remitente' => [
+                    'nombre' => $mensaje->remitente->name,
+                    'email' => $mensaje->remitente->email
+                ],
+                'destinatarios' => [
+                    [
+                        'nombre' => $mensaje->destinatario->name,
+                        'email' => $mensaje->destinatario->email
+                    ]
+                ],
+                'fecha' => $mensaje->created_at,
+                'asunto' => $mensaje->asunto,
+                'contenido' => $mensaje->contenido
+            ];
+            
+            return view('dashboard.redactar_mensaje', compact(
+                'usuarios', 
+                'usuariosAgrupados',
+                'destinatario', 
+                'asunto', 
+                'contenido', 
+                'mensajeOriginal',
+                'mensaje'
+            ));
+        } catch (\Exception $e) {
+            Log::error('Error al cargar formulario de respuesta: ' . $e->getMessage());
+            return redirect()->route('dashboard.mensajes')
+                ->with('error', 'Error al cargar el formulario de respuesta: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Mostrar formulario para reenviar un mensaje
+     */
+    public function forward($id)
+    {
+        try {
+            // Obtener el usuario autenticado
+            $userId = session('auth_user')['id'] ?? Auth::id();
+            
+            // Buscar el mensaje original
+            $mensaje = Mensaje::with(['remitente', 'destinatario', 'adjuntos'])
+                ->findOrFail($id);
+            
+            // Verificar permiso
+            if ($mensaje->destinatario_id != $userId && 
+                $mensaje->remitente_id != $userId && 
+                !$this->isAdmin()) {
+                return redirect()->route('dashboard.mensajes')
+                    ->with('error', 'No tienes permiso para reenviar este mensaje.');
+            }
+            
+            // Obtener lista de usuarios para destinatarios
+            $usuarios = User::select('id', 'name', 'email', 'role')
+                ->orderBy('name')
+                ->get();
+            
+            // Agrupar usuarios por roles
+            $profesores = $usuarios->where('role', 'profesor')->all();
+            $alumnos = $usuarios->where('role', 'alumno')->all();
+            $admins = $usuarios->where('role', 'admin')->all();
+            $otros = $usuarios->whereNotIn('role', ['profesor', 'alumno', 'admin'])->all();
+            
+            // Generamos un array para los grupos
+            $grupos = [
+                [
+                    'id' => 'grupo_profesores',
+                    'nombre' => 'Todos los profesores',
+                    'tipo' => 'grupo'
+                ],
+                [
+                    'id' => 'grupo_alumnos',
+                    'nombre' => 'Todos los alumnos',
+                    'tipo' => 'grupo'
+                ],
+                [
+                    'id' => 'grupo_todos',
+                    'nombre' => 'Todos los usuarios',
+                    'tipo' => 'grupo'
+                ]
+            ];
+            
+            // Organizamos usuarios
+            $usuariosAgrupados = [
+                'grupos' => $grupos,
+                'profesores' => $profesores,
+                'alumnos' => $alumnos,
+                'admins' => $admins,
+                'otros' => $otros
+            ];
+            
+            // Preparar datos para la vista
+            $asunto = 'FW: ' . $mensaje->asunto;
+            $contenido = '<br><br><hr><p>Mensaje original:</p><p><strong>De:</strong> ' . $mensaje->remitente->name . '<br><strong>Para:</strong> ' . $mensaje->destinatario->name . '<br><strong>Enviado:</strong> ' . $mensaje->created_at->format('d/m/Y H:i') . '<br><strong>Asunto:</strong> ' . $mensaje->asunto . '</p>' . $mensaje->contenido;
+            
+            // Preparar adjuntos originales
+            $adjuntosOriginales = [];
+            foreach ($mensaje->adjuntos as $adjunto) {
+                $adjuntosOriginales[] = [
+                    'id' => $adjunto->id,
+                    'nombre' => $adjunto->nombre,
+                    'tipo' => $adjunto->tipo,
+                    'tamano' => $this->formatoTamano($adjunto->tamaño)
+                ];
+            }
+            
+            return view('dashboard.redactar_mensaje', compact(
+                'usuarios', 
+                'usuariosAgrupados',
+                'asunto', 
+                'contenido', 
+                'adjuntosOriginales',
+                'mensaje'
+            ));
+        } catch (\Exception $e) {
+            Log::error('Error al cargar formulario de reenvío: ' . $e->getMessage());
+            return redirect()->route('dashboard.mensajes')
+                ->with('error', 'Error al cargar el formulario de reenvío: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Formatear el tamaño de archivo a una forma legible
+     */
+    private function formatoTamano($bytes)
+    {
+        if ($bytes < 1024) {
+            return $bytes . ' B';
+        } elseif ($bytes < 1048576) {
+            return round($bytes / 1024, 1) . ' KB';
+        } else {
+            return round($bytes / 1048576, 1) . ' MB';
         }
     }
 } 

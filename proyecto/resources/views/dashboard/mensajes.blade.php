@@ -59,6 +59,12 @@
                             <span class="badge badge-danger badge-pill">{{ $contadores['no_leidos'] }}</span>
                         </a>
                         @endif
+                        <a href="{{ route('dashboard.mensajes', ['tipo' => 'recibidos', 'filter' => 'recientes']) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {{ (request('filter') == 'recientes') ? 'active' : '' }}">
+                            <div>
+                                <i class="fas fa-clock mr-2"></i> Recientes
+                            </div>
+                            <span class="badge badge-info badge-pill">{{ $contadores['recientes'] }}</span>
+                        </a>
                         <a href="{{ route('dashboard.mensajes', ['tipo' => 'destacados']) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {{ $tipo == 'destacados' ? 'active' : '' }}">
                             <div>
                                 <i class="fas fa-star mr-2"></i> Destacados

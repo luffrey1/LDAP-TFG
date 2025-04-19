@@ -45,6 +45,11 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
     Route::post('/mensajes/enviar', [MensajeController::class, 'store'])->name('dashboard.mensajes.enviar');
     Route::get('/mensajes/{id}', [MensajeController::class, 'show'])->name('dashboard.mensajes.ver');
     Route::delete('/mensajes/{id}', [MensajeController::class, 'destroy'])->name('dashboard.mensajes.eliminar');
+    Route::post('/mensajes/{id}/responder', [MensajeController::class, 'reply'])->name('dashboard.mensajes.responder');
+    Route::post('/mensajes/{id}/reenviar', [MensajeController::class, 'forward'])->name('dashboard.mensajes.reenviar');
+    Route::post('/mensajes/{id}/destacar', [MensajeController::class, 'toggleFavorite'])->name('dashboard.mensajes.destacar');
+    Route::post('/mensajes/{id}/leido', [MensajeController::class, 'toggleRead'])->name('dashboard.mensajes.leido');
+    Route::post('/mensajes/{id}/restaurar', [MensajeController::class, 'restore'])->name('dashboard.mensajes.restaurar');
     
     // Calendario y eventos
     Route::get('/calendario', [EventoController::class, 'index'])->name('dashboard.calendario');
