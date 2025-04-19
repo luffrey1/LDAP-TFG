@@ -4,7 +4,7 @@
 <div class="container-fluid">
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 class="text-2xl font-bold text-gray-800">Documentos</h1>
-        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#uploadDocumentModal">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadDocumentModal">
             <i class="fas fa-upload fa-sm text-white-50 mr-1"></i> Subir Documento
         </button>
     </div>
@@ -50,10 +50,19 @@
                     </select>
                 </div>
                 <div class="col-md-3 mb-3">
+                    <label for="categoria">Categoría:</label>
+                    <select name="categoria" id="categoria" class="form-control">
+                        <option value="">Todas las categorías</option>
+                        @foreach($folders as $folder)
+                        <option value="{{ $folder['clave'] }}" {{ request('categoria') == $folder['clave'] ? 'selected' : '' }}>{{ $folder['nombre'] }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
                     <label for="date">Fecha:</label>
                     <input type="date" name="date" id="date" class="form-control" value="{{ request('date') }}">
                 </div>
-                <div class="col-md-3 mb-3 d-flex align-items-end">
+                <div class="col-md-12 mb-3 d-flex justify-content-end">
                     <button type="submit" class="btn btn-primary mr-2">Filtrar</button>
                     <a href="{{ route('dashboard.gestion-documental') }}" class="btn btn-secondary">Limpiar</a>
                 </div>
@@ -74,6 +83,7 @@
                         <tr>
                             <th>Nombre</th>
                             <th>Tipo</th>
+                            <th>Categoría</th>
                             <th>Subido por</th>
                             <th>Fecha</th>
                             <th>Tamaño</th>
@@ -98,6 +108,7 @@
                                 </div>
                             </td>
                             <td>{{ strtoupper($doc['extension']) }}</td>
+                            <td><span class="badge bg-info">{{ ucfirst($doc['carpeta']) }}</span></td>
                             <td>{{ $doc['subido_por_nombre'] }}</td>
                             <td>{{ date('d/m/Y', strtotime($doc['fecha_subida'])) }}</td>
                             <td>{{ $doc['tamaño'] }}</td>
@@ -106,7 +117,7 @@
                                     <a href="{{ route('dashboard.gestion-documental.descargar', $doc['id']) }}" class="btn btn-sm btn-primary" title="Descargar">
                                         <i class="fas fa-download"></i>
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-info" title="Ver" data-toggle="modal" data-target="#viewDocumentModal{{ $doc['id'] }}">
+                                    <button type="button" class="btn btn-sm btn-info" title="Ver" data-bs-toggle="modal" data-bs-target="#viewDocumentModal{{ $doc['id'] }}">
                                         <i class="fas fa-eye"></i>
                                     </button>
                                     <form action="{{ route('dashboard.gestion-documental.eliminar', $doc['id']) }}" method="POST" class="d-inline">
@@ -131,14 +142,12 @@
 </div>
 
 <!-- Modal para subir documento -->
-<div class="modal fade" id="uploadDocumentModal" tabindex="-1" role="dialog" aria-labelledby="uploadDocumentModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
+<div class="modal fade" id="uploadDocumentModal" tabindex="-1" aria-labelledby="uploadDocumentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="uploadDocumentModalLabel">Subir Documento</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form action="{{ route('dashboard.gestion-documental.subir') }}" method="POST" enctype="multipart/form-data">
                 @csrf
@@ -170,7 +179,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Subir</button>
                 </div>
             </form>
@@ -180,21 +189,22 @@
 
 <!-- Modals para visualizar documentos -->
 @foreach($documents as $doc)
-<div class="modal fade" id="viewDocumentModal{{ $doc['id'] }}" tabindex="-1" role="dialog" aria-labelledby="viewDocumentModalLabel{{ $doc['id'] }}" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
+<div class="modal fade" id="viewDocumentModal{{ $doc['id'] }}" tabindex="-1" aria-labelledby="viewDocumentModalLabel{{ $doc['id'] }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="viewDocumentModalLabel{{ $doc['id'] }}">{{ $doc['nombre'] }}</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="row mb-3">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <p><strong>Subido por:</strong> {{ $doc['subido_por_nombre'] }}</p>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
+                        <p><strong>Categoría:</strong> {{ ucfirst($doc['carpeta']) }}</p>
+                    </div>
+                    <div class="col-md-4">
                         <p><strong>Fecha:</strong> {{ date('d/m/Y', strtotime($doc['fecha_subida'])) }}</p>
                     </div>
                 </div>
@@ -226,7 +236,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                 <a href="{{ route('dashboard.gestion-documental.descargar', $doc['id']) }}" class="btn btn-primary">
                     <i class="fas fa-download mr-1"></i> Descargar
                 </a>
@@ -245,6 +255,12 @@ $(document).ready(function() {
     $(".custom-file-input").on("change", function() {
         var fileName = $(this).val().split("\\").pop();
         $(this).siblings(".custom-file-label").addClass("selected").html(fileName);
+    });
+    
+    // Asegurar que los modales funcionan correctamente
+    var documentModals = document.querySelectorAll('.modal');
+    documentModals.forEach(function(modal) {
+        new bootstrap.Modal(modal);
     });
 });
 </script>

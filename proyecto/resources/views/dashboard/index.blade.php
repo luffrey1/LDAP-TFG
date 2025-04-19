@@ -114,13 +114,14 @@
                             <thead>
                                 <tr>
                                     <th>Nombre</th>
+                                    <th>Categoría</th>
                                     <th>Subido por</th>
                                     <th>Fecha</th>
                                     <th>Tamaño</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @if(count($recentDocuments) > 0)
+                                @if(isset($recentDocuments) && count($recentDocuments) > 0)
                                     @foreach($recentDocuments as $doc)
                                     <tr>
                                         <td>
@@ -145,6 +146,7 @@
                                                 <span class="text-truncate">{{ $doc['nombre'] }}</span>
                                             </div>
                                         </td>
+                                        <td><span class="badge bg-info">{{ ucfirst($doc['carpeta']) }}</span></td>
                                         <td>{{ $doc['subido_por_nombre'] }}</td>
                                         <td>{{ date('d/m/Y', strtotime($doc['fecha_subida'])) }}</td>
                                         <td>{{ $doc['tamaño'] }}</td>
@@ -152,7 +154,7 @@
                                     @endforeach
                                 @else
                                     <tr>
-                                        <td colspan="4" class="text-center">No hay documentos recientes</td>
+                                        <td colspan="5" class="text-center">No hay documentos recientes</td>
                                     </tr>
                                 @endif
                             </tbody>

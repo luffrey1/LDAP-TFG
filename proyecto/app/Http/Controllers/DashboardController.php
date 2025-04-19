@@ -499,8 +499,8 @@ class DashboardController extends Controller
     {
         try {
             // Obtener documentos recientes de la base de datos
-            $documents = \DB::table('documentos')
-                ->orderBy('fecha_subida', 'desc')
+            $documents = Documento::where('activo', true)
+                ->orderBy('created_at', 'desc')
                 ->limit(5)
                 ->get();
                 
@@ -508,32 +508,51 @@ class DashboardController extends Controller
                 Log::info("Documentos recientes obtenidos: " . $documents->count());
                 
                 return $documents->map(function ($doc) {
-                    // Formatear tamaño del archivo
-                    $tamaño = $this->formatFileSize($doc->tamaño ?? 0);
-                    
                     return [
                         'id' => $doc->id,
                         'nombre' => $doc->nombre,
                         'extension' => $doc->extension,
-                        'fecha_subida' => $doc->fecha_subida,
+                        'fecha_subida' => $doc->created_at,
                         'subido_por' => $doc->subido_por,
-                        'subido_por_nombre' => $this->getUserName($doc->subido_por),
-                        'tamaño' => $tamaño
+                        'subido_por_nombre' => $doc->usuario ? $doc->usuario->name : 'Usuario desconocido',
+                        'tamaño' => $doc->tamaño_formateado,
+                        'carpeta' => $doc->carpeta
                     ];
                 })->toArray();
             }
             
-            // Si no hay documentos, devolver un documento de ejemplo
-            Log::info("No hay documentos recientes, devolviendo documento de ejemplo");
+            // Si no hay documentos, devolver ejemplos con diferentes categorías
+            Log::info("No hay documentos recientes, devolviendo documentos de ejemplo");
             return [
                 [
                     'id' => '1',
-                    'nombre' => 'Documento de ejemplo',
+                    'nombre' => 'Programación Didáctica',
                     'extension' => 'pdf',
                     'fecha_subida' => '2025-04-19 10:00:00',
                     'subido_por' => 'profesor1',
-                    'subido_por_nombre' => 'Profesor Ejemplo1',
-                    'tamaño' => '0 KB'
+                    'subido_por_nombre' => 'Profesor Ejemplo',
+                    'tamaño' => '2.5 MB',
+                    'carpeta' => 'programaciones'
+                ],
+                [
+                    'id' => '2',
+                    'nombre' => 'Horario Escolar',
+                    'extension' => 'xls',
+                    'fecha_subida' => '2025-04-18 14:30:00',
+                    'subido_por' => 'secretaria',
+                    'subido_por_nombre' => 'Secretaría',
+                    'tamaño' => '1.8 MB',
+                    'carpeta' => 'horarios'
+                ],
+                [
+                    'id' => '3',
+                    'nombre' => 'Acta de Evaluación',
+                    'extension' => 'doc',
+                    'fecha_subida' => '2025-04-17 09:15:00',
+                    'subido_por' => 'jefatura',
+                    'subido_por_nombre' => 'Jefe de Estudios',
+                    'tamaño' => '560 KB',
+                    'carpeta' => 'actas'
                 ]
             ];
         } catch (\Exception $e) {
@@ -547,8 +566,9 @@ class DashboardController extends Controller
                     'extension' => 'pdf',
                     'fecha_subida' => '2025-04-19 10:00:00',
                     'subido_por' => 'profesor1',
-                    'subido_por_nombre' => 'Profesor Ejemplo1',
-                    'tamaño' => '0 KB'
+                    'subido_por_nombre' => 'Profesor Ejemplo',
+                    'tamaño' => '0 KB',
+                    'carpeta' => 'general'
                 ]
             ];
         }

@@ -15,16 +15,9 @@ class DocumentoController extends Controller
     /**
      * Mostrar la lista de documentos
      */
-    public function index()
+    public function index(Request $request)
     {
         Log::info('DocumentoController@index iniciado - IP: ' . request()->ip());
-        Log::info('Sesión actual: ' . json_encode(session()->all()));
-        Log::info('URL previa: ' . url()->previous());
-        Log::info('URL actual: ' . url()->current());
-        
-        // Verificar si estamos siendo redirigidos desde otra parte
-        $referer = request()->headers->get('referer');
-        Log::info('Referer: ' . ($referer ? $referer : 'No hay referer'));
         
         try {
             // Comprobar si el usuario está autenticado
@@ -37,29 +30,44 @@ class DocumentoController extends Controller
             // Crear una respuesta que evite la redirección automática
             session()->put('documentos_access', true);
             
-            // Intentar obtener documentos reales
-            try {
-                $documents = Documento::where('activo', true)
-                    ->orderBy('created_at', 'desc')
-                    ->get()
-                    ->map(function($doc) {
-                        return [
-                            'id' => $doc->id,
-                            'nombre' => $doc->nombre,
-                            'extension' => $doc->extension,
-                            'fecha_subida' => $doc->created_at->format('Y-m-d H:i:s'),
-                            'subido_por' => $doc->usuario ? $doc->usuario->id : 'Unknown',
-                            'subido_por_nombre' => $doc->usuario ? $doc->usuario->name : 'Usuario desconocido',
-                            'tamaño' => $doc->tamaño_formateado,
-                            'carpeta' => $doc->carpeta
-                        ];
-                    });
-                
-                Log::info('DocumentoController: Encontrados ' . count($documents) . ' documentos');
-            } catch (\Exception $e) {
-                Log::warning('Error al obtener documentos: ' . $e->getMessage() . ' - Usando array vacío');
-                $documents = [];
+            // Obtener documentos con filtros
+            $query = Documento::where('activo', true);
+            
+            // Aplicar filtros si existen
+            if ($request->has('search') && !empty($request->search)) {
+                $query->where('nombre', 'like', '%' . $request->search . '%')
+                    ->orWhere('descripcion', 'like', '%' . $request->search . '%');
             }
+            
+            if ($request->has('type') && !empty($request->type)) {
+                $query->where('extension', $request->type);
+            }
+            
+            if ($request->has('date') && !empty($request->date)) {
+                $query->whereDate('created_at', $request->date);
+            }
+            
+            if ($request->has('categoria') && !empty($request->categoria)) {
+                $query->where('carpeta', $request->categoria);
+            }
+            
+            // Obtener documentos ordenados
+            $documents = $query->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function($doc) {
+                    return [
+                        'id' => $doc->id,
+                        'nombre' => $doc->nombre,
+                        'extension' => $doc->extension,
+                        'fecha_subida' => $doc->created_at->format('Y-m-d H:i:s'),
+                        'subido_por' => $doc->usuario ? $doc->usuario->id : 'Unknown',
+                        'subido_por_nombre' => $doc->usuario ? $doc->usuario->name : 'Usuario desconocido',
+                        'tamaño' => $doc->tamaño_formateado,
+                        'carpeta' => $doc->carpeta
+                    ];
+                });
+            
+            Log::info('DocumentoController: Encontrados ' . count($documents) . ' documentos');
             
             $folders = $this->getFolders();
             
@@ -96,37 +104,47 @@ class DocumentoController extends Controller
                 return $foldersDB->toArray();
             }
             
-            // Si no hay datos en la base de datos, obtener carpetas existentes del storage
-            $storageDirs = Storage::disk('public')->directories('documentos');
-            $folders = [];
-            
-            // Crear estructura de carpetas basada en los directorios existentes
-            foreach ($storageDirs as $dir) {
-                $folderName = str_replace('documentos/', '', $dir);
-                if ($folderName) {
-                    $folders[] = [
-                        'nombre' => ucfirst($folderName),
-                        'clave' => $folderName,
-                        'icono' => $this->getFolderIcon($folderName)
-                    ];
-                }
-            }
-            
-            // Asegurar que siempre existe la carpeta General
-            $hasGeneral = false;
-            foreach ($folders as $folder) {
-                if ($folder['clave'] === 'general') {
-                    $hasGeneral = true;
-                    break;
-                }
-            }
-            
-            if (!$hasGeneral) {
-                array_unshift($folders, [
+            // Si no hay datos en la base de datos, crear categorías predefinidas
+            // Añadir categorías predefinidas que siempre deben existir
+            $folders = [
+                [
                     'nombre' => 'General',
                     'clave' => 'general',
                     'icono' => 'fa-folder'
-                ]);
+                ],
+                [
+                    'nombre' => 'Programaciones',
+                    'clave' => 'programaciones',
+                    'icono' => 'fa-file-alt'
+                ],
+                [
+                    'nombre' => 'Horarios',
+                    'clave' => 'horarios',
+                    'icono' => 'fa-calendar-alt'
+                ],
+                [
+                    'nombre' => 'Actas',
+                    'clave' => 'actas',
+                    'icono' => 'fa-file-signature'
+                ],
+                [
+                    'nombre' => 'Evaluaciones',
+                    'clave' => 'evaluaciones',
+                    'icono' => 'fa-clipboard-check'
+                ]
+            ];
+            
+            // Intentar crear los directorios si no existen
+            foreach ($folders as $folder) {
+                $dirPath = 'documentos/' . $folder['clave'];
+                if (!Storage::disk('public')->exists($dirPath)) {
+                    try {
+                        Storage::disk('public')->makeDirectory($dirPath);
+                        Log::info('Directorio creado: ' . $dirPath);
+                    } catch (\Exception $e) {
+                        Log::error('Error al crear directorio ' . $dirPath . ': ' . $e->getMessage());
+                    }
+                }
             }
             
             return $folders;
@@ -134,12 +152,22 @@ class DocumentoController extends Controller
         } catch (\Exception $e) {
             Log::error('Error al obtener carpetas: ' . $e->getMessage());
             
-            // Devolver sólo la carpeta General en caso de error
+            // Devolver categorías básicas en caso de error
             return [
                 [
                     'nombre' => 'General',
                     'clave' => 'general',
                     'icono' => 'fa-folder'
+                ],
+                [
+                    'nombre' => 'Programaciones',
+                    'clave' => 'programaciones',
+                    'icono' => 'fa-file-alt'
+                ],
+                [
+                    'nombre' => 'Evaluaciones',
+                    'clave' => 'evaluaciones',
+                    'icono' => 'fa-clipboard-check'
                 ]
             ];
         }
@@ -175,37 +203,39 @@ class DocumentoController extends Controller
 
         try {
             $file = $request->file('documento');
+            
+            // Verificar si el archivo es válido
+            if (!$file->isValid()) {
+                throw new \Exception('El archivo no es válido: ' . $file->getErrorMessage());
+            }
+            
+            // Verificar que el archivo exista y sea legible
+            if (!file_exists($file->getPathname()) || !is_readable($file->getPathname())) {
+                throw new \Exception('El archivo temporal no existe o no se puede leer. Intente nuevamente.');
+            }
+            
             $originalName = $file->getClientOriginalName();
             $extension = $file->getClientOriginalExtension();
             $fileSize = $file->getSize();
             $fileName = time() . '_' . Str::slug($request->nombre) . '.' . $extension;
             
+            // Log para depuración
+            Log::info('Procesando archivo: ' . $originalName);
+            Log::info('Categoría seleccionada: ' . $request->categoria);
+            
             // Asegurar que el directorio existe
             $dirPath = 'documentos/' . $request->categoria;
-            $fullPath = public_path($dirPath);
             
-            // Log para depuración
-            Log::info('Intentando guardar en: ' . $fullPath);
+            // Guardar el archivo usando Storage en lugar de move
+            $filePath = Storage::disk('public')->putFileAs(
+                $dirPath, 
+                $file, 
+                $fileName
+            );
             
-            if (!file_exists($fullPath)) {
-                Log::info('El directorio no existe, intentando crearlo');
-                if (!mkdir($fullPath, 0777, true)) {
-                    $error = error_get_last();
-                    throw new \Exception('No se pudo crear el directorio: ' . $fullPath . ' - Error: ' . ($error['message'] ?? 'Desconocido'));
-                }
-                // Establecer permisos explícitamente después de crear
-                chmod($fullPath, 0777);
+            if (!$filePath) {
+                throw new \Exception('No se pudo guardar el archivo en el almacenamiento.');
             }
-            
-            // Guardar el archivo
-            $filePath = $fullPath . '/' . $fileName;
-            
-            if (!$file->move($fullPath, $fileName)) {
-                throw new \Exception('No se pudo mover el archivo al directorio: ' . $fullPath);
-            }
-            
-            // Dar permisos al archivo creado
-            chmod($filePath, 0666);
             
             // Guardar en la base de datos
             $documento = new Documento();
@@ -216,7 +246,7 @@ class DocumentoController extends Controller
             $documento->extension = $extension;
             $documento->tipo = $file->getMimeType();
             $documento->tamaño = $fileSize;
-            $documento->ruta = $dirPath . '/' . $fileName;
+            $documento->ruta = 'storage/' . $filePath;
             $documento->subido_por = session('auth_user')['id'] ?? Auth::id() ?? 1; // Fallback a ID 1 si no hay sesión
             $documento->activo = true;
             $documento->save();
@@ -319,16 +349,28 @@ class DocumentoController extends Controller
                     ->with('error', 'El documento no está disponible.');
             }
             
-            // Ruta al archivo físico
-            $rutaDocumento = public_path($documento->ruta);
-            
-            // Verificar si existe el archivo
-            if (file_exists($rutaDocumento)) {
-                Log::info('Descargando documento: ' . $id . ' - Ruta: ' . $rutaDocumento);
-                return response()->download($rutaDocumento, $documento->nombre_original);
+            // Comprobar si es una ruta de storage
+            if (strpos($documento->ruta, 'storage/') === 0) {
+                // Quitar el prefijo 'storage/' para obtener la ruta relativa
+                $relativePath = str_replace('storage/', '', $documento->ruta);
+                
+                // Verificar si existe el archivo en el storage público
+                if (Storage::disk('public')->exists($relativePath)) {
+                    Log::info('Descargando documento desde storage: ' . $id . ' - Ruta: ' . $relativePath);
+                    return Storage::disk('public')->download($relativePath, $documento->nombre_original);
+                }
+            } else {
+                // Ruta al archivo físico (para compatibilidad con rutas antiguas)
+                $rutaDocumento = public_path($documento->ruta);
+                
+                // Verificar si existe el archivo
+                if (file_exists($rutaDocumento)) {
+                    Log::info('Descargando documento: ' . $id . ' - Ruta: ' . $rutaDocumento);
+                    return response()->download($rutaDocumento, $documento->nombre_original);
+                }
             }
             
-            Log::warning('Archivo no encontrado para descarga: ' . $rutaDocumento);
+            Log::warning('Archivo no encontrado para descarga: ' . $documento->ruta);
             return redirect()->route('dashboard.gestion-documental')
                 ->with('error', 'No se encontró el archivo físico.');
                 
