@@ -19,6 +19,9 @@
 
 ## ⚠️ IMPORTANTE: Configuración del Entorno Docker
 
+CAMBIAR ESTA LINEA POR LA IP DE TU LDAP HOST IMPORTANTE:
+LDAP_DEFAULT_HOSTS=172.19.0.4
+
 ### 🔐 Servidor LDAP (OpenLDAP)
 
 Para configurar el servidor LDAP de forma rápida, se proporcionan scripts de automatización:

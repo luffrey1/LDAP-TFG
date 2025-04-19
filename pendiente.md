@@ -1,5 +1,9 @@
 **PENDIENTE**
 
+CAMBIAR ESTO:
+LDAP_DEFAULT_HOSTS=172.19.0.4
+xq sino hay que cambiar siempre la ip del ldap default cada persona que entra, (está asi por un bug de inicio de sesion solo por LDAP-ADMIN)
+
 1: Revisar que funcione la creacion de usuarios y se hashee la contraseña correctamente, que se eliminen correctamente los usuarios que eligas en las pestañas, que el boton de la coronita de admin funcione bien.
 2:Los mensajes que se puedan reenviar, borrar, destacar etc etc...
 3: En el calendario que funcionen bien los eventos y se muestren en el dashboard correctamente con contador y eventos proximos.
