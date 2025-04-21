@@ -73,8 +73,7 @@ class AuthController extends Controller
             $basedn = $config->get('base_dn');
             $adminDn = $config->get('username');
             
-         //   Log::debug("Usando configuración LdapRecord: hosts=" . json_encode($hosts) . 
-                     ", base_dn={$basedn}, admin_dn={$adminDn}");
+           Log::debug("Usando configuración LdapRecord: hosts=" . json_encode($hosts) . ", base_dn={$basedn}, admin_dn={$adminDn}");
             
             // Construir DN de usuario
             $userDn = "uid={$credentials['username']},ou=people," . $basedn;
