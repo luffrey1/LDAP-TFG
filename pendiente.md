@@ -4,11 +4,11 @@
 - Cambiar `LDAP_DEFAULT_HOSTS=172.19.0.4` ya que actualmente hay que cambiar la IP del LDAP por defecto para cada nuevo usuario (está así por un bug de inicio de sesión exclusivo con LDAP-ADMIN)
 
 ## Tareas Inmediatas
-1. **Gestión de usuarios**
-   - Revisar que funcione correctamente la creación de usuarios
-   - Verificar que se hashee la contraseña correctamente
-   - Comprobar que los usuarios se eliminen correctamente desde la interfaz
-   - Asegurar que la función de promover a administrador (icono de corona) funcione bien
+1. **Gestión de usuarios YA FUNCIONA**
+   - Revisar que funcione correctamente la creación de usuarios # funciona #
+   - Verificar que se hashee la contraseña correctamente # funciona #
+   - Comprobar que los usuarios se eliminen correctamente desde la interfaz # funciona #
+   - Asegurar que la función de promover a administrador (icono de corona) funcione bien # funciona #
 
 2. **Sistema de mensajería**
    - Implementar funcionalidad para reenviar mensajes

@@ -38,7 +38,7 @@ class DashboardController extends Controller
                 // Obtener usuarios LDAP recientes
                 $ldapRecentUsers = $this->getLdapRecentUsers();
             } catch (\Exception $e) {
-                Log::error('Error al obtener datos LDAP: ' . $e->getMessage());
+                //Log::error('Error al obtener datos LDAP: ' . $e->getMessage());
                 // Valores por defecto en caso de error
                 $stats['ldap_admins'] = 0;
                 $stats['ldap_profesores'] = 0;
@@ -480,7 +480,7 @@ class DashboardController extends Controller
                 'usuarios' => $usuariosCount
             ];
         } catch (\Exception $e) {
-            Log::error('Error al obtener estadísticas: ' . $e->getMessage());
+            //Log::error('Error al obtener estadísticas: ' . $e->getMessage());
             
             // Devolver valores por defecto en caso de error
             return [
@@ -556,7 +556,7 @@ class DashboardController extends Controller
                 ]
             ];
         } catch (\Exception $e) {
-            Log::error('Error al obtener documentos recientes: ' . $e->getMessage());
+            //Log::error('Error al obtener documentos recientes: ' . $e->getMessage());
             
             // Devolver documento de ejemplo en caso de error
             return [
@@ -686,7 +686,7 @@ class DashboardController extends Controller
                 ]
             ];
         } catch (\Exception $e) {
-            Log::error('Error al obtener mensajes recientes: ' . $e->getMessage());
+            //Log::error('Error al obtener mensajes recientes: ' . $e->getMessage());
             
             // Devolver mensaje de bienvenida en caso de error
             return [
@@ -775,7 +775,7 @@ class DashboardController extends Controller
                 ]
             ];
         } catch (\Exception $e) {
-            Log::error('Error al obtener eventos próximos: ' . $e->getMessage());
+            //Log::error('Error al obtener eventos próximos: ' . $e->getMessage());
             
             // Devolver datos de fallback para evitar errores en la vista
             return [
@@ -832,7 +832,7 @@ class DashboardController extends Controller
                 ]
             ];
         } catch (\Exception $e) {
-            Log::error('Error al obtener actividad de usuarios: ' . $e->getMessage());
+            //Log::error('Error al obtener actividad de usuarios: ' . $e->getMessage());
             
             // Devolver actividad por defecto
             return [
@@ -873,7 +873,7 @@ class DashboardController extends Controller
             
             return $documents->toArray();
         } catch (\Exception $e) {
-            Log::error('Error al obtener documentos: ' . $e->getMessage());
+            //Log::error('Error al obtener documentos: ' . $e->getMessage());
             return [];
         }
     }
@@ -930,7 +930,7 @@ class DashboardController extends Controller
             return $folders;
             
         } catch (\Exception $e) {
-            Log::error('Error al obtener carpetas: ' . $e->getMessage());
+            //Log::error('Error al obtener carpetas: ' . $e->getMessage());
             
             // Devolver sólo la carpeta General en caso de error
             return [
@@ -1027,7 +1027,7 @@ class DashboardController extends Controller
             return $mensajes->toArray();
             
         } catch (\Exception $e) {
-            Log::error('Error al obtener mensajes recibidos: ' . $e->getMessage());
+            //Log::error('Error al obtener mensajes recibidos: ' . $e->getMessage());
             return [];
         }
     }
@@ -1053,7 +1053,7 @@ class DashboardController extends Controller
                 return $mensajes->toArray();
             }
         } catch (\Exception $e) {
-            Log::warning('Error al obtener mensajes enviados: ' . $e->getMessage());
+            //Log::warning('Error al obtener mensajes enviados: ' . $e->getMessage());
         }
         
         // Datos simulados simplificados
@@ -1239,7 +1239,7 @@ class DashboardController extends Controller
                 }
             }
         } catch (\Exception $e) {
-            Log::error('Error al obtener estadísticas LDAP: ' . $e->getMessage());
+            //Log::error('Error al obtener estadísticas LDAP: ' . $e->getMessage());
         }
         
         return $stats;
@@ -1281,7 +1281,7 @@ class DashboardController extends Controller
                 }
             }
         } catch (\Exception $e) {
-            Log::error('Error al obtener usuarios LDAP: ' . $e->getMessage());
+            //Log::error('Error al obtener usuarios LDAP: ' . $e->getMessage());
         }
         
         return $users;

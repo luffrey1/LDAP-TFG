@@ -140,9 +140,9 @@ class DocumentoController extends Controller
                 if (!Storage::disk('public')->exists($dirPath)) {
                     try {
                         Storage::disk('public')->makeDirectory($dirPath);
-                        Log::info('Directorio creado: ' . $dirPath);
+                        //     Log::info('Directorio creado: ' . $dirPath);
                     } catch (\Exception $e) {
-                        Log::error('Error al crear directorio ' . $dirPath . ': ' . $e->getMessage());
+                        //  Log::error('Error al crear directorio ' . $dirPath . ': ' . $e->getMessage());
                     }
                 }
             }
@@ -150,7 +150,7 @@ class DocumentoController extends Controller
             return $folders;
             
         } catch (\Exception $e) {
-            Log::error('Error al obtener carpetas: ' . $e->getMessage());
+            //Log::error('Error al obtener carpetas: ' . $e->getMessage());
             
             // Devolver categorías básicas en caso de error
             return [

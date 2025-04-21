@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Pagination\Paginator;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,6 +20,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Usar Tailwind para la paginación
+        Paginator::defaultView('pagination.custom');
+        
+        // Asegurarse de que la primera página siempre se muestre
+        Paginator::useBootstrap();
     }
 }

@@ -4,7 +4,7 @@
 dn: cn=alumnos,ou=groups,dc=test,dc=tierno,dc=es
 objectClass: top
 objectClass: posixGroup
-objectClass: groupOfUniqueNames
+# objectClass: groupOfUniqueNames
 cn: alumnos
 uniqueMember: uid=diurno,ou=people,dc=test,dc=tierno,dc=es
 uniqueMember: uid=vespertino,ou=people,dc=test,dc=tierno,dc=es

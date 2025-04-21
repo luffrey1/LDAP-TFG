@@ -175,10 +175,49 @@
                         </table>
                     </div>
 
-                    {{ $users->links() }}
+                    <div class="pagination-container mt-4">
+                        {{ $users->appends(request()->query())->links('pagination.custom') }}
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div>
+                            <p class="text-muted mb-0">
+                                Mostrando {{ $users->firstItem() ?? 0 }} - {{ $users->lastItem() ?? 0 }} de {{ $total ?? 0 }} usuarios
+                            </p>
+                        </div>
+                        <div>
+                            <select id="perPageSelector" class="form-select form-select-sm" style="width: auto;">
+                                <option value="10" {{ ($perPage ?? 10) == 10 ? 'selected' : '' }}>10 por página</option>
+                                <option value="25" {{ ($perPage ?? 10) == 25 ? 'selected' : '' }}>25 por página</option>
+                                <option value="50" {{ ($perPage ?? 10) == 50 ? 'selected' : '' }}>50 por página</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Controlar el selector de registros por página
+    const perPageSelector = document.getElementById('perPageSelector');
+    if (perPageSelector) {
+        perPageSelector.addEventListener('change', function() {
+            // Obtener la URL actual
+            const url = new URL(window.location.href);
+            
+            // Actualizar el parámetro perPage
+            url.searchParams.set('perPage', this.value);
+            
+            // Reiniciar la página a 1 cuando se cambia el número de registros por página
+            url.searchParams.set('page', '1');
+            
+            // Navegar a la nueva URL
+            window.location.href = url.toString();
+        });
+    }
+});
+</script>
 @endsection 

@@ -4,7 +4,7 @@
 dn: cn=profesores,ou=groups,dc=test,dc=tierno,dc=es
 objectClass: top
 objectClass: posixGroup
-objectClass: groupOfUniqueNames
+# objectClass: groupOfUniqueNames
 cn: profesores
 uniqueMember: uid=profesor,ou=people,dc=test,dc=tierno,dc=es
 gidNumber: 10000
