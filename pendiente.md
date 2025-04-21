@@ -41,8 +41,7 @@
 
 ### Gestión de equipos y usuarios
 - Organizar ordenadores por clases
-- Asignar perfiles LDAP personalizados a cada alumno
-- Crear usuarios personalizados con contraseñas individuales
+
 
 ### Monitorización básica
 - Implementar sistema de ping a ordenadores
@@ -58,6 +57,7 @@
 - Permitir inicio de sesión independiente del ordenador físico
 - Implementar carga de archivos personales entre sesiones
 - Sistema de sincronización de configuraciones personales
+- Asignar perfiles LDAP personalizados a cada alumno
 
 ### Sistema de seguridad proactivo
 - Monitorizar y notificar acciones críticas que puedan afectar negativamente a equipos

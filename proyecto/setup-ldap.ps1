@@ -13,142 +13,39 @@ docker run --name openldap-osixia -p 389:389 -p 636:636 -d mi-openldap
 Write-Host "Esperando a que el contenedor esté listo..."
 Start-Sleep -Seconds 10
 
-# Crear OUs - estructura básica
-Write-Host "Creando OUs..."
-docker exec -it openldap-osixia bash -c 'echo "dn: ou=people,dc=test,dc=tierno,dc=es
-objectClass: organizationalUnit
-ou: people" > /tmp/01-ou-people.ldif'
+# Verificar que la carpeta ldif existe
+Write-Host "Verificando acceso a los archivos LDIF..."
+if (-not (Test-Path "ldap/ldif")) {
+    Write-Host "Error: No se encuentra la carpeta ldap/ldif" -ForegroundColor Red
+    exit 1
+}
 
-docker exec -it openldap-osixia bash -c 'echo "dn: ou=groups,dc=test,dc=tierno,dc=es
-objectClass: organizationalUnit
-ou: groups" > /tmp/02-ou-groups.ldif'
+# Crear directorio destino en el contenedor
+Write-Host "Creando directorio en el contenedor..."
+docker exec -it openldap-osixia mkdir -p /tmp/ldif
 
-# Importar OUs una por una
-Write-Host "Importando OU people..."
-docker exec -it openldap-osixia ldapadd -x -D "cn=admin,dc=test,dc=tierno,dc=es" -w "admin" -f /tmp/01-ou-people.ldif
-Write-Host "Importando OU groups..."
-docker exec -it openldap-osixia ldapadd -x -D "cn=admin,dc=test,dc=tierno,dc=es" -w "admin" -f /tmp/02-ou-groups.ldif
+# Copiar todos los archivos LDIF al contenedor
+Write-Host "Copiando archivos LDIF al contenedor..."
+$ldifFiles = Get-ChildItem -Path "ldap/ldif" -Filter "*.ldif" | Sort-Object Name
 
-# Crear usuario ldap-admin
-Write-Host "Creando usuario ldap-admin..."
-docker exec -it openldap-osixia bash -c 'echo "dn: uid=ldap-admin,ou=people,dc=test,dc=tierno,dc=es
-givenName: LDAP
-sn: Admin
-uid: ldap-admin
-mail: ldap-admin@test.tierno.es
-cn: LDAPAdmin
-objectClass: person
-objectClass: inetOrgPerson
-objectClass: posixAccount
-userPassword: {SSHA}yKyX1tTYqQ9CmdCs4Vt/VE5vqGaYvlZ5
-uidNumber: 9001
-gidNumber: 9001
-loginShell: /bin/bash
-homeDirectory: /home/ldap-admin" > /tmp/03-ldap-admin.ldif'
+foreach ($file in $ldifFiles) {
+    Write-Host "Copiando $($file.Name)..." -ForegroundColor Cyan
+    docker cp "ldap/ldif/$($file.Name)" openldap-osixia:/tmp/ldif/
+}
 
-# Importar usuario ldap-admin
-Write-Host "Importando usuario ldap-admin..."
-docker exec -it openldap-osixia ldapadd -x -D "cn=admin,dc=test,dc=tierno,dc=es" -w "admin" -f /tmp/03-ldap-admin.ldif
+# Procesar archivos LDIF en orden numérico
+Write-Host "Procesando archivos LDIF en orden..."
+$ldifContainerFiles = docker exec -it openldap-osixia ls -v /tmp/ldif/ | Where-Object { $_ -match "\.ldif$" }
 
-# Crear grupo ldapadmins
-Write-Host "Creando grupo ldapadmins..."
-docker exec -it openldap-osixia bash -c 'echo "dn: cn=ldapadmins,ou=groups,dc=test,dc=tierno,dc=es
-objectClass: top
-objectClass: posixGroup
-objectClass: groupOfUniqueNames
-cn: ldapadmins
-uniqueMember: uid=ldap-admin,ou=people,dc=test,dc=tierno,dc=es
-gidNumber: 9001" > /tmp/04-ldapadmins.ldif'
-
-# Importar grupo ldapadmins
-Write-Host "Importando grupo ldapadmins..."
-docker exec -it openldap-osixia ldapadd -x -D "cn=admin,dc=test,dc=tierno,dc=es" -w "admin" -f /tmp/04-ldapadmins.ldif
-
-# Crear usuario profesor
-Write-Host "Creando usuario profesor..."
-docker exec -it openldap-osixia bash -c 'echo "dn: uid=profesor,ou=people,dc=test,dc=tierno,dc=es
-givenName: Profesor
-sn: Ejemplo
-uid: profesor
-mail: profesor@test.tierno.es
-cn: Profesor Ejemplo
-objectClass: person
-objectClass: inetOrgPerson
-objectClass: posixAccount
-userPassword: {SSHA}yKyX1tTYqQ9CmdCs4Vt/VE5vqGaYvlZ5
-uidNumber: 10001
-gidNumber: 10001
-loginShell: /bin/bash
-homeDirectory: /home/profesor" > /tmp/05-profesor.ldif'
-
-# Importar usuario profesor
-Write-Host "Importando usuario profesor..."
-docker exec -it openldap-osixia ldapadd -x -D "cn=admin,dc=test,dc=tierno,dc=es" -w "admin" -f /tmp/05-profesor.ldif
-
-# Crear usuario alumno
-Write-Host "Creando usuario alumno..."
-docker exec -it openldap-osixia bash -c 'echo "dn: uid=alumno,ou=people,dc=test,dc=tierno,dc=es
-givenName: Alumno
-sn: Test
-uid: alumno
-mail: alumno@test.tierno.es
-cn: Alumno Test
-objectClass: person
-objectClass: inetOrgPerson
-objectClass: posixAccount
-userPassword: {SSHA}yKyX1tTYqQ9CmdCs4Vt/VE5vqGaYvlZ5
-uidNumber: 10002
-gidNumber: 10002
-loginShell: /bin/bash
-homeDirectory: /home/alumno" > /tmp/06-alumno.ldif'
-
-# Importar usuario alumno
-Write-Host "Importando usuario alumno..."
-docker exec -it openldap-osixia ldapadd -x -D "cn=admin,dc=test,dc=tierno,dc=es" -w "admin" -f /tmp/06-alumno.ldif
-
-# Crear grupo profesores
-Write-Host "Creando grupo profesores..."
-docker exec -it openldap-osixia bash -c 'echo "dn: cn=profesores,ou=groups,dc=test,dc=tierno,dc=es
-objectClass: top
-objectClass: posixGroup
-objectClass: groupOfUniqueNames
-cn: profesores
-uniqueMember: uid=profesor,ou=people,dc=test,dc=tierno,dc=es
-gidNumber: 10001" > /tmp/07-profesores.ldif'
-
-# Importar grupo profesores
-Write-Host "Importando grupo profesores..."
-docker exec -it openldap-osixia ldapadd -x -D "cn=admin,dc=test,dc=tierno,dc=es" -w "admin" -f /tmp/07-profesores.ldif
-
-# Crear grupo alumnos
-Write-Host "Creando grupo alumnos..."
-docker exec -it openldap-osixia bash -c 'echo "dn: cn=alumnos,ou=groups,dc=test,dc=tierno,dc=es
-objectClass: top
-objectClass: posixGroup
-objectClass: groupOfUniqueNames
-cn: alumnos
-uniqueMember: uid=alumno,ou=people,dc=test,dc=tierno,dc=es
-gidNumber: 10002" > /tmp/08-alumnos.ldif'
-
-# Importar grupo alumnos
-Write-Host "Importando grupo alumnos..."
-docker exec -it openldap-osixia ldapadd -x -D "cn=admin,dc=test,dc=tierno,dc=es" -w "admin" -f /tmp/08-alumnos.ldif
-
-# Crear grupo everybody
-Write-Host "Creando grupo everybody..."
-docker exec -it openldap-osixia bash -c 'echo "dn: cn=everybody,ou=groups,dc=test,dc=tierno,dc=es
-objectClass: top
-objectClass: posixGroup
-objectClass: groupOfUniqueNames
-cn: everybody
-uniqueMember: uid=ldap-admin,ou=people,dc=test,dc=tierno,dc=es
-uniqueMember: uid=profesor,ou=people,dc=test,dc=tierno,dc=es
-uniqueMember: uid=alumno,ou=people,dc=test,dc=tierno,dc=es
-gidNumber: 10000" > /tmp/09-everybody.ldif'
-
-# Importar grupo everybody
-Write-Host "Importando grupo everybody..."
-docker exec -it openldap-osixia ldapadd -x -D "cn=admin,dc=test,dc=tierno,dc=es" -w "admin" -f /tmp/09-everybody.ldif
+foreach ($file in $ldifContainerFiles) {
+    Write-Host "Importando $file..." -ForegroundColor Green
+    try {
+        docker exec -it openldap-osixia ldapadd -x -D "cn=admin,dc=test,dc=tierno,dc=es" -w "admin" -f "/tmp/ldif/$file"
+    }
+    catch {
+        Write-Host "Advertencia: Error al importar $file. Continuando..." -ForegroundColor Yellow
+    }
+}
 
 # Verificar usuarios y grupos
 Write-Host "Verificando usuarios y grupos..."
@@ -158,7 +55,7 @@ docker exec -it openldap-osixia ldapsearch -x -b "dc=test,dc=tierno,dc=es" -H ld
 Write-Host "Reiniciando el servicio de Laravel..."
 docker restart laravel-app
 
-Write-Host "Configuración completada. Ahora puedes acceder con los siguientes usuarios LDAP:"
-Write-Host "- ldap-admin (contraseña: password)"
-Write-Host "- profesor (contraseña: password)"
-Write-Host "- alumno (contraseña: password)" 
+Write-Host "Configuración completada. Ahora puedes acceder con los siguientes usuarios LDAP:" -ForegroundColor Green
+Write-Host "- ldap-admin (contraseña: password)" -ForegroundColor White
+Write-Host "- profesor (contraseña: password)" -ForegroundColor White
+Write-Host "- alumno (contraseña: password)" -ForegroundColor White 

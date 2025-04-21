@@ -26,22 +26,21 @@ LDAP_DEFAULT_HOSTS=172.19.0.4
 
 Para configurar el servidor LDAP de forma rápida, se proporcionan scripts de automatización:
 
-> **Nota:** Es más seguro utilizar la configuración manual que se detalla más abajo.
 
 **En Windows:**
 ```powershell
-# Ejecutar el script de configuración LDAP para Windows
+# Ejecutar el script de configuración LDAP para Windows(DENTRO DE /PROYECTO)
 .\setup-ldap.ps1
 ```
 
 **En Linux/macOS:**
 ```bash
-# Ejecutar el script de configuración LDAP para sistemas Unix
+# Ejecutar el script de configuración LDAP para sistemas Unix(DENTRO DE /PROYECTO)
 chmod +x ./setup-ldap.sh
 ./setup-ldap.sh
 ```
 
-**Configuración Manual (Recomendada):**
+**Configuración Manual (No crea usuarios, el script si, y en cuyo caso no cree los grupos, proceder con lo de abajo y luego el script.):**
 
 ```bash
 # Crear el contenedor de LDAP
