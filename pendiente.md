@@ -10,7 +10,7 @@
    - Comprobar que los usuarios se eliminen correctamente desde la interfaz # funciona #
    - Asegurar que la función de promover a administrador (icono de corona) funcione bien # funciona #
 
-2. **Sistema de mensajería**
+2. **Sistema de mensajería YA FUNCIONA**
    - Implementar funcionalidad para reenviar mensajes
    - Añadir opción para borrar mensajes
    - Permitir destacar mensajes importantes
