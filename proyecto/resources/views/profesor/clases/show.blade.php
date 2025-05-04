@@ -7,7 +7,7 @@
     <div class="section-header">
         <h1><i class="fas fa-chalkboard"></i> {{ $grupo->nombre }}</h1>
         <div class="section-header-breadcrumb">
-            <div class="breadcrumb-item active"><a href="{{ route('dashboard') }}">Dashboard</a></div>
+            <div class="breadcrumb-item active"><a href="{{ route('dashboard.index') }}">Dashboard</a></div>
             <div class="breadcrumb-item"><a href="{{ route('profesor.clases.index') }}">Clases</a></div>
             <div class="breadcrumb-item">Detalles</div>
         </div>
