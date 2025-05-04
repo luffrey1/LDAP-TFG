@@ -53,11 +53,11 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
     });
     
     // Calendario y eventos
-    Route::middleware(CheckModuleAccess::class.':calendario')->group(function () {
-        Route::get('/calendario', [EventoController::class, 'index'])->name('dashboard.calendario');
-        Route::post('/calendario/evento', [EventoController::class, 'store'])->name('dashboard.calendario.evento');
-        Route::put('/calendario/evento/{id}', [EventoController::class, 'update'])->name('dashboard.calendario.actualizar');
-        Route::delete('/calendario/evento/{id}', [EventoController::class, 'destroy'])->name('dashboard.calendario.eliminar');
+    Route::prefix('calendario')->middleware(CheckModuleAccess::class.':calendario')->group(function () {
+        Route::get('/', [EventoController::class, 'index'])->name('dashboard.calendario');
+        Route::post('/evento', [EventoController::class, 'store'])->name('dashboard.calendario.evento');
+        Route::put('/evento/{id}', [EventoController::class, 'update'])->name('dashboard.calendario.actualizar');
+        Route::delete('/evento/{id}', [EventoController::class, 'destroy'])->name('dashboard.calendario.eliminar');
     });
     
     // Ruta para gestión de usuarios LDAP - acceso directo a admin users
@@ -86,6 +86,41 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware', 'App\Http\Mi
         ->name('configuracion.index');
     Route::post('/configuracion', [App\Http\Controllers\Admin\ConfiguracionController::class, 'guardar'])
         ->name('configuracion.guardar');
+});
+
+// Rutas para la gestión de alumnos
+Route::middleware(['App\Http\Middleware\LdapAuthMiddleware'])->prefix('profesor')->name('profesor.')->group(function () {
+    // Rutas para gestión de clases
+    Route::get('clases', [App\Http\Controllers\Profesor\ClaseController::class, 'index'])->name('clases.index');
+    Route::get('clases/create', [App\Http\Controllers\Profesor\ClaseController::class, 'create'])->name('clases.create');
+    Route::post('clases', [App\Http\Controllers\Profesor\ClaseController::class, 'store'])->name('clases.store');
+    Route::get('clases/{id}', [App\Http\Controllers\Profesor\ClaseController::class, 'show'])->name('clases.show');
+    Route::get('clases/{id}/edit', [App\Http\Controllers\Profesor\ClaseController::class, 'edit'])->name('clases.edit');
+    Route::put('clases/{id}', [App\Http\Controllers\Profesor\ClaseController::class, 'update'])->name('clases.update');
+    Route::delete('clases/{id}', [App\Http\Controllers\Profesor\ClaseController::class, 'destroy'])->name('clases.destroy');
+    
+    // Rutas para clases de tutores
+    Route::get('mis-clases', [App\Http\Controllers\Profesor\ClaseController::class, 'misClases'])->name('clases.mias');
+    Route::get('mis-clases/{id}', [App\Http\Controllers\Profesor\ClaseController::class, 'verMiClase'])->name('clases.mias.ver');
+    
+    // Rutas para gestión de alumnos
+    Route::get('alumnos', [App\Http\Controllers\Profesor\AlumnoController::class, 'index'])->name('alumnos.index');
+    Route::get('alumnos/create', [App\Http\Controllers\Profesor\AlumnoController::class, 'create'])->name('alumnos.create');
+    Route::post('alumnos', [App\Http\Controllers\Profesor\AlumnoController::class, 'store'])->name('alumnos.store');
+    Route::get('alumnos/{id}', [App\Http\Controllers\Profesor\AlumnoController::class, 'show'])->name('alumnos.show');
+    Route::get('alumnos/{id}/edit', [App\Http\Controllers\Profesor\AlumnoController::class, 'edit'])->name('alumnos.edit');
+    Route::put('alumnos/{id}', [App\Http\Controllers\Profesor\AlumnoController::class, 'update'])->name('alumnos.update');
+    Route::delete('alumnos/{id}', [App\Http\Controllers\Profesor\AlumnoController::class, 'destroy'])->name('alumnos.destroy');
+    Route::get('alumnos/{id}/actividades', [App\Http\Controllers\Profesor\AlumnoController::class, 'actividades'])->name('alumnos.actividades');
+    
+    // Rutas para importar alumnos
+    Route::get('alumnos/import/form', [App\Http\Controllers\Profesor\AlumnoController::class, 'importForm'])->name('alumnos.import');
+    Route::post('alumnos/import/process', [App\Http\Controllers\Profesor\AlumnoController::class, 'importProcess'])->name('alumnos.import.process');
+    Route::get('alumnos/import/template', [App\Http\Controllers\Profesor\AlumnoController::class, 'downloadTemplate'])->name('alumnos.template');
+    
+    // Rutas para LDAP alumnos
+    Route::get('alumnos/ldap/buscar', [App\Http\Controllers\Profesor\AlumnoController::class, 'buscarAlumnosLdap'])->name('alumnos.ldap.buscar');
+    Route::post('alumnos/ldap/importar', [App\Http\Controllers\Profesor\AlumnoController::class, 'importarAlumnosLdap'])->name('alumnos.ldap.importar');
 });
 
 

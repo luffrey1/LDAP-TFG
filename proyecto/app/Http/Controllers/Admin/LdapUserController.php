@@ -1054,6 +1054,8 @@ class LdapUserController extends Controller
     protected function addUserToGroup($userDn, $groupDn)
     {
         try {
+            Log::debug("Intentando añadir usuario {$userDn} al grupo {$groupDn}");
+            
             // Extraer uid del userDn
             $userUid = '';
             if (preg_match('/uid=([^,]+)/', $userDn, $matches)) {
@@ -1062,12 +1064,17 @@ class LdapUserController extends Controller
                 throw new Exception("No se pudo extraer el UID del DN del usuario");
             }
             
-            // Paso 1: Obtener información sobre el grupo
-            $group = $this->connection->query()
-                ->in($this->baseDn)
-                ->where('dn', '=', $groupDn)
-                ->first();
-                
+            // Extraer nombre del grupo del DN para logs
+            $groupName = '';
+            if (preg_match('/cn=([^,]+)/', $groupDn, $matches)) {
+                $groupName = $matches[1];
+            }
+            
+            Log::debug("Buscando grupo: {$groupDn}");
+            
+            // Buscar el grupo utilizando múltiples métodos
+            $group = $this->findGroupByMultipleMethods($groupDn, $groupName);
+            
             if (!$group) {
                 throw new Exception("Grupo no encontrado: $groupDn");
             }
@@ -1076,6 +1083,7 @@ class LdapUserController extends Controller
             $objectClasses = isset($group['objectclass']) ? $group['objectclass'] : [];
             $isPosixGroup = false;
             $isGroupOfUniqueNames = false;
+            $isGroupOfNames = false;
             
             foreach ($objectClasses as $class) {
                 $classLower = strtolower($class);
@@ -1083,68 +1091,309 @@ class LdapUserController extends Controller
                     $isPosixGroup = true;
                 } else if ($classLower === 'groupofuniquenames') {
                     $isGroupOfUniqueNames = true;
+                } else if ($classLower === 'groupofnames') {
+                    $isGroupOfNames = true;
                 }
             }
             
-            // Caso 1: Para PosixGroup, añadir el uid a memberUid
+            Log::debug("Clases de objeto del grupo {$groupName}: " . json_encode($objectClasses));
+            
+            // Procesar según el tipo de grupo
             if ($isPosixGroup) {
-                // Obtener miembros actuales
-                $memberUids = [];
-                if (isset($group['memberuid'])) {
-                    $memberUids = is_array($group['memberuid']) ? $group['memberuid'] : [$group['memberuid']];
-                }
-                
-                // Si el usuario ya está en el grupo, no hacer nada
-                if (in_array($userUid, $memberUids)) {
-                    return true;
-                }
-                
-                // Añadir el usuario a los miembros
-                $memberUids[] = $userUid;
-                
-                // Realizar la modificación
-                $this->connection->run(function ($ldap) use ($groupDn, $memberUids) {
-                    $ldap->modifyBatch($groupDn, [
-                        [
-                            'attrib' => 'memberuid',
-                            'modtype' => LDAP_MODIFY_BATCH_REPLACE,
-                            'values' => $memberUids,
-                        ],
-                    ]);
-                });
+                $this->addUserToPosixGroup($userUid, $groupDn, $groupName, $group);
             }
             
-            // Caso 2: Para groupOfUniqueNames, añadir el DN completo a uniqueMember
             if ($isGroupOfUniqueNames) {
-                // Obtener miembros actuales
-                $members = [];
-                if (isset($group['uniquemember'])) {
-                    $members = is_array($group['uniquemember']) ? $group['uniquemember'] : [$group['uniquemember']];
-                }
-                
-                // Si el usuario ya está en el grupo, no hacer nada
-                if (in_array($userDn, $members)) {
-                    return true;
-                }
-                
-                // Añadir el usuario a los miembros
-                $members[] = $userDn;
-                
-                // Realizar la modificación
-                $this->connection->run(function ($ldap) use ($groupDn, $members) {
-                    $ldap->modifyBatch($groupDn, [
-                        [
-                            'attrib' => 'uniquemember',
-                            'modtype' => LDAP_MODIFY_BATCH_REPLACE,
-                            'values' => $members,
-                        ],
-                    ]);
-                });
+                $this->addUserToGroupOfUniqueNames($userDn, $groupDn, $groupName, $group);
             }
             
+            if ($isGroupOfNames) {
+                $this->addUserToGroupOfNames($userDn, $groupDn, $groupName, $group);
+            }
+            
+            Log::info("Usuario añadido con éxito al grupo {$groupName}");
             return true;
         } catch (Exception $e) {
+            Log::error("Error al añadir usuario al grupo: " . $e->getMessage());
             throw new Exception("Error al añadir usuario al grupo: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Buscar grupo por múltiples métodos
+     */
+    protected function findGroupByMultipleMethods($groupDn, $groupName)
+    {
+        $group = null;
+        $errorMsg = '';
+        
+        // Método 1: Búsqueda exacta por DN
+        try {
+            $group = $this->connection->query()
+                ->in($this->baseDn)
+                ->where('dn', '=', $groupDn)
+                ->first();
+                
+            if ($group) {
+                Log::debug("Grupo encontrado por DN exacto: {$groupDn}");
+                return $group;
+            }
+        } catch (\Exception $e) {
+            $errorMsg .= "Error búsqueda 1: " . $e->getMessage() . "; ";
+            Log::debug("Error en búsqueda 1: " . $e->getMessage());
+        }
+        
+        // Método 2: Búsqueda por componentes
+        try {
+            // Extraer cn y ou del DN
+            $cn = '';
+            $ou = '';
+            if (preg_match('/cn=([^,]+),ou=([^,]+)/', $groupDn, $matches)) {
+                $cn = $matches[1];
+                $ou = $matches[2];
+                
+                // Buscar por CN
+                $group = $this->connection->query()
+                    ->in("ou={$ou},{$this->baseDn}")
+                    ->where('cn', '=', $cn)
+                    ->first();
+                    
+                if ($group) {
+                    Log::debug("Grupo encontrado por CN en OU: {$cn} en ou={$ou}");
+                    return $group;
+                }
+            }
+        } catch (\Exception $e) {
+            $errorMsg .= "Error búsqueda 2: " . $e->getMessage() . "; ";
+            Log::debug("Error en búsqueda 2: " . $e->getMessage());
+        }
+        
+        // Método 3: Búsqueda directa por filtro rawFilter
+        try {
+            // Construir un filtro LDAP directo para el grupo
+            $escapedDn = ldap_escape($groupDn, "", LDAP_ESCAPE_FILTER);
+            $results = $this->connection->query()
+                ->in($this->baseDn)
+                ->rawFilter("(|(dn={$escapedDn})(distinguishedName={$escapedDn}))")
+                ->get();
+                
+            if (count($results) > 0) {
+                $group = $results[0];
+                Log::debug("Grupo encontrado por filtro directo: {$groupDn}");
+                return $group;
+            }
+        } catch (\Exception $e) {
+            $errorMsg .= "Error búsqueda 3: " . $e->getMessage() . "; ";
+            Log::debug("Error en búsqueda 3: " . $e->getMessage());
+        }
+        
+        // Intento final: buscar por nombre en el contenedor de grupos
+        try {
+            Log::debug("Buscando grupo por cn={$groupName} en {$this->groupsOu}");
+            $group = $this->connection->query()
+                ->in($this->groupsOu)
+                ->where('cn', '=', $groupName)
+                ->first();
+                
+            if ($group) {
+                Log::debug("Grupo encontrado por CN en contenedor de grupos: {$groupName}");
+                return $group;
+            }
+        } catch (\Exception $e) {
+            $errorMsg .= "Error búsqueda final: " . $e->getMessage();
+            Log::debug("Error en búsqueda final: " . $e->getMessage());
+        }
+        
+        // Último intento: comprobar usando conexión nativa
+        try {
+            $ldapConn = ldap_connect(config('ldap.connections.default.hosts')[0], config('ldap.connections.default.port'));
+            ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
+            ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
+            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
+            
+            $bind = ldap_bind(
+                $ldapConn, 
+                config('ldap.connections.default.username'), 
+                config('ldap.connections.default.password')
+            );
+            
+            if ($bind) {
+                $search = ldap_search($ldapConn, $this->baseDn, "(cn={$groupName})");
+                $entries = ldap_get_entries($ldapConn, $search);
+                
+                if ($entries['count'] > 0) {
+                    Log::debug("Grupo encontrado mediante conexión nativa de PHP: {$groupName}");
+                    ldap_close($ldapConn);
+                    return $entries[0];
+                }
+                ldap_close($ldapConn);
+            }
+        } catch (\Exception $e) {
+            Log::debug("Error en búsqueda nativa: " . $e->getMessage());
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Añadir usuario a un grupo posixGroup
+     */
+    protected function addUserToPosixGroup($userUid, $groupDn, $groupName, $group)
+    {
+        // Obtener miembros actuales
+        $memberUids = [];
+        if (isset($group['memberuid'])) {
+            $memberUids = is_array($group['memberuid']) ? $group['memberuid'] : [$group['memberuid']];
+        }
+        
+        // Asegurarse de que es un array indexado numéricamente
+        $memberUids = array_values($memberUids);
+        
+        // Si el usuario ya está en el grupo, no hacer nada
+        if (in_array($userUid, $memberUids)) {
+            Log::debug("Usuario {$userUid} ya es miembro del grupo {$groupName} (posixGroup)");
+            return true;
+        }
+        
+        // Añadir el usuario a los miembros
+        $memberUids[] = $userUid;
+        
+        // Asegurarse nuevamente de que es un array indexado numéricamente
+        $memberUids = array_values($memberUids);
+        
+        Log::debug("Añadiendo {$userUid} a memberUid de {$groupName}. Array final: " . json_encode($memberUids));
+        
+        // Realizar la modificación
+        return $this->modifyGroupAttribute($groupDn, $groupName, 'memberuid', $memberUids, $userUid);
+    }
+    
+    /**
+     * Añadir usuario a un grupo groupOfUniqueNames
+     */
+    protected function addUserToGroupOfUniqueNames($userDn, $groupDn, $groupName, $group)
+    {
+        // Obtener miembros actuales
+        $members = [];
+        if (isset($group['uniquemember'])) {
+            $members = is_array($group['uniquemember']) ? $group['uniquemember'] : [$group['uniquemember']];
+        }
+        
+        // Asegurarse de que es un array indexado numéricamente
+        $members = array_values($members);
+        
+        // Si el usuario ya está en el grupo, no hacer nada
+        if (in_array($userDn, $members)) {
+            Log::debug("Usuario {$userDn} ya es miembro del grupo {$groupName} (groupOfUniqueNames)");
+            return true;
+        }
+        
+        // Añadir el usuario a los miembros
+        $members[] = $userDn;
+        
+        // Asegurarse nuevamente de que es un array indexado numéricamente
+        $members = array_values($members);
+        
+        Log::debug("Añadiendo {$userDn} a uniqueMember de {$groupName}. Array final: " . json_encode($members));
+        
+        // Realizar la modificación
+        return $this->modifyGroupAttribute($groupDn, $groupName, 'uniquemember', $members, $userDn);
+    }
+    
+    /**
+     * Añadir usuario a un grupo groupOfNames
+     */
+    protected function addUserToGroupOfNames($userDn, $groupDn, $groupName, $group)
+    {
+        // Obtener miembros actuales
+        $members = [];
+        if (isset($group['member'])) {
+            $members = is_array($group['member']) ? $group['member'] : [$group['member']];
+        }
+        
+        // Asegurarse de que es un array indexado numéricamente
+        $members = array_values($members);
+        
+        // Si el usuario ya está en el grupo, no hacer nada
+        if (in_array($userDn, $members)) {
+            Log::debug("Usuario {$userDn} ya es miembro del grupo {$groupName} (groupOfNames)");
+            return true;
+        }
+        
+        // Añadir el usuario a los miembros
+        $members[] = $userDn;
+        
+        // Asegurarse nuevamente de que es un array indexado numéricamente
+        $members = array_values($members);
+        
+        Log::debug("Añadiendo {$userDn} a member de {$groupName}. Array final: " . json_encode($members));
+        
+        // Realizar la modificación
+        return $this->modifyGroupAttribute($groupDn, $groupName, 'member', $members, $userDn);
+    }
+    
+    /**
+     * Modificar atributo de grupo con manejo de errores
+     */
+    protected function modifyGroupAttribute($groupDn, $groupName, $attribute, $values, $userId)
+    {
+        try {
+            $this->connection->run(function ($ldap) use ($groupDn, $attribute, $values) {
+                $ldap->modifyBatch($groupDn, [
+                    [
+                        'attrib' => $attribute,
+                        'modtype' => LDAP_MODIFY_BATCH_REPLACE,
+                        'values' => $values,
+                    ],
+                ]);
+            });
+            
+            Log::info("Usuario {$userId} añadido al grupo {$groupName} (" . ucfirst($attribute) . ")");
+            return true;
+        } catch (\Exception $e) {
+            Log::error("Error en la modificación LDAP: " . $e->getMessage());
+            
+            // Intento alternativo con conexión LDAP nativa
+            return $this->modifyGroupAttributeNative($groupDn, $groupName, $attribute, $values, $userId);
+        }
+    }
+    
+    /**
+     * Modificar atributo de grupo usando LDAP nativo
+     */
+    protected function modifyGroupAttributeNative($groupDn, $groupName, $attribute, $values, $userId)
+    {
+        try {
+            $ldapConn = ldap_connect(config('ldap.connections.default.hosts')[0], config('ldap.connections.default.port'));
+            ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
+            ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
+            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
+            
+            $bind = ldap_bind(
+                $ldapConn, 
+                config('ldap.connections.default.username'), 
+                config('ldap.connections.default.password')
+            );
+            
+            if ($bind) {
+                // Usar mod_replace en lugar de mod_add para reemplazar todos los valores
+                $entry = [$attribute => $values];
+                $result = ldap_modify($ldapConn, $groupDn, $entry);
+                
+                if ($result) {
+                    Log::info("Usuario {$userId} añadido al grupo {$groupName} mediante LDAP nativo");
+                    ldap_close($ldapConn);
+                    return true;
+                } else {
+                    Log::error("Error en LDAP nativo: " . ldap_error($ldapConn));
+                    ldap_close($ldapConn);
+                    throw new Exception("Error en LDAP nativo: " . ldap_error($ldapConn));
+                }
+            }
+            ldap_close($ldapConn);
+            return false;
+        } catch (\Exception $nativeEx) {
+            Log::error("Error en LDAP nativo: " . $nativeEx->getMessage());
+            throw $nativeEx;
         }
     }
 
@@ -1160,13 +1409,20 @@ class LdapUserController extends Controller
                 $userUid = $matches[1];
             }
             
-            $group = $this->connection->query()
-                ->in($this->baseDn)
-                ->where('dn', '=', $groupDn)
-                ->first();
-                
-            if (!$group) {
-                throw new Exception("Grupo no encontrado: $groupDn");
+            // Verificar primero si el grupo existe
+            try {
+                $group = $this->connection->query()
+                    ->in($this->baseDn)
+                    ->where('dn', '=', $groupDn)
+                    ->first();
+                    
+                if (!$group) {
+                    Log::warning("Grupo no encontrado: $groupDn - No se puede eliminar usuario");
+                    return false; // No lanzar excepción, simplemente retornar falso
+                }
+            } catch (Exception $ex) {
+                Log::warning("Error al buscar el grupo $groupDn: " . $ex->getMessage());
+                return false; // El grupo no existe o no se puede acceder, continuamos
             }
             
             // Verificar las clases de objeto del grupo
@@ -1233,6 +1489,7 @@ class LdapUserController extends Controller
             
             return true;
         } catch (Exception $e) {
+            Log::error("Error al eliminar usuario del grupo: " . $e->getMessage());
             throw new Exception("Error al eliminar usuario del grupo: " . $e->getMessage());
         }
     }
@@ -1243,27 +1500,257 @@ class LdapUserController extends Controller
     protected function updateUserGroups($userDn, $selectedGroups)
     {
         try {
+            Log::debug("Actualizando grupos para usuario: $userDn");
+            Log::debug("Grupos seleccionados: " . json_encode($selectedGroups));
+            
+            // Lista de grupos que necesitan manejo especial
+            $gruposEspeciales = ['everybody']; // Solo ignoraremos 'everybody'
+            
+            // Filtrar solamente los grupos que no podemos manejar
+            $filteredSelectedGroups = array_filter($selectedGroups, function($group) use ($gruposEspeciales) {
+                return !in_array($group, $gruposEspeciales);
+            });
+            
+            // Informar sobre los grupos filtrados
+            if (count($selectedGroups) !== count($filteredSelectedGroups)) {
+                $gruposIgnorados = array_diff($selectedGroups, $filteredSelectedGroups);
+                Log::info("Se ignoraron los siguientes grupos que no pueden ser manejados: " . implode(', ', $gruposIgnorados));
+            }
+            
             // Obtener todos los grupos posixGroup
-            $allGroups = $this->connection->query()
+            $allGroups = [];
+            try {
+                $allGroups = $this->connection->query()
+                    ->in($this->groupsOu)
+                    ->where('objectclass', '=', 'posixGroup')
+                    ->get();
+                
+                Log::debug("Grupos posixGroup encontrados: " . count($allGroups));
+            } catch (\Exception $e) {
+                Log::warning("Error al buscar grupos posixGroup: " . $e->getMessage());
+            }
+            
+            // Agregar también los grupos conocidos
+            $knownGroups = [];
+            
+            // Manejar grupos conocidos - crearlos si no existen
+            $gruposConocidos = [
+                'ldapadmins' => $this->adminGroupDn,
+                'profesores' => $this->profesoresGroupDn,
+                'alumnos' => $this->alumnosGroupDn
+            ];
+            
+            foreach ($gruposConocidos as $groupName => $groupDn) {
+                if (in_array($groupName, $filteredSelectedGroups)) {
+                    try {
+                        $groupExists = $this->connection->query()->find($groupDn);
+                        if ($groupExists) {
+                            $knownGroups[] = ['dn' => $groupDn, 'cn' => [$groupName]];
+                            Log::debug("Grupo $groupName encontrado y añadido");
+                        } else {
+                            // Crear el grupo si no existe
+                            Log::info("Grupo $groupName no encontrado, intentando crearlo");
+                            $this->createLdapGroup($groupName, $groupDn);
+                            $knownGroups[] = ['dn' => $groupDn, 'cn' => [$groupName]];
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning("Error al verificar grupo $groupName: " . $e->getMessage());
+                        if (strpos($e->getMessage(), 'No such object') !== false) {
+                            // Crear el grupo si no existe
+                            Log::info("Grupo $groupName no encontrado, intentando crearlo");
+                            $this->createLdapGroup($groupName, $groupDn);
+                            $knownGroups[] = ['dn' => $groupDn, 'cn' => [$groupName]];
+                        }
+                    }
+                }
+            }
+            
+            // Combinar grupos
+            $allGroups = array_merge($allGroups, $knownGroups);
+            Log::debug("Total de grupos a procesar: " . count($allGroups));
+            
+            if (empty($allGroups)) {
+                Log::warning("No se encontraron grupos válidos para procesar");
+                return true; // Retornar éxito aunque no haya grupos para evitar error
+            }
+            
+            $errors = [];
+            
+            foreach ($allGroups as $group) {
+                // Verificar que el grupo tenga atributos necesarios
+                if (!isset($group['dn']) || !isset($group['cn']) || !is_array($group['cn']) || empty($group['cn'])) {
+                    Log::warning("Grupo sin atributos válidos, omitiendo: " . json_encode($group));
+                    continue;
+                }
+                
+                $groupDn = $group['dn'];
+                $groupName = $group['cn'][0];
+                
+                Log::debug("Procesando grupo: $groupName");
+                
+                // Saltar los grupos problemáticos
+                if (in_array($groupName, $gruposEspeciales)) {
+                    Log::debug("Omitiendo grupo especial: $groupName");
+                    continue;
+                }
+                
+                try {
+                    // Verificar que el grupo existe antes de modificarlo
+                    try {
+                        $groupExists = $this->connection->query()->find($groupDn);
+                        if (!$groupExists) {
+                            Log::warning("Grupo $groupName con DN $groupDn no existe, intentando crearlo");
+                            $this->createLdapGroup($groupName, $groupDn);
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning("Error al verificar grupo $groupName: " . $e->getMessage());
+                        // Intentar crear el grupo si no existe
+                        if (strpos($e->getMessage(), 'No such object') !== false) {
+                            $this->createLdapGroup($groupName, $groupDn);
+                        } else {
+                            continue;
+                        }
+                    }
+                    
+                    // Si está seleccionado y no está en el grupo, añadirlo
+                    if (in_array($groupName, $filteredSelectedGroups)) {
+                        try {
+                            Log::debug("Añadiendo usuario a grupo: $groupName");
+                            $this->addUserToGroup($userDn, $groupDn);
+                        } catch (\Exception $e) {
+                            Log::warning("Error al añadir usuario a grupo $groupName: " . $e->getMessage());
+                            $errors[] = "Error al añadir usuario al grupo $groupName: " . $e->getMessage();
+                        }
+                    } 
+                    // Si no está seleccionado y está en el grupo, eliminarlo
+                    else {
+                        try {
+                            Log::debug("Eliminando usuario de grupo: $groupName");
+                            $this->removeUserFromGroup($userDn, $groupDn);
+                        } catch (\Exception $e) {
+                            Log::warning("Error al eliminar usuario de grupo $groupName: " . $e->getMessage());
+                        }
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Error al procesar grupo $groupName: " . $e->getMessage());
+                    $errors[] = "Error con grupo $groupName: " . $e->getMessage();
+                }
+            }
+            
+            // Filtrar errores sobre grupos especiales
+            $filteredErrors = [];
+            foreach ($errors as $error) {
+                $isSpecialGroupError = false;
+                foreach ($gruposEspeciales as $specialGroup) {
+                    if (strpos($error, $specialGroup) !== false) {
+                        $isSpecialGroupError = true;
+                        break;
+                    }
+                }
+                
+                if (!$isSpecialGroupError) {
+                    $filteredErrors[] = $error;
+                }
+            }
+            
+            if (!empty($filteredErrors)) {
+                $errorMsg = implode("; ", $filteredErrors);
+                throw new Exception("Algunos grupos no pudieron actualizarse: " . $errorMsg);
+            }
+            
+            return true;
+            
+        } catch (Exception $e) {
+            Log::error("Error al actualizar grupos del usuario: " . $e->getMessage());
+            throw new Exception("Error al actualizar grupos del usuario: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Crear un grupo LDAP si no existe
+     */
+    protected function createLdapGroup($groupName, $groupDn)
+    {
+        try {
+            // Verificar si el grupo ya existe
+            try {
+                $exists = $this->connection->query()->find($groupDn);
+                if ($exists) {
+                    Log::debug("Grupo $groupName ya existe, no es necesario crearlo");
+                    return true;
+                }
+            } catch (\Exception $e) {
+                // Continuar con la creación si hay error
+                Log::debug("Excepción al verificar grupo: " . $e->getMessage());
+            }
+            
+            // Extraer el padre del grupo para verificar si existe
+            $parentDn = preg_replace('/^cn=[^,]+,/', '', $groupDn);
+            try {
+                $parentExists = $this->connection->query()->find($parentDn);
+                if (!$parentExists) {
+                    Log::warning("El contenedor padre $parentDn no existe, no se puede crear el grupo");
+                    return false;
+                }
+            } catch (\Exception $e) {
+                Log::warning("Error al verificar contenedor padre $parentDn: " . $e->getMessage());
+                return false;
+            }
+            
+            Log::info("Creando grupo LDAP: $groupName con DN: $groupDn");
+            
+            // Obtener siguiente GID disponible
+            $gid = $this->getNextGidNumber();
+            
+            // Definir atributos para el grupo
+            $attributes = [
+                'objectclass' => ['top', 'posixGroup'],
+                'cn' => $groupName,
+                'gidNumber' => $gid,
+                'memberUid' => [$userUid]
+            ];
+            
+            // Crear el grupo
+            $this->connection->run(function ($ldap) use ($groupDn, $attributes) {
+                $ldap->add($groupDn, $attributes);
+            });
+            
+            Log::info("Grupo LDAP creado exitosamente: $groupName");
+            return true;
+            
+        } catch (\Exception $e) {
+            Log::error("Error al crear grupo LDAP $groupName: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Obtener siguiente GID disponible
+     */
+    protected function getNextGidNumber()
+    {
+        try {
+            $groups = $this->connection->query()
                 ->in($this->groupsOu)
                 ->where('objectclass', '=', 'posixGroup')
                 ->get();
                 
-            foreach ($allGroups as $group) {
-                $groupDn = $group['dn'];
-                
-                // Si está seleccionado y no está en el grupo, añadirlo
-                if (in_array($group['cn'][0], $selectedGroups)) {
-                    $this->addUserToGroup($userDn, $groupDn);
-                } 
-                // Si no está seleccionado y está en el grupo, eliminarlo
-                else {
-                    $this->removeUserFromGroup($userDn, $groupDn);
+            $maxGid = 500; // Valor inicial
+            
+            foreach ($groups as $group) {
+                if (isset($group['gidnumber'])) {
+                    $gid = (int) $group['gidnumber'][0];
+                    if ($gid > $maxGid) {
+                        $maxGid = $gid;
+                    }
                 }
             }
             
-        } catch (Exception $e) {
-            throw new Exception("Error al actualizar grupos del usuario: " . $e->getMessage());
+            return $maxGid + 1;
+            
+        } catch (\Exception $e) {
+            Log::error('Error al obtener siguiente GID: ' . $e->getMessage());
+            return 501; // Valor por defecto en caso de error
         }
     }
 
@@ -1286,7 +1773,7 @@ class LdapUserController extends Controller
                 ->in($this->baseDn)
                 ->rawFilter('(|(objectclass=groupOfUniqueNames)(objectclass=posixGroup))')
                 ->get();
-                
+            
             foreach ($allGroups as $group) {
                 $isMember = false;
                 
@@ -1455,10 +1942,10 @@ class LdapUserController extends Controller
                         foreach ($userActionKeywords as $keyword) {
                             if (stripos($line, $keyword) !== false) {
                                 $containsUserAction = true;
-                                break;
-                            }
-                        }
-                        
+                        break;
+                    }
+                }
+                
                         // Si no contiene acciones de usuarios, saltamos esta línea
                         if (!$containsUserAction) continue;
                         

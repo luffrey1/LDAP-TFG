@@ -88,6 +88,25 @@
         </button>
     </div>
 
+    <!-- Mensajes de éxito y error -->
+    @if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ session('success') }}
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    @endif
+
+    @if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        {{ session('error') }}
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    @endif
+
     <!-- Tarjeta de Calendario -->
     <div class="card shadow mb-4">
         <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
@@ -143,25 +162,25 @@
                     
                     <div class="form-group">
                         <label class="form-label" for="titulo">Título del evento</label>
-                        <input type="text" id="titulo" name="titulo" class="form-control" required>
+                        <input type="text" id="titulo" name="title" class="form-control" required>
                     </div>
                     
                     <div class="form-group">
                         <label class="form-label" for="descripcion">Descripción</label>
-                        <textarea id="descripcion" name="descripcion" class="form-control" rows="3"></textarea>
+                        <textarea id="descripcion" name="description" class="form-control" rows="3"></textarea>
                     </div>
                     
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="form-label" for="fecha_inicio">Fecha inicio</label>
-                                <input type="datetime-local" id="fecha_inicio" name="fecha_inicio" class="form-control" required>
+                                <input type="datetime-local" id="fecha_inicio" name="start" class="form-control" required>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="form-label" for="fecha_fin">Fecha fin</label>
-                                <input type="datetime-local" id="fecha_fin" name="fecha_fin" class="form-control" required>
+                                <input type="datetime-local" id="fecha_fin" name="end" class="form-control" required>
                             </div>
                         </div>
                     </div>
@@ -183,7 +202,7 @@
                             <div class="form-group">
                                 <label class="form-label d-block">&nbsp;</label>
                                 <div class="custom-control custom-checkbox mt-2">
-                                    <input type="checkbox" id="todo_el_dia" name="todo_el_dia" class="custom-control-input">
+                                    <input type="checkbox" id="todo_el_dia" name="allDay" class="custom-control-input">
                                     <label class="custom-control-label" for="todo_el_dia">Todo el día</label>
                                 </div>
                             </div>
@@ -213,250 +232,276 @@
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/locales/es.js'></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Datos de eventos desde el controlador
-        const eventos = @json($eventos ?? []);
-        
-        var calendarEl = document.getElementById('calendar');
-        var calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,timeGridWeek,timeGridDay'
-            },
-            locale: 'es',
-            events: eventos,
-            editable: false, // No permitimos que todos arrastren eventos
-            selectable: true,
-            dayMaxEvents: true,
-            eventClick: function(info) {
-                // Solo permitimos editar si el evento es editable para este usuario
-                if (info.event.extendedProps.editable) {
-                    openEventModal(info.event);
-                } else {
-                    // Mostrar detalles del evento sin opción a editar
-                    showEventDetails(info.event);
+        try {
+            // Datos de eventos desde el controlador
+            const eventos = @json($eventosFormateados ?? []);
+            
+            var calendarEl = document.getElementById('calendar');
+            
+            if (!calendarEl) {
+                console.error("Elemento calendar no encontrado");
+                return;
+            }
+            
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                locale: 'es',
+                events: eventos,
+                editable: false, // No permitimos que todos arrastren eventos
+                selectable: true,
+                dayMaxEvents: true,
+                eventClick: function(info) {
+                    // Solo permitimos editar si el evento es editable para este usuario
+                    if (info.event.extendedProps.editable) {
+                        openEventModal(info.event);
+                    } else {
+                        // Mostrar detalles del evento sin opción a editar
+                        showEventDetails(info.event);
+                    }
+                },
+                select: function(info) {
+                    openNewEventModal(info);
+                },
+                eventTimeFormat: {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                },
+                eventDidMount: function(info) {
+                    const tooltip = document.createElement('div');
+                    tooltip.classList.add('event-tooltip');
+                    tooltip.innerHTML = `
+                        <strong>${info.event.title}</strong>
+                        ${info.event.extendedProps.description ? `<p>${info.event.extendedProps.description}</p>` : ''}
+                        <p class="text-muted small">Creado por: ${info.event.extendedProps.creador}</p>
+                    `;
+                    
+                    const eventEl = info.el;
+                    eventEl.addEventListener('mouseover', function() {
+                        document.body.appendChild(tooltip);
+                        const rect = eventEl.getBoundingClientRect();
+                        tooltip.style.position = 'fixed';
+                        tooltip.style.top = rect.bottom + 'px';
+                        tooltip.style.left = rect.left + 'px';
+                        tooltip.style.zIndex = 10000;
+                    });
+                    
+                    eventEl.addEventListener('mouseout', function() {
+                        if (document.body.contains(tooltip)) {
+                            document.body.removeChild(tooltip);
+                        }
+                    });
                 }
-            },
-            select: function(info) {
-                openNewEventModal(info);
-            },
-            eventTimeFormat: {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            },
-            eventDidMount: function(info) {
-                const tooltip = document.createElement('div');
-                tooltip.classList.add('event-tooltip');
-                tooltip.innerHTML = `
-                    <strong>${info.event.title}</strong>
-                    ${info.event.extendedProps.description ? `<p>${info.event.extendedProps.description}</p>` : ''}
-                    <p class="text-muted small">Creado por: ${info.event.extendedProps.creador}</p>
-                `;
-                
-                const eventEl = info.el;
-                eventEl.addEventListener('mouseover', function() {
-                    document.body.appendChild(tooltip);
-                    const rect = eventEl.getBoundingClientRect();
-                    tooltip.style.position = 'fixed';
-                    tooltip.style.top = rect.bottom + 'px';
-                    tooltip.style.left = rect.left + 'px';
-                    tooltip.style.zIndex = 10000;
-                });
-                
-                eventEl.addEventListener('mouseout', function() {
-                    if (document.body.contains(tooltip)) {
-                        document.body.removeChild(tooltip);
+            });
+            
+            calendar.render();
+            console.log("Calendario renderizado correctamente");
+        
+            // Modal management
+            const modal = $('#eventoModal');
+            const closeModal = document.getElementById('closeModal');
+            const form = document.getElementById('eventoForm');
+            const crearEventoBtn = document.getElementById('crearEvento');
+            const deleteButton = document.getElementById('deleteButton');
+            const todoElDiaCheck = document.getElementById('todo_el_dia');
+            
+            if (todoElDiaCheck) {
+                todoElDiaCheck.addEventListener('change', function() {
+                    const fechaInicioInput = document.getElementById('fecha_inicio');
+                    const fechaFinInput = document.getElementById('fecha_fin');
+                    
+                    if (this.checked) {
+                        fechaInicioInput.type = 'date';
+                        fechaFinInput.type = 'date';
+                    } else {
+                        fechaInicioInput.type = 'datetime-local';
+                        fechaFinInput.type = 'datetime-local';
                     }
                 });
             }
-        });
-        
-        calendar.render();
-        
-        // Modal management
-        const modal = $('#eventoModal');
-        const closeModal = document.getElementById('closeModal');
-        const form = document.getElementById('eventoForm');
-        const crearEventoBtn = document.getElementById('crearEvento');
-        const deleteButton = document.getElementById('deleteButton');
-        const todoElDiaCheck = document.getElementById('todo_el_dia');
-        
-        todoElDiaCheck.addEventListener('change', function() {
-            const fechaInicioInput = document.getElementById('fecha_inicio');
-            const fechaFinInput = document.getElementById('fecha_fin');
             
-            if (this.checked) {
-                fechaInicioInput.type = 'date';
-                fechaFinInput.type = 'date';
-            } else {
-                fechaInicioInput.type = 'datetime-local';
-                fechaFinInput.type = 'datetime-local';
-            }
-        });
-        
-        // Función para mostrar detalles del evento sin edición
-        function showEventDetails(event) {
-            // Crear un modal de solo lectura
-            const detailsHtml = `
-            <div class="modal fade" id="eventDetailsModal" tabindex="-1" role="dialog" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered" role="document">
-                    <div class="modal-content">
-                        <div class="modal-header" style="background-color: ${event.backgroundColor}; color: white;">
-                            <h5 class="modal-title">${event.title}</h5>
-                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="event-info">
-                                <p><strong>Creado por:</strong> ${event.extendedProps.creador}</p>
-                                <p><strong>Fecha de inicio:</strong> ${event.start ? new Date(event.start).toLocaleString('es-ES') : 'No definida'}</p>
-                                <p><strong>Fecha de fin:</strong> ${event.end ? new Date(event.end).toLocaleString('es-ES') : 'No definida'}</p>
-                                ${event.extendedProps.description ? `<p><strong>Descripción:</strong><br>${event.extendedProps.description}</p>` : ''}
-                                <p><strong>Tipo de evento:</strong> ${getTipoEvento(event.backgroundColor)}</p>
+            // Función para mostrar detalles del evento sin edición
+            function showEventDetails(event) {
+                // Crear un modal de solo lectura
+                const detailsHtml = `
+                <div class="modal fade" id="eventDetailsModal" tabindex="-1" role="dialog" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header" style="background-color: ${event.backgroundColor}; color: white;">
+                                <h5 class="modal-title">${event.title}</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="event-info">
+                                    <p><strong>Creado por:</strong> ${event.extendedProps.creador}</p>
+                                    <p><strong>Fecha de inicio:</strong> ${event.start ? new Date(event.start).toLocaleString('es-ES') : 'No definida'}</p>
+                                    <p><strong>Fecha de fin:</strong> ${event.end ? new Date(event.end).toLocaleString('es-ES') : 'No definida'}</p>
+                                    ${event.extendedProps.description ? `<p><strong>Descripción:</strong><br>${event.extendedProps.description}</p>` : ''}
+                                    <p><strong>Tipo de evento:</strong> ${getTipoEvento(event.backgroundColor)}</p>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
                             </div>
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
-                        </div>
                     </div>
-                </div>
-            </div>`;
-            
-            // Eliminar modal anterior si existe
-            if (document.getElementById('eventDetailsModal')) {
-                document.getElementById('eventDetailsModal').remove();
+                </div>`;
+                
+                // Eliminar modal anterior si existe
+                if (document.getElementById('eventDetailsModal')) {
+                    document.getElementById('eventDetailsModal').remove();
+                }
+                
+                // Agregar al DOM y mostrar
+                document.body.insertAdjacentHTML('beforeend', detailsHtml);
+                $('#eventDetailsModal').modal('show');
+                
+                // Eliminar del DOM al cerrar
+                $('#eventDetailsModal').on('hidden.bs.modal', function() {
+                    document.getElementById('eventDetailsModal').remove();
+                });
             }
             
-            // Agregar al DOM y mostrar
-            document.body.insertAdjacentHTML('beforeend', detailsHtml);
-            $('#eventDetailsModal').modal('show');
+            // Obtener tipo de evento según el color
+            function getTipoEvento(color) {
+                const tiposEvento = {
+                    '#3788d8': 'Reunión',
+                    '#e74c3c': 'Fecha límite',
+                    '#2ecc71': 'Formación',
+                    '#9b59b6': 'Vacaciones',
+                    '#f39c12': 'Claustro'
+                };
+                return tiposEvento[color] || 'Otro';
+            }
             
-            // Eliminar del DOM al cerrar
-            $('#eventDetailsModal').on('hidden.bs.modal', function() {
-                document.getElementById('eventDetailsModal').remove();
+            function openNewEventModal(info) {
+                document.getElementById('modalTitle').textContent = 'Nuevo Evento';
+                form.reset();
+                form.action = "{{ route('dashboard.calendario.evento') }}";
+                document.getElementById('method').value = 'POST';
+                
+                // Set default dates
+                const startDate = info.startStr;
+                const endDate = info.endStr;
+                
+                if (info.allDay) {
+                    todoElDiaCheck.checked = true;
+                    document.getElementById('fecha_inicio').type = 'date';
+                    document.getElementById('fecha_fin').type = 'date';
+                    document.getElementById('fecha_inicio').value = startDate;
+                    document.getElementById('fecha_fin').value = endDate;
+                } else {
+                    todoElDiaCheck.checked = false;
+                    document.getElementById('fecha_inicio').value = formatDateForInput(new Date(startDate));
+                    document.getElementById('fecha_fin').value = formatDateForInput(new Date(endDate));
+                }
+                
+                deleteButton.style.display = 'none';
+                modal.modal('show');
+            }
+            
+            function openEventModal(event) {
+                document.getElementById('modalTitle').textContent = 'Editar Evento';
+                form.reset();
+                form.action = "{{ url('/calendario/evento') }}/" + event.id;
+                document.getElementById('method').value = 'PUT';
+                document.getElementById('evento_id').value = event.id;
+                
+                document.getElementById('titulo').value = event.title;
+                document.getElementById('descripcion').value = event.extendedProps.description || '';
+                document.getElementById('color').value = event.backgroundColor || '#3788d8';
+                
+                if (event.allDay) {
+                    todoElDiaCheck.checked = true;
+                    document.getElementById('fecha_inicio').type = 'date';
+                    document.getElementById('fecha_fin').type = 'date';
+                    document.getElementById('fecha_inicio').value = event.startStr.split('T')[0];
+                    document.getElementById('fecha_fin').value = event.endStr ? event.endStr.split('T')[0] : event.startStr.split('T')[0];
+                } else {
+                    todoElDiaCheck.checked = false;
+                    document.getElementById('fecha_inicio').type = 'datetime-local';
+                    document.getElementById('fecha_fin').type = 'datetime-local';
+                    document.getElementById('fecha_inicio').value = formatDateForInput(event.start);
+                    document.getElementById('fecha_fin').value = event.end ? formatDateForInput(event.end) : formatDateForInput(event.start);
+                }
+                
+                // Solo mostramos el botón eliminar si el usuario puede eliminar este evento
+                deleteButton.style.display = event.extendedProps.editable ? 'block' : 'none';
+                modal.modal('show');
+            }
+            
+            function formatDateForInput(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                
+                return `${year}-${month}-${day}T${hours}:${minutes}`;
+            }
+            
+            // Event listeners
+            modal.on('hidden.bs.modal', function() {
+                form.reset();
             });
-        }
-        
-        // Obtener tipo de evento según el color
-        function getTipoEvento(color) {
-            const tiposEvento = {
-                '#3788d8': 'Reunión',
-                '#e74c3c': 'Fecha límite',
-                '#2ecc71': 'Formación',
-                '#9b59b6': 'Vacaciones',
-                '#f39c12': 'Claustro'
-            };
-            return tiposEvento[color] || 'Otro';
-        }
-        
-        function openNewEventModal(info) {
-            document.getElementById('modalTitle').textContent = 'Nuevo Evento';
-            form.reset();
-            form.action = "{{ route('dashboard.calendario.evento') }}";
-            document.getElementById('method').value = 'POST';
             
-            // Set default dates
-            const startDate = info.startStr;
-            const endDate = info.endStr;
-            
-            if (info.allDay) {
-                todoElDiaCheck.checked = true;
-                document.getElementById('fecha_inicio').type = 'date';
-                document.getElementById('fecha_fin').type = 'date';
-                document.getElementById('fecha_inicio').value = startDate;
-                document.getElementById('fecha_fin').value = endDate;
-            } else {
-                todoElDiaCheck.checked = false;
-                document.getElementById('fecha_inicio').value = formatDateForInput(new Date(startDate));
-                document.getElementById('fecha_fin').value = formatDateForInput(new Date(endDate));
-            }
-            
-            deleteButton.style.display = 'none';
-            modal.modal('show');
-        }
-        
-        function openEventModal(event) {
-            document.getElementById('modalTitle').textContent = 'Editar Evento';
-            form.reset();
-            form.action = "{{ url('/calendario/evento') }}/" + event.id;
-            document.getElementById('method').value = 'PUT';
-            document.getElementById('evento_id').value = event.id;
-            
-            document.getElementById('titulo').value = event.title;
-            document.getElementById('descripcion').value = event.extendedProps.description || '';
-            document.getElementById('color').value = event.backgroundColor || '#3788d8';
-            
-            if (event.allDay) {
-                todoElDiaCheck.checked = true;
-                document.getElementById('fecha_inicio').type = 'date';
-                document.getElementById('fecha_fin').type = 'date';
-                document.getElementById('fecha_inicio').value = event.startStr.split('T')[0];
-                document.getElementById('fecha_fin').value = event.endStr ? event.endStr.split('T')[0] : event.startStr.split('T')[0];
-            } else {
-                todoElDiaCheck.checked = false;
-                document.getElementById('fecha_inicio').type = 'datetime-local';
-                document.getElementById('fecha_fin').type = 'datetime-local';
-                document.getElementById('fecha_inicio').value = formatDateForInput(event.start);
-                document.getElementById('fecha_fin').value = event.end ? formatDateForInput(event.end) : formatDateForInput(event.start);
-            }
-            
-            // Solo mostramos el botón eliminar si el usuario puede eliminar este evento
-            deleteButton.style.display = event.extendedProps.editable ? 'block' : 'none';
-            modal.modal('show');
-        }
-        
-        function formatDateForInput(date) {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            
-            return `${year}-${month}-${day}T${hours}:${minutes}`;
-        }
-        
-        // Event listeners
-        modal.on('hidden.bs.modal', function() {
-            form.reset();
-        });
-        
-        crearEventoBtn.addEventListener('click', function() {
-            const now = new Date();
-            const end = new Date(now);
-            end.setHours(now.getHours() + 1);
-            
-            openNewEventModal({
-                startStr: formatDateForInput(now),
-                endStr: formatDateForInput(end),
-                allDay: false
+            crearEventoBtn.addEventListener('click', function() {
+                const now = new Date();
+                const end = new Date(now);
+                end.setHours(now.getHours() + 1);
+                
+                openNewEventModal({
+                    startStr: formatDateForInput(now),
+                    endStr: formatDateForInput(end),
+                    allDay: false
+                });
             });
-        });
-        
-        deleteButton.addEventListener('click', function() {
-            if (confirm('¿Estás seguro de eliminar este evento?')) {
-                const id = document.getElementById('evento_id').value;
-                const deleteForm = document.getElementById('deleteForm');
+            
+            // Añadir controlador de eventos para el envío del formulario
+            form.addEventListener('submit', function(e) {
+                // No prevenimos el evento predeterminado para permitir el envío normal del formulario
                 
-                // Construimos la URL utilizando la ruta con nombre y el ID del evento
-                deleteForm.action = "{{ route('dashboard.calendario.eliminar', ['id' => '__id__']) }}".replace('__id__', id);
+                // Solo agregamos logs para depuración
+                console.log('Formulario enviado');
+                console.log('URL:', form.action);
+                console.log('Método:', document.getElementById('method').value);
                 
-                deleteForm.submit();
+                // Permitimos que el formulario se envíe normalmente
+                return true;
+            });
+            
+            deleteButton.addEventListener('click', function() {
+                if (confirm('¿Estás seguro de eliminar este evento?')) {
+                    const id = document.getElementById('evento_id').value;
+                    const deleteForm = document.getElementById('deleteForm');
+                    
+                    // Construimos la URL utilizando la ruta con nombre y el ID del evento
+                    deleteForm.action = "{{ route('dashboard.calendario.eliminar', ['id' => '__id__']) }}".replace('__id__', id);
+                    
+                    deleteForm.submit();
+                }
+            });
+            
+            function eliminarEvento() {
+                if (confirm('¿Estás seguro de eliminar este evento?')) {
+                    const id = document.getElementById('evento_id').value;
+                    const deleteForm = document.getElementById('deleteForm');
+                    
+                    // Construimos la URL utilizando la ruta con nombre y el ID del evento
+                    deleteForm.action = "{{ route('dashboard.calendario.eliminar', ['id' => '__id__']) }}".replace('__id__', id);
+                    
+                    deleteForm.submit();
+                }
             }
-        });
-        
-        function eliminarEvento() {
-            if (confirm('¿Estás seguro de eliminar este evento?')) {
-                const id = document.getElementById('evento_id').value;
-                const deleteForm = document.getElementById('deleteForm');
-                
-                // Construimos la URL utilizando la ruta con nombre y el ID del evento
-                deleteForm.action = "{{ route('dashboard.calendario.eliminar', ['id' => '__id__']) }}".replace('__id__', id);
-                
-                deleteForm.submit();
-            }
+        } catch (error) {
+            console.error("Error al inicializar el calendario:", error);
         }
     });
 </script>

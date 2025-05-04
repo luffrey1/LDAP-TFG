@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Dashboard') - Departamento IT</title>
     
     <!-- Bootstrap 5 CSS -->
@@ -565,6 +566,25 @@
                             </a>
                         </li>
                         @endif
+                        
+                        <!-- Gestión Académica -->
+                        <div class="sidebar-divider"></div>
+                        <div class="nav-item-header">Gestión Académica</div>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('profesor.clases.*') ? 'active' : '' }}" href="{{ route('profesor.clases.index') }}">
+                                <i class="fas fa-chalkboard"></i> Gestión de Clases
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('profesor.clases.mias') || request()->routeIs('profesor.clases.mias.ver') ? 'active' : '' }}" href="{{ route('profesor.clases.mias') }}">
+                                <i class="fas fa-chalkboard-teacher"></i> Mis Clases
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('profesor.alumnos.*') ? 'active' : '' }}" href="{{ route('profesor.alumnos.index') }}">
+                                <i class="fas fa-user-graduate"></i> Gestión de Alumnos
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -594,6 +614,9 @@
     
     <!-- AOS - Animate On Scroll -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+    
+    <!-- CountUp.js (versión UMD sin export) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/countup.js/2.0.7/countUp.umd.min.js"></script>
     
     <!-- Custom JS -->
     <script>

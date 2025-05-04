@@ -738,10 +738,56 @@ class DashboardController extends Controller
                     Log::info("Eventos próximos obtenidos con modelo: " . $modelEvents->count());
                     
                     return $modelEvents->map(function ($event) {
-                        // Obtener información del creador
-                        $creadorNombre = 'Sistema';
-                        if ($event->creador) {
-                            $creadorNombre = $event->creador->nombre ?? $event->creador->username ?? 'Usuario ' . $event->creado_por;
+                        // PRIORIZAR: Usar el campo nombre_creador que ya contiene el nombre correcto
+                        if (!empty($event->nombre_creador)) {
+                            $creadorNombre = $event->nombre_creador;
+                            Log::debug("Usando nombre_creador para evento {$event->id}: {$creadorNombre}");
+                        }
+                        // FALLBACK: Obtener información del creador con manejo mejorado
+                        else {
+                            // CASO ESPECIAL: Si es el usuario LDAP-Admin (ID=7)
+                            if ($event->creado_por == 7) {
+                                $creadorNombre = 'Administrador LDAP';
+                                Log::debug("Caso especial: evento creado por ldap-admin");
+                            }
+                            // Si el creador existe en la base de datos, usar su nombre
+                            else if ($event->creador) {
+                                // Intentar usar diferentes campos disponibles
+                                if (!empty($event->creador->nombre)) {
+                                    $creadorNombre = $event->creador->nombre;
+                                } elseif (!empty($event->creador->name)) {
+                                    $creadorNombre = $event->creador->name;
+                                } else {
+                                    $creadorNombre = $event->creador->username ?? 'Usuario ' . $event->creado_por;
+                                }
+                                Log::debug("Usando nombre del modelo User para evento {$event->id}: {$creadorNombre}");
+                            } 
+                            // Si nosotros somos el creador, usar nuestro nombre
+                            else {
+                                $authId = Auth::id() ?: session('auth_user.id');
+                                if ($authId && $event->creado_por == $authId) {
+                                    $creadorNombre = session('auth_user.nombre') ?? 
+                                                   session('auth_user.name') ?? 
+                                                   session('auth_user.username') ?? 
+                                                   'Usuario actual';
+                                    Log::debug("Usando nombre de sesión actual para evento {$event->id}: {$creadorNombre}");
+                                }
+                                // Si no podemos determinar el nombre, usar un valor genérico pero más descriptivo
+                                else {
+                                    $creadorNombre = "Usuario #" . $event->creado_por;
+                                    Log::debug("Usando ID genérico para evento {$event->id}: {$creadorNombre}");
+                                }
+                            }
+                            
+                            // Guardar el nombre en la base de datos para futuras referencias
+                            try {
+                                \DB::table('eventos')
+                                    ->where('id', $event->id)
+                                    ->update(['nombre_creador' => $creadorNombre]);
+                                Log::info("Nombre de creador guardado en BD para evento {$event->id}: {$creadorNombre}");
+                            } catch (\Exception $e) {
+                                Log::warning("No se pudo guardar nombre_creador: " . $e->getMessage());
+                            }
                         }
                         
                         // Determinar el tipo de evento según su color
@@ -765,7 +811,7 @@ class DashboardController extends Controller
                 Log::warning('Error al obtener eventos con modelo: ' . $e->getMessage());
             }
             
-            // Intentar obtener eventos desde la tabla directamente
+            // Intentar obtener eventos desde la tabla directamente (incluir nombre_creador)
             $events = \DB::table('eventos')
                 ->leftJoin('users', 'eventos.creado_por', '=', 'users.id')
                 ->whereDate('fecha_inicio', '>=', $fechaHoy)
@@ -779,10 +825,26 @@ class DashboardController extends Controller
                 Log::info("Eventos próximos obtenidos: " . $events->count());
                 
                 return $events->map(function ($event) {
+                    // PRIORIZAR: Usar el campo nombre_creador si existe
+                    if (!empty($event->nombre_creador)) {
+                        $creadorNombre = $event->nombre_creador;
+                    }
+                    // CASO ESPECIAL: Si es el usuario LDAP-Admin (ID=7)
+                    else if ($event->creado_por == 7) {
+                        $creadorNombre = 'Administrador LDAP';
+                        
+                        // Actualizar el campo en la base de datos
+                        try {
+                            \DB::table('eventos')
+                                ->where('id', $event->id)
+                                ->update(['nombre_creador' => $creadorNombre]);
+                        } catch (\Exception $e) {
+                            Log::warning("No se pudo actualizar nombre_creador: " . $e->getMessage());
+                        }
+                    }
                     // Obtener información del creador
-                    $creadorNombre = $event->creador_nombre ?? $event->creador_username ?? 'Usuario ' . $event->creado_por;
-                    if (empty($creadorNombre)) {
-                        $creadorNombre = 'Sistema';
+                    else {
+                        $creadorNombre = $event->creador_nombre ?? $event->creador_username ?? "Usuario #{$event->creado_por}";
                     }
                     
                     // Determinar el tipo de evento según su color
@@ -820,7 +882,7 @@ class DashboardController extends Controller
                 ]
             ];
         } catch (\Exception $e) {
-            //Log::error('Error al obtener eventos próximos: ' . $e->getMessage());
+            Log::error('Error al obtener eventos próximos: ' . $e->getMessage());
             
             // Devolver datos de fallback para evitar errores en la vista
             return [

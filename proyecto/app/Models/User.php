@@ -23,6 +23,8 @@ class User extends Authenticatable
         'role',
         'guid',
         'domain',
+        'ldap_dn',
+        'is_admin',
     ];
 
     /**

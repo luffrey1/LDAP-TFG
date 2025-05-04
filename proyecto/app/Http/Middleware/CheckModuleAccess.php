@@ -18,15 +18,23 @@ class CheckModuleAccess
     public function handle(Request $request, Closure $next, string $moduleName): Response
     {
         try {
+            // CASO ESPECIAL: El calendario siempre está disponible para todos
+            if ($moduleName === 'calendario') {
+                Log::info('Acceso al calendario permitido para todos los usuarios: ' . session('auth_user.username'));
+                return $next($request);
+            }
+            
             $configKey = 'modulo_' . $moduleName . '_activo';
             $moduleActive = SistemaConfig::obtenerConfig($configKey, true); // Por defecto está activo si no existe configuración
             
             // Si el módulo no está activo y el usuario no es administrador, negar acceso
             if (!$moduleActive && !$this->isAdmin($request)) {
+                Log::warning('Acceso denegado al módulo ' . $moduleName . ' para usuario: ' . session('auth_user.username'));
                 return redirect()->route('dashboard.index')
                     ->with('error', 'El módulo ' . ucfirst($moduleName) . ' no está disponible actualmente.');
             }
             
+            Log::info('Acceso permitido al módulo ' . $moduleName . ' para usuario: ' . session('auth_user.username'));
             return $next($request);
             
         } catch (\Exception $e) {

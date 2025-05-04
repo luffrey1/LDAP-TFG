@@ -343,41 +343,43 @@
 @endsection
 
 @section('scripts')
-<script src="https://cdnjs.cloudflare.com/ajax/libs/countup.js/2.0.8/countUp.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Inicializar contadores
-        const counters = document.querySelectorAll('.counter');
-        counters.forEach(counter => {
-            const value = parseInt(counter.innerText);
-            const countUp = new CountUp(counter, value, {
+        // Inicializar contadores con CountUp.js
+        const counterElements = document.querySelectorAll('.counter');
+        counterElements.forEach(function(el) {
+            const value = parseInt(el.textContent);
+            // La versión UMD usa una sintaxis ligeramente diferente
+            const counter = new countUp.CountUp(el, value, {
                 duration: 2.5,
                 useEasing: true,
-                useGrouping: true
+                useGrouping: true,
+                separator: ',',
+                decimal: '.'
             });
-            
-            if (!countUp.error) {
-                countUp.start();
-            }
+            counter.start();
         });
         
         // Función para actualizar estadísticas (simulado)
-        document.getElementById('refreshStats').addEventListener('click', function() {
-            this.disabled = true;
-            const button = this;
-            
-            // Agregar ícono de spinner
-            this.innerHTML = '<i class="fas fa-spinner fa-spin fa-sm text-white-50 me-1"></i> Actualizando...';
-            
-            // Simular actualización de datos
-            setTimeout(function() {
-                button.innerHTML = '<i class="fas fa-sync-alt fa-sm text-white-50 me-1"></i> Actualizar';
-                button.disabled = false;
+        const refreshBtn = document.getElementById('refreshStats');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', function() {
+                this.disabled = true;
+                const button = this;
                 
-                // Mostrar notificación
-                showNotification('Datos actualizados correctamente', 'success');
-            }, 1500);
-        });
+                // Agregar ícono de spinner
+                this.innerHTML = '<i class="fas fa-spinner fa-spin fa-sm text-white-50 me-1"></i> Actualizando...';
+                
+                // Simular actualización de datos
+                setTimeout(function() {
+                    button.innerHTML = '<i class="fas fa-sync-alt fa-sm text-white-50 me-1"></i> Actualizar';
+                    button.disabled = false;
+                    
+                    // Mostrar notificación
+                    showNotification('Datos actualizados correctamente', 'success');
+                }, 1500);
+            });
+        }
     });
 </script>
 @endsection 
