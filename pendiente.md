@@ -10,18 +10,18 @@
    - Comprobar que los usuarios se eliminen correctamente desde la interfaz # funciona #
    - Asegurar que la función de promover a administrador (icono de corona) funcione bien # funciona #
 
-2. **Sistema de mensajería**
+2. **Sistema de mensajería YA FUNCIONA**
    - Implementar funcionalidad para reenviar mensajes
    - Añadir opción para borrar mensajes
    - Permitir destacar mensajes importantes
    - Revisar otras funcionalidades de mensajería
 
-3. **Calendario**
+3. **Calendario YA FUNCIONA**
    - Verificar el correcto funcionamiento de los eventos
    - Comprobar que se muestren correctamente en el dashboard
    - Asegurar que los contadores y eventos próximos se actualicen adecuadamente
 
-4. **Evaluación general**
+4. **Evaluación general CORRECTA**
    - Si todas las funcionalidades anteriores funcionan correctamente, avanzar a la siguiente fase
    - En caso contrario, revisar y solucionar los problemas pendientes
 
@@ -29,13 +29,13 @@
    - Establecer conexión remota mediante VPN
 
 6. **Panel de administración**
-   - Desarrollar área donde administradores (ldap-admin o administradores designados) puedan gestionar:
-     - Activación/desactivación de mensajería
+   - Desarrollar área donde administradores (ldap-admin o administradores designados) puedan gestionar: FUNCIONA
+     - Activación/desactivación de mensajería 
      - Control de documentos
      - Configuración del calendario
      - Requisitos de contraseña
-   - Implementar sistema de avisos para contraseñas que no cumplan requisitos (7 días de plazo)
-   - Crear interfaz para que los usuarios puedan cambiar su contraseña en su perfil
+   - Implementar sistema de avisos para contraseñas que no cumplan requisitos (7 días de plazo) FUNCIONA
+   - Crear interfaz para que los usuarios puedan cambiar su contraseña en su perfil NO IMPLEMENTADO
 
 ## Futuras Implementaciones
 

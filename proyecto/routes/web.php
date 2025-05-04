@@ -10,6 +10,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TestController;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Middleware\CheckModuleAccess;
 
 // Ruta principal redirige al login
 Route::get('/', function () {
@@ -33,29 +34,31 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
     
     // Gestión documental
-    Route::get('/gestion-documental', [DocumentoController::class, 'index'])->name('dashboard.gestion-documental');
-    Route::post('/gestion-documental/subir', [DocumentoController::class, 'store'])->name('dashboard.gestion-documental.subir');
-    Route::get('/gestion-documental/descargar/{id}', [DocumentoController::class, 'download'])->name('dashboard.gestion-documental.descargar');
-    Route::get('/gestion-documental/{id}', [DocumentoController::class, 'show'])->name('dashboard.gestion-documental.ver');
-    Route::delete('/gestion-documental/{id}', [DocumentoController::class, 'destroy'])->name('dashboard.gestion-documental.eliminar');
+    Route::middleware(CheckModuleAccess::class.':documentos')->group(function () {
+        Route::get('/gestion-documental', [DocumentoController::class, 'index'])->name('dashboard.gestion-documental');
+        Route::post('/gestion-documental/subir', [DocumentoController::class, 'store'])->name('dashboard.gestion-documental.subir');
+        Route::get('/gestion-documental/descargar/{id}', [DocumentoController::class, 'download'])->name('dashboard.gestion-documental.descargar');
+        Route::get('/gestion-documental/{id}', [DocumentoController::class, 'show'])->name('dashboard.gestion-documental.ver');
+        Route::delete('/gestion-documental/{id}', [DocumentoController::class, 'destroy'])->name('dashboard.gestion-documental.eliminar');
+    });
     
     // Mensajería interna
-    Route::get('/mensajes', [MensajeController::class, 'index'])->name('dashboard.mensajes');
-    Route::get('/mensajes/nuevo', [MensajeController::class, 'create'])->name('dashboard.mensajes.nuevo');
-    Route::post('/mensajes/enviar', [MensajeController::class, 'store'])->name('dashboard.mensajes.enviar');
-    Route::get('/mensajes/{id}', [MensajeController::class, 'show'])->name('dashboard.mensajes.ver');
-    Route::delete('/mensajes/{id}', [MensajeController::class, 'destroy'])->name('dashboard.mensajes.eliminar');
-    Route::post('/mensajes/{id}/responder', [MensajeController::class, 'reply'])->name('dashboard.mensajes.responder');
-    Route::post('/mensajes/{id}/reenviar', [MensajeController::class, 'forward'])->name('dashboard.mensajes.reenviar');
-    Route::post('/mensajes/{id}/destacar', [MensajeController::class, 'toggleFavorite'])->name('dashboard.mensajes.destacar');
-    Route::post('/mensajes/{id}/leido', [MensajeController::class, 'toggleRead'])->name('dashboard.mensajes.leido');
-    Route::post('/mensajes/{id}/restaurar', [MensajeController::class, 'restore'])->name('dashboard.mensajes.restaurar');
+    Route::prefix('mensajes')->middleware(CheckModuleAccess::class.':mensajeria')->group(function () {
+        Route::get('/', [MensajeController::class, 'index'])->name('dashboard.mensajes');
+        Route::get('/nuevo', [MensajeController::class, 'create'])->name('dashboard.mensajes.nuevo');
+        Route::post('/enviar', [MensajeController::class, 'enviar'])->name('dashboard.mensajes.enviar');
+        Route::get('/{id}', [MensajeController::class, 'ver'])->name('dashboard.mensajes.ver');
+        Route::delete('/{id}', [MensajeController::class, 'eliminar'])->name('dashboard.mensajes.eliminar');
+        Route::post('/{id}/restaurar', [MensajeController::class, 'restore'])->name('dashboard.mensajes.restaurar');
+    });
     
     // Calendario y eventos
-    Route::get('/calendario', [EventoController::class, 'index'])->name('dashboard.calendario');
-    Route::post('/calendario/evento', [EventoController::class, 'store'])->name('dashboard.calendario.evento');
-    Route::put('/calendario/evento/{id}', [EventoController::class, 'update'])->name('dashboard.calendario.actualizar');
-    Route::delete('/calendario/evento/{id}', [EventoController::class, 'destroy'])->name('dashboard.calendario.eliminar');
+    Route::middleware(CheckModuleAccess::class.':calendario')->group(function () {
+        Route::get('/calendario', [EventoController::class, 'index'])->name('dashboard.calendario');
+        Route::post('/calendario/evento', [EventoController::class, 'store'])->name('dashboard.calendario.evento');
+        Route::put('/calendario/evento/{id}', [EventoController::class, 'update'])->name('dashboard.calendario.actualizar');
+        Route::delete('/calendario/evento/{id}', [EventoController::class, 'destroy'])->name('dashboard.calendario.eliminar');
+    });
     
     // Ruta para gestión de usuarios LDAP - acceso directo a admin users
     Route::get('/usuarios', [App\Http\Controllers\Admin\LdapUserController::class, 'index'])->name('ldap.users.index');
@@ -77,6 +80,12 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware', 'App\Http\Mi
     
     // Logs de actividad LDAP
     Route::get('/logs', [App\Http\Controllers\Admin\LdapUserController::class, 'logs'])->name('logs');
+
+    // Nuevas rutas de configuración del sistema
+    Route::get('/configuracion', [App\Http\Controllers\Admin\ConfiguracionController::class, 'index'])
+        ->name('configuracion.index');
+    Route::post('/configuracion', [App\Http\Controllers\Admin\ConfiguracionController::class, 'guardar'])
+        ->name('configuracion.guardar');
 });
 
 

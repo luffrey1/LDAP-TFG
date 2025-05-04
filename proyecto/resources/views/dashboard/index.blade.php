@@ -1,24 +1,24 @@
 @extends('layouts.dashboard')
 
-@section('title', 'Dashboard - Panel de Control')
+@section('title', 'Dashboard')
 
 @section('content')
 <div class="container-fluid">
-    <!-- Cabecera -->
-    <div class="d-flex justify-content-between align-items-center mb-4" data-aos="fade-up">
-        <div>
-            <h1 class="h3 mb-0 text-gray-800">Panel de Control</h1>
-            <p class="text-muted">Bienvenido, <span class="fw-bold">{{ session('auth_user')['nombre'] }}</span>. Última conexión: {{ now()->format('d/m/Y H:i') }}</p>
-        </div>
-        <div>
-            <button class="btn btn-primary shadow-sm" id="refreshStats">
-                <i class="fas fa-sync-alt fa-sm text-white-50 me-1"></i> Actualizar
-            </button>
-        </div>
+    <!-- Encabezado de página -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
     </div>
 
-    <!-- Estadísticas -->
-    <div class="row mb-4">
+    @php
+        $moduloMensajeriaActivo = App\Models\SistemaConfig::obtenerConfig('modulo_mensajeria_activo', true);
+        $moduloCalendarioActivo = App\Models\SistemaConfig::obtenerConfig('modulo_calendario_activo', true);
+        $moduloDocumentosActivo = App\Models\SistemaConfig::obtenerConfig('modulo_documentos_activo', true);
+        $isAdmin = session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin';
+    @endphp
+
+    <!-- Tarjetas de estadísticas -->
+    <div class="row">
+        <!-- Usuarios -->
         <div class="col-xl-3 col-md-6 mb-4" data-aos="fade-up" data-aos-delay="100">
             <div class="card border-left-primary shadow h-100 py-2 stat-card">
                 <div class="card-body">
@@ -32,12 +32,14 @@
                         </div>
                     </div>
                     <div class="progress mt-3" style="height: 5px;">
-                        <div class="progress-bar bg-primary" role="progressbar" style="width: 85%" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100"></div>
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: 80%" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
                 </div>
             </div>
         </div>
-        
+
+        @if($moduloDocumentosActivo || $isAdmin)
+        <!-- Documentos -->
         <div class="col-xl-3 col-md-6 mb-4" data-aos="fade-up" data-aos-delay="200">
             <div class="card border-left-success shadow h-100 py-2 stat-card">
                 <div class="card-body">
@@ -51,12 +53,15 @@
                         </div>
                     </div>
                     <div class="progress mt-3" style="height: 5px;">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: 70%" aria-valuenow="70" aria-valuemin="0" aria-valuemax="100"></div>
+                        <div class="progress-bar bg-success" role="progressbar" style="width: 60%" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
                 </div>
             </div>
         </div>
-        
+        @endif
+
+        @if($moduloMensajeriaActivo || $isAdmin)
+        <!-- Mensajes Nuevos -->
         <div class="col-xl-3 col-md-6 mb-4" data-aos="fade-up" data-aos-delay="300">
             <div class="card border-left-info shadow h-100 py-2 stat-card">
                 <div class="card-body">
@@ -70,12 +75,15 @@
                         </div>
                     </div>
                     <div class="progress mt-3" style="height: 5px;">
-                        <div class="progress-bar bg-info" role="progressbar" style="width: 50%" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"></div>
+                        <div class="progress-bar bg-info" role="progressbar" style="width: 70%" aria-valuenow="70" aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
                 </div>
             </div>
         </div>
-        
+        @endif
+
+        @if($moduloCalendarioActivo || $isAdmin)
+        <!-- Eventos Próximos -->
         <div class="col-xl-3 col-md-6 mb-4" data-aos="fade-up" data-aos-delay="400">
             <div class="card border-left-warning shadow h-100 py-2 stat-card">
                 <div class="card-body">
@@ -94,9 +102,11 @@
                 </div>
             </div>
         </div>
+        @endif
     </div>
 
     <div class="row">
+        @if($moduloDocumentosActivo || $isAdmin)
         <!-- Documentos Recientes -->
         <div class="col-xl-6 col-lg-6 mb-4" data-aos="fade-up" data-aos-delay="100">
             <div class="card shadow mb-4">
@@ -108,10 +118,11 @@
                         <i class="fas fa-arrow-right fa-sm text-white-50 me-1"></i> Ver todos
                     </a>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-0">
+                    @if(isset($recentDocuments) && count($recentDocuments) > 0)
                     <div class="table-responsive">
-                        <table class="table table-hover table-borderless" width="100%" cellspacing="0">
-                            <thead>
+                        <table class="table table-hover mb-0">
+                            <thead class="bg-light">
                                 <tr>
                                     <th>Nombre</th>
                                     <th>Categoría</th>
@@ -121,49 +132,30 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @if(isset($recentDocuments) && count($recentDocuments) > 0)
-                                    @foreach($recentDocuments as $doc)
-                                    <tr>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                @if($doc['extension'] == 'pdf')
-                                                <div class="icon-circle bg-danger text-white me-2">
-                                                    <i class="fas fa-file-pdf"></i>
-                                                </div>
-                                                @elseif(in_array($doc['extension'], ['docx', 'doc']))
-                                                <div class="icon-circle bg-primary text-white me-2">
-                                                    <i class="fas fa-file-word"></i>
-                                                </div>
-                                                @elseif(in_array($doc['extension'], ['xlsx', 'xls']))
-                                                <div class="icon-circle bg-success text-white me-2">
-                                                    <i class="fas fa-file-excel"></i>
-                                                </div>
-                                                @else
-                                                <div class="icon-circle bg-secondary text-white me-2">
-                                                    <i class="fas fa-file"></i>
-                                                </div>
-                                                @endif
-                                                <span class="text-truncate">{{ $doc['nombre'] }}</span>
-                                            </div>
-                                        </td>
-                                        <td><span class="badge bg-info">{{ ucfirst($doc['carpeta']) }}</span></td>
-                                        <td>{{ $doc['subido_por_nombre'] }}</td>
-                                        <td>{{ date('d/m/Y', strtotime($doc['fecha_subida'])) }}</td>
-                                        <td>{{ $doc['tamaño'] }}</td>
-                                    </tr>
-                                    @endforeach
-                                @else
-                                    <tr>
-                                        <td colspan="5" class="text-center">No hay documentos recientes</td>
-                                    </tr>
-                                @endif
+                                @foreach($recentDocuments as $document)
+                                <tr>
+                                    <td class="fw-semibold">{{ $document['nombre'] }}</td>
+                                    <td><span class="badge bg-light text-dark">{{ ucfirst($document['carpeta']) }}</span></td>
+                                    <td>{{ $document['subido_por_nombre'] }}</td>
+                                    <td>{{ date('d/m/Y', strtotime($document['fecha_subida'])) }}</td>
+                                    <td>{{ $document['tamaño'] }}</td>
+                                </tr>
+                                @endforeach
                             </tbody>
                         </table>
                     </div>
+                    @else
+                    <div class="text-center py-5">
+                        <i class="fas fa-file fa-3x text-gray-300 mb-3"></i>
+                        <p>No hay documentos recientes.</p>
+                    </div>
+                    @endif
                 </div>
             </div>
         </div>
+        @endif
 
+        @if($moduloMensajeriaActivo || $isAdmin)
         <!-- Mensajes Recientes -->
         <div class="col-xl-6 col-lg-6 mb-4" data-aos="fade-up" data-aos-delay="200">
             <div class="card shadow mb-4">
@@ -176,38 +168,38 @@
                     </a>
                 </div>
                 <div class="card-body p-0">
-                    @if(count($recentMessages) > 0)
-                        <div class="list-group list-group-flush">
-                            @foreach($recentMessages as $mensaje)
-                            <a href="{{ route('dashboard.mensajes.ver', $mensaje['id']) }}" class="list-group-item list-group-item-action px-4 py-3 {{ $mensaje['leido'] ? '' : 'bg-light' }}">
-                                <div class="d-flex w-100 justify-content-between align-items-center">
-                                    <h6 class="mb-1 {{ $mensaje['leido'] ? '' : 'fw-bold' }}">{{ $mensaje['asunto'] }}</h6>
-                                    <small class="text-muted">{{ date('d/m/Y', strtotime($mensaje['fecha'])) }}</small>
-                                </div>
-                                <p class="mb-1 text-truncate text-muted small">{{ $mensaje['contenido'] }}</p>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <small class="text-primary">
-                                        <i class="fas fa-user-circle me-1"></i>{{ $mensaje['remitente_nombre'] }}
-                                    </small>
-                                    @if(!$mensaje['leido'])
-                                    <span class="badge bg-primary">Nuevo</span>
-                                    @endif
-                                </div>
-                            </a>
-                            @endforeach
+                    @if(isset($recentMessages) && count($recentMessages) > 0)
+                    <div class="list-group list-group-flush">
+                        @foreach($recentMessages as $message)
+                        <div class="list-group-item p-3 position-relative">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ $message['asunto'] }}</h6>
+                                <small class="text-muted">{{ date('d/m/Y', strtotime($message['fecha'])) }}</small>
+                            </div>
+                            <p class="mb-1 text-truncate">{{ strip_tags($message['contenido']) }}</p>
+                            <small>De: {{ $message['remitente_nombre'] }}</small>
+                            @if(!$message['leido'])
+                            <span class="position-absolute top-0 start-100 translate-middle p-1 bg-primary rounded-circle">
+                                <span class="visually-hidden">Nuevo mensaje</span>
+                            </span>
+                            @endif
                         </div>
+                        @endforeach
+                    </div>
                     @else
-                        <div class="text-center py-5">
-                            <i class="fas fa-inbox fa-3x text-gray-300 mb-3"></i>
-                            <p>No hay mensajes recientes.</p>
-                        </div>
+                    <div class="text-center py-5">
+                        <i class="fas fa-envelope fa-3x text-gray-300 mb-3"></i>
+                        <p>No hay mensajes recientes.</p>
+                    </div>
                     @endif
                 </div>
             </div>
         </div>
+        @endif
     </div>
 
     <div class="row">
+        @if($moduloCalendarioActivo || $isAdmin)
         <!-- Eventos Próximos -->
         <div class="col-xl-6 col-lg-6 mb-4" data-aos="fade-up" data-aos-delay="150">
             <div class="card shadow mb-4">
@@ -228,21 +220,39 @@
                                 <h6 class="mb-1 fw-semibold">{{ $evento['titulo'] }}</h6>
                                 <div class="event-badge" style="background-color: {{ $evento['color'] }}"></div>
                             </div>
-                            <p class="mb-1 d-flex align-items-center">
-                                <i class="fas fa-clock text-muted me-2"></i>
-                                <span class="small">
-                                    @if(isset($evento['todo_el_dia']) && $evento['todo_el_dia'])
-                                        {{ date('d/m/Y', strtotime($evento['fecha_inicio'])) }} (Todo el día)
-                                    @else
-                                        {{ date('d/m/Y H:i', strtotime($evento['fecha_inicio'])) }} - 
-                                        @if(date('d/m/Y', strtotime($evento['fecha_inicio'])) == date('d/m/Y', strtotime($evento['fecha_fin'])))
-                                            {{ date('H:i', strtotime($evento['fecha_fin'])) }}
+                            
+                            @if(isset($evento['descripcion']) && !empty($evento['descripcion']))
+                            <p class="mb-2 text-muted small">{{ \Illuminate\Support\Str::limit($evento['descripcion'], 100) }}</p>
+                            @endif
+                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <p class="mb-1 d-flex align-items-center">
+                                    <i class="fas fa-clock text-muted me-2"></i>
+                                    <span class="small">
+                                        @if(isset($evento['todo_el_dia']) && $evento['todo_el_dia'])
+                                            {{ date('d/m/Y', strtotime($evento['fecha_inicio'])) }} (Todo el día)
                                         @else
-                                            {{ date('d/m/Y H:i', strtotime($evento['fecha_fin'])) }}
+                                            {{ date('d/m/Y H:i', strtotime($evento['fecha_inicio'])) }} - 
+                                            @if(date('d/m/Y', strtotime($evento['fecha_inicio'])) == date('d/m/Y', strtotime($evento['fecha_fin'])))
+                                                {{ date('H:i', strtotime($evento['fecha_fin'])) }}
+                                            @else
+                                                {{ date('d/m/Y H:i', strtotime($evento['fecha_fin'])) }}
+                                            @endif
                                         @endif
-                                    @endif
+                                    </span>
+                                </p>
+                                
+                                <span class="badge bg-light text-dark">{{ $evento['tipo_evento'] ?? 'Evento' }}</span>
+                            </div>
+                            
+                            <div class="mt-1 d-flex justify-content-between align-items-center">
+                                <span class="text-muted small">
+                                    <i class="fas fa-user me-1"></i> {{ $evento['creador_nombre'] ?? 'Usuario' }}
                                 </span>
-                            </p>
+                                <a href="{{ route('dashboard.calendario') }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye me-1"></i> Ver
+                                </a>
+                            </div>
                         </div>
                         @endforeach
                     </div>
@@ -255,35 +265,36 @@
                 </div>
             </div>
         </div>
+        @endif
 
         <!-- Actividad Reciente -->
-        <div class="col-xl-6 col-lg-6 mb-4" data-aos="fade-up" data-aos-delay="250">
+        <div class="col-xl-6 col-lg-6 mb-4" data-aos="fade-up" data-aos-delay="350">
             <div class="card shadow mb-4">
-                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <div class="card-header py-3">
                     <h6 class="m-0 font-weight-bold text-primary">
                         <i class="fas fa-history me-2"></i>Actividad Reciente
                     </h6>
                 </div>
                 <div class="card-body">
-                    @if(isset($userActivity) && count($userActivity) > 0)
                     <div class="timeline">
-                        @foreach($userActivity as $activity)
-                        <div class="timeline-item">
-                            <div class="timeline-marker"></div>
-                            <div class="timeline-content">
-                                <h5 class="timeline-title">{{ $activity['nombre'] }}</h5>
-                                <p class="text-muted mb-1">{{ $activity['accion'] }}: {{ $activity['detalles'] }}</p>
-                                <p class="text-primary small">{{ date('d/m/Y H:i', strtotime($activity['fecha'])) }}</p>
+                        @if(isset($userActivity) && count($userActivity) > 0)
+                            @foreach($userActivity as $activity)
+                            <div class="timeline-item">
+                                <div class="timeline-marker"></div>
+                                <div class="timeline-content">
+                                    <h5 class="timeline-title">{{ $activity['nombre'] }} {{ $activity['accion'] }}</h5>
+                                    <p class="mb-1">{{ $activity['detalles'] }}</p>
+                                    <small class="text-muted">{{ date('d/m/Y H:i', strtotime($activity['fecha'])) }}</small>
+                                </div>
                             </div>
-                        </div>
-                        @endforeach
+                            @endforeach
+                        @else
+                            <div class="text-center py-3">
+                                <i class="fas fa-info-circle fa-2x text-gray-300 mb-3"></i>
+                                <p>No hay actividad reciente.</p>
+                            </div>
+                        @endif
                     </div>
-                    @else
-                    <div class="text-center py-5">
-                        <i class="fas fa-history fa-3x text-gray-300 mb-3"></i>
-                        <p>No hay actividad reciente.</p>
-                    </div>
-                    @endif
                 </div>
             </div>
         </div>

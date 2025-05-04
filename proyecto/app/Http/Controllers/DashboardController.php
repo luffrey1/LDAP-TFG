@@ -351,12 +351,24 @@ class DashboardController extends Controller
             // Obtener eventos reales de la base de datos
             $eventos = Evento::whereDate('fecha_inicio', '>=', now()->subDays(7))
                 ->orderBy('fecha_inicio')
-                ->get();
+                ->get()
+                ->map(function ($evento) {
+                    return [
+                        'id' => $evento->id,
+                        'title' => $evento->titulo,
+                        'start' => $evento->fecha_inicio,
+                        'end' => $evento->fecha_fin,
+                        'description' => $evento->descripcion,
+                        'backgroundColor' => $evento->color,
+                        'borderColor' => $evento->color,
+                        'allDay' => $evento->todo_el_dia
+                    ];
+                });
             
-            return view('dashboard.calendario.index', compact('eventos'));
+            return view('dashboard.calendario', compact('eventos'));
         } catch (\Exception $e) {
             Log::error('Error al cargar eventos: ' . $e->getMessage());
-            return view('dashboard.calendario.index', [
+            return view('dashboard.calendario', [
                 'eventos' => collect(),
                 'error' => 'Error al cargar eventos: ' . $e->getMessage()
             ]);
@@ -713,32 +725,10 @@ class DashboardController extends Controller
             $fechaHoy = now()->format('Y-m-d');
             $fechaLimite = now()->addDays(14)->format('Y-m-d');
             
-            // Obtener eventos próximos de la base de datos
-            $events = \DB::table('eventos')
-                ->whereDate('fecha_inicio', '>=', $fechaHoy)
-                ->whereDate('fecha_inicio', '<=', $fechaLimite)
-                ->orderBy('fecha_inicio')
-                ->limit(5)
-                ->get();
-                
-            if ($events->count() > 0) {
-                Log::info("Eventos próximos obtenidos: " . $events->count());
-                
-                return $events->map(function ($event) {
-                    return [
-                        'id' => $event->id,
-                        'titulo' => $event->titulo,
-                        'fecha_inicio' => $event->fecha_inicio,
-                        'fecha_fin' => $event->fecha_fin,
-                        'todo_el_dia' => (bool)($event->todo_el_dia ?? false),
-                        'color' => $event->color ?? '#3788d8'
-                    ];
-                })->toArray();
-            }
-            
-            // Si no hay eventos, verificar si se está usando el modelo Evento
+            // Obtener eventos próximos de la base de datos usando el modelo Evento con relaciones
             try {
-                $modelEvents = \App\Models\Evento::where('fecha_inicio', '>=', $fechaHoy)
+                $modelEvents = \App\Models\Evento::with('creador')
+                    ->where('fecha_inicio', '>=', $fechaHoy)
                     ->where('fecha_inicio', '<=', $fechaLimite)
                     ->orderBy('fecha_inicio')
                     ->limit(5)
@@ -748,18 +738,69 @@ class DashboardController extends Controller
                     Log::info("Eventos próximos obtenidos con modelo: " . $modelEvents->count());
                     
                     return $modelEvents->map(function ($event) {
+                        // Obtener información del creador
+                        $creadorNombre = 'Sistema';
+                        if ($event->creador) {
+                            $creadorNombre = $event->creador->nombre ?? $event->creador->username ?? 'Usuario ' . $event->creado_por;
+                        }
+                        
+                        // Determinar el tipo de evento según su color
+                        $tipoEvento = $this->getTipoEventoPorColor($event->color);
+                        
                         return [
                             'id' => $event->id,
                             'titulo' => $event->titulo,
+                            'descripcion' => $event->descripcion,
                             'fecha_inicio' => $event->fecha_inicio,
                             'fecha_fin' => $event->fecha_fin,
                             'todo_el_dia' => (bool)$event->todo_el_dia,
-                            'color' => $event->color
+                            'color' => $event->color,
+                            'creador_id' => $event->creado_por,
+                            'creador_nombre' => $creadorNombre,
+                            'tipo_evento' => $tipoEvento
                         ];
                     })->toArray();
                 }
             } catch (\Exception $e) {
                 Log::warning('Error al obtener eventos con modelo: ' . $e->getMessage());
+            }
+            
+            // Intentar obtener eventos desde la tabla directamente
+            $events = \DB::table('eventos')
+                ->leftJoin('users', 'eventos.creado_por', '=', 'users.id')
+                ->whereDate('fecha_inicio', '>=', $fechaHoy)
+                ->whereDate('fecha_inicio', '<=', $fechaLimite)
+                ->orderBy('fecha_inicio')
+                ->limit(5)
+                ->select('eventos.*', 'users.nombre as creador_nombre', 'users.username as creador_username')
+                ->get();
+                
+            if ($events->count() > 0) {
+                Log::info("Eventos próximos obtenidos: " . $events->count());
+                
+                return $events->map(function ($event) {
+                    // Obtener información del creador
+                    $creadorNombre = $event->creador_nombre ?? $event->creador_username ?? 'Usuario ' . $event->creado_por;
+                    if (empty($creadorNombre)) {
+                        $creadorNombre = 'Sistema';
+                    }
+                    
+                    // Determinar el tipo de evento según su color
+                    $tipoEvento = $this->getTipoEventoPorColor($event->color);
+                    
+                    return [
+                        'id' => $event->id,
+                        'titulo' => $event->titulo,
+                        'descripcion' => $event->descripcion,
+                        'fecha_inicio' => $event->fecha_inicio,
+                        'fecha_fin' => $event->fecha_fin,
+                        'todo_el_dia' => (bool)($event->todo_el_dia ?? false),
+                        'color' => $event->color ?? '#3788d8',
+                        'creador_id' => $event->creado_por,
+                        'creador_nombre' => $creadorNombre,
+                        'tipo_evento' => $tipoEvento
+                    ];
+                })->toArray();
             }
             
             // Si no hay eventos, devolver un evento de ejemplo
@@ -768,10 +809,14 @@ class DashboardController extends Controller
                 [
                     'id' => '1',
                     'titulo' => 'Sin eventos próximos',
+                    'descripcion' => 'No hay eventos programados para los próximos días',
                     'fecha_inicio' => now()->addDays(1)->format('Y-m-d H:i:s'),
                     'fecha_fin' => now()->addDays(1)->addHour()->format('Y-m-d H:i:s'),
                     'todo_el_dia' => false,
-                    'color' => '#3788d8'
+                    'color' => '#3788d8',
+                    'creador_id' => null,
+                    'creador_nombre' => 'Sistema',
+                    'tipo_evento' => 'Reunión'
                 ]
             ];
         } catch (\Exception $e) {
@@ -782,13 +827,33 @@ class DashboardController extends Controller
                 [
                     'id' => '1',
                     'titulo' => 'Sin eventos próximos',
+                    'descripcion' => 'Error al cargar los eventos',
                     'fecha_inicio' => now()->addDays(1)->format('Y-m-d H:i:s'),
                     'fecha_fin' => now()->addDays(1)->addHour()->format('Y-m-d H:i:s'),
                     'todo_el_dia' => false,
-                    'color' => '#3788d8'
+                    'color' => '#3788d8',
+                    'creador_id' => null,
+                    'creador_nombre' => 'Sistema',
+                    'tipo_evento' => 'Reunión'
                 ]
             ];
         }
+    }
+    
+    /**
+     * Determinar el tipo de evento según su color
+     */
+    private function getTipoEventoPorColor($color)
+    {
+        $tiposEvento = [
+            '#3788d8' => 'Reunión',
+            '#e74c3c' => 'Fecha límite',
+            '#2ecc71' => 'Formación',
+            '#9b59b6' => 'Vacaciones',
+            '#f39c12' => 'Claustro'
+        ];
+        
+        return $tiposEvento[$color] ?? 'Otro';
     }
 
     /**

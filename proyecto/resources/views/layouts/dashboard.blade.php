@@ -504,12 +504,19 @@
             <div class="col-md-3 col-lg-2 px-0 sidebar" id="sidebar">
                 <div class="position-sticky">
                     <ul class="nav flex-column">
+                        @php
+                            $moduloMensajeriaActivo = App\Models\SistemaConfig::obtenerConfig('modulo_mensajeria_activo', true);
+                            $moduloCalendarioActivo = App\Models\SistemaConfig::obtenerConfig('modulo_calendario_activo', true);
+                            $moduloDocumentosActivo = App\Models\SistemaConfig::obtenerConfig('modulo_documentos_activo', true);
+                        @endphp
+                        
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('dashboard.index') ? 'active' : '' }}" href="{{ route('dashboard.index') }}">
                                 <i class="fas fa-tachometer-alt"></i> Dashboard
                             </a>
                         </li>
                         
+                        @if($moduloDocumentosActivo || session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
                         <div class="sidebar-divider"></div>
                         <div class="nav-item-header">Documentos</div>
                         <li class="nav-item">
@@ -517,19 +524,26 @@
                                 <i class="fas fa-folder"></i> Gestión Documental
                             </a>
                         </li>
+                        @endif
                         
                         <div class="sidebar-divider"></div>
                         <div class="nav-item-header">Comunicación</div>
+                        
+                        @if($moduloMensajeriaActivo || session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('dashboard.mensajes*') ? 'active' : '' }}" href="{{ route('dashboard.mensajes') }}">
                                 <i class="fas fa-envelope"></i> Mensajería Interna
                             </a>
                         </li>
+                        @endif
+                        
+                        @if($moduloCalendarioActivo || session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('dashboard.calendario*') ? 'active' : '' }}" href="{{ route('dashboard.calendario') }}">
                                 <i class="fas fa-calendar-alt"></i> Calendario
                             </a>
                         </li>
+                        @endif
                         
                         <!-- Admin Menu -->
                         @if(session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
@@ -543,6 +557,11 @@
                         <li class="nav-item">
                             <a class="nav-link {{ request()->is('admin/logs') ? 'active' : '' }}" href="{{ route('admin.logs') }}">
                                 <i class="fas fa-clipboard-list"></i> Logs LDAP
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->is('admin/configuracion') ? 'active' : '' }}" href="{{ route('admin.configuracion.index') }}">
+                                <i class="fas fa-cogs"></i> Configuración
                             </a>
                         </li>
                         @endif

@@ -190,14 +190,17 @@
                         </div>
                     </div>
                     
-                    <div class="event-actions">
-                        <button type="button" id="deleteButton" class="btn btn-danger" style="display:none;">
-                            <i class="fas fa-trash-alt mr-2"></i>Eliminar
-                        </button>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save mr-2"></i>Guardar
-                        </button>
+                    <div class="modal-footer">
+                        <button type="button" id="deleteButton" class="btn btn-danger" onclick="eliminarEvento()">Eliminar</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
                     </div>
+                </form>
+                
+                <!-- Formulario separado para eliminar eventos -->
+                <form id="deleteForm" method="POST">
+                    @csrf
+                    <input type="hidden" name="_method" value="DELETE">
                 </form>
             </div>
         </div>
@@ -223,11 +226,17 @@
             },
             locale: 'es',
             events: eventos,
-            editable: true,
+            editable: false, // No permitimos que todos arrastren eventos
             selectable: true,
             dayMaxEvents: true,
             eventClick: function(info) {
-                openEventModal(info.event);
+                // Solo permitimos editar si el evento es editable para este usuario
+                if (info.event.extendedProps.editable) {
+                    openEventModal(info.event);
+                } else {
+                    // Mostrar detalles del evento sin opción a editar
+                    showEventDetails(info.event);
+                }
             },
             select: function(info) {
                 openNewEventModal(info);
@@ -243,6 +252,7 @@
                 tooltip.innerHTML = `
                     <strong>${info.event.title}</strong>
                     ${info.event.extendedProps.description ? `<p>${info.event.extendedProps.description}</p>` : ''}
+                    <p class="text-muted small">Creado por: ${info.event.extendedProps.creador}</p>
                 `;
                 
                 const eventEl = info.el;
@@ -286,6 +296,62 @@
             }
         });
         
+        // Función para mostrar detalles del evento sin edición
+        function showEventDetails(event) {
+            // Crear un modal de solo lectura
+            const detailsHtml = `
+            <div class="modal fade" id="eventDetailsModal" tabindex="-1" role="dialog" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color: ${event.backgroundColor}; color: white;">
+                            <h5 class="modal-title">${event.title}</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="event-info">
+                                <p><strong>Creado por:</strong> ${event.extendedProps.creador}</p>
+                                <p><strong>Fecha de inicio:</strong> ${event.start ? new Date(event.start).toLocaleString('es-ES') : 'No definida'}</p>
+                                <p><strong>Fecha de fin:</strong> ${event.end ? new Date(event.end).toLocaleString('es-ES') : 'No definida'}</p>
+                                ${event.extendedProps.description ? `<p><strong>Descripción:</strong><br>${event.extendedProps.description}</p>` : ''}
+                                <p><strong>Tipo de evento:</strong> ${getTipoEvento(event.backgroundColor)}</p>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+            
+            // Eliminar modal anterior si existe
+            if (document.getElementById('eventDetailsModal')) {
+                document.getElementById('eventDetailsModal').remove();
+            }
+            
+            // Agregar al DOM y mostrar
+            document.body.insertAdjacentHTML('beforeend', detailsHtml);
+            $('#eventDetailsModal').modal('show');
+            
+            // Eliminar del DOM al cerrar
+            $('#eventDetailsModal').on('hidden.bs.modal', function() {
+                document.getElementById('eventDetailsModal').remove();
+            });
+        }
+        
+        // Obtener tipo de evento según el color
+        function getTipoEvento(color) {
+            const tiposEvento = {
+                '#3788d8': 'Reunión',
+                '#e74c3c': 'Fecha límite',
+                '#2ecc71': 'Formación',
+                '#9b59b6': 'Vacaciones',
+                '#f39c12': 'Claustro'
+            };
+            return tiposEvento[color] || 'Otro';
+        }
+        
         function openNewEventModal(info) {
             document.getElementById('modalTitle').textContent = 'Nuevo Evento';
             form.reset();
@@ -315,7 +381,7 @@
         function openEventModal(event) {
             document.getElementById('modalTitle').textContent = 'Editar Evento';
             form.reset();
-            form.action = "/calendario/evento/" + event.id;
+            form.action = "{{ url('/calendario/evento') }}/" + event.id;
             document.getElementById('method').value = 'PUT';
             document.getElementById('evento_id').value = event.id;
             
@@ -337,7 +403,8 @@
                 document.getElementById('fecha_fin').value = event.end ? formatDateForInput(event.end) : formatDateForInput(event.start);
             }
             
-            deleteButton.style.display = 'block';
+            // Solo mostramos el botón eliminar si el usuario puede eliminar este evento
+            deleteButton.style.display = event.extendedProps.editable ? 'block' : 'none';
             modal.modal('show');
         }
         
@@ -368,30 +435,29 @@
             });
         });
         
-        deleteButton.addEventListener('click', function(e) {
-            e.preventDefault();
-            if (confirm('¿Estás seguro de que deseas eliminar este evento?')) {
+        deleteButton.addEventListener('click', function() {
+            if (confirm('¿Estás seguro de eliminar este evento?')) {
                 const id = document.getElementById('evento_id').value;
-                const form = document.createElement('form');
-                form.action = "/calendario/evento/" + id;
-                form.method = "POST";
+                const deleteForm = document.getElementById('deleteForm');
                 
-                const csrfToken = document.createElement('input');
-                csrfToken.type = 'hidden';
-                csrfToken.name = '_token';
-                csrfToken.value = document.querySelector('meta[name="csrf-token"]').content;
+                // Construimos la URL utilizando la ruta con nombre y el ID del evento
+                deleteForm.action = "{{ route('dashboard.calendario.eliminar', ['id' => '__id__']) }}".replace('__id__', id);
                 
-                const methodField = document.createElement('input');
-                methodField.type = 'hidden';
-                methodField.name = '_method';
-                methodField.value = 'DELETE';
-                
-                form.appendChild(csrfToken);
-                form.appendChild(methodField);
-                document.body.appendChild(form);
-                form.submit();
+                deleteForm.submit();
             }
         });
+        
+        function eliminarEvento() {
+            if (confirm('¿Estás seguro de eliminar este evento?')) {
+                const id = document.getElementById('evento_id').value;
+                const deleteForm = document.getElementById('deleteForm');
+                
+                // Construimos la URL utilizando la ruta con nombre y el ID del evento
+                deleteForm.action = "{{ route('dashboard.calendario.eliminar', ['id' => '__id__']) }}".replace('__id__', id);
+                
+                deleteForm.submit();
+            }
+        }
     });
 </script>
 @endsection 

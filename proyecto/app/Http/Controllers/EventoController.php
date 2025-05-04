@@ -17,6 +17,14 @@ class EventoController extends Controller
     {
         try {
             $eventos = Evento::all()->map(function ($evento) {
+                // Obtenemos información sobre quién creó el evento
+                $creador = $evento->creador ? $evento->creador->nombre : 'Sistema';
+                $esAdmin = session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin';
+                $creadoPorUsuarioActual = $evento->creado_por == Auth::id();
+                
+                // Determinamos si el usuario actual puede editar/eliminar este evento
+                $puedeEditar = $esAdmin || $creadoPorUsuarioActual;
+                
                 return [
                     'id' => $evento->id,
                     'title' => $evento->titulo,
@@ -25,7 +33,10 @@ class EventoController extends Controller
                     'description' => $evento->descripcion,
                     'backgroundColor' => $evento->color,
                     'borderColor' => $evento->color,
-                    'allDay' => $evento->todo_el_dia
+                    'allDay' => $evento->todo_el_dia,
+                    'creador' => $creador,
+                    'creado_por' => $evento->creado_por,
+                    'editable' => $puedeEditar // Este valor será usado en el frontend
                 ];
             });
 
@@ -70,15 +81,15 @@ class EventoController extends Controller
                 'fecha_fin' => $fechaFin,
                 'color' => $request->color,
                 'todo_el_dia' => $todoElDia,
-                'creado_por' => Auth::id()
+                'creado_por' => Auth::id() ?: session('auth_user.id')
             ]);
 
-            Log::info('Evento creado con ID: ' . $evento->id . ' por usuario: ' . Auth::id());
+            Log::info('Evento creado con ID: ' . $evento->id . ' por usuario: ' . (Auth::id() ?: session('auth_user.id')));
             
-            return redirect()->route('calendario')->with('success', 'Evento creado correctamente');
+            return redirect()->route('dashboard.calendario')->with('success', 'Evento creado correctamente');
         } catch (\Exception $e) {
             Log::error('Error al crear evento: ' . $e->getMessage());
-            return redirect()->route('calendario')->with('error', 'Error al crear el evento: ' . $e->getMessage());
+            return redirect()->route('dashboard.calendario')->with('error', 'Error al crear el evento: ' . $e->getMessage());
         }
     }
 
@@ -99,6 +110,16 @@ class EventoController extends Controller
         try {
             $evento = Evento::findOrFail($id);
             
+            // Verificar permisos para editar
+            $esAdmin = session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin';
+            $creadoPorUsuarioActual = $evento->creado_por == (Auth::id() ?: session('auth_user.id'));
+            
+            if (!$esAdmin && !$creadoPorUsuarioActual) {
+                Log::warning('Intento no autorizado de actualizar evento ID: ' . $id . ' por usuario: ' . (Auth::id() ?: session('auth_user.id')));
+                return redirect()->route('dashboard.calendario')
+                    ->with('error', 'No tienes permiso para editar este evento.');
+            }
+            
             $todoElDia = $request->has('todo_el_dia');
             
             // Formatear las fechas según si es todo el día o no
@@ -118,15 +139,15 @@ class EventoController extends Controller
                 'fecha_fin' => $fechaFin,
                 'color' => $request->color,
                 'todo_el_dia' => $todoElDia,
-                'actualizado_por' => Auth::id()
+                'actualizado_por' => Auth::id() ?: session('auth_user.id')
             ]);
 
-            Log::info('Evento actualizado con ID: ' . $id . ' por usuario: ' . Auth::id());
+            Log::info('Evento actualizado con ID: ' . $id . ' por usuario: ' . (Auth::id() ?: session('auth_user.id')));
             
-            return redirect()->route('calendario')->with('success', 'Evento actualizado correctamente');
+            return redirect()->route('dashboard.calendario')->with('success', 'Evento actualizado correctamente');
         } catch (\Exception $e) {
             Log::error('Error al actualizar evento: ' . $e->getMessage());
-            return redirect()->route('calendario')->with('error', 'Error al actualizar el evento: ' . $e->getMessage());
+            return redirect()->route('dashboard.calendario')->with('error', 'Error al actualizar el evento: ' . $e->getMessage());
         }
     }
 
@@ -137,14 +158,25 @@ class EventoController extends Controller
     {
         try {
             $evento = Evento::findOrFail($id);
+            
+            // Verificar permisos para eliminar
+            $esAdmin = session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin';
+            $creadoPorUsuarioActual = $evento->creado_por == (Auth::id() ?: session('auth_user.id'));
+            
+            if (!$esAdmin && !$creadoPorUsuarioActual) {
+                Log::warning('Intento no autorizado de eliminar evento ID: ' . $id . ' por usuario: ' . (Auth::id() ?: session('auth_user.id')));
+                return redirect()->route('dashboard.calendario')
+                    ->with('error', 'No tienes permiso para eliminar este evento.');
+            }
+            
             $evento->delete();
 
-            Log::info('Evento eliminado con ID: ' . $id . ' por usuario: ' . Auth::id());
+            Log::info('Evento eliminado con ID: ' . $id . ' por usuario: ' . (Auth::id() ?: session('auth_user.id')));
             
-            return redirect()->route('calendario')->with('success', 'Evento eliminado correctamente');
+            return redirect()->route('dashboard.calendario')->with('success', 'Evento eliminado correctamente');
         } catch (\Exception $e) {
             Log::error('Error al eliminar evento: ' . $e->getMessage());
-            return redirect()->route('calendario')->with('error', 'Error al eliminar el evento: ' . $e->getMessage());
+            return redirect()->route('dashboard.calendario')->with('error', 'Error al eliminar el evento: ' . $e->getMessage());
         }
     }
 } 
