@@ -546,6 +546,12 @@
                         </li>
                         @endif
                         
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('monitor.*') ? 'active' : '' }}" href="{{ route('monitor.index') }}">
+                                <i class="fas fa-desktop"></i> Monitor de Equipos
+                            </a>
+                        </li>
+                        
                         <!-- Admin Menu -->
                         @if(session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
                         <div class="sidebar-divider"></div>

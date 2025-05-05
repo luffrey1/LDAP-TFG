@@ -11,6 +11,7 @@ use App\Http\Controllers\TestController;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Middleware\CheckModuleAccess;
+use App\Http\Controllers\MonitorController;
 
 // Ruta principal redirige al login
 Route::get('/', function () {
@@ -55,9 +56,10 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
     // Calendario y eventos
     Route::prefix('calendario')->middleware(CheckModuleAccess::class.':calendario')->group(function () {
         Route::get('/', [EventoController::class, 'index'])->name('dashboard.calendario');
-        Route::post('/evento', [EventoController::class, 'store'])->name('dashboard.calendario.evento');
-        Route::put('/evento/{id}', [EventoController::class, 'update'])->name('dashboard.calendario.actualizar');
-        Route::delete('/evento/{id}', [EventoController::class, 'destroy'])->name('dashboard.calendario.eliminar');
+        Route::post('/eventos', [EventoController::class, 'store'])->name('eventos.store');
+        Route::get('/eventos', [EventoController::class, 'getEvents'])->name('eventos.get');
+        Route::put('/eventos/{id}', [EventoController::class, 'update'])->name('eventos.update');
+        Route::delete('/eventos/{id}', [EventoController::class, 'destroy'])->name('eventos.destroy');
     });
     
     // Ruta para gestión de usuarios LDAP - acceso directo a admin users
@@ -122,5 +124,27 @@ Route::middleware(['App\Http\Middleware\LdapAuthMiddleware'])->prefix('profesor'
     Route::get('alumnos/ldap/buscar', [App\Http\Controllers\Profesor\AlumnoController::class, 'buscarAlumnosLdap'])->name('alumnos.ldap.buscar');
     Route::post('alumnos/ldap/importar', [App\Http\Controllers\Profesor\AlumnoController::class, 'importarAlumnosLdap'])->name('alumnos.ldap.importar');
 });
+
+// Rutas de monitoreo
+Route::prefix('monitor')->name('monitor.')->middleware(['auth'])->group(function () {
+    Route::get('/', [App\Http\Controllers\MonitorController::class, 'index'])->name('index');
+    Route::get('/create', [App\Http\Controllers\MonitorController::class, 'create'])->name('create');
+    Route::post('/', [App\Http\Controllers\MonitorController::class, 'store'])->name('store');
+    Route::get('/{id}', [App\Http\Controllers\MonitorController::class, 'show'])->name('show');
+    Route::get('/{id}/edit', [App\Http\Controllers\MonitorController::class, 'edit'])->name('edit');
+    Route::put('/{id}', [App\Http\Controllers\MonitorController::class, 'update'])->name('update');
+    Route::delete('/{id}', [App\Http\Controllers\MonitorController::class, 'destroy'])->name('destroy');
+    Route::get('/ping/{id}', [App\Http\Controllers\MonitorController::class, 'ping'])->name('ping');
+    Route::get('/ping-all', [App\Http\Controllers\MonitorController::class, 'pingAll'])->name('ping-all');
+    Route::get('/scan', [App\Http\Controllers\MonitorController::class, 'scanNetworkForm'])->name('scan');
+    Route::post('/scan', [App\Http\Controllers\MonitorController::class, 'scanNetwork'])->name('scan.execute');
+    Route::post('/update-status', [App\Http\Controllers\MonitorController::class, 'updateStatus'])->name('update-status');
+    Route::post('/update-system-info', [App\Http\Controllers\MonitorController::class, 'updateSystemInfo'])->name('update-system-info');
+    Route::post('/update-telemetry', [App\Http\Controllers\MonitorController::class, 'updateTelemetry'])->name('update-telemetry');
+    Route::post('/{id}/command', [App\Http\Controllers\MonitorController::class, 'executeCommand'])->name('execute-command');
+});
+
+// Endpoint para recibir actualizaciones de telemetría desde agentes
+Route::post('/api/telemetry/update', [MonitorController::class, 'updateTelemetry'])->name('api.telemetry.update');
 
 
