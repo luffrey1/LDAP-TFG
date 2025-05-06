@@ -530,10 +530,10 @@ class ClaseController extends Controller
             }
             
             // Verificar si hay alumnos en la clase
-            $alumnosCount = AlumnoClase::where('clase_id', $id)->count();
+            $alumnosCount = AlumnoClase::where('clase_grupo_id', $id)->count();
             if ($alumnosCount > 0) {
                 // Eliminar las relaciones primero
-                AlumnoClase::where('clase_id', $id)->delete();
+                AlumnoClase::where('clase_grupo_id', $id)->delete();
             }
             
             // Eliminar la clase

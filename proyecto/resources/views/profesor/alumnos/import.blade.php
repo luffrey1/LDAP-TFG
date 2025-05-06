@@ -76,16 +76,25 @@
                             <div class="form-group">
                                 <label>Archivo de Alumnos</label>
                                 <div class="custom-file">
-                                    <input type="file" name="file" class="custom-file-input" id="file" accept=".csv, .xlsx, .xls" required>
-                                    <label class="custom-file-label" for="file">Seleccionar archivo</label>
+                                    <input type="file" name="archivo_csv" class="custom-file-input" id="archivo_csv" accept=".csv, .xlsx, .xls" required>
+                                    <label class="custom-file-label" for="archivo_csv">Seleccionar archivo</label>
                                     <div class="form-text text-muted">Formatos aceptados: CSV, Excel (.xlsx, .xls)</div>
                                 </div>
                             </div>
 
                             <div class="form-group">
+                                <label for="separador">Separador CSV</label>
+                                <select name="separador" id="separador" class="form-control" required>
+                                    <option value=",">Coma (,)</option>
+                                    <option value=";">Punto y coma (;)</option>
+                                    <option value="\t">Tabulador</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
                                 <div class="custom-control custom-checkbox">
-                                    <input type="checkbox" name="header_row" id="header_row" class="custom-control-input" checked>
-                                    <label class="custom-control-label" for="header_row">El archivo contiene fila de encabezados</label>
+                                    <input type="checkbox" name="tiene_encabezados" id="tiene_encabezados" class="custom-control-input" checked>
+                                    <label class="custom-control-label" for="tiene_encabezados">El archivo contiene fila de encabezados</label>
                                 </div>
                             </div>
 

@@ -493,8 +493,12 @@ class AlumnoController extends Controller
      */
     public function importProcess(Request $request)
     {
+        // Convertir checkbox a booleano antes de la validación
+        $data = $request->all();
+        $data['tiene_encabezados'] = $request->has('tiene_encabezados');
+        
         // Validar formulario
-        $validator = Validator::make($request->all(), [
+        $validator = Validator::make($data, [
             'archivo_csv' => 'required|file|mimes:csv,txt|max:2048',
             'clase_grupo_id' => 'required|exists:clase_grupos,id',
             'crear_cuentas_ldap' => 'boolean',

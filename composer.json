@@ -1,5 +1,6 @@
 {
     "require": {
-        "directorytree/ldaprecord-laravel": "^3.4"
+        "directorytree/ldaprecord-laravel": "^3.4",
+        "league/csv": "^9.23"
     }
 }
