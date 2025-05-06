@@ -98,6 +98,15 @@
                                 </div>
                             </div>
 
+                            <!-- Previsualización simple -->
+                            <div id="preview" class="table-responsive mt-3" style="display: none;">
+                                <h5>Previsualización:</h5>
+                                <table class="table table-bordered table-striped">
+                                    <tbody id="preview-content">
+                                    </tbody>
+                                </table>
+                            </div>
+
                             <div class="form-group">
                                 <button type="submit" class="btn btn-primary btn-block">
                                     <i class="fas fa-upload"></i> Importar Alumnos
@@ -115,10 +124,54 @@
 @section('scripts')
 <script>
     $(document).ready(function() {
-        // Mostrar nombre del archivo al seleccionarlo
+        // Mostrar nombre del archivo y previsualizar
         $('.custom-file-input').on('change', function() {
             let fileName = $(this).val().split('\\').pop();
             $(this).next('.custom-file-label').addClass("selected").html(fileName);
+            
+            // Previsualizar CSV
+            const file = this.files[0];
+            const reader = new FileReader();
+            const separator = $('#separador').val();
+            
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const lines = text.split('\n');
+                let html = '';
+                
+                // Mostrar todas las líneas
+                lines.forEach((line, index) => {
+                    if (line.trim() !== '') {  // Ignorar líneas vacías
+                        const cells = line.split(separator);
+                        if (index === 0) {  // Primera fila (títulos)
+                            html += '<tr>';
+                            cells.forEach(cell => {
+                                html += `<th style="font-weight: bold;">${cell.trim()}</th>`;
+                            });
+                            html += '</tr>';
+                        } else {  // Resto de filas (datos)
+                            html += '<tr>';
+                            cells.forEach(cell => {
+                                html += `<td>${cell.trim()}</td>`;
+                            });
+                            html += '</tr>';
+                        }
+                    }
+                });
+                
+                $('#preview-content').html(html);
+                $('#preview').show();
+            };
+            
+            reader.readAsText(file);
+        });
+
+        // Actualizar previsualización cuando cambie el separador
+        $('#separador').on('change', function() {
+            const fileInput = document.getElementById('archivo_csv');
+            if(fileInput.files.length > 0) {
+                $(fileInput).trigger('change');
+            }
         });
 
         // Inicializar select2
