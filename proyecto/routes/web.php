@@ -56,10 +56,10 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
     // Calendario y eventos
     Route::prefix('calendario')->middleware(CheckModuleAccess::class.':calendario')->group(function () {
         Route::get('/', [EventoController::class, 'index'])->name('dashboard.calendario');
-        Route::post('/eventos', [EventoController::class, 'store'])->name('eventos.store');
+        Route::post('/evento', [EventoController::class, 'store'])->name('dashboard.calendario.evento');
+        Route::put('/evento/{id}', [EventoController::class, 'update'])->name('dashboard.calendario.evento.update');
+        Route::delete('/evento/{id}', [EventoController::class, 'destroy'])->name('dashboard.calendario.eliminar');
         Route::get('/eventos', [EventoController::class, 'getEvents'])->name('eventos.get');
-        Route::put('/eventos/{id}', [EventoController::class, 'update'])->name('eventos.update');
-        Route::delete('/eventos/{id}', [EventoController::class, 'destroy'])->name('eventos.destroy');
     });
     
     // Ruta para gestión de usuarios LDAP - acceso directo a admin users

@@ -135,7 +135,6 @@ class ClaseController extends Controller
                                         'username' => $uid,
                                         'email' => $email,
                                         'role' => in_array($uid, $adminUids) || strtolower($uid) === 'ldap-admin' ? 'admin' : 'profesor',
-                                        'is_admin' => in_array($uid, $adminUids) || strtolower($uid) === 'ldap-admin'
                                     ]);
                                     $profesores[] = $tempUser;
                                     Log::info("Usuario LDAP no encontrado en BD, creado objeto temporal: $uid");
@@ -218,7 +217,6 @@ class ClaseController extends Controller
                             'username' => 'admin',
                             'email' => 'admin@example.com',
                             'role' => 'admin',
-                            'is_admin' => true
                         ])
                     ];
                 }
@@ -244,12 +242,30 @@ class ClaseController extends Controller
         // Validación de datos del formulario
         $validated = $request->validate([
             'nombre' => 'required|string|max:255',
-            'codigo' => 'required|string|max:50|unique:clase_grupos,codigo',
             'descripcion' => 'nullable|string|max:500',
             'nivel' => 'required|string|max:100',
             'curso' => 'required|integer|min:1|max:10',
             'seccion' => 'required|string|max:20',
-            'profesor_id' => 'required',
+            'profesor_id' => ['required', function ($attribute, $value, $fail) {
+                if (!is_numeric($value) && !is_string($value)) {
+                    $fail('El ID del profesor debe ser un número o un nombre de usuario válido.');
+                }
+                
+                if (is_numeric($value)) {
+                    // Verificar si existe en la base de datos
+                    $exists = \App\Models\User::where('id', $value)
+                        ->where(function($query) {
+                            $query->where('role', 'profesor')
+                                ->orWhere('role', 'admin')
+                                ->orWhere('is_admin', true);
+                        })
+                        ->exists();
+                    
+                    if (!$exists) {
+                        $fail('El profesor seleccionado no existe en la base de datos.');
+                    }
+                }
+            }],
         ]);
         
         // Debug para ver los datos recibidos
@@ -333,7 +349,6 @@ class ClaseController extends Controller
                                 $user->email = $email;
                                 $user->password = bcrypt(Str::random(16)); // Contraseña aleatoria
                                 $user->role = $esAdmin ? 'admin' : 'profesor';
-                                $user->is_admin = $esAdmin;
                                 $user->save();
                                 
                                 Log::info("Usuario creado en la BD: {$user->id} - {$user->name}");
@@ -352,10 +367,13 @@ class ClaseController extends Controller
                 }
             }
             
+            // Generar código único para la clase
+            $codigo = $this->generarCodigoUnico($validated['nivel'], $validated['curso'], $validated['seccion']);
+            
             // Crear el grupo de clase con el usuario obtenido
             $clase = new ClaseGrupo();
             $clase->nombre = $validated['nombre'];
-            $clase->codigo = $validated['codigo'];
+            $clase->codigo = $codigo;
             $clase->descripcion = $validated['descripcion'];
             $clase->nivel = $validated['nivel'];
             $clase->curso = $validated['curso'];
@@ -377,6 +395,31 @@ class ClaseController extends Controller
                 ->with('error', 'Error al crear la clase: ' . $e->getMessage())
                 ->withInput();
         }
+    }
+
+    /**
+     * Genera un código único para la clase basado en el nivel, curso y sección
+     */
+    private function generarCodigoUnico($nivel, $curso, $seccion)
+    {
+        // Limpiar y formatear los componentes
+        $nivelAbrev = strtoupper(preg_replace('/[^A-Za-z]/', '', $nivel));
+        $cursoNum = $curso;
+        $seccionLimpia = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $seccion));
+        
+        // Generar el código base
+        $codigoBase = sprintf('%s%d%s', $nivelAbrev, $cursoNum, $seccionLimpia);
+        
+        // Verificar si el código ya existe y añadir un sufijo numérico si es necesario
+        $codigo = $codigoBase;
+        $contador = 1;
+        
+        while (ClaseGrupo::where('codigo', $codigo)->exists()) {
+            $codigo = $codigoBase . '-' . $contador;
+            $contador++;
+        }
+        
+        return $codigo;
     }
 
     /**

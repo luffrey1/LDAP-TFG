@@ -19,7 +19,8 @@ return new class extends Migration
             $table->dateTime('fecha_fin');
             $table->boolean('todo_el_dia')->default(false);
             $table->string('color', 20)->default('#3788d8');
-            $table->foreignId('creado_por')->constrained('users')->onDelete('cascade');
+            $table->foreignId('creado_por')->nullable()->constrained('users')->onDelete('set null');
+            $table->string('nombre_creador')->nullable();
             $table->boolean('publico')->default(false);
             $table->timestamps();
         });

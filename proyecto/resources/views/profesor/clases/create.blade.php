@@ -93,14 +93,13 @@
                                         <option value="">Seleccione un profesor</option>
                                         @foreach($profesores as $profesor)
                                             @php
-                                                $profesorId = is_string($profesor->id) && strpos($profesor->id, 'ldap_') === 0 
-                                                    ? substr($profesor->id, 5) : $profesor->id;
-                                                $esLdap = is_string($profesor->id) && strpos($profesor->id, 'ldap_') === 0;
+                                                $profesorId = $profesor->username ?? $profesor->id;
+                                                $esLdap = !is_numeric($profesor->id) && strpos($profesor->id, 'ldap_') === 0;
                                             @endphp
                                             <option value="{{ $profesorId }}" {{ old('profesor_id') == $profesorId ? 'selected' : '' }}>
                                                 {{ $profesor->name }} 
                                                 @if($esLdap) (LDAP) @endif
-                                                @if($profesor->role == 'admin' || $profesor->is_admin) (Admin) @endif
+                                                @if($profesor->role == 'admin') (Admin) @endif
                                             </option>
                                         @endforeach
                                     </select>
