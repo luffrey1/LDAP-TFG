@@ -4,27 +4,8 @@
 - Cambiar `LDAP_DEFAULT_HOSTS=172.19.0.4` ya que actualmente hay que cambiar la IP del LDAP por defecto para cada nuevo usuario (está así por un bug de inicio de sesión exclusivo con LDAP-ADMIN)
 
 ## Tareas Inmediatas
-1. **Gestión de usuarios YA FUNCIONA**
-   - Revisar que funcione correctamente la creación de usuarios # funciona #
-   - Verificar que se hashee la contraseña correctamente # funciona #
-   - Comprobar que los usuarios se eliminen correctamente desde la interfaz # funciona #
-   - Asegurar que la función de promover a administrador (icono de corona) funcione bien # funciona #
-
-2. **Sistema de mensajería YA FUNCIONA**
-   - Implementar funcionalidad para reenviar mensajes
-   - Añadir opción para borrar mensajes
-   - Permitir destacar mensajes importantes
-   - Revisar otras funcionalidades de mensajería
-
-3. **Calendario YA FUNCIONA**
-   - Verificar el correcto funcionamiento de los eventos
-   - Comprobar que se muestren correctamente en el dashboard
-   - Asegurar que los contadores y eventos próximos se actualicen adecuadamente
-
-4. **Evaluación general CORRECTA**
-   - Si todas las funcionalidades anteriores funcionan correctamente, avanzar a la siguiente fase
-   - En caso contrario, revisar y solucionar los problemas pendientes
-
+1- **Que funcionen los logs, los olvidamos y con todos los cambios estan totalmente diferentes**
+2- **que se puedan eliminar equipos, no funciona y redirige al dashboard, mirar temas de rutas lo más posible o alguna configuracion sql**
 5. **Conectividad remota**
    - Establecer conexión remota mediante VPN
 
