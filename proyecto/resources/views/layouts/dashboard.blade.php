@@ -509,6 +509,7 @@
                             $moduloMensajeriaActivo = App\Models\SistemaConfig::obtenerConfig('modulo_mensajeria_activo', true);
                             $moduloCalendarioActivo = App\Models\SistemaConfig::obtenerConfig('modulo_calendario_activo', true);
                             $moduloDocumentosActivo = App\Models\SistemaConfig::obtenerConfig('modulo_documentos_activo', true);
+                            $moduloMonitoreoActivo = App\Models\SistemaConfig::obtenerConfig('modulo_monitoreo_activo', true);
                         @endphp
                         
                         <li class="nav-item">
@@ -546,11 +547,13 @@
                         </li>
                         @endif
                         
+                        @if($moduloMonitoreoActivo || session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('monitor.*') ? 'active' : '' }}" href="{{ route('monitor.index') }}">
                                 <i class="fas fa-desktop"></i> Monitor de Equipos
                             </a>
                         </li>
+                        @endif
                         
                         <!-- Admin Menu -->
                         @if(session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')

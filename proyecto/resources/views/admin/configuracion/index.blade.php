@@ -146,6 +146,16 @@
                                     $configuraciones['modulos']->where('clave', 'modulo_documentos_activo')->first()->valor == 'true') checked @endif>
                             </div>
                         </div>
+                        
+                        <div class="modulo-card">
+                            <div class="modulo-titulo">Monitor de Equipos</div>
+                            <div class="modulo-descripcion">Monitoreo y gestión de equipos por aulas</div>
+                            <div class="form-check form-switch modulo-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="modulo_monitoreo_activo" name="modulos[]" value="modulo_monitoreo_activo"
+                                    @if(isset($configuraciones['modulos']) && $configuraciones['modulos']->where('clave', 'modulo_monitoreo_activo')->first() && 
+                                    $configuraciones['modulos']->where('clave', 'modulo_monitoreo_activo')->first()->valor == 'true') checked @endif>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

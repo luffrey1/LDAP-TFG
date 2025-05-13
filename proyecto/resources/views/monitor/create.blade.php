@@ -86,6 +86,22 @@
                                 @enderror
                             </div>
 
+                            <div class="form-group">
+                                <label for="group_id">Grupo</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-layer-group"></i></span>
+                                    <select class="form-select" id="group_id" name="group_id">
+                                        <option value="">-- Sin grupo --</option>
+                                        @foreach($groups as $group)
+                                            <option value="{{ $group->id }}" {{ old('group_id', $groupId ?? '') == $group->id ? 'selected' : '' }}>
+                                                {{ $group->name }} - {{ $group->description ?? 'Sin descripción' }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="form-text text-muted">Seleccione el grupo/aula al que pertenece este equipo</div>
+                            </div>
+
                             <div class="card-footer text-right">
                                 <button type="submit" class="btn btn-primary">Guardar</button>
                                 <a href="{{ route('monitor.index') }}" class="btn btn-secondary">Cancelar</a>
@@ -106,7 +122,6 @@
                             <ul>
                                 <li>Asegúrate de que el host esté encendido y conectado a la red.</li>
                                 <li>Si no conoces la dirección IP, puedes usar la función de <a href="{{ route('monitor.scan') }}">Escaneo de Red</a>.</li>
-                                <li>Para obtener datos de telemetría, necesitarás instalar un agente en el equipo.</li>
                             </ul>
                         </div>
 

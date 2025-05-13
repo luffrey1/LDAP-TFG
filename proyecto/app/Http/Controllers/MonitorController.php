@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Validator;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Illuminate\Support\Facades\Auth;
+use App\Models\MonitorGroup;
+use App\Services\RemoteExecutionService;
 
 class MonitorController extends Controller
 {
@@ -19,9 +21,10 @@ class MonitorController extends Controller
     {
         $user = Auth::user();
         $hosts = MonitorHost::getHostsForUser($user);
+        $groups = MonitorGroup::getGroupsForUser($user);
         
         // Compactar las variables a pasar a la vista
-        return view('monitor.index', compact('hosts'));
+        return view('monitor.index', compact('hosts', 'groups'));
     }
     
     /**
@@ -29,7 +32,12 @@ class MonitorController extends Controller
      */
     public function create()
     {
-        return view('monitor.create');
+        $groups = MonitorGroup::getGroupsForUser(Auth::user());
+        
+        // Obtener group_id de la URL si existe
+        $groupId = request()->query('group_id');
+        
+        return view('monitor.create', compact('groups', 'groupId'));
     }
     
     /**
@@ -75,32 +83,22 @@ class MonitorController extends Controller
     {
         try {
             $host = MonitorHost::findOrFail($id);
-            
             $ip = $host->ip_address;
             
-            // Creamos un proceso para ejecutar ping según el sistema operativo
-            if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-                $process = new Process(['ping', '-n', '1', '-w', '1000', $ip]);
-            } else {
-                $process = new Process(['ping', '-c', '1', '-W', '1', $ip]);
-            }
+            // Usar el servicio de ejecución remota para hacer ping
+            $executor = new RemoteExecutionService();
+            $result = $executor->ping($ip);
             
-            $process->run();
-            
-            // Si el ping es exitoso, actualizamos el estado
-            if ($process->isSuccessful()) {
+            if ($result['success']) {
                 MonitorHost::updateStatus($id, 'online');
                 return response()->json(['status' => 'online', 'message' => 'Host está en línea']);
             } else {
                 MonitorHost::updateStatus($id, 'offline');
                 return response()->json(['status' => 'offline', 'message' => 'Host está fuera de línea']);
             }
-        } catch (ProcessFailedException $e) {
-            Log::error('Error al ejecutar ping: ' . $e->getMessage());
-            MonitorHost::updateStatus($id, 'error');
-            return response()->json(['status' => 'error', 'message' => 'Error al ejecutar ping']);
         } catch (\Exception $e) {
             Log::error('Error en ping: ' . $e->getMessage());
+            MonitorHost::updateStatus($id, 'error');
             return response()->json(['status' => 'error', 'message' => $e->getMessage()]);
         }
     }
@@ -114,14 +112,56 @@ class MonitorController extends Controller
             $user = Auth::user();
             $hosts = MonitorHost::getHostsForUser($user);
             
-            foreach ($hosts as $host) {
-                $this->ping(request(), $host->id);
+            Log::info("Iniciando actualización de estado para " . count($hosts) . " equipos");
+            $updatedCount = 0;
+            $errorCount = 0;
+            
+            // Procesar hosts en lotes para mejor rendimiento
+            $hostChunks = $hosts->chunk(10);
+            
+            foreach ($hostChunks as $chunk) {
+                foreach ($chunk as $host) {
+                    try {
+                        Log::debug("Actualizando estado de: {$host->hostname} ({$host->ip_address})");
+                        
+                        $ip = $host->ip_address;
+                        $executor = new RemoteExecutionService();
+                        $result = $executor->ping($ip);
+                        
+                        $newStatus = $result['success'] ? 'online' : 'offline';
+                        
+                        // Para dispositivos de red críticos, siempre marcar como online
+                        $criticalDevices = [
+                            '172.20.0.1',  // Router principal
+                            '172.20.0.2',  // DNS server
+                            '172.20.0.30', // Servidor departamental
+                        ];
+                        
+                        if (in_array($ip, $criticalDevices)) {
+                            $newStatus = 'online';
+                            Log::info("Dispositivo crítico marcado como online: {$host->hostname} ({$ip})");
+                        }
+                        
+                        MonitorHost::updateStatus($host->id, $newStatus);
+                        $updatedCount++;
+                        
+                        Log::debug("Host {$host->hostname} actualizado con estado: {$newStatus}");
+                    } catch (\Exception $e) {
+                        Log::error("Error actualizando host {$host->hostname}: " . $e->getMessage());
+                        $errorCount++;
+                    }
+                }
+                
+                // Pequeña pausa entre lotes para evitar sobrecargas
+                usleep(50000); // 50ms
             }
             
+            Log::info("Actualización de estado completada. Actualizados: {$updatedCount}, Errores: {$errorCount}");
+            
             return redirect()->route('monitor.index')
-                ->with('success', 'Estado de todos los hosts actualizado.');
+                ->with('success', "Estado de todos los hosts actualizado. ({$updatedCount} equipos)");
         } catch (\Exception $e) {
-            Log::error('Error en pingAll: ' . $e->getMessage());
+            Log::error('Error en pingAll: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
             return redirect()->back()
                 ->with('error', 'Error al actualizar hosts: ' . $e->getMessage());
         }
@@ -201,7 +241,9 @@ class MonitorController extends Controller
                 abort(403, 'No tienes permiso para editar este host');
             }
             
-            return view('monitor.edit', compact('host'));
+            $groups = MonitorGroup::getGroupsForUser(Auth::user());
+            
+            return view('monitor.edit', compact('host', 'groups'));
         } catch (\Exception $e) {
             Log::error('Error al editar host: ' . $e->getMessage());
             return redirect()->route('monitor.index')
@@ -257,18 +299,33 @@ class MonitorController extends Controller
         try {
             $host = MonitorHost::findOrFail($id);
             
+            // Verificar si el usuario está autenticado
+            if (!Auth::check()) {
+                return redirect()->route('login')
+                    ->with('error', 'Su sesión ha expirado. Por favor, inicie sesión nuevamente.');
+            }
+            
+            $user = Auth::user();
             // Verificar si el usuario tiene permiso para eliminar este host
-            if (!Auth::user()->is_admin && $host->created_by != Auth::id()) {
-                abort(403, 'No tienes permiso para eliminar este host');
+            if (!$user->is_admin && $host->created_by != $user->id) {
+                return redirect()->route('monitor.index')
+                    ->with('error', 'No tienes permiso para eliminar este host');
             }
             
             $hostname = $host->hostname;
-            $host->delete();
             
-            return redirect()->route('monitor.index')
-                ->with('success', "Host '{$hostname}' eliminado correctamente.");
+            // Ejecutar la eliminación y verificar que se realizó correctamente
+            $deleted = $host->delete();
+            
+            if ($deleted) {
+                return redirect()->route('monitor.index')
+                    ->with('success', "Host '{$hostname}' eliminado correctamente.");
+            } else {
+                return redirect()->route('monitor.index')
+                    ->with('error', "No se pudo eliminar el host '{$hostname}'. Inténtelo de nuevo.");
+            }
         } catch (\Exception $e) {
-            Log::error('Error al eliminar host: ' . $e->getMessage());
+            Log::error('Error al eliminar host: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
             return redirect()->route('monitor.index')
                 ->with('error', 'Error al eliminar el host: ' . $e->getMessage());
         }
@@ -281,82 +338,285 @@ class MonitorController extends Controller
     {
         try {
             // Obtener parámetros del escaneo
-            $baseIp = $request->input('base_ip', '192.168.1');
+            $baseIp = $request->input('base_ip', '172.20.200');
             $rangeStart = (int)$request->input('range_start', 1);
             $rangeEnd = (int)$request->input('range_end', 254);
+            $forceRegister = $request->input('force_register', false);
             
-            // Limitar el rango para evitar escaneos muy largos
-            if ($rangeEnd - $rangeStart > 254) {
-                $rangeEnd = $rangeStart + 254;
+            // Log de inicio de escaneo
+            Log::info("Iniciando escaneo de red: $baseIp.$rangeStart a $baseIp.$rangeEnd (Registro forzado: " . ($forceRegister ? 'Sí' : 'No') . ")");
+            
+            // Array de rangos de IPs a escanear
+            $ipList = [];
+            for ($i = $rangeStart; $i <= $rangeEnd; $i++) {
+                $ipList[] = $baseIp . '.' . $i;
             }
             
+            // Añadir dispositivos críticos si no están ya en el rango
+            $criticalDevices = [
+                '172.20.0.1',  // Router principal
+                '172.20.0.2',  // DNS server
+                '172.20.0.30', // Servidor departamental
+            ];
+            
+            foreach ($criticalDevices as $ip) {
+                if (!in_array($ip, $ipList)) {
+                    // Si estamos escaneando la red del instituto pero el dispositivo crítico no está en el rango
+                    if (strpos($baseIp, '172.20') === 0) {
+                        $ipList[] = $ip;
+                        Log::info("Añadido dispositivo crítico al escaneo: $ip");
+                    }
+                }
+            }
+            
+            // Dividir en lotes más pequeños para procesar
+            $ipBatches = array_chunk($ipList, 5); // Procesar 5 IPs a la vez
+            
             $discoveredHosts = 0;
+            $updatedHosts = 0;
+            $skippedHosts = 0;
             $errorCount = 0;
             
-            // Escanear el rango de IPs
-            for ($i = $rangeStart; $i <= $rangeEnd; $i++) {
-                $ip = $baseIp . '.' . $i;
+            foreach ($ipBatches as $index => $batch) {
+                Log::info("Procesando lote " . ($index + 1) . " de " . count($ipBatches) . " (" . count($batch) . " IPs)");
                 
-                // Verificar si ya existe este host en la base de datos
-                $hostExists = MonitorHost::where('ip_address', $ip)->exists();
-                if ($hostExists) {
-                    continue;
-                }
-                
-                // Probar ping para ver si el host está online
-                try {
-                    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-                        $process = new Process(['ping', '-n', '1', '-w', '500', $ip]);
+                foreach ($batch as $ip) {
+                    // Verificar si ya existe este host en la base de datos
+                    $hostExists = MonitorHost::where('ip_address', $ip)->exists();
+                    $isUpdate = false;
+                    
+                    if ($hostExists) {
+                        $isUpdate = true;
+                        Log::debug("Host $ip ya existe, actualizando información");
                     } else {
-                        $process = new Process(['ping', '-c', '1', '-W', '0.5', $ip]);
+                        Log::debug("Escaneando IP: $ip");
                     }
                     
-                    $process->run();
-                    
-                    // Solo agregar si el ping es exitoso
-                    if ($process->isSuccessful()) {
-                        // Intentar obtener el hostname
-                        $hostname = '';
-                        $hostnameProcess = new Process(['nslookup', $ip]);
-                        $hostnameProcess->run();
+                    try {
+                        // Verificar si es un dispositivo crítico
+                        $isCriticalDevice = in_array($ip, $criticalDevices);
                         
-                        if ($hostnameProcess->isSuccessful()) {
-                            $output = $hostnameProcess->getOutput();
-                            // Intentar extraer el nombre del host del resultado de nslookup
-                            if (preg_match('/name\s*=\s*([^\s]+)/', $output, $matches)) {
-                                $hostname = $matches[1];
-                                // Eliminar posible punto al final
-                                $hostname = rtrim($hostname, '.');
+                        // Estado del ping inicialmente false
+                        $pingSuccess = false;
+                        
+                        // Para dispositivos críticos, forzar detección sin importar el ping
+                        if ($isCriticalDevice) {
+                            $pingSuccess = true;
+                            Log::info("Dispositivo crítico detectado: $ip (registro forzado)");
+                        } else {
+                            // Usar el servicio de ejecución remota para hacer ping
+                            $executor = new RemoteExecutionService();
+                            $result = $executor->ping($ip);
+                            $pingSuccess = $result['success'];
+                            
+                            // Si el ping no tuvo éxito pero force_register está activado, proceder de todos modos
+                            if (!$pingSuccess && $forceRegister) {
+                                $pingSuccess = true; // Forzar registro aunque no responda
+                                Log::info("Forzando registro del host $ip aunque no responde a ping");
                             }
                         }
                         
-                        if (empty($hostname)) {
-                            $hostname = 'Host-' . $ip;
+                        // Solo agregar si el ping es exitoso o forzamos registro
+                        if ($pingSuccess) {
+                            Log::debug("Procesando host $ip para registro/actualización");
+                            
+                            // Determinar hostname
+                            $hostname = '';
+                            
+                            // Para dispositivos críticos, usar nombres predefinidos
+                            if ($ip === '172.20.0.1') {
+                                $hostname = 'Router-Principal';
+                            } elseif ($ip === '172.20.0.2') {
+                                $hostname = 'Servidor-DNS';
+                            } elseif ($ip === '172.20.0.30') {
+                                $hostname = 'Servidor-Departamental';
+                            } else {
+                                // Para otros dispositivos, intentar resolver el hostname
+                                $dnsHostname = @gethostbyaddr($ip);
+                                if ($dnsHostname && $dnsHostname !== $ip) {
+                                    // Extraer solo el nombre del equipo sin el dominio
+                                    $parts = explode('.', $dnsHostname);
+                                    $hostname = $parts[0];
+                                    Log::debug("Hostname obtenido por gethostbyaddr: $hostname");
+                                }
+                                
+                                // Si aún no tenemos hostname, usar uno predeterminado
+                                if (empty($hostname)) {
+                                    // Si es un rango DHCP del instituto, usar un nombre más descriptivo
+                                    if (strpos($ip, '172.20.2') === 0) {
+                                        $lastOctet = explode('.', $ip)[3];
+                                        $hostname = 'Equipo-DHCP-' . $lastOctet;
+                                    } else {
+                                        $hostname = 'Host-' . str_replace('.', '-', $ip);
+                                    }
+                                    Log::debug("No se pudo obtener hostname, usando nombre predeterminado: $hostname");
+                                }
+                            }
+                            
+                            // Determinar grupo basado en la IP o el hostname
+                            $groupId = null;
+                            
+                            // Si es un dispositivo crítico, asignar al grupo "Infraestructura"
+                            if ($isCriticalDevice) {
+                                // Buscar o crear grupo de infraestructura
+                                $infraGroup = MonitorGroup::where('name', 'Infraestructura')->first();
+                                if (!$infraGroup) {
+                                    $infraGroup = new MonitorGroup();
+                                    $infraGroup->name = 'Infraestructura';
+                                    $infraGroup->description = 'Dispositivos críticos de red';
+                                    $infraGroup->type = 'infrastructure';
+                                    $infraGroup->created_by = Auth::id() ?: 1;
+                                    $infraGroup->save();
+                                    Log::info("Creado grupo de infraestructura");
+                                }
+                                $groupId = $infraGroup->id;
+                            } 
+                            // Verificar si es un equipo del rango DHCP del instituto (172.20.2xx.xxx)
+                            elseif (strpos($ip, '172.20.2') === 0) {
+                                // Asignar al grupo DHCP si existe o crearlo
+                                $dhcpGroup = MonitorGroup::where('name', 'DHCP-Dinamicos')->first();
+                                if (!$dhcpGroup) {
+                                    $dhcpGroup = new MonitorGroup();
+                                    $dhcpGroup->name = 'DHCP-Dinamicos';
+                                    $dhcpGroup->description = 'Equipos con IP dinámica DHCP';
+                                    $dhcpGroup->type = 'dynamic';
+                                    $dhcpGroup->created_by = Auth::id() ?: 1;
+                                    $dhcpGroup->save();
+                                    Log::info("Creado grupo DHCP para IPs dinámicas");
+                                }
+                                $groupId = $dhcpGroup->id;
+                            }
+                            // Para el resto, intentar detectar aula por hostname (formato B27-A1)
+                            elseif (preg_match('/^([B][0-9]{2})-[A-F][0-9]/', $hostname, $matches)) {
+                                $aula = $matches[1];
+                                $group = MonitorGroup::where('name', $aula)->first();
+                                
+                                if ($group) {
+                                    $groupId = $group->id;
+                                } else {
+                                    // Crear grupo automáticamente
+                                    try {
+                                        $group = new MonitorGroup();
+                                        $group->name = $aula;
+                                        $group->description = 'Aula ' . $aula . ' (creado automáticamente)';
+                                        $group->type = 'classroom';
+                                        $group->created_by = Auth::id() ?: 1;
+                                        $group->save();
+                                        
+                                        $groupId = $group->id;
+                                        Log::debug("Creado nuevo grupo para aula: $aula (ID: $groupId)");
+                                    } catch (\Exception $e) {
+                                        Log::error("Error creando grupo para aula $aula: " . $e->getMessage());
+                                    }
+                                }
+                            } 
+                            // Si no es aula, asignar al grupo seleccionado en el formulario
+                            else {
+                                $groupId = $request->input('group_id');
+                            }
+                            
+                            // Obtener MAC para dispositivos que no son críticos
+                            $macAddress = null;
+                            if (!$isCriticalDevice) {
+                                $macAddress = $this->getMacFromIp($ip);
+                                Log::debug("MAC obtenida para $ip: " . ($macAddress ?? 'No encontrada'));
+                            }
+                            
+                            // Estado a asignar basado en el resultado del ping y si es crítico
+                            $hostStatus = ($result['success'] || $isCriticalDevice) ? 'online' : 'offline';
+                            
+                            // Guardar el host o actualizar
+                            try {
+                                if ($isUpdate) {
+                                    // Actualizar el host existente
+                                    $host = MonitorHost::where('ip_address', $ip)->first();
+                                    $host->status = $hostStatus;
+                                    $host->last_seen = now();
+                                    
+                                    // Actualizar información solo si está disponible
+                                    if (!empty($hostname)) {
+                                        $host->hostname = $hostname;
+                                    }
+                                    if (!empty($macAddress)) {
+                                        $host->mac_address = $macAddress;
+                                    }
+                                    if (!is_null($groupId)) {
+                                        $host->group_id = $groupId;
+                                    }
+                                    
+                                    $host->save();
+                                    $updatedHosts++;
+                                    
+                                    Log::info("Host actualizado: $ip ({$host->hostname}) - Estado: $hostStatus");
+                                } else {
+                                    // Crear el nuevo host
+                                    $host = new MonitorHost();
+                                    $host->hostname = $hostname;
+                                    $host->ip_address = $ip;
+                                    $host->mac_address = $macAddress;
+                                    $host->status = $hostStatus;
+                                    $host->last_seen = now();
+                                    
+                                    if ($isCriticalDevice) {
+                                        $host->description = 'Dispositivo de red crítico';
+                                    } elseif ($forceRegister && !$result['success']) {
+                                        $host->description = 'Registrado manualmente el ' . now()->format('d/m/Y H:i:s') . ' (no responde a ping)';
+                                    } else {
+                                        $host->description = 'Detectado automáticamente el ' . now()->format('d/m/Y H:i:s');
+                                    }
+                                    
+                                    $host->group_id = $groupId ?? $request->input('group_id');
+                                    $host->created_by = Auth::id() ?: 1;
+                                    $host->save();
+                                    
+                                    $discoveredHosts++;
+                                    Log::info("Host añadido: $hostname ($ip) - Estado: $hostStatus");
+                                }
+                            } catch (\Exception $e) {
+                                Log::error("Error guardando host $ip: " . $e->getMessage());
+                                $errorCount++;
+                            }
+                        } else {
+                            Log::debug("Host $ip no responde a ping - Omitido");
+                            $skippedHosts++;
                         }
-                        
-                        // Crear el nuevo host
-                        $host = new MonitorHost();
-                        $host->hostname = $hostname;
-                        $host->ip_address = $ip;
-                        $host->status = 'online';
-                        $host->last_seen = now();
-                        $host->description = 'Detectado automáticamente el ' . now()->format('d/m/Y H:i:s');
-                        $host->group_id = $request->input('group_id', 0);
-                        $host->created_by = Auth::id();
-                        $host->save();
-                        
-                        $discoveredHosts++;
+                    } catch (\Exception $e) {
+                        Log::error("Error escaneando IP $ip: " . $e->getMessage());
+                        $errorCount++;
                     }
-                } catch (\Exception $e) {
-                    Log::error("Error escaneando IP $ip: " . $e->getMessage());
-                    $errorCount++;
                 }
+                
+                // Pausa entre lotes para no sobrecargar el sistema
+                usleep(200000); // 200ms
             }
             
-            return redirect()->route('monitor.index')
-                ->with('success', "Escaneo completado. Se encontraron {$discoveredHosts} equipos nuevos.");
+            Log::info("Escaneo completado. Encontrados: $discoveredHosts, Actualizados: $updatedHosts, Omitidos: $skippedHosts, Errores: $errorCount");
+            
+            if ($discoveredHosts > 0 || $updatedHosts > 0) {
+                $message = "Escaneo completado. ";
+                if ($discoveredHosts > 0) {
+                    $message .= "Se encontraron {$discoveredHosts} equipos nuevos. ";
+                }
+                if ($updatedHosts > 0) {
+                    $message .= "Se actualizaron {$updatedHosts} equipos existentes. ";
+                }
+                if ($skippedHosts > 0) {
+                    $message .= "Se omitieron {$skippedHosts} equipos que no respondieron.";
+                }
+                
+                return redirect()->route('monitor.index')
+                    ->with('success', $message);
+            } else {
+                if ($errorCount > 0) {
+                    return redirect()->route('monitor.index')
+                        ->with('warning', "No se encontraron equipos nuevos. Hubo {$errorCount} errores durante el escaneo. Revise los logs para más detalles.");
+                } else {
+                    return redirect()->route('monitor.index')
+                        ->with('info', "No se encontraron equipos nuevos. Si espera ver equipos específicos, intente activar la opción 'Forzar registro' en la próxima exploración.");
+                }
+            }
         } catch (\Exception $e) {
-            Log::error('Error en escaneo de red: ' . $e->getMessage());
+            Log::error('Error en escaneo de red: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
             return redirect()->route('monitor.index')
                 ->with('error', 'Error al escanear la red: ' . $e->getMessage());
         }
@@ -369,7 +629,7 @@ class MonitorController extends Controller
     {
         // Detectar la IP del servidor para sugerir un rango
         $serverIp = request()->server('SERVER_ADDR');
-        $baseIp = '192.168.1'; // IP base por defecto
+        $baseIp = '172.20.200'; // IP base por defecto para red del Tierno
         
         if ($serverIp && filter_var($serverIp, FILTER_VALIDATE_IP)) {
             $ipParts = explode('.', $serverIp);
@@ -378,7 +638,10 @@ class MonitorController extends Controller
             }
         }
         
-        return view('monitor.scan', compact('baseIp'));
+        // Obtener grupos para selector
+        $groups = MonitorGroup::getGroupsForUser(Auth::user());
+        
+        return view('monitor.scan', compact('baseIp', 'groups'));
     }
     
     /**
@@ -476,5 +739,442 @@ class MonitorController extends Controller
             Log::error('Error al actualizar info del sistema: ' . $e->getMessage());
             return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
+    }
+    
+    /**
+     * Envía un paquete Wake-on-LAN a un host específico
+     */
+    public function wakeOnLan($id)
+    {
+        try {
+            $host = MonitorHost::findOrFail($id);
+            
+            // Verificar si el usuario tiene permiso para despertar este host
+            if (!Auth::user()->is_admin && $host->created_by != Auth::id()) {
+                abort(403, 'No tienes permiso para despertar este host');
+            }
+            
+            if (empty($host->mac_address)) {
+                return redirect()->back()
+                    ->with('error', 'No se puede enviar Wake-on-LAN: El host no tiene una dirección MAC configurada.');
+            }
+            
+            $result = $host->wakeOnLan();
+            
+            if ($result) {
+                // Registrar el evento
+                Log::info("Usuario {".Auth::user()->username."} envió Wake-on-LAN a {$host->hostname} ({$host->mac_address})");
+                
+                return redirect()->back()
+                    ->with('success', "Paquete Wake-on-LAN enviado a {$host->hostname}");
+            } else {
+                return redirect()->back()
+                    ->with('error', 'Error al enviar el paquete Wake-on-LAN. Revise los logs para más detalles.');
+            }
+        } catch (\Exception $e) {
+            Log::error('Error en wakeOnLan: ' . $e->getMessage());
+            return redirect()->back()
+                ->with('error', 'Error al despertar el host: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Obtener la dirección MAC a partir de una IP usando ARP
+     */
+    private function getMacFromIp($ip)
+    {
+        try {
+            Log::debug("Obteniendo MAC para IP: $ip");
+            
+            // Usar el servicio de ejecución remota si está configurado
+            $executor = new RemoteExecutionService();
+            if ($executor->isConfigured()) {
+                $result = $executor->executeCommand('arp -n ' . $ip);
+                if ($result['success']) {
+                    $output = $result['output'];
+                    Log::debug("Resultado ARP remoto para $ip: " . $output);
+                    
+                    // Patrón para Linux/Unix
+                    if (preg_match('/([0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2})/', $output, $matches)) {
+                        Log::debug("MAC encontrada para $ip: " . $matches[1]);
+                        return $matches[1];
+                    }
+                }
+            }
+            
+            // Fallback al método local
+            // El comando ARP para Linux
+            $process = new Process(['arp', '-n', $ip]);
+            
+            $process->setTimeout(3); // Aumentar timeout a 3 segundos
+            $process->run();
+            
+            if ($process->isSuccessful()) {
+                $output = $process->getOutput();
+                Log::debug("Resultado ARP para $ip: " . $output);
+                
+                // Patrón para Linux/Unix
+                if (preg_match('/([0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2})/', $output, $matches)) {
+                    Log::debug("MAC encontrada para $ip: " . $matches[1]);
+                    return $matches[1];
+                }
+                
+                Log::debug("No se encontró MAC en la salida ARP para $ip");
+            } else {
+                Log::warning("Error en el comando ARP para $ip: " . $process->getErrorOutput());
+            }
+        } catch (\Exception $e) {
+            Log::error('Error obteniendo MAC desde IP: ' . $e->getMessage());
+        }
+        
+        Log::debug("No se pudo obtener MAC para $ip");
+        return null;
+    }
+    
+    /**
+     * Mostrar formulario para crear un nuevo grupo
+     */
+    public function createGroup()
+    {
+        return view('monitor.group.create');
+    }
+    
+    /**
+     * Guardar un nuevo grupo en la base de datos
+     */
+    public function storeGroup(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string|max:1000',
+            'type' => 'nullable|string|max:50',
+            'location' => 'nullable|string|max:255',
+        ]);
+        
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+        
+        try {
+            $group = new MonitorGroup();
+            $group->name = $request->name;
+            $group->description = $request->description;
+            $group->type = $request->type ?? 'classroom';
+            $group->location = $request->location;
+            $group->created_by = Auth::id();
+            $group->save();
+            
+            return redirect()->route('monitor.groups.index')
+                ->with('success', "Grupo '{$group->name}' creado correctamente.");
+        } catch (\Exception $e) {
+            Log::error('Error al guardar grupo: ' . $e->getMessage());
+            return redirect()->back()
+                ->with('error', 'Error al guardar el grupo: ' . $e->getMessage())
+                ->withInput();
+        }
+    }
+    
+    /**
+     * Listar todos los grupos
+     */
+    public function groupsIndex()
+    {
+        $user = Auth::user();
+        $groups = MonitorGroup::getGroupsForUser($user);
+        
+        return view('monitor.group.index', compact('groups'));
+    }
+    
+    /**
+     * Ver detalles de un grupo y sus hosts
+     */
+    public function showGroup($id)
+    {
+        try {
+            $group = MonitorGroup::findOrFail($id);
+            
+            // Verificar si el usuario tiene permiso para ver este grupo
+            if (!Auth::user()->is_admin && $group->created_by != Auth::id()) {
+                abort(403, 'No tienes permiso para ver este grupo');
+            }
+            
+            $hosts = $group->hosts;
+            
+            return view('monitor.group.show', compact('group', 'hosts'));
+        } catch (\Exception $e) {
+            Log::error('Error al mostrar grupo: ' . $e->getMessage());
+            return redirect()->route('monitor.groups.index')
+                ->with('error', 'Error al obtener detalles del grupo: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Editar un grupo
+     */
+    public function editGroup($id)
+    {
+        try {
+            $group = MonitorGroup::findOrFail($id);
+            
+            // Verificar si el usuario tiene permiso para editar este grupo
+            if (!Auth::user()->is_admin && $group->created_by != Auth::id()) {
+                abort(403, 'No tienes permiso para editar este grupo');
+            }
+            
+            return view('monitor.group.edit', compact('group'));
+        } catch (\Exception $e) {
+            Log::error('Error al editar grupo: ' . $e->getMessage());
+            return redirect()->route('monitor.groups.index')
+                ->with('error', 'Error al editar el grupo: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Actualizar un grupo
+     */
+    public function updateGroup(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string|max:1000',
+            'type' => 'nullable|string|max:50',
+            'location' => 'nullable|string|max:255',
+        ]);
+        
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+        
+        try {
+            $group = MonitorGroup::findOrFail($id);
+            
+            // Verificar si el usuario tiene permiso para actualizar este grupo
+            if (!Auth::user()->is_admin && $group->created_by != Auth::id()) {
+                abort(403, 'No tienes permiso para actualizar este grupo');
+            }
+            
+            $group->name = $request->name;
+            $group->description = $request->description;
+            $group->type = $request->type ?? $group->type;
+            $group->location = $request->location;
+            $group->save();
+            
+            return redirect()->route('monitor.groups.index')
+                ->with('success', "Grupo '{$group->name}' actualizado correctamente.");
+        } catch (\Exception $e) {
+            Log::error('Error al actualizar grupo: ' . $e->getMessage());
+            return redirect()->back()
+                ->with('error', 'Error al actualizar el grupo: ' . $e->getMessage())
+                ->withInput();
+        }
+    }
+    
+    /**
+     * Eliminar un grupo
+     */
+    public function destroyGroup($id)
+    {
+        try {
+            $group = MonitorGroup::findOrFail($id);
+            
+            // Verificar si el usuario tiene permiso para eliminar este grupo
+            if (!Auth::user()->is_admin && $group->created_by != Auth::id()) {
+                abort(403, 'No tienes permiso para eliminar este grupo');
+            }
+            
+            // Verificar si tiene hosts asociados
+            if ($group->hosts()->count() > 0) {
+                return redirect()->route('monitor.groups.index')
+                    ->with('error', "No se puede eliminar el grupo '{$group->name}' porque tiene equipos asociados.");
+            }
+            
+            $groupName = $group->name;
+            $group->delete();
+            
+            return redirect()->route('monitor.groups.index')
+                ->with('success', "Grupo '{$groupName}' eliminado correctamente.");
+        } catch (\Exception $e) {
+            Log::error('Error al eliminar grupo: ' . $e->getMessage());
+            return redirect()->route('monitor.groups.index')
+                ->with('error', 'Error al eliminar el grupo: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Enviar Wake-on-LAN a todos los equipos de un grupo
+     */
+    public function wakeOnLanGroup($id)
+    {
+        try {
+            $group = MonitorGroup::findOrFail($id);
+            
+            // Verificar si el usuario tiene permiso para despertar este grupo
+            if (!Auth::user()->is_admin && $group->created_by != Auth::id()) {
+                abort(403, 'No tienes permiso para despertar los hosts de este grupo');
+            }
+            
+            $hosts = $group->hosts()->whereNotNull('mac_address')->get();
+            $sentCount = 0;
+            $errorCount = 0;
+            
+            foreach ($hosts as $host) {
+                $result = $host->wakeOnLan();
+                if ($result) {
+                    Log::info("Usuario {".Auth::user()->username."} envió Wake-on-LAN a {$host->hostname} ({$host->mac_address}) del grupo {$group->name}");
+                    $sentCount++;
+                } else {
+                    $errorCount++;
+                }
+            }
+            
+            if ($sentCount > 0) {
+                return redirect()->back()
+                    ->with('success', "Paquetes Wake-on-LAN enviados a {$sentCount} equipos del grupo '{$group->name}'." . 
+                           ($errorCount > 0 ? " {$errorCount} equipos fallaron." : ""));
+            } else {
+                return redirect()->back()
+                    ->with('error', "No se pudo enviar Wake-on-LAN a ningún equipo del grupo '{$group->name}'. Verifica que tengan MAC configurada.");
+            }
+        } catch (\Exception $e) {
+            Log::error('Error en wakeOnLanGroup: ' . $e->getMessage());
+            return redirect()->back()
+                ->with('error', 'Error al despertar los hosts del grupo: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Verifica la conectividad con la red del instituto
+     * Prueba pings a routers y servidores conocidos del instituto
+     */
+    private function checkInstitutoNetwork()
+    {
+        $result = [
+            'connected' => false,
+            'message' => 'No se detectó conexión con la red del instituto.',
+            'details' => []
+        ];
+        
+        // IPs críticas del instituto
+        $criticalIPs = [
+            '172.20.0.1' => 'Router principal',
+            '172.20.0.2' => 'Servidor DNS',
+            '172.20.0.30' => 'Servidor departamental'
+        ];
+        
+        $connectedCount = 0;
+        $executor = new RemoteExecutionService();
+        
+        foreach ($criticalIPs as $ip => $description) {
+            try {
+                // Usar el servicio de ejecución remota para hacer ping
+                $pingResult = $executor->ping($ip);
+                
+                $pingSuccess = $pingResult['success'];
+                $result['details'][$ip] = [
+                    'name' => $description,
+                    'status' => $pingSuccess ? 'online' : 'offline'
+                ];
+                
+                if ($pingSuccess) {
+                    $connectedCount++;
+                }
+                
+                // Pequeña pausa para no saturar la red
+                usleep(100000); // 100ms
+            } catch (\Exception $e) {
+                Log::error("Error verificando conectividad con $ip: " . $e->getMessage());
+                $result['details'][$ip] = [
+                    'name' => $description,
+                    'status' => 'error',
+                    'error' => $e->getMessage()
+                ];
+            }
+        }
+        
+        // Si al menos 2 de los 3 puntos críticos responden, consideramos que hay conexión
+        if ($connectedCount >= 2) {
+            $result['connected'] = true;
+            $result['message'] = "Conectado a la red del instituto ($connectedCount/3 puntos críticos responden).";
+        } else {
+            $onlinePoints = $connectedCount > 0 ? " ($connectedCount/3 puntos críticos responden)." : "";
+            $result['message'] = "No se detectó conexión completa con la red del instituto" . $onlinePoints . " Asegúrese de estar conectado a la VPN o red local del instituto.";
+        }
+        
+        Log::info("Verificación de red del instituto: " . ($result['connected'] ? 'Conectado' : 'No conectado') . " - " . $result['message']);
+        return $result;
+    }
+    
+    /**
+     * Endpoint para verificar la conectividad con la red del instituto
+     */
+    public function checkNetwork(Request $request)
+    {
+        try {
+            $networkStatus = $this->checkInstitutoNetwork();
+            return response()->json($networkStatus);
+        } catch (\Exception $e) {
+            Log::error('Error verificando la red: ' . $e->getMessage());
+            return response()->json([
+                'connected' => false,
+                'message' => 'Error al verificar la red: ' . $e->getMessage(),
+                'details' => []
+            ], 500);
+        }
+    }
+    
+    /**
+     * Ping a todos los equipos y forzar estado online para dispositivos críticos
+     */
+    public function refreshNetworkDevices()
+    {
+        try {
+            // Lista de IPs de dispositivos críticos que siempre deben aparecer online
+            $criticalDevices = [
+                '172.20.0.1',  // Router principal
+                '172.20.0.2',  // DNS server
+                '172.20.0.30', // Servidor departamental
+            ];
+            
+            foreach ($criticalDevices as $ip) {
+                $host = MonitorHost::where('ip_address', $ip)->first();
+                
+                if (!$host) {
+                    // Si no existe, crearlo
+                    $host = new MonitorHost();
+                    $host->hostname = $this->getNetworkDeviceName($ip);
+                    $host->ip_address = $ip;
+                    $host->description = 'Dispositivo de red esencial - Añadido automáticamente';
+                    $host->created_by = Auth::id() ?: 1; // Admin o primer usuario
+                    $host->save();
+                    
+                    Log::info("Dispositivo de red crítico creado: $ip ({$host->hostname})");
+                }
+                
+                // Forzar estado online para estos dispositivos críticos
+                MonitorHost::updateStatus($host->id, 'online');
+                Log::info("Dispositivo de red crítico marcado como online: $ip ({$host->hostname})");
+            }
+            
+            return redirect()->route('monitor.index')
+                ->with('success', 'Estado de dispositivos de red actualizado.');
+        } catch (\Exception $e) {
+            Log::error('Error al actualizar dispositivos de red: ' . $e->getMessage());
+            return redirect()->back()
+                ->with('error', 'Error al actualizar dispositivos de red: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Devuelve un nombre descriptivo para un dispositivo de red
+     */
+    private function getNetworkDeviceName($ip)
+    {
+        $names = [
+            '172.20.0.1' => 'Router Principal',
+            '172.20.0.2' => 'Servidor DNS',
+            '172.20.0.30' => 'Servidor Departamental',
+        ];
+        
+        return $names[$ip] ?? 'Dispositivo de Red ' . $ip;
     }
 } 

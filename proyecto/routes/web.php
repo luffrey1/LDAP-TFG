@@ -27,8 +27,6 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
 Route::get('/test-documentos', [DocumentoController::class, 'index'])->name('test.documentos');
 Route::get('/test-controller', [TestController::class, 'test'])->name('test.controller');
 
-
-
 // Rutas protegidas que requieren autenticación
 Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(function () {
     // Dashboard principal
@@ -60,6 +58,40 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
         Route::put('/evento/{id}', [EventoController::class, 'update'])->name('dashboard.calendario.evento.update');
         Route::delete('/evento/{id}', [EventoController::class, 'destroy'])->name('dashboard.calendario.eliminar');
         Route::get('/eventos', [EventoController::class, 'getEvents'])->name('eventos.get');
+    });
+    
+    // Monitoreo de Equipos
+    Route::prefix('monitor')->name('monitor.')->middleware(CheckModuleAccess::class.':monitoreo')->group(function () {
+        Route::get('/', [MonitorController::class, 'index'])->name('index');
+        Route::get('/create', [MonitorController::class, 'create'])->name('create');
+        Route::post('/', [MonitorController::class, 'store'])->name('store');
+        Route::get('/{id}', [MonitorController::class, 'show'])->name('show')->where('id', '[0-9]+');
+        Route::get('/{id}/edit', [MonitorController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [MonitorController::class, 'update'])->name('update');
+        Route::delete('/{id}', [MonitorController::class, 'destroy'])->name('destroy');
+        Route::get('/ping/{id}', [MonitorController::class, 'ping'])->name('ping');
+        Route::get('/ping-all', [MonitorController::class, 'pingAll'])->name('ping-all');
+        Route::get('/refresh-network', [MonitorController::class, 'refreshNetworkDevices'])->name('refresh-network');
+        Route::get('/scan', [MonitorController::class, 'scanNetworkForm'])->name('scan');
+        Route::post('/scan', [MonitorController::class, 'scanNetwork'])->name('scan.execute');
+        Route::post('/check-network', [MonitorController::class, 'checkNetwork'])->name('check-network');
+        Route::post('/update-status', [MonitorController::class, 'updateStatus'])->name('update-status');
+        Route::post('/update-system-info', [MonitorController::class, 'updateSystemInfo'])->name('update-system-info');
+        Route::post('/update-telemetry', [MonitorController::class, 'updateTelemetry'])->name('update-telemetry');
+        Route::post('/{id}/command', [MonitorController::class, 'executeCommand'])->name('execute-command');
+        
+        // Nuevas rutas de Wake-on-LAN
+        Route::get('/{id}/wol', [MonitorController::class, 'wakeOnLan'])->name('wol');
+        
+        // Rutas de grupos
+        Route::get('/groups', [MonitorController::class, 'groupsIndex'])->name('groups.index');
+        Route::get('/groups/create', [MonitorController::class, 'createGroup'])->name('groups.create');
+        Route::post('/groups', [MonitorController::class, 'storeGroup'])->name('groups.store');
+        Route::get('/groups/{id}', [MonitorController::class, 'showGroup'])->name('groups.show');
+        Route::get('/groups/{id}/edit', [MonitorController::class, 'editGroup'])->name('groups.edit');
+        Route::put('/groups/{id}', [MonitorController::class, 'updateGroup'])->name('groups.update');
+        Route::delete('/groups/{id}', [MonitorController::class, 'destroyGroup'])->name('groups.destroy');
+        Route::get('/groups/{id}/wol', [MonitorController::class, 'wakeOnLanGroup'])->name('groups.wol');
     });
     
     // Ruta para gestión de usuarios LDAP - acceso directo a admin users
@@ -123,25 +155,6 @@ Route::middleware(['App\Http\Middleware\LdapAuthMiddleware'])->prefix('profesor'
     // Rutas para LDAP alumnos
     Route::get('alumnos/ldap/buscar', [App\Http\Controllers\Profesor\AlumnoController::class, 'buscarAlumnosLdap'])->name('alumnos.ldap.buscar');
     Route::post('alumnos/ldap/importar', [App\Http\Controllers\Profesor\AlumnoController::class, 'importarAlumnosLdap'])->name('alumnos.ldap.importar');
-});
-
-// Rutas de monitoreo
-Route::prefix('monitor')->name('monitor.')->middleware(['auth'])->group(function () {
-    Route::get('/', [App\Http\Controllers\MonitorController::class, 'index'])->name('index');
-    Route::get('/create', [App\Http\Controllers\MonitorController::class, 'create'])->name('create');
-    Route::post('/', [App\Http\Controllers\MonitorController::class, 'store'])->name('store');
-    Route::get('/{id}', [App\Http\Controllers\MonitorController::class, 'show'])->name('show');
-    Route::get('/{id}/edit', [App\Http\Controllers\MonitorController::class, 'edit'])->name('edit');
-    Route::put('/{id}', [App\Http\Controllers\MonitorController::class, 'update'])->name('update');
-    Route::delete('/{id}', [App\Http\Controllers\MonitorController::class, 'destroy'])->name('destroy');
-    Route::get('/ping/{id}', [App\Http\Controllers\MonitorController::class, 'ping'])->name('ping');
-    Route::get('/ping-all', [App\Http\Controllers\MonitorController::class, 'pingAll'])->name('ping-all');
-    Route::get('/scan', [App\Http\Controllers\MonitorController::class, 'scanNetworkForm'])->name('scan');
-    Route::post('/scan', [App\Http\Controllers\MonitorController::class, 'scanNetwork'])->name('scan.execute');
-    Route::post('/update-status', [App\Http\Controllers\MonitorController::class, 'updateStatus'])->name('update-status');
-    Route::post('/update-system-info', [App\Http\Controllers\MonitorController::class, 'updateSystemInfo'])->name('update-system-info');
-    Route::post('/update-telemetry', [App\Http\Controllers\MonitorController::class, 'updateTelemetry'])->name('update-telemetry');
-    Route::post('/{id}/command', [App\Http\Controllers\MonitorController::class, 'executeCommand'])->name('execute-command');
 });
 
 // Endpoint para recibir actualizaciones de telemetría desde agentes

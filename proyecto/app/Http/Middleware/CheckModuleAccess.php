@@ -27,6 +27,9 @@ class CheckModuleAccess
             $configKey = 'modulo_' . $moduleName . '_activo';
             $moduleActive = SistemaConfig::obtenerConfig($configKey, true); // Por defecto está activo si no existe configuración
             
+            // Registrar en el log para debug
+            Log::debug("Verificando módulo $moduleName: " . ($moduleActive ? 'activo' : 'inactivo') . ' para usuario: ' . session('auth_user.username'));
+            
             // Si el módulo no está activo y el usuario no es administrador, negar acceso
             if (!$moduleActive && !$this->isAdmin($request)) {
                 Log::warning('Acceso denegado al módulo ' . $moduleName . ' para usuario: ' . session('auth_user.username'));
@@ -36,7 +39,6 @@ class CheckModuleAccess
             
             Log::info('Acceso permitido al módulo ' . $moduleName . ' para usuario: ' . session('auth_user.username'));
             return $next($request);
-            
         } catch (\Exception $e) {
             Log::warning('Error al verificar módulo ' . $moduleName . ': ' . $e->getMessage());
             // Si hay un error, permitir el acceso pero loguear el problema

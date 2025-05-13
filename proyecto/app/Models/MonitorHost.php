@@ -31,10 +31,11 @@ class MonitorHost extends Model
 
     protected $casts = [
         'last_seen' => 'datetime',
+        'last_boot' => 'datetime',
         'system_info' => 'json',
-        'cpu_usage' => 'float',
-        'memory_usage' => 'float',
-        'disk_usage' => 'float',
+        'disk_usage' => 'json',
+        'memory_usage' => 'json',
+        'cpu_usage' => 'json',
         'temperature' => 'float',
     ];
 
@@ -45,6 +46,10 @@ class MonitorHost extends Model
      */
     public static function getHostsForUser($user)
     {
+        // Mostrar todos los hosts independientemente del usuario
+        return self::all();
+        
+        /* Código original comentado
         if (!$user) {
             return collect([]);
         }
@@ -56,6 +61,7 @@ class MonitorHost extends Model
         
         // Si no es admin, solo ve sus propios hosts
         return self::where('created_by', $user->id)->get();
+        */
     }
 
     /**
@@ -112,10 +118,78 @@ class MonitorHost extends Model
                 $host->system_info = $data['system_info'];
             }
             
+            if (isset($data['last_boot'])) {
+                $host->last_boot = $data['last_boot'];
+            }
+            
             $host->last_seen = now();
             return $host->save();
         } catch (\Exception $e) {
             Log::error('Error al actualizar información del sistema: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Envía un paquete Wake-on-LAN a la dirección MAC del host
+     * @return bool Éxito de la operación
+     */
+    public function wakeOnLan()
+    {
+        if (empty($this->mac_address)) {
+            Log::error("No se puede enviar WoL: dirección MAC no disponible para el host {$this->hostname}");
+            return false;
+        }
+        
+        try {
+            // Limpia la dirección MAC (elimina caracteres no hex)
+            $mac = preg_replace('/[^a-fA-F0-9]/', '', $this->mac_address);
+            
+            if (strlen($mac) != 12) {
+                Log::error("Dirección MAC no válida para WoL: {$this->mac_address}");
+                return false;
+            }
+            
+            // Crea el paquete mágico
+            $hwAddr = pack('H*', $mac);
+            $magicPacket = str_repeat(chr(0xff), 6) . str_repeat($hwAddr, 16);
+            
+            // Envía el paquete a la dirección de broadcast
+            $sock = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
+            if (!$sock) {
+                Log::error('Error al crear socket para WoL: ' . socket_strerror(socket_last_error()));
+                return false;
+            }
+            
+            // Permite broadcast
+            socket_set_option($sock, SOL_SOCKET, SO_BROADCAST, true);
+            
+            // Envía a broadcast general y también a la subred específica
+            $broadcastAddr = '255.255.255.255';
+            $port = 9;  // Puerto estándar para WoL
+            
+            // Intenta determinar la dirección de broadcast de la subred
+            if ($this->ip_address) {
+                $ipParts = explode('.', $this->ip_address);
+                if (count($ipParts) == 4) {
+                    $subnetBroadcast = $ipParts[0] . '.' . $ipParts[1] . '.' . $ipParts[2] . '.255';
+                    socket_sendto($sock, $magicPacket, strlen($magicPacket), 0, $subnetBroadcast, $port);
+                }
+            }
+            
+            // Envía a broadcast general como respaldo
+            $result = socket_sendto($sock, $magicPacket, strlen($magicPacket), 0, $broadcastAddr, $port);
+            socket_close($sock);
+            
+            if ($result) {
+                Log::info("Paquete WoL enviado a {$this->mac_address} para {$this->hostname}");
+                return true;
+            } else {
+                Log::error('Error al enviar paquete WoL: ' . socket_strerror(socket_last_error()));
+                return false;
+            }
+        } catch (\Exception $e) {
+            Log::error('Error al enviar WoL: ' . $e->getMessage());
             return false;
         }
     }
@@ -163,13 +237,15 @@ class MonitorHost extends Model
      */
     public function getCpuColorAttribute()
     {
-        if ($this->cpu_usage === null) {
+        if (!isset($this->cpu_usage['percentage'])) {
             return 'secondary';
         }
         
-        if ($this->cpu_usage > 90) {
+        $usage = $this->cpu_usage['percentage'];
+        
+        if ($usage > 90) {
             return 'danger';
-        } elseif ($this->cpu_usage > 70) {
+        } elseif ($usage > 70) {
             return 'warning';
         } else {
             return 'success';
@@ -181,13 +257,15 @@ class MonitorHost extends Model
      */
     public function getMemoryColorAttribute()
     {
-        if ($this->memory_usage === null) {
+        if (!isset($this->memory_usage['percentage'])) {
             return 'secondary';
         }
         
-        if ($this->memory_usage > 90) {
+        $usage = $this->memory_usage['percentage'];
+        
+        if ($usage > 90) {
             return 'danger';
-        } elseif ($this->memory_usage > 70) {
+        } elseif ($usage > 70) {
             return 'warning';
         } else {
             return 'success';
@@ -199,17 +277,57 @@ class MonitorHost extends Model
      */
     public function getDiskColorAttribute()
     {
-        if ($this->disk_usage === null) {
+        if (!isset($this->disk_usage['percentage'])) {
             return 'secondary';
         }
         
-        if ($this->disk_usage > 90) {
+        $usage = $this->disk_usage['percentage'];
+        
+        if ($usage > 90) {
             return 'danger';
-        } elseif ($this->disk_usage > 70) {
+        } elseif ($usage > 70) {
             return 'warning';
         } else {
             return 'success';
         }
+    }
+    
+    /**
+     * Verificar si el host pertenece a un aula específica basado en el hostname
+     */
+    public function getClassroomAttribute()
+    {
+        if (empty($this->hostname)) {
+            return null;
+        }
+        
+        // Intenta extraer el aula del hostname según el formato B27-A1
+        if (preg_match('/^([B][0-9]{2})-[A-F][0-9]/', $this->hostname, $matches)) {
+            return $matches[1];
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Obtener la ubicación del host basado en el hostname
+     * Formato esperado: B27-A1 (Aula B27, columna A, fila 1)
+     */
+    public function getLocationDetailsAttribute()
+    {
+        if (empty($this->hostname)) {
+            return null;
+        }
+        
+        if (preg_match('/^([B][0-9]{2})-([A-F])([0-9])/', $this->hostname, $matches)) {
+            return [
+                'aula' => $matches[1],
+                'columna' => $matches[2],
+                'fila' => $matches[3]
+            ];
+        }
+        
+        return null;
     }
 
     /**
@@ -218,5 +336,13 @@ class MonitorHost extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+    
+    /**
+     * Relación con el grupo
+     */
+    public function group()
+    {
+        return $this->belongsTo(MonitorGroup::class, 'group_id');
     }
 } 

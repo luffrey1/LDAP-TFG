@@ -59,3 +59,46 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+# Sistema de Gestión Integrado
+
+## Configuración del Nodo de Ejecución Remota
+
+Para mejorar la funcionalidad de monitoreo de equipos, el sistema puede usar un nodo de ejecución remota en Linux. Esto permite:
+
+1. Ejecutar comandos de ping consistentes desde Linux, independientemente del sistema operativo del servidor web
+2. Detectar correctamente todos los dispositivos de red, incluyendo routers y switches
+3. Ejecutar comandos en equipos remotos de forma masiva (característica futura)
+
+### Pasos para configurar un nodo de ejecución:
+
+1. Configure un servidor Linux (puede ser una máquina virtual pequeña)
+2. Asegúrese de que sea accesible por SSH
+3. Configure un usuario específico con permisos para ejecutar ping y arp
+4. Actualice el archivo `.env` con la información de este servidor:
+
+```
+SSH_EXECUTION_HOST=192.168.1.100
+SSH_EXECUTION_USER=executor
+SSH_EXECUTION_PASSWORD=contraseña
+SSH_EXECUTION_PORT=22
+```
+
+5. Asegúrese de tener instalada la biblioteca phpseclib:
+
+```
+composer require phpseclib/phpseclib:^3.0
+```
+
+### Ventajas del nodo de ejecución remota:
+
+- Permite escaneos de red consistentes desde cualquier sistema operativo
+- Facilita el monitoreo de dispositivos en la red institucional
+- Habilita la ejecución futura de comandos remotos en aulas informáticas
+
+### Operación sin nodo de ejecución:
+
+Si no configura un nodo de ejecución, el sistema funcionará con capacidades reducidas:
+- Utilizará los comandos nativos del sistema donde se ejecuta la aplicación web
+- Los comandos de ping pueden variar según el sistema operativo
+- Algunos dispositivos como routers podrían no ser detectados correctamente

@@ -55,7 +55,8 @@ class ConfiguracionController extends Controller
             $modulos = [
                 'modulo_calendario_activo',
                 'modulo_mensajeria_activo',
-                'modulo_documentos_activo'
+                'modulo_documentos_activo',
+                'modulo_monitoreo_activo'
             ];
             
             foreach ($modulos as $modulo) {

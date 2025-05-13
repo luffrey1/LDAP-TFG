@@ -1,6 +1,7 @@
 {
     "require": {
         "directorytree/ldaprecord-laravel": "^3.4",
-        "league/csv": "^9.23"
+        "league/csv": "^9.23",
+        "phpseclib/phpseclib": "3.0"
     }
 }

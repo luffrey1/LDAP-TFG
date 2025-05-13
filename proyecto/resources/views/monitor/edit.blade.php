@@ -87,12 +87,18 @@
                             </div>
 
                             <div class="form-group">
-                                <label for="group_id">Grupo (Opcional)</label>
-                                <select class="form-control" id="group_id" name="group_id">
-                                    <option value="0" {{ $host->group_id == 0 ? 'selected' : '' }}>Sin grupo</option>
-                                    <!-- Aquí se cargarían los grupos desde la base de datos -->
-                                </select>
-                                <small class="form-text text-muted">Asigna este host a un grupo específico para organizarlo mejor.</small>
+                                <label for="group_id">Grupo</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-layer-group"></i></span>
+                                    <select class="form-select" id="group_id" name="group_id">
+                                        <option value="">-- Sin grupo --</option>
+                                        @foreach($groups as $group)
+                                            <option value="{{ $group->id }}" {{ old('group_id', $host->group_id) == $group->id ? 'selected' : '' }}>
+                                                {{ $group->name }} - {{ $group->description ?? 'Sin descripción' }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
                             </div>
 
                             <div class="form-group">
