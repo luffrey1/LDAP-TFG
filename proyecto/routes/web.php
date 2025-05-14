@@ -112,6 +112,9 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware', 'App\Http\Mi
     Route::post('/usuarios/{dn}/reset-password', [App\Http\Controllers\Admin\LdapUserController::class, 'resetPassword'])->name('users.reset-password');
     Route::get('/usuarios-exportar', [App\Http\Controllers\Admin\LdapUserController::class, 'exportExcel'])->name('users.export');
     
+    // Ruta para reparar usuario (UID no codificado)
+    Route::post('/usuarios/reparar/{uid}', [App\Http\Controllers\Admin\LdapUserController::class, 'repairUser'])->name('users.repair');
+    
     // Logs de actividad LDAP
     Route::get('/logs', [App\Http\Controllers\Admin\LdapUserController::class, 'logs'])->name('logs');
 

@@ -65,4 +65,33 @@ class User extends Authenticatable
     {
         return $this->hasMany(Documento::class, 'subido_por');
     }
+
+    /**
+     * Check if user has admin privileges
+     *
+     * @return bool
+     */
+    public function getIsAdminAttribute()
+    {
+        // Si ya tiene la propiedad is_admin explícitamente definida como true, devolver true
+        if ($this->attributes['is_admin'] ?? false) {
+            return true;
+        }
+        
+        // También verificar basado en el rol (para compatibilidad)
+        return $this->role === 'admin';
+    }
+    
+    /**
+     * Set admin status
+     */
+    public function setIsAdminAttribute($value)
+    {
+        $this->attributes['is_admin'] = (bool)$value;
+        
+        // También actualizar el rol para mantener consistencia
+        if ((bool)$value && $this->role !== 'admin') {
+            $this->role = 'admin';
+        }
+    }
 }

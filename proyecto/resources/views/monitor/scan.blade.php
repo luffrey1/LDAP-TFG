@@ -30,29 +30,31 @@
                         </ul>
                     </div>
 
-                    <div class="row mb-4">
-                        <div class="col-md-12">
-                            <div class="card">
-                                <div class="card-header bg-light">
-                                    <h5 class="mb-0"><i class="fas fa-bolt me-2"></i> Escaneo Rápido</h5>
-                                </div>
-                                <div class="card-body">
-                                    <p>Seleccione uno de estos rangos preconfigurados para escanear rápidamente:</p>
-                                    <div class="row">
-                                        <div class="col-md-3 mb-2">
-                                            <button class="btn btn-success w-100" onclick="setRange('172.20.200', 1, 254)">
-                                                <i class="fas fa-network-wired me-1"></i> DHCP 1 (172.20.200.x)
-                                            </button>
-                                        </div>
-                                        <div class="col-md-3 mb-2">
-                                            <button class="btn btn-success w-100" onclick="setRange('172.20.201', 1, 254)">
-                                                <i class="fas fa-network-wired me-1"></i> DHCP 2 (172.20.201.x)
-                                            </button>
-                                        </div>
-                                        <div class="col-md-3 mb-2">
-                                            <button class="btn btn-info w-100" onclick="setRange('172.20.0', 1, 30)">
-                                                <i class="fas fa-server me-1"></i> Infraestructura
-                                            </button>
+                    <div class="card mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="fas fa-network-wired me-2"></i> Verificar Conectividad de Red</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-9">
+                                    <div class="alert alert-secondary">
+                                        <p class="mb-2">Verifique su conectividad con la red del instituto antes de iniciar el escaneo:</p>
+                                        <div class="row mb-2">
+                                            <div class="col-md-4">
+                                                <button class="btn btn-outline-primary w-100" onclick="setRange('172.20.0', 1, 30)">
+                                                    <i class="fas fa-server me-1"></i> Red Administrativa
+                                                </button>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <button class="btn btn-outline-success w-100" onclick="setRange('172.20.200', 1, 254)">
+                                                    <i class="fas fa-laptop me-1"></i> DHCP 1 (Aulas)
+                                                </button>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <button class="btn btn-outline-info w-100" onclick="setRange('172.20.201', 1, 254)">
+                                                    <i class="fas fa-desktop me-1"></i> DHCP 2 (Más aulas)
+                                                </button>
+                                            </div>
                                         </div>
                                         <div class="col-md-3 mb-2">
                                             <button class="btn btn-warning w-100" id="checkNetworkBtn">
@@ -108,6 +110,30 @@
 
                         <div class="alert alert-warning">
                             <i class="fas fa-exclamation-triangle me-2"></i> <strong>Importante:</strong> Verifique que está conectado a la VPN o red local del instituto antes de continuar.
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="force_register" name="force_register" value="1">
+                                    <label class="form-check-label" for="force_register">
+                                        <i class="fas fa-magic me-1"></i> Forzar registro de hosts (incluso si no responden al ping)
+                                    </label>
+                                    <div class="form-text">Active esta opción para registrar equipos aunque no respondan al ping actualmente.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="scan_additional_ranges" name="scan_additional_ranges" value="1" checked>
+                                    <label class="form-check-label" for="scan_additional_ranges">
+                                        <i class="fas fa-layer-group me-1"></i> Escanear rangos adicionales (Infraestructura + muestras DHCP)
+                                    </label>
+                                    <div class="form-text">Incluye automáticamente dispositivos críticos y muestras de otros rangos DHCP del instituto.</div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="d-flex justify-content-between align-items-center mb-3">
