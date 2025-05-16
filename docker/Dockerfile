@@ -16,6 +16,10 @@ RUN apt-get update && apt-get install -y \
     iputils-ping \
     && docker-php-ext-install ldap zip pdo pdo_mysql
 
+# Instalar extensión pcntl para Laravel Reverb (Websockets)
+RUN docker-php-ext-configure pcntl --enable-pcntl \
+    && docker-php-ext-install pcntl
+
 # Cambia el root de Apache a /public de Laravel
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf
@@ -42,6 +46,15 @@ ENV LDAP_AUTH_USERNAME_SCOPE=uid
 ENV LDAP_AUTH_LOGIN_FALLBACK=false
 ENV LDAP_DEBUG=true
 
+# Establecer variables de entorno para Laravel Reverb (WebSockets)
+ENV REVERB_APP_ID=proyectoDAreverb
+ENV REVERB_APP_KEY=proyectoDArevkey
+ENV REVERB_APP_SECRET=proyectoDAreverbsecret
+ENV REVERB_HOST=127.0.0.1
+ENV REVERB_PORT=8080
+ENV REVERB_SCHEME=http
+ENV BROADCAST_DRIVER=reverb
+
 # Copiar el script de inicio
 COPY docker/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
@@ -58,6 +71,11 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 
 # Instala dependencias de Laravel (y evita errores en container)
 RUN composer install --no-dev --optimize-autoloader --no-scripts
+
+# Instalar Laravel Reverb
+RUN composer require laravel/reverb
+RUN php artisan vendor:publish --tag=reverb-config
+
 RUN composer dump-autoload
 RUN php artisan package:discover --ansi || true
 RUN php artisan config:cache || true

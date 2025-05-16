@@ -230,55 +230,78 @@ class RemoteExecutionService
     public function executeRemoteCommand($ip, $command, $username = null, $password = null)
     {
         try {
-            // Conectar al host específico
-            $ssh = new SSH2($ip);
-            if ($username === null) {
-                $username = env('DEFAULT_SSH_USER', 'admin');
-            }
-            if ($password === null) {
-                $password = env('DEFAULT_SSH_PASSWORD', '');
-            }
+            // Configuración por defecto para conexiones SSH
+            $username = $username ?? 'root';
+            $password = $password ?? 'password'; // Contraseña configurada en ldap-setup.sh
+            $port = 22;
             
-            if (!$ssh->login($username, $password)) {
+            Log::debug("Ejecutando comando en {$ip} con usuario {$username}: {$command}");
+            
+            // Usar el método de fallback que funciona sin problemas 
+            return $this->fallbackSshCommand($ip, $command, $username, $password, $port);
+        } catch (\Exception $e) {
+            Log::error("Error ejecutando comando remoto: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Error al ejecutar comando remoto: ' . $e->getMessage(),
+                'output' => 'Error de conexión: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Método alternativo para ejecutar comando SSH usando shell_exec
+     */
+    private function fallbackSshCommand($ip, $command, $username, $password, $port = 22)
+    {
+        try {
+            Log::debug("Intentando ejecutar comando SSH con shell_exec en {$ip}");
+            
+            // Escapar credenciales para seguridad
+            $escapedPassword = escapeshellarg($password);
+            $escapedCommand = escapeshellarg($command);
+            
+            // Construir comando sshpass para autenticación automática
+            $sshCmd = "sshpass -p {$escapedPassword} ssh -o StrictHostKeyChecking=no -p {$port} {$username}@{$ip} {$escapedCommand} 2>&1";
+            Log::debug("Comando SSH generado: " . preg_replace('/sshpass -p \'[^\']+\'/', 'sshpass -p [PROTECTED]', $sshCmd));
+            
+            // Ejecutar comando
+            $output = shell_exec($sshCmd);
+            
+            // Verificar si hay errores comunes
+            if (strpos($output, 'Permission denied') !== false) {
+                Log::error("Error de autenticación SSH en {$ip}: Permiso denegado");
                 return [
                     'success' => false,
-                    'message' => 'No se pudo conectar al host: ' . $ip,
-                    'output' => ''
+                    'message' => 'Error de autenticación: Permiso denegado',
+                    'output' => $output
                 ];
             }
             
-            $output = $ssh->exec($command);
+            if (strpos($output, 'Connection refused') !== false) {
+                Log::error("Error de conexión SSH en {$ip}: Conexión rechazada");
+                return [
+                    'success' => false,
+                    'message' => 'Error de conexión: Puerto cerrado o bloqueado',
+                    'output' => $output
+                ];
+            }
             
+            // Asumir éxito si llegamos aquí
+            Log::debug("Comando ejecutado con éxito en {$ip} usando shell_exec");
             return [
                 'success' => true,
                 'message' => 'Comando ejecutado correctamente',
                 'output' => $output
             ];
         } catch (\Exception $e) {
-            Log::error("Error ejecutando comando remoto: " . $e->getMessage());
+            Log::error("Error en fallbackSshCommand: " . $e->getMessage());
             return [
                 'success' => false,
                 'message' => 'Error al ejecutar comando remoto: ' . $e->getMessage(),
-                'output' => ''
+                'output' => 'Error en conexión SSH: ' . $e->getMessage()
             ];
         }
-    }
-    
-    /**
-     * Ejecuta un comando simultáneamente en múltiples hosts
-     * @param array $ips Lista de IPs
-     * @param string $command El comando a ejecutar
-     * @return array Resultados por IP
-     */
-    public function executeCommandOnMultipleHosts($ips, $command)
-    {
-        $results = [];
-        
-        foreach ($ips as $ip) {
-            $results[$ip] = $this->executeRemoteCommand($ip, $command);
-        }
-        
-        return $results;
     }
 
     /**
@@ -295,11 +318,11 @@ class RemoteExecutionService
      * @param string $command El comando a ejecutar
      * @return array Resultado con status y output
      */
-    public function executeCommand($command)
+    public function executeLocalCommand($command)
     {
         // Si no hay nodo de ejecución configurado, ejecutar localmente
         if (!$this->isConfigured()) {
-            return $this->executeLocalCommand($command);
+            return $this->executeSystemCommand($command);
         }
         
         if (!$this->connect()) {
@@ -327,13 +350,13 @@ class RemoteExecutionService
             ];
         }
     }
-    
+
     /**
      * Ejecuta un comando arbitrario en el sistema local (fallback)
      * @param string $command El comando a ejecutar
      * @return array Resultado con status y output
      */
-    protected function executeLocalCommand($command)
+    protected function executeSystemCommand($command)
     {
         try {
             $process = new \Symfony\Component\Process\Process(explode(' ', $command));
@@ -788,5 +811,116 @@ class RemoteExecutionService
         }
         
         return null;
+    }
+
+    /**
+     * Transfiere un archivo al sistema remoto
+     *
+     * @param string $ip Dirección IP del host remoto
+     * @param string $localPath Ruta local del archivo
+     * @param string $remotePath Ruta remota donde guardar el archivo
+     * @return array Resultado de la operación
+     */
+    public function transferFile($ip, $localPath, $remotePath)
+    {
+        try {
+            // Leer el contenido del archivo local
+            if (!file_exists($localPath)) {
+                return ['success' => false, 'output' => "El archivo $localPath no existe"];
+            }
+            
+            $content = file_get_contents($localPath);
+            if ($content === false) {
+                return ['success' => false, 'output' => "No se pudo leer el archivo $localPath"];
+            }
+            
+            // Usar la función putFileContent para transferir el archivo
+            $result = $this->putFileContent($ip, $remotePath, $content);
+            
+            // Si es un script en Linux, hacerlo ejecutable
+            if ($result['success'] && pathinfo($remotePath, PATHINFO_EXTENSION) === 'sh') {
+                $chmodCmd = "chmod +x " . escapeshellarg($remotePath);
+                $this->executeCommand($ip, $chmodCmd);
+            }
+            
+            return $result;
+        } catch (\Exception $e) {
+            Log::error('Error en transferencia de archivo: ' . $e->getMessage());
+            return ['success' => false, 'output' => 'Error: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * Escribe contenido en un archivo remoto
+     *
+     * @param string $ip Dirección IP del host remoto
+     * @param string $remotePath Ruta remota del archivo
+     * @param string $content Contenido a escribir
+     * @return array Resultado de la operación
+     */
+    public function putFileContent($ip, $remotePath, $content)
+    {
+        try {
+            // Obtener host de la base de datos para credenciales
+            $host = \App\Models\Host::where('ip_address', $ip)->first();
+            
+            if (!$host) {
+                Log::warning("Host no encontrado en la base de datos para IP: $ip");
+                return ['success' => false, 'output' => 'Host no encontrado en la base de datos'];
+            }
+            
+            $username = $host->ssh_user ?? 'root';
+            $password = $host->ssh_password ?? '';
+            $sshPort = $host->ssh_port ?? 22;
+            
+            // Determinar tipo de conexión (Windows/Linux)
+            $isWindows = (strpos($remotePath, '\\') !== false || strpos($remotePath, 'C:') === 0);
+
+            // Determinar tipo de conexión (Windows/Linux)
+            if ($isWindows) {
+                // Para Windows: usar PowerShell a través de una conexión SSH
+                $tempLocalFile = tempnam(sys_get_temp_dir(), 'script_');
+                file_put_contents($tempLocalFile, $content);
+                
+                // Crear un comando para copiar y verificar archivos en Windows
+                $sshCommand = "sshpass -p " . escapeshellarg($password) . " scp -P $sshPort -o StrictHostKeyChecking=no $tempLocalFile $username@$ip:" . escapeshellarg($remotePath);
+                
+                Log::debug("Ejecutando comando SCP para Windows: " . $sshCommand);
+                $output = shell_exec($sshCommand . " 2>&1");
+                
+                unlink($tempLocalFile);
+                
+                if (strpos($output, 'error') !== false || strpos($output, 'failed') !== false) {
+                    Log::error("Error al transferir archivo a Windows: $output");
+                    return ['success' => false, 'output' => "Error al transferir archivo: $output"];
+                }
+                
+                return ['success' => true, 'output' => "Archivo transferido exitosamente a $remotePath"];
+            } else {
+                // Para Linux: usar un comando echo a través de una conexión SSH
+                // Codificar el contenido para evitar problemas con caracteres especiales
+                $encodedContent = base64_encode($content);
+                
+                // Crear comando para decodificar y escribir el archivo en el sistema remoto
+                $remoteCommand = "mkdir -p $(dirname " . escapeshellarg($remotePath) . ") && " .
+                                "echo " . escapeshellarg($encodedContent) . " | base64 -d > " . escapeshellarg($remotePath);
+                
+                // Ejecutar comando SSH
+                $sshCommand = "sshpass -p " . escapeshellarg($password) . " ssh -p $sshPort -o StrictHostKeyChecking=no $username@$ip " . escapeshellarg($remoteCommand);
+                
+                Log::debug("Ejecutando comando SSH para Linux: " . $sshCommand);
+                $output = shell_exec($sshCommand . " 2>&1");
+                
+                if (strpos($output, 'error') !== false || strpos($output, 'failed') !== false) {
+                    Log::error("Error al transferir archivo a Linux: $output");
+                    return ['success' => false, 'output' => "Error al transferir archivo: $output"];
+                }
+                
+                return ['success' => true, 'output' => "Archivo transferido exitosamente a $remotePath"];
+            }
+        } catch (\Exception $e) {
+            Log::error('Error al escribir archivo remoto: ' . $e->getMessage());
+            return ['success' => false, 'output' => 'Error: ' . $e->getMessage()];
+        }
     }
 } 

@@ -27,6 +27,7 @@ class MonitorHost extends Model
         'temperature',
         'uptime',
         'system_info',
+        'agent_version',
     ];
 
     protected $casts = [

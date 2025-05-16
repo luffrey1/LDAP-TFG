@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Middleware\CheckModuleAccess;
 use App\Http\Controllers\MonitorController;
+use App\Http\Controllers\SshTerminalController;
+use App\Http\Controllers\WebSocketController;
 
 // Ruta principal redirige al login
 Route::get('/', function () {
@@ -79,6 +81,10 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
         Route::post('/update-system-info', [MonitorController::class, 'updateSystemInfo'])->name('update-system-info');
         Route::post('/update-telemetry', [MonitorController::class, 'updateTelemetry'])->name('update-telemetry');
         Route::post('/{id}/command', [MonitorController::class, 'executeCommand'])->name('execute-command');
+        
+        // Nuevas rutas para gestión de scripts
+        Route::get('/scripts/available', [MonitorController::class, 'getAvailableScripts'])->name('scripts.available');
+        Route::post('/scripts/transfer', [MonitorController::class, 'transferScript'])->name('scripts.transfer');
         
         // Nuevas rutas de Wake-on-LAN
         Route::get('/{id}/wol', [MonitorController::class, 'wakeOnLan'])->name('wol');
@@ -162,5 +168,47 @@ Route::middleware(['App\Http\Middleware\LdapAuthMiddleware'])->prefix('profesor'
 
 // Endpoint para recibir actualizaciones de telemetría desde agentes
 Route::post('/api/telemetry/update', [MonitorController::class, 'updateTelemetry'])->name('api.telemetry.update');
+
+// Rutas para la gestión de scripts
+Route::get('/monitor/scripts/available', [MonitorController::class, 'getAvailableScripts'])->name('monitor.scripts.available');
+Route::post('/monitor/scripts/transfer', [MonitorController::class, 'transferScript'])->name('monitor.scripts.transfer');
+
+// Rutas para terminal SSH - definidas directamente sin usar prefix para evitar problemas de ruta
+Route::post('/api/terminal/connect', [SshTerminalController::class, 'connect'])
+    ->middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])
+    ->name('ssh.connect');
+Route::post('/api/terminal/disconnect', [SshTerminalController::class, 'disconnect'])
+    ->middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])
+    ->name('ssh.disconnect');
+Route::post('/api/terminal/send', [SshTerminalController::class, 'execute'])
+    ->middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])
+    ->name('ssh.send');
+
+// Rutas para WebSocket
+Route::prefix('api/websocket')->middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(function () {
+    Route::get('/status', [WebSocketController::class, 'checkStatus'])->name('websocket.status');
+    Route::post('/start', [WebSocketController::class, 'startServer'])->name('websocket.start');
+    Route::post('/command', [WebSocketController::class, 'receiveCommand'])->name('websocket.command');
+});
+
+// Ruta WebSocket para SSH (usada por el proxy WebSocket)
+Route::get('/ssh-terminal/{sessionId}', function() {
+    return response()->json([
+        'error' => 'Esta ruta debe ser accedida a través de una conexión WebSocket, no HTTP'
+    ], 400);
+})->middleware(['App\Http\Middleware\WebSocketAuthentication']);
+
+// Ruta para debug desde el frontend
+Route::post('/api/debug/log', function(\Illuminate\Http\Request $request) {
+    $message = $request->input('message');
+    $level = $request->input('level', 'info');
+    
+    \Illuminate\Support\Facades\Log::$level("DEBUG-FRONTEND: " . $message);
+    
+    return response()->json(['success' => true]);
+});
+
+// Routes for SSH Terminal
+// Route::post('/terminal/send', [App\Http\Controllers\MonitorController::class, 'terminalSend'])->name('terminal.send');
 
 

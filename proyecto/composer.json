@@ -10,8 +10,11 @@
         "directorytree/ldaprecord-laravel": "^3.4",
         "illuminate/support": "*",
         "laravel/framework": "^12.0",
+        "laravel/reverb": "^1.5",
         "laravel/tinker": "^2.10.1",
-        "league/csv": "*"
+        "league/csv": "*",
+        "phpseclib/phpseclib": "3.0",
+        "predis/predis": "^3.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

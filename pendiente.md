@@ -6,6 +6,7 @@
 ## Tareas Inmediatas
 1- **Que funcionen los logs, los olvidamos y con todos los cambios estan totalmente diferentes**
 2- **que se puedan eliminar equipos, no funciona y redirige al dashboard, mirar temas de rutas lo más posible o alguna configuracion sql**
+3- **mensajeria arreglarlo**
 5. **Conectividad remota**
    - Establecer conexión remota mediante VPN
 
