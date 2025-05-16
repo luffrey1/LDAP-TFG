@@ -4,20 +4,20 @@
 - Cambiar `LDAP_DEFAULT_HOSTS=172.19.0.4` ya que actualmente hay que cambiar la IP del LDAP por defecto para cada nuevo usuario (está así por un bug de inicio de sesión exclusivo con LDAP-ADMIN)
 
 ## Tareas Inmediatas
-1- **Que funcionen los logs, los olvidamos y con todos los cambios estan totalmente diferentes**
-2- **que se puedan eliminar equipos, no funciona y redirige al dashboard, mirar temas de rutas lo más posible o alguna configuracion sql**
-3- **mensajeria arreglarlo**
-5. **Conectividad remota**
-   - Establecer conexión remota mediante VPN
+1- **mensajeria arreglarlo**
+2- **Que funcionen los logs, los olvidamos y con todos los cambios estan totalmente diferentes**
+3- **El panel de configuracion donde se desactivan secciones arreglarlo porque con tantos cambios se ha ido**
 
-6. **Panel de administración**
-   - Desarrollar área donde administradores (ldap-admin o administradores designados) puedan gestionar: FUNCIONA
-     - Activación/desactivación de mensajería 
-     - Control de documentos
-     - Configuración del calendario
-     - Requisitos de contraseña
-   - Implementar sistema de avisos para contraseñas que no cumplan requisitos (7 días de plazo) FUNCIONA
-   - Crear interfaz para que los usuarios puedan cambiar su contraseña en su perfil NO IMPLEMENTADO
+##No tan inmediatas
+3- **que se puedan eliminar equipos, no funciona y redirige al dashboard, mirar temas de rutas lo más posible o alguna configuracion sql**
+
+4- **Hacer lo de acceder por vpn y tal**
+
+5- **Que funcione la terminal con websockets y reverb**
+
+
+6- Implementar sistema de avisos para contraseñas que no cumplan requisitos (7 días de plazo)NO FUNCIONA
+7- Crear interfaz para que los usuarios puedan cambiar su contraseña en su perfil NO IMPLEMENTADO
 
 ## Futuras Implementaciones
 
