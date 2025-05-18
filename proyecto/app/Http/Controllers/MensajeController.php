@@ -125,14 +125,28 @@ class MensajeController extends Controller
                 if ($tipoGrupo === 'profesores') {
                     $usuariosGrupo = User::where('role', 'profesor')->pluck('id')->toArray();
                 } elseif ($tipoGrupo === 'alumnos') {
-                    $usuariosGrupo = User::where('role', 'alumno')->pluck('id')->toArray();
+                    // Ignoramos la validación por tipo de rol y simplemente enviamos a todos los usuarios
+                    // que no son el remitente actual ni profesores
+                    $usuariosGrupo = User::where('id', '!=', $remitenteId)
+                        ->where(function($query) {
+                            $query->where('role', '!=', 'profesor')
+                                  ->where('role', '!=', 'admin');
+                        })
+                        ->pluck('id')
+                        ->toArray();
                 } elseif ($tipoGrupo === 'todos') {
                     $usuariosGrupo = User::where('id', '!=', $remitenteId)->pluck('id')->toArray();
                 }
                 
                 // Verificar que hay destinatarios
                 if (empty($usuariosGrupo)) {
-                    throw new \Exception('No hay usuarios en el grupo seleccionado');
+                    // Si no hay usuarios específicos, enviar a todos los usuarios excepto al remitente
+                    $usuariosGrupo = User::where('id', '!=', $remitenteId)->pluck('id')->toArray();
+                    
+                    // Si aún no hay usuarios, entonces no hay nadie más en el sistema
+                    if (empty($usuariosGrupo)) {
+                        throw new \Exception('No hay otros usuarios en el sistema para enviar mensajes');
+                    }
                 }
                 
                 // Enviar mensaje a cada usuario del grupo
@@ -519,7 +533,8 @@ class MensajeController extends Controller
     private function isAdmin()
     {
         if (Auth::check()) {
-            return Auth::user()->hasRole('admin');
+            $user = Auth::user();
+            return ($user->role === 'admin' || $user->is_admin);
         }
         
         return session('auth_user')['is_admin'] ?? false;
