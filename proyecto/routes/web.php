@@ -14,6 +14,7 @@ use App\Http\Middleware\CheckModuleAccess;
 use App\Http\Controllers\MonitorController;
 use App\Http\Controllers\SshTerminalController;
 use App\Http\Controllers\WebSocketController;
+use App\Events\TestBroadcast;
 
 // Ruta principal redirige al login
 Route::get('/', function () {
@@ -28,6 +29,10 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
 // Ruta de prueba directo al controlador de documentos
 Route::get('/test-documentos', [DocumentoController::class, 'index'])->name('test.documentos');
 Route::get('/test-controller', [TestController::class, 'test'])->name('test.controller');
+Route::get('/test-broadcast', function () {
+    broadcast(new TestBroadcast('¡Funciona el WebSocket!'));
+    return 'Evento emitido';
+});
 
 // Rutas protegidas que requieren autenticación
 Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(function () {

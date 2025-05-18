@@ -6,6 +6,6 @@ objectClass: top
 objectClass: posixGroup
 # objectClass: groupOfUniqueNames
 cn: alumnos
-uniqueMember: uid=diurno,ou=people,dc=test,dc=tierno,dc=es
-uniqueMember: uid=vespertino,ou=people,dc=test,dc=tierno,dc=es
+#uniqueMember: uid=diurno,ou=people,dc=test,dc=tierno,dc=es
+#uniqueMember: uid=vespertino,ou=people,dc=test,dc=tierno,dc=es
 gidNumber: 10001

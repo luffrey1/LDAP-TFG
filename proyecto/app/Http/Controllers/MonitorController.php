@@ -417,12 +417,11 @@ class MonitorController extends Controller
             
             // Verificar si el usuario actual es administrador
             $user = Auth::user();
-            $isAdmin = $user && ($user->is_admin || $user->role === 'admin');
-            
-            // Si no es admin ni el creador, no tiene permiso
-            if (!$isAdmin && $host->created_by != $user->id) {
-                abort(403, 'No tienes permiso para ver este host');
-            }
+            // TEMPORAL: Permitir a cualquier usuario autenticado ver cualquier host
+            // $isAdmin = $user && ($user->is_admin || $user->role === 'admin');
+            // if (!$isAdmin && $host->created_by != $user->id) {
+            //     abort(403, 'No tienes permiso para ver este host');
+            // }
             
             // Realizar ping para actualizar estado
             $this->ping($id);

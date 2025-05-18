@@ -18,7 +18,7 @@ class RemoteExecutionService
     public function __construct()
     {
         // Cargar configuración desde .env
-        $this->sshHost = env('SSH_EXECUTION_HOST', '127.0.0.1');
+        $this->sshHost = env('SSH_EXECUTION_HOST');
         $this->sshUser = env('SSH_EXECUTION_USER', 'executor');
         $this->sshPassword = env('SSH_EXECUTION_PASSWORD', '');
         $this->sshPort = env('SSH_EXECUTION_PORT', 22);
@@ -862,7 +862,7 @@ class RemoteExecutionService
     {
         try {
             // Obtener host de la base de datos para credenciales
-            $host = \App\Models\Host::where('ip_address', $ip)->first();
+            $host = \App\Models\MonitorHost::where('ip_address', $ip)->first();
             
             if (!$host) {
                 Log::warning("Host no encontrado en la base de datos para IP: $ip");

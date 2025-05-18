@@ -46,8 +46,9 @@ services:
     restart: unless-stopped
     ports:
       - "8000:80"
+      - "8080:8080"
     environment:
-      - LDAP_HOST=openldap-osixia
+      - LDAP_HOST=172.19.0.3
       - LDAP_PORT=389
       - LDAP_BASE_DN=dc=test,dc=tierno,dc=es
       - LDAP_USERNAME=cn=admin,dc=test,dc=tierno,dc=es

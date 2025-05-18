@@ -50,12 +50,12 @@ ENV LDAP_DEBUG=true
 ENV REVERB_APP_ID=proyectoDAreverb
 ENV REVERB_APP_KEY=proyectoDArevkey
 ENV REVERB_APP_SECRET=proyectoDAreverbsecret
-ENV REVERB_HOST=127.0.0.1
+ENV REVERB_HOST=0.0.0.0
 ENV REVERB_PORT=8080
 ENV REVERB_SCHEME=http
 ENV BROADCAST_DRIVER=reverb
 
-# Copiar el script de inicio
+# Copiar el script de iniciot
 COPY docker/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 

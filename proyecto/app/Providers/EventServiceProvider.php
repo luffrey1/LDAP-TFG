@@ -6,6 +6,9 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Event;
+use App\Events\CommandReceived;
+use App\Listeners\HandleTerminalCommand;
+use Illuminate\Pagination\Paginator;
 
 class EventServiceProvider extends ServiceProvider
 {
@@ -18,6 +21,9 @@ class EventServiceProvider extends ServiceProvider
         Registered::class => [
             SendEmailVerificationNotification::class,
         ],
+        CommandReceived::class => [
+            HandleTerminalCommand::class,
+        ],
     ];
 
     /**
@@ -25,7 +31,22 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Usar Tailwind para la paginación
+        Paginator::defaultView('pagination.custom');
+        
+        // Asegurarse de que la primera página siempre se muestre
+        Paginator::useBootstrap();
+
+        // Solo registrar el handler si estamos en el proceso de Reverb
+        if (app()->runningInConsole() && $this->app->bound('reverb.connector')) {
+            \Log::info('Registrando handler de whisper para Reverb (proceso console)');
+            echo "Registrando handler de whisper para Reverb (proceso console)\n";
+            $this->app->resolving('reverb.connector', function ($connector) {
+                $connector->listenWhisper('command', [\App\Events\CommandReceived::class, 'handleWhisper']);
+            });
+        } else {
+          //  \Log::info('NO se registra handler de whisper (no es proceso console o no está reverb.connector)');
+        }
     }
 
     /**

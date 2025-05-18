@@ -12,7 +12,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // ...otros registros...
+        $this->app->afterResolving('reverb.connector', function ($connector) {
+            \Log::info('Registrando handler de whisper para Reverb (afterResolving)');
+            $connector->listenWhisper('command', [\App\Events\CommandReceived::class, 'handleWhisper']);
+        });
     }
 
     /**

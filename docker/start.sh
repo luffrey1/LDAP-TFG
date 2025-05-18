@@ -32,16 +32,6 @@ sed -i "s/LDAP_USERNAME=.*/LDAP_USERNAME=cn=admin,dc=test,dc=tierno,dc=es/" /var
 sed -i "s/LDAP_PASSWORD=.*/LDAP_PASSWORD=admin/" /var/www/html/.env
 sed -i "s/LDAP_AUTH_LOGIN_FALLBACK=.*/LDAP_AUTH_LOGIN_FALLBACK=false/" /var/www/html/.env
 
-# Actualizar configuración de WebSockets en .env
-echo "Configurando variables de entorno para WebSockets..."
-sed -i "s/BROADCAST_DRIVER=.*/BROADCAST_DRIVER=reverb/" /var/www/html/.env
-sed -i "s/REVERB_APP_ID=.*/REVERB_APP_ID=proyectoDAreverb/" /var/www/html/.env
-sed -i "s/REVERB_APP_KEY=.*/REVERB_APP_KEY=proyectoDArevkey/" /var/www/html/.env
-sed -i "s/REVERB_APP_SECRET=.*/REVERB_APP_SECRET=proyectoDAreverbsecret/" /var/www/html/.env
-sed -i "s/REVERB_HOST=.*/REVERB_HOST=127.0.0.1/" /var/www/html/.env
-sed -i "s/REVERB_PORT=.*/REVERB_PORT=8080/" /var/www/html/.env
-sed -i "s/REVERB_SCHEME=.*/REVERB_SCHEME=http/" /var/www/html/.env
-
 # Configuración de Laravel
 cd /var/www/html
 
@@ -64,20 +54,10 @@ php artisan view:clear
 
 # Ejecutar migraciones
 echo "Ejecutando migraciones..."
-php artisan migrate --force || true
+php artisan migrate --force
 
 # Crear usuario de prueba si no existe
 php artisan db:seed --class=UserSeeder
-
-# Generar claves SSH para la terminal
-echo "Configurando claves SSH para la terminal..."
-mkdir -p /var/www/html/storage/app/ssh
-if [ ! -f /var/www/html/storage/app/ssh/id_rsa ]; then
-    ssh-keygen -t rsa -b 4096 -f /var/www/html/storage/app/ssh/id_rsa -N ""
-    echo "Claves SSH generadas correctamente"
-fi
-chmod 600 /var/www/html/storage/app/ssh/id_rsa
-chmod 644 /var/www/html/storage/app/ssh/id_rsa.pub
 
 # Establecer permisos adecuados
 echo "Estableciendo permisos..."
@@ -110,22 +90,6 @@ try {
 }
 "
 
-# Iniciar Laravel Reverb en segundo plano
-echo "Iniciando servidor WebSocket (Laravel Reverb)..."
-mkdir -p /var/www/html/storage/logs
-nohup php artisan reverb:start > /var/www/html/storage/logs/reverb.log 2>&1 &
-echo "Servidor WebSocket iniciado en segundo plano"
-
-# Esperar un momento para que Reverb inicie
-sleep 3
-
-# Verificar que Reverb está ejecutándose
-if pgrep -f "artisan reverb:start" > /dev/null; then
-    echo "Laravel Reverb se está ejecutando correctamente"
-else
-    echo "¡Advertencia! Laravel Reverb no se inició correctamente. Verificar logs en storage/logs/reverb.log"
-fi
-
-# Iniciar Apache en primer plano (para mantener el contenedor en ejecución)
+# Iniciar el servidor
 echo "Iniciando servidor Apache..."
 apache2-foreground 

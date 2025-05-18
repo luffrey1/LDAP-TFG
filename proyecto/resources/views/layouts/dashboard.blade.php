@@ -450,11 +450,18 @@
                 font-size: 1rem;
             }
         }
+        
+        /* DEBUG: Forzar visibilidad del menú de usuario y navbar */
+        .navbar-nav { display: flex !important; }
+        .nav-item.dropdown { display: block !important; }
+        .dropdown-menu { display: block !important; position: static !important; }
     </style>
     
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     @yield('styles')
 </head>
 <body>
+
     <!-- Loader -->
     <div class="page-loader">
         <span class="loader"></span>
@@ -476,7 +483,13 @@
                 <ul class="navbar-nav ms-auto align-items-center">
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                            <span class="me-2 d-none d-lg-inline">{{ session('auth_user')['nombre'] ?? 'Usuario' }}</span>
+                            <span class="me-2 d-none d-lg-inline">
+                                @if(session('auth_user'))
+                                    {{ session('auth_user')['nombre'] ?? session('auth_user')['username'] ?? session('auth_user')['email'] ?? 'Usuario' }}
+                                @else
+                                    Usuario
+                                @endif
+                            </span>
                             <div class="rounded-circle bg-light d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
                                 <i class="fas fa-user text-primary"></i>
                             </div>

@@ -6,5 +6,5 @@ objectClass: top
 objectClass: posixGroup
 # objectClass: groupOfUniqueNames
 cn: profesores
-uniqueMember: uid=profesor,ou=people,dc=test,dc=tierno,dc=es
+#uniqueMember: uid=profesor,ou=people,dc=test,dc=tierno,dc=es
 gidNumber: 10000

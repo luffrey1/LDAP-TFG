@@ -18,6 +18,7 @@ class UserSeeder extends Seeder
             ['email' => 'admin@example.com'],
             [
                 'name' => 'Administrador',
+                'username' => 'admin',
                 'password' => Hash::make('admin123'),
                 'email_verified_at' => now(),
             ]
@@ -28,6 +29,7 @@ class UserSeeder extends Seeder
             ['email' => 'profesor@example.com'],
             [
                 'name' => 'Profesor',
+                'username' => 'profesor',
                 'password' => Hash::make('profesor123'),
                 'email_verified_at' => now(),
             ]
@@ -37,21 +39,25 @@ class UserSeeder extends Seeder
         $usuarios = [
             [
                 'name' => 'Carlos Martínez',
+                'username' => 'carlos.martinez',
                 'email' => 'carlos.martinez@example.com',
                 'password' => Hash::make('password'),
             ],
             [
                 'name' => 'María López',
+                'username' => 'maria.lopez',
                 'email' => 'maria.lopez@example.com',
                 'password' => Hash::make('password'),
             ],
             [
                 'name' => 'Juan García',
+                'username' => 'juan.garcia',
                 'email' => 'juan.garcia@example.com',
                 'password' => Hash::make('password'),
             ],
             [
                 'name' => 'Laura Fernández',
+                'username' => 'laura.fernandez',
                 'email' => 'laura.fernandez@example.com',
                 'password' => Hash::make('password'),
             ],
@@ -62,6 +68,7 @@ class UserSeeder extends Seeder
                 ['email' => $usuario['email']],
                 [
                     'name' => $usuario['name'],
+                    'username' => $usuario['username'],
                     'password' => $usuario['password'],
                     'email_verified_at' => now(),
                 ]
