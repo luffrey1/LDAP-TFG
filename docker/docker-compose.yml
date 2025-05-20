@@ -75,6 +75,38 @@ services:
       retries: 3
       start_period: 30s
 
+  terminal-server:
+    build:
+      context: ../terminal-server
+      dockerfile: Dockerfile
+    container_name: terminal-server
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    networks:
+      - app-network
+    user: root
+
+  webssh2:
+    build:
+      context: ../webssh2
+      dockerfile: Dockerfile
+    container_name: webssh2
+    restart: unless-stopped
+    ports:
+      - "2222:2222"
+    environment:
+      - SSHHOST=0.0.0.0
+      - SSHPORT=22
+      - SSHUSER=root
+      - SSHKEY=/config/id_rsa
+    volumes:
+      - ../webssh2/app/config.json:/config.json:ro
+      - ../webssh2/config:/config
+      - ../webssh2/config/id_rsa:/config/id_rsa:ro
+    networks:
+      - app-network
+
 networks:
   app-network:
     driver: bridge

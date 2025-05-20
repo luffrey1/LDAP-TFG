@@ -175,10 +175,50 @@
             max-height: 100vh;
             box-sizing: border-box;
         }
+
+        /* Estilos Ubuntu-like solo cuando la terminal está conectada */
+        #terminal-container.ubuntu-terminal-active {
+            background: linear-gradient(135deg, #300a24 0%, #4f2350 100%) !important;
+            border-radius: 10px;
+            box-shadow: 0 4px 24px #0004;
+            border: 2px solid #5e2750;
+        }
+        .terminal-titlebar.ubuntu-terminal-active {
+            background: linear-gradient(90deg, #3c3b37 0%, #5e2750 100%);
+            border-radius: 10px 10px 0 0;
+            font-family: 'Ubuntu', 'Fira Mono', monospace;
+            font-size: 15px;
+            letter-spacing: 0.5px;
+        }
+        .terminal-titlebar-buttons.ubuntu-terminal-active .terminal-button {
+            width: 13px;
+            height: 13px;
+            margin-right: 0;
+        }
+        .terminal-titlebar-buttons.ubuntu-terminal-active {
+            gap: 7px;
+        }
+        .terminal-title.ubuntu-terminal-active {
+            font-family: 'Ubuntu', 'Fira Mono', monospace;
+            font-size: 15px;
+        }
+        .xterm.ubuntu-terminal-active {
+            font-family: 'Ubuntu Mono', 'Fira Mono', monospace !important;
+            font-size: 15px !important;
+            color: #e0e0e0 !important;
+            background: transparent !important;
+            padding: 12px 18px 12px 18px !important;
+            border-radius: 0 0 10px 10px;
+        }
     </style>
 @endsection
 
 @section('content')
+<div class="alert alert-info" style="font-size:1.15em; font-weight:bold; border:2px solid #0056b3; background:#e9f5ff; color:#003366; margin-bottom:24px;">
+    <i class="fab fa-github"></i> Para enviar o ejecutar scripts en los hosts, <span style="color:#0056b3;">usa siempre un repositorio <b>GitHub</b>:</span><br>
+    <span style="font-size:0.95em; color:#222;">Ejecuta <code>git clone https://github.com/tuusuario/tu-repo.git</code> o <code>git pull</code> desde la terminal SSH web.<br>
+    <b>¡No se pueden enviar scripts automáticamente desde Laravel!</b></span>
+</div>
 <section class="section">
     <div class="section-header">
         <h1>{{ $host->hostname }}</h1>
@@ -240,12 +280,15 @@
                             <button class="btn btn-danger btn-icon icon-left btn-block delete-host-button" data-id="{{ $host->id }}" data-hostname="{{ $host->hostname }}">
                                 <i class="fas fa-trash"></i> Eliminar Host
                             </button>
-                            
                             @if(!empty($host->mac_address))
                             <a href="{{ route('monitor.wol', $host->id) }}" class="btn btn-success btn-icon icon-left btn-block mt-2">
                                 <i class="fas fa-power-off"></i> Encender (WOL)
                             </a>
                             @endif
+                            <!-- Botón para abrir la terminal SSH real en webssh2 -->
+                            <button type="button" class="btn btn-primary btn-icon icon-left btn-block mt-2" id="open-ssh-terminal">
+                                <i class="fas fa-terminal"></i> Terminal SSH
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -419,8 +462,15 @@
                 
                 {{-- TERMINAL SSH REAL --}}
                 <div class="card mt-4">
-                    <div class="card-header d-flex align-items-center">
-                        <span class="terminal-title" style="font-family: monospace; font-size: 1.1em;">Terminal SSH</span>
+                    <div class="card-header d-flex align-items-center" style="padding: 0; background: none; border: none;">
+                        <div class="terminal-titlebar" id="ubuntuTitleBar" style="width: 100%;">
+                            <div class="terminal-titlebar-buttons">
+                                <div class="terminal-button terminal-button-close"></div>
+                                <div class="terminal-button terminal-button-minimize"></div>
+                                <div class="terminal-button terminal-button-maximize"></div>
+                            </div>
+                            <span class="terminal-title">ubuntu@{{ $host->hostname }}: ~</span>
+                        </div>
                         <span id="connectionStatus" class="connection-indicator connection-inactive ms-3"></span>
                         <span id="connectionText" class="ms-2">Desconectado</span>
                         <button id="connect-terminal-button" class="btn btn-primary ms-auto"><i class="fas fa-terminal"></i> Conectar</button>
@@ -434,7 +484,7 @@
                     <div class="tab-content" id="terminalTabsContent">
                         <div class="tab-pane fade show active" id="terminal-pane" role="tabpanel" aria-labelledby="terminal-tab">
                             <div class="card-body p-0" style="background: #1e1e1e;">
-                                <div id="terminal-container" style="width: 100%; height: 400px;"></div>
+                                <div id="terminal-container"></div>
                             </div>
                         </div>
                     </div>
@@ -477,433 +527,19 @@
 
 <!-- Dependencias Xterm.js y jQuery -->
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xterm-addon-search@0.13.0/lib/xterm-addon-search.min.js"></script>
 <script>
-// Toda la lógica de la terminal y eventos DOM dentro de DOMContentLoaded
-window.addEventListener('DOMContentLoaded', function() {
-    // Obtener elementos DOM de forma segura
-    const connectionStatus = document.getElementById('connectionStatus');
-    const connectionText = document.getElementById('connectionText');
-    const connectBtn = document.getElementById('connect-terminal-button');
-    const terminalContainer = document.getElementById('terminal-container');
-    if (!connectionStatus || !connectionText || !connectBtn || !terminalContainer) {
-        console.error('No se encontraron los elementos necesarios para la terminal.');
-        return;
-    }
-
-    // --- Terminal SSH Real con WebSocket y xterm.js ---
-    window.terminal = null;
-    window.fitAddon = null;
-    window.searchAddon = null;
-    let isConnected = false;
-    let sessionId = null;
-    let currentPrompt = '';
-    let currentDirectory = '~';
-    let commandBuffer = '';
-    let commandHistory = [];
-    let historyIndex = -1;
-    let usingWebsockets = true;
-    let retryConnection = false;
-
-    function initTerminal() {
-        window.terminal = new Terminal({
-            theme: {
-                background: '#1e1e1e',
-                foreground: '#d4d4d4',
-                cursor: '#00ffea',
-                selection: '#264f78',
-            },
-            fontFamily: 'Fira Mono, monospace',
-            fontSize: 15,
-            cursorBlink: true,
-            scrollback: 2000,
-            tabStopWidth: 4,
-            disableStdin: false,
-        });
-        window.fitAddon = new FitAddon.FitAddon();
-        window.searchAddon = new SearchAddon.SearchAddon();
-        terminal = window.terminal;
-        fitAddon = window.fitAddon;
-        searchAddon = window.searchAddon;
-        terminal.loadAddon(fitAddon);
-        terminal.loadAddon(searchAddon);
-        terminal.open(terminalContainer);
-        fitAddon.fit();
-        terminal.focus();
-        terminal.writeln('\x1B[1;36m┌─────────────────────────────────────────────┐\x1B[0m');
-        terminal.writeln('\x1B[1;36m│\x1B[0m \x1B[1;32mBienvenido al terminal SSH\x1B[0m           \x1B[1;36m│\x1B[0m');
-        terminal.writeln('\x1B[1;36m└─────────────────────────────────────────────┘\x1B[0m\r\n');
-        terminal.write('Presiona Conectar para iniciar sesión...\r\n');
-        terminal.onData(handleTerminalInput);
-        window.addEventListener('resize', () => fitAddon.fit());
-    }
-
-    function updateConnectionStatus(isActive, text) {
-        connectionStatus.className = `connection-indicator ${isActive ? 'connection-active' : 'connection-inactive'}`;
-        connectionText.textContent = text;
-    }
-
-    function updateTerminalTitle(username = 'root') {
-        const titleEl = document.querySelector('.terminal-title');
-        if (titleEl) {
-            titleEl.textContent = `${username}@{{ $host->hostname }}: ${formatPath(currentDirectory)}`;
-        }
-    }
-
-    function formatPath(path) {
-        if (!path) return '~';
-        return path.replace('/home/' + getCurrentUserFromPrompt(), '~');
-    }
-
-    function getCurrentUserFromPrompt() {
-        const match = currentPrompt.match(/^([\w-]+)@/);
-        return match ? match[1] : 'root';
-    }
-
-    function showPrompt() {
-        terminal.write(`\r\n${currentPrompt}`);
-    }
-
-    function handleTerminalInput(data) {
-        if (!isConnected) return;
-        // Enter
-        if (data === '\r') {
-            terminal.write('\r\n');
-            if (commandBuffer.trim() !== '') {
-                sendCommand(commandBuffer);
-                commandHistory.unshift(commandBuffer);
-                if (commandHistory.length > 50) commandHistory.pop();
-                historyIndex = -1;
+$(function() {
+    var $sshBtn = $('#connect-terminal-button');
+    if ($sshBtn.length) {
+        $sshBtn.on('click', function(e) {
+            e.preventDefault();
+            var ip = $('#info-ip_address').text().trim();
+            var url = `http://localhost:2222/ssh/host/${ip}?username=root`;
+            var win = window.open(url, '_blank');
+            if (!win) {
+                alert('El navegador ha bloqueado la nueva pestaña. Permite popups para este sitio.');
             }
-            commandBuffer = '';
-            // El prompt se mostrará al recibir la respuesta
-        } else if (data === '\u007F') { // Backspace
-            if (commandBuffer.length > 0) {
-                terminal.write('\b \b');
-                commandBuffer = commandBuffer.slice(0, -1);
-            }
-        } else if (data === '\u001b[A') { // Flecha arriba
-            if (commandHistory.length > 0 && historyIndex < commandHistory.length - 1) {
-                historyIndex++;
-                clearCurrentLine();
-                commandBuffer = commandHistory[historyIndex];
-                terminal.write(commandBuffer);
-            }
-        } else if (data === '\u001b[B') { // Flecha abajo
-            if (historyIndex > 0) {
-                historyIndex--;
-                clearCurrentLine();
-                commandBuffer = commandHistory[historyIndex];
-                terminal.write(commandBuffer);
-            } else if (historyIndex === 0) {
-                historyIndex = -1;
-                clearCurrentLine();
-                commandBuffer = '';
-            }
-        } else if (data === '\u0003') { // Ctrl+C
-            terminal.write('^C');
-            commandBuffer = '';
-            showPrompt();
-        } else if (data >= ' ' && data <= '~') { // Caracteres imprimibles
-            terminal.write(data);
-            commandBuffer += data;
-        }
-    }
-
-    function clearCurrentLine() {
-        // Borra la línea actual del prompt
-        let len = commandBuffer.length;
-        while (len-- > 0) terminal.write('\b \b');
-    }
-
-    // --- Debug helpers ---
-    const debugCommands = [];
-    const debugEvents = [];
-    let lastDebugOutput = '';
-    function showDebugToast(title, content) {
-        const toast = document.getElementById('debug-toast');
-        if (!toast) return;
-        toast.innerHTML = `<b>${title}</b><br><pre style='white-space:pre-wrap; color:#0f0; margin:0;'>${content}</pre>`;
-        toast.style.display = 'block';
-        clearTimeout(window._debugToastTimeout);
-        window._debugToastTimeout = setTimeout(() => { toast.style.display = 'none'; }, 5000);
-    }
-
-    function sendCommand(cmd) {
-        if (!sessionId || !isConnected) return;
-        showDebugToast('Comando enviado', cmd);
-        if (usingWebsockets && window.Echo) {
-            // Enviar comando por WebSocket (Reverb)
-            fetch('/api/websocket/command', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({ sessionId, command: cmd })
-            }).then(res => res.json()).then(resp => {
-                if (!resp.success) {
-                    terminal.writeln(`\x1B[1;31m✗ Error WebSocket: ${resp.message}\x1B[0m`);
-                    showPrompt();
-                }
-            }).catch(() => {
-                terminal.writeln('\x1B[1;31m✗ Error enviando comando por WebSocket\x1B[0m');
-                showPrompt();
-            });
-        } else {
-            // Fallback AJAX
-            fetch('/api/terminal/send', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({ sessionId, command: cmd })
-            }).then(res => res.json()).then(resp => {
-                if (resp.output) terminal.write(resp.output);
-                showPrompt();
-            });
-        }
-    }
-
-    function connectToSsh(username = 'root') {
-        terminal.clear();
-        updateConnectionStatus(false, 'Iniciando WebSocket...');
-        terminal.writeln('\x1B[1;34m● Iniciando servidor WebSocket Reverb...\x1B[0m');
-        if (window.echoConnectionFailed) {
-            terminal.writeln('\x1B[1;33m⚠ WebSockets no disponibles. Continuando en modo de compatibilidad.\x1B[0m');
-            usingWebsockets = false;
-            connectToSSHServer(username);
-            return;
-        }
-        fetch('/api/websocket/status').then(r => r.json()).then(response => {
-            if (response.running) {
-                terminal.writeln('\x1B[1;32m✓ Servidor WebSocket activo\x1B[0m');
-                usingWebsockets = true;
-                connectToSSHServer(username);
-            } else {
-                startReverbServer(username);
-            }
-        }).catch(() => startReverbServer(username));
-    }
-
-    function startReverbServer(username) {
-        fetch('/api/websocket/start', {
-            method: 'POST',
-            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
-        }).then(r => r.json()).then(response => {
-            terminal.writeln(`\x1B[1;32m✓ ${response.message || 'Servidor WebSocket iniciado'}\x1B[0m`);
-            usingWebsockets = true;
-            setTimeout(() => connectToSSHServer(username), 1000);
-        }).catch(() => {
-            terminal.writeln('\x1B[1;33m⚠ No se pudo iniciar Reverb. Continuando en modo de compatibilidad.\x1B[0m');
-            usingWebsockets = false;
-            window.echoConnectionFailed = true;
-            connectToSSHServer(username);
         });
     }
-
-    function connectToSSHServer(username) {
-        updateConnectionStatus(false, 'Conectando...');
-        terminal.writeln(`\x1B[1;34m● Conectando al servidor SSH como \x1B[1;36m${username}\x1B[0m usando autenticación por clave...`);
-        fetch('/api/terminal/connect', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-            body: JSON.stringify({ host_id: '{{ $host->id }}', username })
-        }).then(res => res.json()).then(response => {
-            if (response.success) {
-                isConnected = true;
-                sessionId = response.sessionId;
-                updateConnectionStatus(true, `Conectado: ${username}@{{ $host->hostname }}`);
-                terminal.writeln('\x1B[1;32m✓ Conexión establecida. Terminal listo.\x1B[0m');
-                currentPrompt = `${username}@{{ $host->hostname }}:~$ `;
-                updateTerminalTitle(username);
-                if (usingWebsockets) setupWebSocketConnection(sessionId);
-                showPrompt();
-            } else {
-                updateConnectionStatus(false, 'Error de conexión');
-                terminal.writeln(`\x1B[1;31m✗ Error: ${response.message}\x1B[0m`);
-            }
-        }).catch(() => {
-            updateConnectionStatus(false, 'Falló la conexión');
-            terminal.writeln('\x1B[1;33m⚠ Presiona Enter para intentar nuevamente\x1B[0m');
-            retryConnection = true;
-        });
-    }
-
-    function setupWebSocketConnection(sessionId) {
-    if (typeof window.Echo === 'undefined' || window.echoConnectionFailed === true) {
-        usingWebsockets = false;
-        terminal.writeln('\x1B[1;33m⚠ WebSockets no disponibles. Funcionando en modo de compatibilidad.\x1B[0m');
-        return;
-    }
-    try {
-        const channelName = `terminal.${sessionId}`;
-
-        // Logs iniciales
-        console.log(`[CLIENT JS DEBUG] Intentando configurar WebSocket para el canal: ${channelName}`);
-        console.log(`[CLIENT JS DEBUG] Objeto Echo disponible:`, window.Echo);
-        console.log(`[CLIENT JS DEBUG] Escuchando el evento: 'App.Events.TerminalOutputReceived'`);
-
-        // --- UTILIZA SOLO ESTE BLOQUE PARA LA SUSCRIPCIÓN Y LISTENERS ---
-        if (window.Echo) {
-            // Dejar de escuchar en el canal antiguo si ya existía una suscripción previa
-            // Esto es importante si llamas a setupWebSocketConnection múltiples veces con diferentes sessionIds
-            if (window.currentActiveTerminalChannel) {
-                console.log(`[CLIENT JS DEBUG] Dejando el canal anterior: ${window.currentActiveTerminalChannel.name}`);
-                window.currentActiveTerminalChannel.stopListening('App.Events.TerminalOutputReceived'); // Detiene el listener específico
-                window.Echo.leave(window.currentActiveTerminalChannel.name); // Abandona el canal
-            }
-
-            console.log(`[CLIENT JS DEBUG] Suscribiéndose ahora a: ${channelName}`);
-            let subscribedChannel = window.Echo.channel(channelName);
-            window.currentActiveTerminalChannel = subscribedChannel; // Guardar referencia al canal activo
-
-            subscribedChannel.subscribed(() => {
-                console.log(`[CLIENT JS DEBUG] ¡Suscrito exitosamente a: ${channelName}! Listo para escuchar.`);
-                updateConnectionStatus(true, `Conectado (WS): ${getCurrentUserFromPrompt()}@{{ $host->hostname }}`);
-                usingWebsockets = true;
-            });
-
-            subscribedChannel.error((error) => {
-                console.error(`[CLIENT JS DEBUG] Error de suscripción a ${channelName}:`, error);
-                terminal.writeln(`\x1B[1;31m✗ Error de suscripción WebSocket a ${channelName}\x1B[0m`);
-                updateConnectionStatus(false, 'Error WS');
-                // Considerar fallback a AJAX si la suscripción falla
-                // usingWebsockets = false;
-                // window.echoConnectionFailed = true;
-            });
-
-            // Suscríbete a ambos nombres de evento por compatibilidad
-            subscribedChannel.listen('App.Events.TerminalOutputReceived', (eventData) => {
-                console.log('[CLIENT JS DEBUG] >>> Evento App.Events.TerminalOutputReceived RECIBIDO (listener principal):', eventData);
-                processWebSocketResponse(eventData);
-            });
-            subscribedChannel.listen('TerminalOutputReceived', (eventData) => {
-                console.log('[CLIENT JS DEBUG] >>> Evento TerminalOutputReceived RECIBIDO (listener alternativo):', eventData);
-                processWebSocketResponse(eventData);
-            });
-
-            // Listener manual usando el canal Pusher subyacente
-            const pusherChannel = window.Echo.connector.pusher.channel(channelName);
-            if (pusherChannel) {
-                pusherChannel.bind('TerminalOutputReceived', function(data) {
-                    console.log('[CLIENT JS DEBUG] Evento TerminalOutputReceived recibido por Pusher:', data);
-                    let eventData = data;
-                    if (typeof data === 'string') {
-                        try { eventData = JSON.parse(data); } catch (e) {}
-                    }
-                    processWebSocketResponse(eventData);
-                });
-            }
-
-            // Listeners de diagnóstico de bajo nivel (puedes mantenerlos o quitarlos una vez funcione)
-            if (window.Echo.connector && window.Echo.connector.pusher) {
-                const connection = window.Echo.connector.pusher.connection;
-                // Evita añadir listeners duplicados si esta función se llama múltiples veces
-                if (!connection.bindings || !connection.bindings['state_change']) { // Simple check
-                    connection.bind('state_change', function(states) {
-                        console.log("[CLIENT JS DEBUG] Estado de conexión Reverb cambió:", states);
-                    });
-                    connection.bind('connected', function() {
-                        console.log('[CLIENT JS DEBUG] Conectado a Reverb a nivel de pusher (bajo nivel).');
-                    });
-                    connection.bind('error', function(err) {
-                        console.error('[CLIENT JS DEBUG] Error de conexión Pusher/Reverb (bajo nivel):', err);
-                    });
-                }
-            }
-        } else {
-             console.error("[CLIENT JS DEBUG] window.Echo no está definido al intentar suscribirse.");
-             // Fallback a modo no-websockets
-             usingWebsockets = false;
-             window.echoConnectionFailed = true;
-             terminal.writeln('\x1B[1;33m⚠ window.Echo no definido. Funcionando en modo de compatibilidad.\x1B[0m');
-        }
-        // Ya no necesitas la línea que actualizaba connectionStatus aquí,
-        // se hace dentro del callback .subscribed() o .error()
-
-    } catch (error) {
-        terminal.writeln('\x1B[1;31m✗ Error al configurar WebSocket: ' + error.message + '\x1B[0m');
-        terminal.writeln('\x1B[1;33m⚠ Continuando en modo de compatibilidad sin WebSockets\x1B[0m');
-        usingWebsockets = false;
-            window.echoConnectionFailed = true;
-        }
-    }
-
-
-    // --- Asegura que siempre existe formatOutput ---
-    function formatOutput(output) {
-        output = String(output ?? '');
-        // Normaliza saltos de línea para xterm.js
-        return output.replace(/\r?\n/g, '\r\n');
-    }
-
-    function processWebSocketResponse(event) {
-        if (window.lastCommandTimeout) {
-            clearTimeout(window.lastCommandTimeout);
-            window.lastCommandTimeout = null;
-        }
-        showDebugToast('Evento WebSocket recibido', JSON.stringify(event, null, 2));
-        console.log('WebSocket: Evento recibido', event);
-        try {
-            // Si es comando de limpiar terminal
-            if (event.clear) {
-                terminal.clear();
-                return;
-            }
-            // Escribir la salida en el terminal SIEMPRE, aunque sea vacío
-            let formattedOutput = '';
-            if ('output' in event) {
-                formattedOutput = formatOutput(event.output);
-                terminal.write(formattedOutput);
-                console.log('WebSocket: Salida escrita en terminal:', formattedOutput);
-            } else {
-                console.warn('WebSocket: Evento recibido SIN output:', event);
-                terminal.write('\r\n\x1B[1;33m[Advertencia] Evento recibido sin output\x1B[0m\r\n');
-            }
-            // Actualizar el directorio actual si se proporciona
-            if (event.currentDirectory) {
-                const currentUser = getCurrentUserFromPrompt ? getCurrentUserFromPrompt() : 'user';
-                currentDirectory = event.currentDirectory;
-                currentPrompt = `${currentUser}@{{ $host->hostname }}:${formatPath ? formatPath(currentDirectory) : currentDirectory}$ `;
-                updateTerminalTitle && updateTerminalTitle(currentUser);
-            }
-            // Mostrar el prompt SIEMPRE en nueva línea
-            terminal.write('\r\n' + (typeof currentPrompt !== 'undefined' ? currentPrompt : '$ '));
-            // Ajustar scroll automáticamente
-            if (typeof scrollToBottom === 'function') scrollToBottom();
-            else if (terminal && terminal.scrollToBottom) terminal.scrollToBottom();
-            fitAddon && fitAddon.fit();
-        } catch (err) {
-            console.error('WebSocket: Error procesando evento:', err, event);
-            terminal.write('\r\n\x1B[1;31m[Error] No se pudo mostrar la salida del evento WebSocket\x1B[0m\r\n');
-        }
-    }
-
-    // Botón conectar
-    connectBtn.addEventListener('click', function() {
-        if (!isConnected) {
-            connectBtn.disabled = true;
-            connectBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Conectando...';
-            connectToSsh('root');
-            setTimeout(() => {
-                connectBtn.disabled = false;
-                connectBtn.innerHTML = '<i class="fas fa-power-off"></i> Desconectar';
-            }, 3000);
-        } else {
-            // Desconectar
-            isConnected = false;
-            sessionId = null;
-            updateConnectionStatus(false, 'Desconectado');
-            terminal.writeln('\x1B[1;33mDesconectado.\x1B[0m');
-            connectBtn.innerHTML = '<i class="fas fa-terminal"></i> Conectar';
-        }
-    });
-
-    // Inicializar terminal
-    initTerminal();
 });
 </script>
