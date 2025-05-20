@@ -7,4 +7,4 @@ objectClass: posixGroup
 # objectClass: groupOfUniqueNames
 cn: everybody
 gidNumber: 9000
-uniqueMember: uid=ldap-admin,ou=people,dc=test,dc=tierno,dc=es
+# uniqueMember: uid=ldap-admin,ou=people,dc=test,dc=tierno,dc=es
