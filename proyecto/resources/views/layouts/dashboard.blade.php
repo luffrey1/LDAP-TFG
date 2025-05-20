@@ -76,13 +76,14 @@
         .navbar {
             box-shadow: 0 0.15rem 1.75rem 0 rgba(0, 0, 0, 0.3);
             background: var(--darker-color);
-            padding: 0.75rem 1rem;
+            padding: 0.5rem 1rem;
             z-index: 1040;
+            height: 56px;
         }
         
         .navbar .navbar-brand {
-            font-weight: 700;
-            font-size: 1.2rem;
+            font-weight: 600;
+            font-size: 1.1rem;
             letter-spacing: 0.05rem;
             color: var(--text-color);
         }
@@ -91,14 +92,40 @@
             border: none;
             box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.2);
             background-color: var(--darker-color);
+            min-width: 200px;
         }
         
         .navbar .dropdown-item {
             color: var(--text-color);
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
         }
         
         .navbar .dropdown-item:hover {
             background-color: var(--card-bg);
+        }
+        
+        .navbar .dropdown-divider {
+            border-top: 1px solid var(--border-color);
+            margin: 0.5rem 0;
+        }
+        
+        .navbar .nav-link {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .navbar .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.9rem;
+            margin-left: 0.5rem;
         }
         
         /* Sidebar */
@@ -451,10 +478,108 @@
             }
         }
         
-        /* DEBUG: Forzar visibilidad del menú de usuario y navbar */
-        .navbar-nav { display: flex !important; }
-        .nav-item.dropdown { display: block !important; }
-        .dropdown-menu { display: block !important; position: static !important; }
+        /* Estilos para el perfil en el sidebar */
+        .sidebar-profile {
+            border-bottom: 1px solid var(--border-color);
+            background: linear-gradient(to right, var(--darker-color), var(--card-bg));
+        }
+
+        .sidebar-profile .user-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-profile .user-avatar i {
+            position: relative;
+            top: 1px;
+        }
+
+        .sidebar-profile .user-info {
+            flex: 1;
+            min-width: 0;
+            margin-left: 12px;
+        }
+
+        .sidebar-profile .user-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-color);
+            margin-bottom: 2px;
+        }
+
+        .sidebar-profile .user-role {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: capitalize;
+        }
+
+        .sidebar-profile .dropdown-toggle {
+            padding: 12px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .sidebar-profile .dropdown-toggle::after {
+            display: inline-block;
+            margin-left: 8px;
+            vertical-align: middle;
+            content: "\f107";
+            font-family: "Font Awesome 5 Free";
+            font-weight: 900;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-profile .dropdown-toggle:hover::after {
+            color: var(--primary-color);
+            transform: translateY(2px);
+        }
+
+        .sidebar-profile .dropdown-item {
+            color: var(--text-color);
+            padding: 10px 16px;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-profile .dropdown-item:hover {
+            background-color: var(--card-bg);
+            color: var(--primary-color);
+            padding-left: 20px;
+        }
+
+        .sidebar-profile .dropdown-item i {
+            width: 20px;
+            text-align: center;
+            margin-right: 8px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .sidebar-profile .dropdown-item:hover i {
+            color: var(--primary-color);
+        }
+
+        .sidebar-profile .dropdown-divider {
+            border-top: 1px solid var(--border-color);
+            margin: 8px 0;
+        }
     </style>
     
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -482,26 +607,26 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto align-items-center">
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                            <span class="me-2 d-none d-lg-inline">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="me-2">
                                 @if(session('auth_user'))
                                     {{ session('auth_user')['nombre'] ?? session('auth_user')['username'] ?? session('auth_user')['email'] ?? 'Usuario' }}
                                 @else
                                     Usuario
                                 @endif
                             </span>
-                            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                                <i class="fas fa-user text-primary"></i>
+                            <div class="user-avatar">
+                                <i class="fas fa-user"></i>
                             </div>
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-user-cog fa-fw me-2 text-gray-400"></i> Perfil</a></li>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                            <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="fas fa-user-cog fa-fw me-2 text-gray-400"></i> Ver Perfil</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <form action="{{ route('auth.logout') }}" method="POST">
                                     @csrf
                                     <button type="submit" class="dropdown-item">
-                                        <i class="fas fa-sign-out-alt fa-fw me-2 text-gray-400"></i> Cerrar sesión
+                                        <i class="fas fa-sign-out-alt fa-fw me-2 text-gray-400"></i> Cerrar Sesión
                                     </button>
                                 </form>
                             </li>
@@ -517,21 +642,49 @@
             <!-- Sidebar -->
             <div class="col-md-3 col-lg-2 px-0 sidebar" id="sidebar">
                 <div class="position-sticky">
+                    <!-- Perfil de usuario -->
+                    <div class="sidebar-profile p-3 mb-3">
+                        <div class="dropdown">
+                            <a class="d-flex align-items-center text-decoration-none dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <div class="user-avatar me-2">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="user-info">
+                                    <div class="user-name">
+                                        @if(session('auth_user'))
+                                            {{ session('auth_user')['nombre'] ?? session('auth_user')['username'] ?? session('auth_user')['email'] ?? 'Usuario' }}
+                                        @else
+                                            Usuario
+                                        @endif
+                                    </div>
+                                    <div class="user-role text-muted small">
+                                        {{ session('auth_user')['role'] ?? 'Usuario' }}
+                                    </div>
+                                </div>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="userDropdown">
+                                <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="fas fa-user-cog fa-fw me-2"></i> Ver Perfil</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form action="{{ route('auth.logout') }}" method="POST">
+                                        @csrf
+                                        <button type="submit" class="dropdown-item">
+                                            <i class="fas fa-sign-out-alt fa-fw me-2"></i> Cerrar Sesión
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
                     <ul class="nav flex-column">
-                        @php
-                            $moduloMensajeriaActivo = App\Models\SistemaConfig::obtenerConfig('modulo_mensajeria_activo', true);
-                            $moduloCalendarioActivo = App\Models\SistemaConfig::obtenerConfig('modulo_calendario_activo', true);
-                            $moduloDocumentosActivo = App\Models\SistemaConfig::obtenerConfig('modulo_documentos_activo', true);
-                            $moduloMonitoreoActivo = App\Models\SistemaConfig::obtenerConfig('modulo_monitoreo_activo', true);
-                        @endphp
-                        
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('dashboard.index') ? 'active' : '' }}" href="{{ route('dashboard.index') }}">
                                 <i class="fas fa-tachometer-alt"></i> Dashboard
                             </a>
                         </li>
                         
-                        @if($moduloDocumentosActivo || session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
+                        @if(\App\Models\SistemaConfig::obtenerConfig('modulo_documentos_activo', true))
                         <div class="sidebar-divider"></div>
                         <div class="nav-item-header">Documentos</div>
                         <li class="nav-item">
@@ -544,7 +697,7 @@
                         <div class="sidebar-divider"></div>
                         <div class="nav-item-header">Comunicación</div>
                         
-                        @if($moduloMensajeriaActivo || session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
+                        @if(\App\Models\SistemaConfig::obtenerConfig('modulo_mensajeria_activo', true))
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('dashboard.mensajes*') ? 'active' : '' }}" href="{{ route('dashboard.mensajes') }}">
                                 <i class="fas fa-envelope"></i> Mensajería Interna
@@ -552,7 +705,7 @@
                         </li>
                         @endif
                         
-                        @if($moduloCalendarioActivo || session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
+                        @if(\App\Models\SistemaConfig::obtenerConfig('modulo_calendario_activo', true))
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('dashboard.calendario*') ? 'active' : '' }}" href="{{ route('dashboard.calendario') }}">
                                 <i class="fas fa-calendar-alt"></i> Calendario
@@ -560,7 +713,7 @@
                         </li>
                         @endif
                         
-                        @if($moduloMonitoreoActivo || session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
+                        @if(\App\Models\SistemaConfig::obtenerConfig('modulo_monitoreo_activo', true))
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('monitor.*') ? 'active' : '' }}" href="{{ route('monitor.index') }}">
                                 <i class="fas fa-desktop"></i> Monitor de Equipos

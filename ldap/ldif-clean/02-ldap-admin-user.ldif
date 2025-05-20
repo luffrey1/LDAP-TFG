@@ -1,0 +1,18 @@
+#
+# CAUTION: this file gas automatically generated running make.sh. Do not edit.
+#
+# Password: password
+dn: uid=ldap-admin,ou=people,dc=test,dc=tierno,dc=es
+givenName: LDAP
+sn: Admin
+uid: ldap-admin
+mail: ldap-admin@test.tierno.es
+cn: LDAPAdmin
+objectClass: person
+objectClass: inetOrgPerson
+objectClass: posixAccount
+userPassword: {SSHA}yKyX1tTYqQ9CmdCs4Vt/VE5vqGaYvlZ5
+uidNumber: 9001
+gidNumber: 9001
+loginShell: /bin/bash
+homeDirectory: /home/ldap-admin

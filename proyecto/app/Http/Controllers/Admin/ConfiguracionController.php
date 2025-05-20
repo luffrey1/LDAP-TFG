@@ -60,9 +60,13 @@ class ConfiguracionController extends Controller
             ];
             
             foreach ($modulos as $modulo) {
-                $valor = in_array($modulo, $request->modulos ?? []) ? 'true' : 'false';
-                SistemaConfig::establecerConfig($modulo, $valor, 'boolean', null, Auth::id());
+                $activo = in_array($modulo, $request->modulos ?? []);
+                SistemaConfig::establecerConfig($modulo, $activo ? 'true' : 'false', 'boolean', null, Auth::id());
+                cache()->forget('config.' . $modulo);
             }
+            
+            // Limpiar la caché general
+            cache()->forget('sistema_config');
             
             // Actualizar políticas de contraseñas
             SistemaConfig::establecerConfig(

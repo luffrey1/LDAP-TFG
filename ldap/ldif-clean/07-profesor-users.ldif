@@ -1,0 +1,17 @@
+#
+# CAUTION: this file gas automatically generated running make.sh. Do not edit.
+#
+dn: uid=profesor,ou=people,dc=test,dc=tierno,dc=es
+givenName: profesor
+sn: Tierno
+uid: profesor
+mail: profesor@test.tierno.es
+cn: Profesor
+objectClass: person
+objectClass: inetOrgPerson
+objectClass: posixAccount
+uidNumber: 10002
+gidNumber: 10000
+loginShell: /bin/bash
+homeDirectory: /home/profesor
+userPassword: {SSHA}yKyX1tTYqQ9CmdCs4Vt/VE5vqGaYvlZ5

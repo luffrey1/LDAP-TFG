@@ -2104,10 +2104,10 @@ class LdapUserController extends Controller
                         foreach ($userActionKeywords as $keyword) {
                             if (stripos($line, $keyword) !== false) {
                                 $containsUserAction = true;
-                        break;
-                    }
-                }
-                
+                                break;
+                            }
+                        }
+                        
                         // Si no contiene acciones de usuarios, saltamos esta línea
                         if (!$containsUserAction) continue;
                         
@@ -2199,8 +2199,27 @@ class LdapUserController extends Controller
         usort($logs, function($a, $b) {
             return strtotime($b['fecha']) - strtotime($a['fecha']);
         });
+
+        // Obtener la página actual de la URL o usar 1 por defecto
+        $page = request()->get('page', 1);
+        $perPage = 10;
         
-        return view('admin.users.logs', compact('logs'));
+        // Calcular el offset para la paginación
+        $offset = ($page - 1) * $perPage;
+        
+        // Obtener los logs para la página actual
+        $paginatedLogs = array_slice($logs, $offset, $perPage);
+        
+        // Crear una colección paginada manualmente
+        $paginatedCollection = new \Illuminate\Pagination\LengthAwarePaginator(
+            $paginatedLogs,
+            count($logs),
+            $perPage,
+            $page,
+            ['path' => request()->url()]
+        );
+        
+        return view('admin.users.logs', ['logs' => $paginatedCollection]);
     }
 
     /**
