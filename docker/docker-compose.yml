@@ -12,7 +12,7 @@ services:
       - LDAP_ADMIN_PASSWORD=admin
       - LDAP_REMOVE_CONFIG_AFTER_SETUP=false
     volumes:
-      - ../ldap/ldif-clean:/container/service/slapd/assets/config/bootstrap/ldif/custom
+      - ../ldap/ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom
     networks:
       - app-network
     restart: unless-stopped
