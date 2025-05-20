@@ -477,6 +477,109 @@
                 font-size: 1rem;
             }
         }
+        
+        /* Estilos para el perfil en el sidebar */
+        .sidebar-profile {
+            border-bottom: 1px solid var(--border-color);
+            background: linear-gradient(to right, var(--darker-color), var(--card-bg));
+        }
+
+        .sidebar-profile .user-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-profile .user-avatar i {
+            position: relative;
+            top: 1px;
+        }
+
+        .sidebar-profile .user-info {
+            flex: 1;
+            min-width: 0;
+            margin-left: 12px;
+        }
+
+        .sidebar-profile .user-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-color);
+            margin-bottom: 2px;
+        }
+
+        .sidebar-profile .user-role {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: capitalize;
+        }
+
+        .sidebar-profile .dropdown-toggle {
+            padding: 12px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .sidebar-profile .dropdown-toggle::after {
+            display: inline-block;
+            margin-left: 8px;
+            vertical-align: middle;
+            content: "\f107";
+            font-family: "Font Awesome 5 Free";
+            font-weight: 900;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-profile .dropdown-toggle:hover::after {
+            color: var(--primary-color);
+            transform: translateY(2px);
+        }
+
+        .sidebar-profile .dropdown-item {
+            color: var(--text-color);
+            padding: 10px 16px;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-profile .dropdown-item:hover {
+            background-color: var(--card-bg);
+            color: var(--primary-color);
+            padding-left: 20px;
+        }
+
+        .sidebar-profile .dropdown-item i {
+            width: 20px;
+            text-align: center;
+            margin-right: 8px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .sidebar-profile .dropdown-item:hover i {
+            color: var(--primary-color);
+        }
+
+        .sidebar-profile .dropdown-divider {
+            border-top: 1px solid var(--border-color);
+            margin: 8px 0;
+        }
     </style>
     
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -539,6 +642,41 @@
             <!-- Sidebar -->
             <div class="col-md-3 col-lg-2 px-0 sidebar" id="sidebar">
                 <div class="position-sticky">
+                    <!-- Perfil de usuario -->
+                    <div class="sidebar-profile p-3 mb-3">
+                        <div class="dropdown">
+                            <a class="d-flex align-items-center text-decoration-none dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <div class="user-avatar me-2">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="user-info">
+                                    <div class="user-name">
+                                        @if(session('auth_user'))
+                                            {{ session('auth_user')['nombre'] ?? session('auth_user')['username'] ?? session('auth_user')['email'] ?? 'Usuario' }}
+                                        @else
+                                            Usuario
+                                        @endif
+                                    </div>
+                                    <div class="user-role text-muted small">
+                                        {{ session('auth_user')['role'] ?? 'Usuario' }}
+                                    </div>
+                                </div>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="userDropdown">
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-user-cog fa-fw me-2"></i> Ver Perfil</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form action="{{ route('auth.logout') }}" method="POST">
+                                        @csrf
+                                        <button type="submit" class="dropdown-item">
+                                            <i class="fas fa-sign-out-alt fa-fw me-2"></i> Cerrar Sesión
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
                     <ul class="nav flex-column">
                         @php
                             $moduloMensajeriaActivo = App\Models\SistemaConfig::obtenerConfig('modulo_mensajeria_activo', true);
