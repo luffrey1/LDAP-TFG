@@ -73,18 +73,6 @@ services:
       retries: 3
       start_period: 30s
     network_mode: host
-
-  terminal-server:
-    build:
-      context: ../terminal-server
-      dockerfile: Dockerfile
-    container_name: terminal-server
-    restart: unless-stopped
-    ports:
-      - "8081:8081"
-    user: root
-    network_mode: host
-
   webssh2:
     build:
       context: ../webssh2
