@@ -620,7 +620,7 @@
                             </div>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-user-cog fa-fw me-2 text-gray-400"></i> Ver Perfil</a></li>
+                            <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="fas fa-user-cog fa-fw me-2 text-gray-400"></i> Ver Perfil</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <form action="{{ route('auth.logout') }}" method="POST">
@@ -663,7 +663,7 @@
                                 </div>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="userDropdown">
-                                <li><a class="dropdown-item" href="#"><i class="fas fa-user-cog fa-fw me-2"></i> Ver Perfil</a></li>
+                                <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="fas fa-user-cog fa-fw me-2"></i> Ver Perfil</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <form action="{{ route('auth.logout') }}" method="POST">

@@ -15,6 +15,7 @@ use App\Http\Controllers\MonitorController;
 use App\Http\Controllers\SshTerminalController;
 use App\Http\Controllers\WebSocketController;
 use App\Events\TestBroadcast;
+use App\Http\Controllers\ProfileController;
 
 // Ruta principal redirige al login
 Route::get('/', function () {
@@ -38,6 +39,10 @@ Route::get('/test-broadcast', function () {
 Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(function () {
     // Dashboard principal
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+    
+    // Rutas del perfil
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     
     // Gestión documental
     Route::middleware(CheckModuleAccess::class.':documentos')->group(function () {
