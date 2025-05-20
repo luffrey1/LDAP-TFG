@@ -73,6 +73,24 @@
                             </tbody>
                         </table>
                     </div>
+
+                    @if($logs->hasPages())
+                        <div class="d-flex justify-content-center mt-4">
+                            <div class="btn-group" role="group">
+                                @if($logs->currentPage() > 1)
+                                    <a href="{{ $logs->previousPageUrl() }}" class="btn btn-outline-primary">
+                                        <i class="fas fa-chevron-left"></i> {{ __('Anterior') }}
+                                    </a>
+                                @endif
+
+                                @if($logs->hasMorePages())
+                                    <a href="{{ $logs->nextPageUrl() }}" class="btn btn-primary">
+                                        {{ __('Ver más') }} <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>

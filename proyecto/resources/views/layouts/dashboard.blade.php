@@ -76,13 +76,14 @@
         .navbar {
             box-shadow: 0 0.15rem 1.75rem 0 rgba(0, 0, 0, 0.3);
             background: var(--darker-color);
-            padding: 0.75rem 1rem;
+            padding: 0.5rem 1rem;
             z-index: 1040;
+            height: 56px;
         }
         
         .navbar .navbar-brand {
-            font-weight: 700;
-            font-size: 1.2rem;
+            font-weight: 600;
+            font-size: 1.1rem;
             letter-spacing: 0.05rem;
             color: var(--text-color);
         }
@@ -91,14 +92,40 @@
             border: none;
             box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.2);
             background-color: var(--darker-color);
+            min-width: 200px;
         }
         
         .navbar .dropdown-item {
             color: var(--text-color);
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
         }
         
         .navbar .dropdown-item:hover {
             background-color: var(--card-bg);
+        }
+        
+        .navbar .dropdown-divider {
+            border-top: 1px solid var(--border-color);
+            margin: 0.5rem 0;
+        }
+        
+        .navbar .nav-link {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .navbar .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.9rem;
+            margin-left: 0.5rem;
         }
         
         /* Sidebar */
@@ -450,11 +477,6 @@
                 font-size: 1rem;
             }
         }
-        
-        /* DEBUG: Forzar visibilidad del menú de usuario y navbar */
-        .navbar-nav { display: flex !important; }
-        .nav-item.dropdown { display: block !important; }
-        .dropdown-menu { display: block !important; position: static !important; }
     </style>
     
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -482,26 +504,26 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto align-items-center">
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                            <span class="me-2 d-none d-lg-inline">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="me-2">
                                 @if(session('auth_user'))
                                     {{ session('auth_user')['nombre'] ?? session('auth_user')['username'] ?? session('auth_user')['email'] ?? 'Usuario' }}
                                 @else
                                     Usuario
                                 @endif
                             </span>
-                            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                                <i class="fas fa-user text-primary"></i>
+                            <div class="user-avatar">
+                                <i class="fas fa-user"></i>
                             </div>
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-user-cog fa-fw me-2 text-gray-400"></i> Perfil</a></li>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-user-cog fa-fw me-2 text-gray-400"></i> Ver Perfil</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <form action="{{ route('auth.logout') }}" method="POST">
                                     @csrf
                                     <button type="submit" class="dropdown-item">
-                                        <i class="fas fa-sign-out-alt fa-fw me-2 text-gray-400"></i> Cerrar sesión
+                                        <i class="fas fa-sign-out-alt fa-fw me-2 text-gray-400"></i> Cerrar Sesión
                                     </button>
                                 </form>
                             </li>

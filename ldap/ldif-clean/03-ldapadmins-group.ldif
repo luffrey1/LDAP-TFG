@@ -1,0 +1,10 @@
+#
+# CAUTION: this file gas automatically generated running make.sh. Do not edit.
+#
+dn: cn=ldapadmins,ou=groups,dc=test,dc=tierno,dc=es
+objectClass: top
+objectClass: posixGroup
+# objectClass: groupOfUniqueNames
+cn: ldapadmins
+gidNumber: 9001
+# uniqueMember: uid=ldap-admin,ou=people,dc=test,dc=tierno,dc=es

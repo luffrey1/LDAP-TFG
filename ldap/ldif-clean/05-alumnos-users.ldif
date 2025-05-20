@@ -1,0 +1,32 @@
+#
+# CAUTION: this file gas automatically generated running make.sh. Do not edit.
+#
+dn: uid=diurno,ou=people,dc=test,dc=tierno,dc=es
+givenName: Alumno
+sn: Diurno
+uid: diurno
+mail: diurno@test.tierno.es
+cn: diurno
+objectClass: person
+objectClass: inetOrgPerson
+objectClass: posixAccount
+uidNumber: 10000
+gidNumber: 10001
+loginShell: /bin/bash
+homeDirectory: /home/diurno
+userPassword: {SSHA}yKyX1tTYqQ9CmdCs4Vt/VE5vqGaYvlZ5
+
+dn: uid=vespertino,ou=people,dc=test,dc=tierno,dc=es
+givenName: Alumno
+sn: Vespertino
+uid: vespertino
+mail: vespertino@test.tierno.es
+cn: vespertino
+objectClass: person
+objectClass: inetOrgPerson
+objectClass: posixAccount
+uidNumber: 10001
+gidNumber: 10001
+loginShell: /bin/bash
+homeDirectory: /home/vespertino
+userPassword: {SSHA}yKyX1tTYqQ9CmdCs4Vt/VE5vqGaYvlZ5

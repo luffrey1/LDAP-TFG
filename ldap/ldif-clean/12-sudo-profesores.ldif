@@ -1,0 +1,14 @@
+#
+# CAUTION: this file gas automatically generated running make.sh. Do not edit.
+#
+# To import run this:
+# ldapmodify -Y EXTERNAL -H ldapi:/// -f 12-sudo-profesores.ldif
+#
+# Hacer sudo al grupo profesor
+dn: cn=%profesores,ou=sudoers,dc=test,dc=tierno,dc=es
+objectClass: top
+objectClass: sudoRole
+cn: %profesores
+sudoUser: %profesores
+sudoHost: ALL
+sudoCommand: ALL

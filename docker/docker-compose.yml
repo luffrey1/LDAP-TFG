@@ -63,6 +63,7 @@ services:
     volumes:
       - ../proyecto:/var/www/html
       - document_data:/var/www/html/public/documentos
+      - laravel_logs:/var/www/html/storage/logs
     depends_on:
       - ldap
       - mysql
@@ -82,4 +83,6 @@ networks:
 volumes:
   mysql_data:
   document_data:
+    driver: local
+  laravel_logs:
     driver: local
