@@ -10,9 +10,9 @@
     </div>
 
     @php
-        $moduloMensajeriaActivo = App\Models\SistemaConfig::obtenerConfig('modulo_mensajeria_activo', true);
-        $moduloCalendarioActivo = App\Models\SistemaConfig::obtenerConfig('modulo_calendario_activo', true);
-        $moduloDocumentosActivo = App\Models\SistemaConfig::obtenerConfig('modulo_documentos_activo', true);
+        $moduloMensajeriaActivo = \App\Models\SistemaConfig::obtenerConfig('modulo_mensajeria_activo', true);
+        $moduloCalendarioActivo = \App\Models\SistemaConfig::obtenerConfig('modulo_calendario_activo', true);
+        $moduloDocumentosActivo = \App\Models\SistemaConfig::obtenerConfig('modulo_documentos_activo', true);
         $isAdmin = session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin';
     @endphp
 
@@ -38,7 +38,7 @@
             </div>
         </div>
 
-        @if($moduloDocumentosActivo || $isAdmin)
+        @if($moduloDocumentosActivo)
         <!-- Documentos -->
         <div class="col-xl-3 col-md-6 mb-4" data-aos="fade-up" data-aos-delay="200">
             <div class="card border-left-success shadow h-100 py-2 stat-card">
@@ -60,7 +60,7 @@
         </div>
         @endif
 
-        @if($moduloMensajeriaActivo || $isAdmin)
+        @if($moduloMensajeriaActivo)
         <!-- Mensajes Nuevos -->
         <div class="col-xl-3 col-md-6 mb-4" data-aos="fade-up" data-aos-delay="300">
             <div class="card border-left-info shadow h-100 py-2 stat-card">
@@ -82,7 +82,7 @@
         </div>
         @endif
 
-        @if($moduloCalendarioActivo || $isAdmin)
+        @if($moduloCalendarioActivo)
         <!-- Eventos Próximos -->
         <div class="col-xl-3 col-md-6 mb-4" data-aos="fade-up" data-aos-delay="400">
             <div class="card border-left-warning shadow h-100 py-2 stat-card">
@@ -106,7 +106,7 @@
     </div>
 
     <div class="row">
-        @if($moduloDocumentosActivo || $isAdmin)
+        @if($moduloDocumentosActivo)
         <!-- Documentos Recientes -->
         <div class="col-xl-6 col-lg-6 mb-4" data-aos="fade-up" data-aos-delay="100">
             <div class="card shadow mb-4">
@@ -155,7 +155,7 @@
         </div>
         @endif
 
-        @if($moduloMensajeriaActivo || $isAdmin)
+        @if($moduloMensajeriaActivo)
         <!-- Mensajes Recientes -->
         <div class="col-xl-6 col-lg-6 mb-4" data-aos="fade-up" data-aos-delay="200">
             <div class="card shadow mb-4">
@@ -199,7 +199,7 @@
     </div>
 
     <div class="row">
-        @if($moduloCalendarioActivo || $isAdmin)
+        @if($moduloCalendarioActivo)
         <!-- Eventos Próximos -->
         <div class="col-xl-6 col-lg-6 mb-4" data-aos="fade-up" data-aos-delay="150">
             <div class="card shadow mb-4">
