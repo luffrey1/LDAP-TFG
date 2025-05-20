@@ -93,7 +93,11 @@ class SistemaConfig extends Model
     {
         switch ($tipo) {
             case 'boolean':
-                return $valor === 'true';
+                // Convertir explícitamente a booleano
+                if (is_string($valor)) {
+                    return strtolower($valor) === 'true';
+                }
+                return (bool) $valor;
             case 'integer':
                 return (int) $valor;
             case 'float':

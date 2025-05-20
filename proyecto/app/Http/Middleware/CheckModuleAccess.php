@@ -18,31 +18,31 @@ class CheckModuleAccess
     public function handle(Request $request, Closure $next, string $moduleName): Response
     {
         try {
-            // CASO ESPECIAL: El calendario siempre está disponible para todos
-            if ($moduleName === 'calendario') {
-                Log::info('Acceso al calendario permitido para todos los usuarios: ' . session('auth_user.username'));
-                return $next($request);
-            }
-            
+            // Obtener la configuración del módulo
             $configKey = 'modulo_' . $moduleName . '_activo';
-            $moduleActive = SistemaConfig::obtenerConfig($configKey, true); // Por defecto está activo si no existe configuración
+            $moduleActive = SistemaConfig::obtenerConfig($configKey, false);
             
             // Registrar en el log para debug
             Log::debug("Verificando módulo $moduleName: " . ($moduleActive ? 'activo' : 'inactivo') . ' para usuario: ' . session('auth_user.username'));
             
-            // Si el módulo no está activo y el usuario no es administrador, negar acceso
-            if (!$moduleActive && !$this->isAdmin($request)) {
-                Log::warning('Acceso denegado al módulo ' . $moduleName . ' para usuario: ' . session('auth_user.username'));
-                return redirect()->route('dashboard.index')
-                    ->with('error', 'El módulo ' . ucfirst($moduleName) . ' no está disponible actualmente.');
+            // Verificar si el módulo está activo
+            if (!$moduleActive) {
+                // Si el usuario no es administrador, denegar acceso
+                if (!$this->isAdmin($request)) {
+                    Log::warning('Acceso denegado al módulo ' . $moduleName . ' para usuario: ' . session('auth_user.username'));
+                    return redirect()->route('dashboard.index')
+                        ->with('error', 'El módulo ' . ucfirst($moduleName) . ' no está disponible actualmente.');
+                }
+                // Si es administrador, permitir acceso pero registrar en el log
+                Log::info('Acceso permitido al módulo ' . $moduleName . ' desactivado para administrador: ' . session('auth_user.username'));
             }
             
-            Log::info('Acceso permitido al módulo ' . $moduleName . ' para usuario: ' . session('auth_user.username'));
             return $next($request);
+            
         } catch (\Exception $e) {
-            Log::warning('Error al verificar módulo ' . $moduleName . ': ' . $e->getMessage());
-            // Si hay un error, permitir el acceso pero loguear el problema
-            return $next($request);
+            Log::error('Error al verificar módulo ' . $moduleName . ': ' . $e->getMessage());
+            return redirect()->route('dashboard.index')
+                ->with('error', 'Error al verificar el estado del módulo.');
         }
     }
     
