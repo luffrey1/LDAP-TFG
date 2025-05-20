@@ -678,20 +678,13 @@
                     </div>
 
                     <ul class="nav flex-column">
-                        @php
-                            $moduloMensajeriaActivo = App\Models\SistemaConfig::obtenerConfig('modulo_mensajeria_activo', true);
-                            $moduloCalendarioActivo = App\Models\SistemaConfig::obtenerConfig('modulo_calendario_activo', true);
-                            $moduloDocumentosActivo = App\Models\SistemaConfig::obtenerConfig('modulo_documentos_activo', true);
-                            $moduloMonitoreoActivo = App\Models\SistemaConfig::obtenerConfig('modulo_monitoreo_activo', true);
-                        @endphp
-                        
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('dashboard.index') ? 'active' : '' }}" href="{{ route('dashboard.index') }}">
                                 <i class="fas fa-tachometer-alt"></i> Dashboard
                             </a>
                         </li>
                         
-                        @if($moduloDocumentosActivo || session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
+                        @if(\App\Models\SistemaConfig::obtenerConfig('modulo_documentos_activo', true))
                         <div class="sidebar-divider"></div>
                         <div class="nav-item-header">Documentos</div>
                         <li class="nav-item">
@@ -704,7 +697,7 @@
                         <div class="sidebar-divider"></div>
                         <div class="nav-item-header">Comunicación</div>
                         
-                        @if($moduloMensajeriaActivo || session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
+                        @if(\App\Models\SistemaConfig::obtenerConfig('modulo_mensajeria_activo', true))
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('dashboard.mensajes*') ? 'active' : '' }}" href="{{ route('dashboard.mensajes') }}">
                                 <i class="fas fa-envelope"></i> Mensajería Interna
@@ -712,7 +705,7 @@
                         </li>
                         @endif
                         
-                        @if($moduloCalendarioActivo || session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
+                        @if(\App\Models\SistemaConfig::obtenerConfig('modulo_calendario_activo', true))
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('dashboard.calendario*') ? 'active' : '' }}" href="{{ route('dashboard.calendario') }}">
                                 <i class="fas fa-calendar-alt"></i> Calendario
@@ -720,7 +713,7 @@
                         </li>
                         @endif
                         
-                        @if($moduloMonitoreoActivo || session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
+                        @if(\App\Models\SistemaConfig::obtenerConfig('modulo_monitoreo_activo', true))
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('monitor.*') ? 'active' : '' }}" href="{{ route('monitor.index') }}">
                                 <i class="fas fa-desktop"></i> Monitor de Equipos

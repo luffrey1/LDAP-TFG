@@ -93,7 +93,7 @@ class SistemaConfig extends Model
     {
         switch ($tipo) {
             case 'boolean':
-                return filter_var($valor, FILTER_VALIDATE_BOOLEAN);
+                return $valor === 'true';
             case 'integer':
                 return (int) $valor;
             case 'float':
