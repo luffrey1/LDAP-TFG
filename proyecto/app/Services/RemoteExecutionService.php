@@ -405,411 +405,164 @@ class RemoteExecutionService
     public function getMacAddress($ip)
     {
         Log::debug("Intentando obtener dirección MAC para IP: $ip");
-        
-        // Técnica 0: Para el caso de MACs verificadas en base de datos
+
+        // 1. Base de datos de MACs conocidas
         $mac = $this->getKnownMac($ip);
         if ($mac) {
             Log::info("MAC verificada para $ip: $mac");
             return $mac;
         }
-        
-        // Técnica 1: Tabla ARP (básica y ya implementada)
+
+        // 2. Forzar actualización de ARP con ping
+        $this->forceArpUpdate($ip);
+
+        // 3. ip neigh
+        $mac = $this->getMacFromIpNeigh($ip);
+        if ($mac) {
+            Log::info("MAC encontrada con ip neigh para $ip: $mac");
+            return $mac;
+        }
+
+        // 4. arp
         $mac = $this->getMacFromArp($ip);
         if ($mac) {
-            Log::info("MAC real encontrada para $ip usando ARP: $mac");
+            Log::info("MAC encontrada en tabla ARP para $ip: $mac");
             return $mac;
         }
-        
-        // Técnica 2: Forzar comunicación primero y luego consultar ARP
-        $mac = $this->getMacWithForcedArp($ip);
+
+        // 5. arp-scan (si está instalado)
+        $mac = $this->getMacWithArpScan($ip);
         if ($mac) {
-            Log::info("MAC real encontrada para $ip usando ARP forzado: $mac");
+            Log::info("MAC encontrada con arp-scan para $ip: $mac");
             return $mac;
         }
-        
-        // Técnica 3: Para dispositivos de red, usar técnicas específicas
-        if ($this->isNetworkInfrastructure($ip)) {
-            Log::debug("Intentando técnicas específicas para dispositivo de red: $ip");
-            $mac = $this->getNetworkDeviceMac($ip);
-            if ($mac) {
-                Log::info("MAC real encontrada para dispositivo de red $ip: $mac");
-                return $mac;
-            }
+
+        // 6. nmap (si está instalado)
+        $mac = $this->getMacWithNmap($ip);
+        if ($mac) {
+            Log::info("MAC encontrada con nmap para $ip: $mac");
+            return $mac;
         }
-        
-        // Técnica 4: En Ubuntu, comprobar si el archivo /var/lib/dhcp/dhclient.leases contiene la MAC
+
+        // 7. DHCP leases
         $mac = $this->getMacFromDhcpLeases($ip);
         if ($mac) {
-            Log::info("MAC real encontrada en dhclient.leases para $ip: $mac");
+            Log::info("MAC encontrada en DHCP leases para $ip: $mac");
             return $mac;
         }
-        
-        // Técnica adicional: Intentar métodos más avanzados
-        $mac = $this->getAdvancedMacDetection($ip);
-        if ($mac) {
-            Log::info("MAC real encontrada con métodos avanzados para $ip: $mac");
-            return $mac;
-        }
-        
-        Log::debug("No se pudo obtener MAC real para $ip con ninguna técnica");
+
+        Log::warning("No se pudo obtener la MAC para $ip con ninguna técnica.");
         return null;
     }
-    
-    /**
-     * Obtiene la dirección MAC desde la tabla ARP
-     * @param string $ip Dirección IP
-     * @return string|null MAC si se encuentra
-     */
+
+    protected function forceArpUpdate($ip)
+    {
+        try {
+            $process = new \Symfony\Component\Process\Process(['ping', '-c', '2', '-W', '1', $ip]);
+            $process->setTimeout(3);
+            $process->run();
+            Log::debug("Ping enviado a $ip para forzar actualización ARP.");
+        } catch (\Exception $e) {
+            Log::debug("Error forzando ARP con ping: " . $e->getMessage());
+        }
+    }
+
+    protected function getMacFromIpNeigh($ip)
+    {
+        try {
+            $process = new \Symfony\Component\Process\Process(['ip', 'neigh', 'show', $ip]);
+            $process->setTimeout(2);
+            $process->run();
+            $output = $process->getOutput();
+            if (preg_match('/([0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2})/', $output, $matches)) {
+                return strtolower($matches[1]);
+            }
+        } catch (\Exception $e) {
+            Log::debug("Error usando ip neigh: " . $e->getMessage());
+        }
+        return null;
+    }
+
     protected function getMacFromArp($ip)
     {
         try {
-            Log::debug("Consultando tabla ARP para IP: $ip");
-            
-            // Si hay nodo remoto configurado, usarlo
-            if ($this->isConfigured() && $this->connect()) {
-                // En Ubuntu/Linux, probamos varios comandos
-                $commands = [
-                    "arp -n " . $ip,
-                    "ip neigh show " . $ip,
-                    "cat /proc/net/arp | grep " . $ip,
-                    // Bypass 1: Comandos con mayor privilegio
-                    "sudo arp -n " . $ip,
-                    "sudo ip neigh show " . $ip
-                ];
-                
-                foreach ($commands as $command) {
-                    $output = $this->ssh->exec($command);
-                    Log::debug("Resultado comando remoto para $ip: " . substr($output, 0, 200));
-                    
-                    // Extraer MAC de la salida
-                    if (preg_match('/([0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2})/', $output, $matches)) {
-                        return strtolower($matches[1]);
-                    }
-                }
-            }
-            
-            // Método local (fallback)
-            // Adaptado especialmente para Ubuntu/Linux
-            if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN') {
-                $commands = [
-                    ['ip', 'neigh', 'show', $ip],
-                    ['arp', '-n', $ip],
-                    ['sh', '-c', 'cat /proc/net/arp | grep ' . $ip],
-                    // Bypass 2: Comandos avanzados con privilegios
-                    ['sh', '-c', 'sudo ip neigh show ' . $ip],
-                    ['sh', '-c', 'sudo arp -n ' . $ip],
-                    // Bypass 3: Consulta completa de ARP
-                    ['sh', '-c', 'arp -n | grep ' . $ip],
-                    // Bypass 4: Operador de red específico
-                    ['sh', '-c', 'ip -4 neigh show ' . $ip]
-                ];
-                
-                foreach ($commands as $cmdArray) {
-                    try {
-                        $process = new \Symfony\Component\Process\Process($cmdArray);
-                        $process->setTimeout(3);
-                        $process->run();
-                        $output = $process->getOutput();
-                        
-                        Log::debug("Resultado comando local para $ip: " . substr($output, 0, 200));
-                        
-                        if (preg_match('/([0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2})/', $output, $matches)) {
-                            return strtolower($matches[1]);
-                        }
-                    } catch (\Exception $e) {
-                        // Si falla un comando, intentamos el siguiente
-                        Log::debug("Comando falló, intentando el siguiente: " . $e->getMessage());
-                        continue;
-                    }
-                }
-            }
-            // Para Windows
-            else {
-                $command = 'arp -a ' . $ip;
-                $process = new \Symfony\Component\Process\Process(explode(' ', $command));
-                $process->setTimeout(3);
-                $process->run();
-                $output = $process->getOutput();
-                
-                Log::debug("Resultado ARP local para $ip: " . substr($output, 0, 200));
-                
-                if (preg_match('/([0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2}-[0-9a-fA-F]{2})/', $output, $matches)) {
-                    return str_replace('-', ':', strtolower($matches[1]));
-                }
+            $process = new \Symfony\Component\Process\Process(['arp', '-n', $ip]);
+            $process->setTimeout(2);
+            $process->run();
+            $output = $process->getOutput();
+            if (preg_match('/([0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2})/', $output, $matches)) {
+                return strtolower($matches[1]);
             }
         } catch (\Exception $e) {
-            Log::error("Error obteniendo MAC desde ARP: " . $e->getMessage());
+            Log::debug("Error usando arp: " . $e->getMessage());
         }
-        
-        return null;
-    }
-    
-    /**
-     * Fuerza entrada en la tabla ARP enviando ping y luego consulta
-     * @param string $ip Dirección IP
-     * @return string|null MAC si se encuentra
-     */
-    protected function getMacWithForcedArp($ip)
-    {
-        try {
-            Log::debug("Forzando entrada ARP para IP: $ip");
-            
-            // En Ubuntu, podemos usar arping si está disponible
-            if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN') {
-                try {
-                    // Primero intentamos con arping que es más efectivo
-                    $commands = [
-                        // Determinar la interfaz automáticamente (puede variar según la versión)
-                        ['sh', '-c', "arping -c 4 -w 3 $ip 2>/dev/null"],
-                        ['sh', '-c', "arping -c 4 -I $(ip route get $ip | grep -oP 'dev \\K\\S+') $ip 2>/dev/null"],
-                        // Bypass 1: Forzar con ARP agresivo
-                        ['sh', '-c', "sudo arping -c 6 -w 5 $ip 2>/dev/null"],
-                        // Bypass 2: Usar interfaz específica para mejor alcance
-                        ['sh', '-c', "for iface in $(ls /sys/class/net/ | grep -v lo); do sudo arping -c 3 -I \$iface $ip 2>/dev/null; done"],
-                        // Bypass 3: Forzar comunicación con diferentes protocolos
-                        ['sh', '-c', "ping -c 2 $ip >/dev/null && nc -z -v $ip 22 2>/dev/null && nc -z -v $ip 80 2>/dev/null && arping -c 2 $ip 2>/dev/null"]
-                    ];
-                    
-                    foreach ($commands as $cmdArray) {
-                        $process = new \Symfony\Component\Process\Process($cmdArray);
-                        $process->setTimeout(8); // Aumentamos timeout para comandos más complejos
-                        $process->run();
-                        $output = $process->getOutput();
-                        
-                        Log::debug("Resultado arping para $ip: " . substr($output, 0, 200));
-                        
-                        // Normalmente arping muestra la MAC directamente
-                        if (preg_match('/([0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2})/', $output, $matches)) {
-                            return strtolower($matches[1]);
-                        }
-                    }
-                } catch (\Exception $e) {
-                    Log::debug("Error con arping, usando ping estándar: " . $e->getMessage());
-                }
-            }
-            
-            // Bypass 4: Intentar técnicas múltiples de forzado ARP
-            try {
-                // Escanear puertos comunes para forzar comunicación
-                $portsToScan = [22, 80, 443, 8080, 3389];
-                foreach ($portsToScan as $port) {
-                    $process = new \Symfony\Component\Process\Process(['sh', '-c', "nc -z -v -w1 $ip $port 2>/dev/null"]);
-                    $process->setTimeout(2);
-                    $process->run();
-                }
-                
-                // Intentar ping con diferentes parámetros
-                $pingParams = [
-                    "-c 3 -W 2",
-                    "-c 5 -W 3 -s 1472", // MTU grande
-                    "-c 2 -W 1 -s 32"    // MTU pequeño
-                ];
-                
-                foreach ($pingParams as $params) {
-                    $pingCmd = "ping $params $ip > /dev/null 2>&1";
-                    $process = new \Symfony\Component\Process\Process(['sh', '-c', $pingCmd]);
-                    $process->setTimeout(6);
-                    $process->run();
-                }
-            } catch (\Exception $e) {
-                Log::debug("Error en técnicas de forzado ARP: " . $e->getMessage());
-            }
-            
-            // Pequeña pausa para dar tiempo a que se actualice la tabla ARP
-            usleep(800000); // 800ms
-            
-            // Ahora intentar obtener la MAC
-            return $this->getMacFromArp($ip);
-        } catch (\Exception $e) {
-            Log::error("Error en getMacWithForcedArp: " . $e->getMessage());
-            return null;
-        }
-    }
-    
-    /**
-     * Obtiene la dirección MAC para dispositivos de red específicos
-     * @param string $ip Dirección IP del dispositivo
-     * @return string|null MAC si se encuentra
-     */
-    protected function getNetworkDeviceMac($ip)
-    {
-        try {
-            // Para dispositivos de red, probamos técnicas específicas
-            
-            // En Ubuntu/Linux podemos usar comandos más avanzados
-            if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN') {
-                // Comandos locales específicos para Ubuntu
-                $commands = [
-                    ['sh', '-c', "sudo nmap -sP $ip | grep -i mac"],
-                    ['sh', '-c', "ping -c 4 -W 3 $ip && ip neigh show $ip"],
-                    ['sh', '-c', "ip -s -s neigh flush $ip && ping -c 4 -W 3 $ip && ip neigh show $ip"],
-                    // Bypass 1: Escaneo agresivo con nmap
-                    ['sh', '-c', "sudo nmap -PR -sn $ip | grep -i mac"],
-                    ['sh', '-c', "sudo nmap -sP -PE $ip | grep -i mac"],
-                    // Bypass 2: Intentar consultar las tablas de ruta
-                    ['sh', '-c', "ip route get $ip | cat"],
-                    // Bypass 3: Técnicas para routers específicos
-                    ['sh', '-c', "snmpget -v2c -c public $ip IP-MIB::ipNetToMediaPhysAddress.* 2>/dev/null"],
-                    // Bypass 4: Forzar comunicación UDP
-                    ['sh', '-c', "sudo hping3 -2 -p 53 -c 3 $ip 2>/dev/null && ip neigh show $ip"],
-                    // Bypass 5: Para dispositivos específicos
-                    ['sh', '-c', "echo -e '\n\n\nno\n' | telnet $ip 2>/dev/null && ip neigh show $ip"]
-                ];
-                
-                foreach ($commands as $cmdArray) {
-                    try {
-                        $process = new \Symfony\Component\Process\Process($cmdArray);
-                        $process->setTimeout(10); // Mayor timeout para escaneos
-                        $process->run();
-                        $output = $process->getOutput();
-                        
-                        Log::debug("Resultado consulta de ruta para $ip: " . substr($output, 0, 200));
-                        
-                        if (preg_match('/([0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2})/', $output, $matches)) {
-                            return strtolower($matches[1]);
-                        }
-                    } catch (\Exception $e) {
-                        Log::debug("Error en comando para dispositivo de red: " . $e->getMessage());
-                        continue;
-                    }
-                }
-            }
-        } catch (\Exception $e) {
-            Log::error("Error en getNetworkDeviceMac: " . $e->getMessage());
-        }
-        
         return null;
     }
 
-    /**
-     * Obtiene la dirección MAC desde archivos DHCP
-     * @param string $ip Dirección IP
-     * @return string|null MAC si se encuentra
-     */
+    protected function getMacWithArpScan($ip)
+    {
+        try {
+            $check = new \Symfony\Component\Process\Process(['which', 'arp-scan']);
+            $check->run();
+            if (!$check->isSuccessful()) {
+                return null;
+            }
+            // Cambia eth0 por tu interfaz si es necesario
+            $process = new \Symfony\Component\Process\Process(['sudo', 'arp-scan', '--interface=eth0', $ip]);
+            $process->setTimeout(5);
+            $process->run();
+            $output = $process->getOutput();
+            if (preg_match('/([0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2})/', $output, $matches)) {
+                return strtolower($matches[1]);
+            }
+        } catch (\Exception $e) {
+            Log::debug("Error usando arp-scan: " . $e->getMessage());
+        }
+        return null;
+    }
+
+    protected function getMacWithNmap($ip)
+    {
+        try {
+            $check = new \Symfony\Component\Process\Process(['which', 'nmap']);
+            $check->run();
+            if (!$check->isSuccessful()) {
+                return null;
+            }
+            $process = new \Symfony\Component\Process\Process(['sudo', 'nmap', '-sn', $ip]);
+            $process->setTimeout(10);
+            $process->run();
+            $output = $process->getOutput();
+            if (preg_match('/MAC Address: ([0-9A-Fa-f:]{17})/', $output, $matches)) {
+                return strtolower($matches[1]);
+            }
+        } catch (\Exception $e) {
+            Log::debug("Error usando nmap: " . $e->getMessage());
+        }
+        return null;
+    }
+
     protected function getMacFromDhcpLeases($ip)
     {
-        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-            return null; // Solo funciona en Linux
-        }
-        
-        try {
-            $dhcpFiles = [
-                '/var/lib/dhcp/dhclient.leases',
-                '/var/lib/dhcp/dhcpd.leases',
-                '/var/lib/dhcpd/dhcpd.leases',
-                '/var/lib/NetworkManager/dhclient-*.lease',
-                // Bypass 1: Ubicaciones adicionales de archivos DHCP
-                '/var/lib/dhcp3/dhclient.leases',
-                '/var/lib/NetworkManager/internal-*.lease',
-                '/var/db/dhclient.leases.*',
-                '/var/lib/systemd/network/leases'
-            ];
-            
-            foreach ($dhcpFiles as $filePattern) {
-                try {
-                    // Usar glob para manejar patrones de archivos
-                    $files = glob($filePattern);
-                    if (empty($files)) continue;
-                    
-                    foreach ($files as $file) {
-                        if (!file_exists($file)) continue;
-                        
-                        $contents = file_get_contents($file);
-                        if (preg_match('/lease\s+' . preg_quote($ip) . '\s+{.*?hardware\s+ethernet\s+([0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2})/s', $contents, $matches)) {
-                            return strtolower($matches[1]);
-                        }
-                        
-                        // Bypass 2: Buscar patrones alternativos
-                        if (preg_match('/fixed-address\s+' . preg_quote($ip) . '.*?hardware\s+ethernet\s+([0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2})/s', $contents, $matches)) {
-                            return strtolower($matches[1]);
-                        }
-                    }
-                } catch (\Exception $e) {
-                    Log::debug("Error leyendo archivo DHCP $filePattern: " . $e->getMessage());
-                    continue;
-                }
-            }
-            
-            // Bypass 3: Buscar en archivos de configuración de red
-            try {
-                $cmd = ['sh', '-c', "grep -r $ip /etc/netplan/ /etc/NetworkManager/ /etc/network/ 2>/dev/null | grep -i mac"];
-                $process = new \Symfony\Component\Process\Process($cmd);
-                $process->setTimeout(5);
-                $process->run();
-                $output = $process->getOutput();
-                
-                if (preg_match('/([0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2})/', $output, $matches)) {
+        $leaseFiles = [
+            '/var/lib/dhcp/dhclient.leases',
+            '/var/lib/dhcp/dhcpd.leases',
+            '/var/lib/dhcpd/dhcpd.leases',
+            '/var/lib/NetworkManager/dhclient-*.lease',
+            '/var/lib/dhcp3/dhclient.leases',
+            '/var/lib/NetworkManager/internal-*.lease',
+            '/var/db/dhclient.leases.*',
+            '/var/lib/systemd/network/leases'
+        ];
+        foreach ($leaseFiles as $pattern) {
+            foreach (glob($pattern) ?: [] as $file) {
+                if (!file_exists($file)) continue;
+                $contents = file_get_contents($file);
+                if (preg_match('/lease\s+' . preg_quote($ip) . '\s+{.*?hardware\s+ethernet\s+([0-9a-fA-F:]{17})/s', $contents, $matches)) {
                     return strtolower($matches[1]);
                 }
-            } catch (\Exception $e) {
-                Log::debug("Error buscando en archivos de configuración: " . $e->getMessage());
             }
-        } catch (\Exception $e) {
-            Log::error("Error en getMacFromDhcpLeases: " . $e->getMessage());
         }
-        
-        return null;
-    }
-
-    /**
-     * Métodos avanzados para detectar MAC en entornos difíciles
-     * @param string $ip Dirección IP
-     * @return string|null MAC si se encuentra
-     */
-    protected function getAdvancedMacDetection($ip)
-    {
-        try {
-            // Intentar solo con herramientas avanzadas reales que puedan obtener MACs reales
-            if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN') {
-                // Scan avanzado con nmap en modo privilegiado
-                $commands = [
-                    ['sh', '-c', "sudo nmap -sS -PR -n $ip && sudo arp -n $ip"],
-                    ['sh', '-c', "sudo nmap --privileged -sn $ip && ip neigh show $ip"],
-                    // Ataques ARP específicos para forzar respuesta
-                    ['sh', '-c', "sudo arping -I $(ip route | grep default | awk '{print $5}') -c 5 $ip"],
-                    // Tcpdump para capturar paquetes durante un ping
-                    ['sh', '-c', "sudo timeout 3 tcpdump -i any -c 10 -n host $ip and arp 2>/dev/null & ping -c 3 $ip > /dev/null"]
-                ];
-                
-                foreach ($commands as $cmdArray) {
-                    try {
-                        $process = new \Symfony\Component\Process\Process($cmdArray);
-                        $process->setTimeout(15); // Mayor timeout para escaneos privilegiados
-                        $process->run();
-                        $output = $process->getOutput();
-                        
-                        if (preg_match('/([0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2})/', $output, $matches)) {
-                            return strtolower($matches[1]);
-                        }
-                    } catch (\Exception $e) {
-                        Log::debug("Error en comando avanzado: " . $e->getMessage());
-                        continue;
-                    }
-                }
-                
-                // Si hay herramientas específicas instaladas
-                try {
-                    $installCheck = new \Symfony\Component\Process\Process(['sh', '-c', "which arp-scan 2>/dev/null"]);
-                    $installCheck->run();
-                    if ($installCheck->isSuccessful()) {
-                        // Usar arp-scan que es más efectivo para detección real
-                        $arpScan = new \Symfony\Component\Process\Process(['sh', '-c', "sudo arp-scan --localnet | grep $ip"]);
-                        $arpScan->setTimeout(10);
-                        $arpScan->run();
-                        $output = $arpScan->getOutput();
-                        
-                        if (preg_match('/([0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2})/', $output, $matches)) {
-                            return strtolower($matches[1]);
-                        }
-                    }
-                } catch (\Exception $e) {
-                    Log::debug("Error verificando arp-scan: " . $e->getMessage());
-                }
-            }
-        } catch (\Exception $e) {
-            Log::error("Error en getAdvancedMacDetection: " . $e->getMessage());
-        }
-        
         return null;
     }
 
