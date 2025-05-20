@@ -5,8 +5,8 @@ set -e
 # Mostrar información de configuración
 echo "Iniciando configuración del contenedor..."
 
-# Esperar a que MySQL esté disponible en 127.0.0.1
-DB_HOST="127.0.0.1"
+# Esperar a que MySQL esté disponible usando el nombre de servicio
+DB_HOST="mysql"
 DB_PORT="3306"
 echo "Esperando a que MySQL esté disponible..."
 until nc -z -v -w30 $DB_HOST $DB_PORT; do
@@ -15,8 +15,8 @@ until nc -z -v -w30 $DB_HOST $DB_PORT; do
 done
 echo "MySQL está disponible."
 
-# Esperar a que OpenLDAP esté disponible en 127.0.0.1
-LDAP_HOST="127.0.0.1"
+# Esperar a que OpenLDAP esté disponible usando el nombre de servicio
+LDAP_HOST="ldap"
 LDAP_PORT="389"
 echo "Esperando a que OpenLDAP esté disponible..."
 until nc -z -v -w30 $LDAP_HOST $LDAP_PORT; do
@@ -37,6 +37,8 @@ sed -i "s/LDAP_BASE_DN=.*/LDAP_BASE_DN=dc=test,dc=tierno,dc=es/" /var/www/html/.
 sed -i "s/LDAP_USERNAME=.*/LDAP_USERNAME=cn=admin,dc=test,dc=tierno,dc=es/" /var/www/html/.env
 sed -i "s/LDAP_PASSWORD=.*/LDAP_PASSWORD=admin/" /var/www/html/.env
 sed -i "s/LDAP_AUTH_LOGIN_FALLBACK=.*/LDAP_AUTH_LOGIN_FALLBACK=false/" /var/www/html/.env
+sed -i "s/DB_HOST=.*/DB_HOST=$DB_HOST/" /var/www/html/.env
+sed -i "s/DB_PORT=.*/DB_PORT=$DB_PORT/" /var/www/html/.env
 
 # Ejecutar comandos de inicialización de Laravel
 cd /var/www/html
@@ -84,8 +86,8 @@ try {
     require __DIR__ . '/vendor/autoload.php';
     
     \$connection = new \LdapRecord\Connection([
-        'hosts' => ['openldap-osixia'],
-        'port' => 389,
+        'hosts' => ['$LDAP_HOST'],
+        'port' => $LDAP_PORT,
         'base_dn' => 'dc=test,dc=tierno,dc=es',
         'username' => 'cn=admin,dc=test,dc=tierno,dc=es',
         'password' => 'admin',
