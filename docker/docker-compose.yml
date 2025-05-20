@@ -13,8 +13,6 @@ services:
       - LDAP_REMOVE_CONFIG_AFTER_SETUP=false
     volumes:
       - ../ldap/ldif-clean:/container/service/slapd/assets/config/bootstrap/ldif/custom
-    networks:
-      - app-network
     restart: unless-stopped
     network_mode: host
 
@@ -31,8 +29,6 @@ services:
       - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-    networks:
-      - app-network
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -69,8 +65,6 @@ services:
     depends_on:
       - ldap
       - mysql
-    networks:
-      - app-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/"]
       interval: 10s
@@ -87,9 +81,8 @@ services:
     restart: unless-stopped
     ports:
       - "8081:8081"
-    networks:
-      - app-network
     user: root
+    network_mode: host
 
   webssh2:
     build:
@@ -108,8 +101,6 @@ services:
       - ../webssh2/app/config.json:/config.json:ro
       - ../webssh2/config:/config
       - ../webssh2/config/id_rsa:/config/id_rsa:ro
-    networks:
-      - app-network
     network_mode: host
 
 networks:
