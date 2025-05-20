@@ -1,60 +1,67 @@
 #!/bin/bash
 
+set -e
+
 # Mostrar información de configuración
 echo "Iniciando configuración del contenedor..."
 
-# Asegurarse de que la base de datos está disponible
+# Esperar a que MySQL esté disponible en 127.0.0.1
+DB_HOST="127.0.0.1"
+DB_PORT="3306"
 echo "Esperando a que MySQL esté disponible..."
-until nc -z -v -w30 mysql 3306; do
+until nc -z -v -w30 $DB_HOST $DB_PORT; do
   echo "Esperando conexión a MySQL..."
   sleep 5
 done
 echo "MySQL está disponible."
 
-# Esperar a que LDAP esté disponible
-echo "Esperando a que LDAP esté disponible..."
-until nc -z -v -w30 openldap-osixia 389; do
-  echo "Esperando conexión a LDAP (openldap-osixia)..."
+# Esperar a que OpenLDAP esté disponible en 127.0.0.1
+LDAP_HOST="127.0.0.1"
+LDAP_PORT="389"
+echo "Esperando a que OpenLDAP esté disponible..."
+until nc -z -v -w30 $LDAP_HOST $LDAP_PORT; do
+  echo "Esperando conexión a OpenLDAP..."
   sleep 5
 done
-echo "LDAP está disponible."
+echo "OpenLDAP está disponible."
 
 # Verificar conectividad de red
 echo "Verificando red..."
-ping -c 2 openldap-osixia || echo "No se puede hacer ping a LDAP, pero seguimos con la configuración"
+ping -c 2 $LDAP_HOST || echo "No se puede hacer ping a LDAP, pero seguimos con la configuración"
 
 # Asegurar que las variables de entorno en .env son correctas
 echo "Actualizando variables de entorno en .env..."
-sed -i "s/LDAP_HOST=.*/LDAP_HOST=openldap-osixia/" /var/www/html/.env
-sed -i "s/LDAP_PORT=.*/LDAP_PORT=389/" /var/www/html/.env
+sed -i "s/LDAP_HOST=.*/LDAP_HOST=$LDAP_HOST/" /var/www/html/.env
+sed -i "s/LDAP_PORT=.*/LDAP_PORT=$LDAP_PORT/" /var/www/html/.env
 sed -i "s/LDAP_BASE_DN=.*/LDAP_BASE_DN=dc=test,dc=tierno,dc=es/" /var/www/html/.env
 sed -i "s/LDAP_USERNAME=.*/LDAP_USERNAME=cn=admin,dc=test,dc=tierno,dc=es/" /var/www/html/.env
 sed -i "s/LDAP_PASSWORD=.*/LDAP_PASSWORD=admin/" /var/www/html/.env
 sed -i "s/LDAP_AUTH_LOGIN_FALLBACK=.*/LDAP_AUTH_LOGIN_FALLBACK=false/" /var/www/html/.env
 
-# Configuración de Laravel
+# Ejecutar comandos de inicialización de Laravel
 cd /var/www/html
 
-# Instalar dependencias
-echo "Instalando dependencias de Composer..."
-composer install --no-interaction --no-dev --optimize-autoloader
-
-# Generar la clave de aplicación si no existe
-if [ -z "$APP_KEY" ]; then
-    echo "Generando clave de aplicación..."
-    php artisan key:generate
+# Instalar dependencias de PHP si es necesario
+if [ -f composer.json ]; then
+  composer install --no-interaction --prefer-dist --optimize-autoloader
 fi
 
-# Limpiar caché
-echo "Limpiando caché..."
-php artisan cache:clear
-php artisan config:clear
-php artisan route:clear
-php artisan view:clear
+# Instalar dependencias de Node.js y compilar assets si es necesario
+if [ -f package.json ]; then
+  npm install
+  npm run build
+fi
 
-# Ejecutar migraciones
-echo "Ejecutando migraciones..."
-php artisan migrate --force
+# Limpiar y cachear configuración de Laravel
+php artisan config:clear || true
+php artisan cache:clear || true
+php artisan route:clear || true
+php artisan view:clear || true
+php artisan config:cache || true
+php artisan route:cache || true
+
+# Migrar base de datos si es necesario
+php artisan migrate --force || true
 
 # Crear usuario de prueba si no existe
 php artisan db:seed --class=UserSeeder
@@ -90,6 +97,6 @@ try {
 }
 "
 
-# Iniciar el servidor
+# Iniciar Apache en primer plano
 echo "Iniciando servidor Apache..."
 apache2-foreground 
