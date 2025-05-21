@@ -75,39 +75,45 @@
                         <div><strong>Disco:</strong> {{ $host->system_info['disk_total'] ?? 'N/A' }}</div>
                         @php $currentUser = get_current_user(); @endphp
                         @if(is_array($host->users) && count($host->users) > 0)
-                        <div class="mt-3">
-                            <h6 class="mb-2"><i class="fas fa-users me-1"></i> Usuarios conectados</h6>
-                            <table class="table table-sm table-bordered mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Usuario</th>
-                                        <th>Terminal</th>
-                                        <th>Desde</th>
-                                        <th>Login</th>
-                                        <th>Actual</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                @foreach($host->users as $user)
-                                    <tr @if($user['username'] === $currentUser) class="table-success" @endif>
-                                        <td>
-                                            {{ $user['username'] }}
-                                            @if($user['username'] === $currentUser)
-                                                <span class="badge bg-primary ms-1">Actual</span>
-                                            @endif
-                                        </td>
-                                        <td>{{ $user['terminal'] }}</td>
-                                        <td>{{ $user['from'] }}</td>
-                                        <td>{{ $user['login_time'] }}</td>
-                                        <td>
-                                            @if($user['username'] === $currentUser)
-                                                <i class="fas fa-user-check text-success"></i>
-                                            @endif
-                                        </td>
-                                    </tr>
-                                @endforeach
-                                </tbody>
-                            </table>
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h4><i class="fas fa-users mr-2"></i> Usuarios conectados</h4>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Usuario</th>
+                                                <th>Terminal</th>
+                                                <th>Desde</th>
+                                                <th>Hora de login</th>
+                                                <th>Actual</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        @foreach($host->users as $user)
+                                            <tr @if($user['username'] === $currentUser) class="table-success" @endif>
+                                                <td>
+                                                    {{ $user['username'] ?? 'N/A' }}
+                                                    @if($user['username'] === $currentUser)
+                                                        <span class="badge bg-primary ms-1">Actual</span>
+                                                    @endif
+                                                </td>
+                                                <td>{{ $user['terminal'] ?? 'N/A' }}</td>
+                                                <td>{{ $user['from'] ?? 'local' }}</td>
+                                                <td>{{ $user['login_time'] ?? 'N/A' }}</td>
+                                                <td>
+                                                    @if($user['username'] === $currentUser)
+                                                        <i class="fas fa-user-check text-success"></i>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                         @endif
                     </div>
