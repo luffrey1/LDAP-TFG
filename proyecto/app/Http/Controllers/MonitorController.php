@@ -166,65 +166,84 @@ class MonitorController extends Controller
     public function scanNetwork(Request $request)
     {
         try {
-            $network = $request->input('network', '172.20.0.0/16');
-            $pythonServiceUrl = env('MACSCANNER_URL', 'http://macscanner:5000/scanall?network=' . $network);
-            $response = @file_get_contents($pythonServiceUrl);
-            if ($response === false) {
-                Log::error('No se pudo conectar al microservicio Python para escaneo: ' . $pythonServiceUrl);
-                return redirect()->route('monitor.index')->with('error', 'No se pudo conectar al microservicio de escaneo de red.');
+            // Leer parámetros del formulario
+            $baseIp = $request->input('base_ip', '172.20.200');
+            $rangeStart = (int) $request->input('range_start', 1);
+            $rangeEnd = (int) $request->input('range_end', 254);
+            $groupId = $request->input('group_id');
+            $forceRegister = $request->has('force_register');
+            $scanAdditional = $request->has('scan_additional_ranges');
+
+            $ipsToScan = [];
+            // Construir rango principal
+            for ($i = $rangeStart; $i <= $rangeEnd; $i++) {
+                $ipsToScan[] = $baseIp . '.' . $i;
             }
-            $data = json_decode($response, true);
-            if (!$data || !isset($data['hosts'])) {
-                Log::error('Respuesta inválida del microservicio Python (scanNetwork): ' . $response);
-                return redirect()->route('monitor.index')->with('error', 'Respuesta inválida del microservicio de escaneo de red.');
+
+            // Incluir dispositivos críticos y rangos adicionales si corresponde
+            if ($scanAdditional) {
+                $critical = ['172.20.0.1', '172.20.0.2', '172.20.0.30'];
+                $ipsToScan = array_merge($ipsToScan, $critical);
+                // Ejemplo: incluir muestras de otros rangos DHCP
+                foreach ([201,202,203,204,205,206,207,208,209] as $octet) {
+                    foreach ([1, 100, 200] as $host) {
+                        $ipsToScan[] = "172.20.$octet.$host";
+                    }
+                }
             }
+            // Eliminar duplicados
+            $ipsToScan = array_unique($ipsToScan);
+
             $created = 0;
             $updated = 0;
             $errors = 0;
-            foreach ($data['hosts'] as $hostData) {
-                try {
-                    $host = MonitorHost::where('ip_address', $hostData['ip'])->first();
-                    $isNew = false;
-                    if (!$host) {
-                        $host = new MonitorHost();
-                        $host->ip_address = $hostData['ip'];
-                        $host->created_by = Auth::id() ?: 1;
-                        $isNew = true;
-                    }
-                    if (!empty($hostData['hostname'])) $host->hostname = $hostData['hostname'];
-                    if (!empty($hostData['mac'])) $host->mac_address = $hostData['mac'];
-                    $host->status = $hostData['status'] === 'online' ? 'online' : 'offline';
-                    $host->last_seen = $hostData['status'] === 'online' ? now() : $host->last_seen;
-                    // Asignar grupo automáticamente por hostname (ej: B27-A1)
-                    $groupId = null;
-                    if (!empty($hostData['hostname']) && preg_match('/^([B][0-9]{2})-[A-F][0-9]/', $hostData['hostname'], $matches)) {
-                        $aula = $matches[1];
-                        $group = MonitorGroup::firstOrCreate(
-                            ['name' => $aula],
-                            [
-                                'description' => 'Aula ' . $aula . ' (creado automáticamente)',
-                                'type' => 'classroom',
-                                'created_by' => Auth::id() ?: 1
-                            ]
-                        );
-                        $groupId = $group->id;
-                    }
-                    if ($groupId) $host->group_id = $groupId;
-                    $host->save();
-                    if ($isNew) {
-                        $created++;
-                    } else {
-                        $updated++;
-                    }
-                } catch (\Exception $e) {
-                    Log::error('Error guardando host en scanNetwork: ' . $e->getMessage());
+            foreach ($ipsToScan as $ip) {
+                $pythonServiceUrl = 'http://172.20.0.6:5000/scan?ip=' . urlencode($ip);
+                $response = @file_get_contents($pythonServiceUrl);
+                if ($response === false) {
+                    \Log::error('No se pudo conectar al microservicio Python para escaneo (host ' . $ip . '): ' . $pythonServiceUrl);
                     $errors++;
+                    continue;
+                }
+                $data = json_decode($response, true);
+                if (!$data || !isset($data['success'])) {
+                    \Log::error('Respuesta inválida del microservicio Python (scanNetwork, host ' . $ip . '): ' . $response);
+                    $errors++;
+                    continue;
+                }
+                // Solo registrar si responde o si está activado forzar registro
+                if ($data['success'] || $forceRegister) {
+                    try {
+                        $host = MonitorHost::where('ip_address', $ip)->first();
+                        $isNew = false;
+                        if (!$host) {
+                            $host = new MonitorHost();
+                            $host->ip_address = $ip;
+                            $host->created_by = \Auth::id() ?: 1;
+                            $isNew = true;
+                        }
+                        if (!empty($data['hostname'])) $host->hostname = $data['hostname'];
+                        if (!empty($data['mac'])) $host->mac_address = $data['mac'];
+                        $host->status = $data['success'] ? 'online' : 'offline';
+                        $host->last_seen = $data['success'] ? now() : $host->last_seen;
+                        // Asignar grupo si se seleccionó
+                        if ($groupId) $host->group_id = $groupId;
+                        $host->save();
+                        if ($isNew) {
+                            $created++;
+                        } else {
+                            $updated++;
+                        }
+                    } catch (\Exception $e) {
+                        \Log::error('Error guardando host en scanNetwork: ' . $e->getMessage());
+                        $errors++;
+                    }
                 }
             }
             $msg = "Escaneo completado. {$created} equipos nuevos, {$updated} actualizados, {$errors} errores.";
             return redirect()->route('monitor.index')->with('success', $msg);
         } catch (\Exception $e) {
-            Log::error('Error en scanNetwork (Python): ' . $e->getMessage());
+            \Log::error('Error en scanNetwork (Python): ' . $e->getMessage());
             return redirect()->route('monitor.index')->with('error', 'Error al escanear la red: ' . $e->getMessage());
         }
     }
@@ -821,6 +840,60 @@ class MonitorController extends Controller
             \Log::error('Error al mostrar host: ' . $e->getMessage());
             return redirect()->route('monitor.index')
                 ->with('error', 'Error al obtener detalles del host: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Mostrar formulario de edición de un host
+     */
+    public function edit($id)
+    {
+        $host = \App\Models\MonitorHost::findOrFail($id);
+        $groups = \App\Models\MonitorGroup::getGroupsForUser(\Auth::user());
+        return view('monitor.edit', compact('host', 'groups'));
+    }
+
+    /**
+     * Actualizar un host en la base de datos
+     */
+    public function update(Request $request, $id)
+    {
+        $validator = \Validator::make($request->all(), [
+            'hostname' => 'required|string|max:255',
+            'ip_address' => 'required|ip',
+            'description' => 'nullable|string|max:1000',
+        ]);
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+        try {
+            $host = \App\Models\MonitorHost::findOrFail($id);
+            $host->hostname = $request->hostname;
+            $host->ip_address = $request->ip_address;
+            $host->description = $request->description;
+            $host->mac_address = $request->mac_address;
+            $host->group_id = $request->group_id ?? $host->group_id;
+            $host->save();
+            return redirect()->route('monitor.show', $host->id)
+                ->with('success', "Host actualizado correctamente.");
+        } catch (\Exception $e) {
+            \Log::error('Error al actualizar host: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Error al actualizar el host: ' . $e->getMessage())->withInput();
+        }
+    }
+
+    /**
+     * Eliminar un host
+     */
+    public function destroy($id)
+    {
+        try {
+            $host = \App\Models\MonitorHost::findOrFail($id);
+            $host->delete();
+            return redirect()->route('monitor.index')->with('success', 'Host eliminado correctamente.');
+        } catch (\Exception $e) {
+            \Log::error('Error al eliminar host: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Error al eliminar el host: ' . $e->getMessage());
         }
     }
 }
