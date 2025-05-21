@@ -164,8 +164,8 @@
                         <div class="card text-center">
                             <div class="card-header bg-warning text-white">Memoria</div>
                             <div class="card-body">
-                                @if(isset($host->system_info['memory_total']) && isset($host->memory_usage['used']))
-                                    <div class="fw-bold mb-1 text-warning">Usado: {{ $host->memory_usage['used'] }} MB / {{ $host->system_info['memory_total'] }}</div>
+                                @if(isset($host->memory_usage['used']) && isset($host->memory_usage['total']))
+                                    <div class="fw-bold mb-1 text-warning">Usado: {{ $host->memory_usage['used'] }} MB / {{ $host->memory_usage['total'] }} MB</div>
                                 @endif
                                 <canvas id="gauge-mem" width="120" height="120"></canvas>
                                 <div class="mt-2 h5">
@@ -178,8 +178,8 @@
                         <div class="card text-center">
                             <div class="card-header bg-success text-white">Disco</div>
                             <div class="card-body">
-                                @if(isset($host->system_info['disk_total']) && isset($host->disk_usage['used']))
-                                    <div class="fw-bold mb-1 text-success">Usado: {{ $host->disk_usage['used'] }} GB / {{ $host->system_info['disk_total'] }}</div>
+                                @if(isset($host->disk_usage['used']) && isset($host->disk_usage['total']))
+                                    <div class="fw-bold mb-1 text-success">Usado: {{ $host->disk_usage['used'] }} GB / {{ $host->disk_usage['total'] }} GB</div>
                                 @endif
                                 <canvas id="gauge-disk" width="120" height="120"></canvas>
                                 <div class="mt-2 h5">
@@ -329,8 +329,8 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('gauge-mem'),
         {{ is_array($host->memory_usage) && isset($host->memory_usage['percentage']) ? $host->memory_usage['percentage'] : ($host->memory_usage ?? 0) }},
         'Memoria', '#ffc107',
-        @if(isset($host->memory_usage['used']) && isset($host->system_info['memory_total']))
-            'Usado: {{ $host->memory_usage['used'] }} MB de {{ $host->system_info['memory_total'] }}'
+        @if(isset($host->memory_usage['used']) && isset($host->memory_usage['total']))
+            'Usado: {{ $host->memory_usage['used'] }} MB / {{ $host->memory_usage['total'] }} MB'
         @else
             null
         @endif
@@ -340,8 +340,8 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('gauge-disk'),
         {{ is_array($host->disk_usage) && isset($host->disk_usage['percentage']) ? $host->disk_usage['percentage'] : ($host->disk_usage ?? 0) }},
         'Disco', '#28a745',
-        @if(isset($host->disk_usage['used']) && isset($host->system_info['disk_total']))
-            'Usado: {{ $host->disk_usage['used'] }} GB de {{ $host->system_info['disk_total'] }}'
+        @if(isset($host->disk_usage['used']) && isset($host->disk_usage['total']))
+            'Usado: {{ $host->disk_usage['used'] }} GB / {{ $host->disk_usage['total'] }} GB'
         @else
             null
         @endif

@@ -72,9 +72,13 @@ def main():
     # Memoria
     mem = psutil.virtual_memory()
     mem_percent = mem.percent
+    mem_used = mem.used // (1024**2)  # MB usados
+    mem_total = mem.total // (1024**2)  # MB totales
     # Disco
     disk = psutil.disk_usage('/')
     disk_percent = disk.percent
+    disk_used = disk.used // (1024**3)  # GB usados
+    disk_total = disk.total // (1024**3)  # GB totales
 
     # Usuarios conectados
     users = get_users()
@@ -87,8 +91,8 @@ def main():
         "status": status,
         "uptime": f"{uptime // 3600}h {(uptime % 3600) // 60}m",
         "cpu_usage": {"percentage": cpu_percent},
-        "memory_usage": {"percentage": mem_percent},
-        "disk_usage": {"percentage": disk_percent},
+        "memory_usage": {"percentage": mem_percent, "used": mem_used, "total": mem_total},
+        "disk_usage": {"percentage": disk_percent, "used": disk_used, "total": disk_total},
         "users": users,
         "system_info": {
             "os": platform.platform(),
