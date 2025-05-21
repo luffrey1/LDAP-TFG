@@ -80,13 +80,16 @@ class MonitorController extends Controller
     
     /**
      * Verifica el estado de un host específico usando el microservicio Python
+     * Llama SIEMPRE a /ping?ip=... en el microservicio, nunca a /ping/{id}
      */
     public function ping($id)
     {
         try {
             $host = MonitorHost::findOrFail($id);
             $ip = $host->ip_address;
-            $pythonServiceUrl = env('MACSCANNER_URL', 'http://macscanner:5000/ping?ip=' . $ip);
+            // Construir SIEMPRE la URL con la IP, nunca con el ID
+            $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
+            $pythonServiceUrl = rtrim($baseUrl, '/') . '/ping?ip=' . urlencode($ip);
             $response = @file_get_contents($pythonServiceUrl);
             if ($response === false) {
                 Log::error('No se pudo conectar al microservicio Python para ping: ' . $pythonServiceUrl);
