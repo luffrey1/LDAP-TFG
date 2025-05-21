@@ -2,6 +2,9 @@
 @section('title', 'Estado global de los equipos')
 @section('content')
 @php
+    use Illuminate\Support\Carbon;
+    Carbon::setLocale('es');
+    date_default_timezone_set('Europe/Madrid');
     $encendidos8h = collect($equipos)->where('encendido_8h', true);
     $graves = collect($equipos)->where('estado', 'grave')->where('encendido_8h', false);
     $criticos = collect($equipos)->where('estado', 'critico')->where('encendido_8h', false);
@@ -79,7 +82,7 @@
                             <td class="fw-bold @if($eq['mem']>=70) text-danger @elseif($eq['mem']>=50) text-warning @else text-success @endif">{{ $eq['mem'] }}%</td>
                             <td class="fw-bold @if($eq['disk']>=70) text-danger @elseif($eq['disk']>=50) text-warning @else text-success @endif">{{ $eq['disk'] }}%</td>
                             <td>{{ $eq['uptime'] ?? 'N/A' }}</td>
-                            <td>{{ \App\Models\MonitorHost::find($eq['id'])?->last_seen ? Carbon::parse(\App\Models\MonitorHost::find($eq['id'])->last_seen)->timezone('Europe/Madrid')->format('d/m/Y H:i:s') : 'N/A' }}</td>
+                            <td>{{ \App\Models\MonitorHost::find($eq['id'])?->last_seen ? \Illuminate\Support\Carbon::parse(\App\Models\MonitorHost::find($eq['id'])->last_seen)->timezone('Europe/Madrid')->format('d/m/Y H:i:s') : 'N/A' }}</td>
                         </tr>
                         @empty
                         <tr><td colspan="8" class="text-center text-muted">Ningún equipo en este estado</td></tr>
@@ -118,7 +121,7 @@
                             <td class="fw-bold @if($eq['mem']>=70) text-danger @elseif($eq['mem']>=50) text-warning @else text-success @endif">{{ $eq['mem'] }}%</td>
                             <td class="fw-bold @if($eq['disk']>=70) text-danger @elseif($eq['disk']>=50) text-warning @else text-success @endif">{{ $eq['disk'] }}%</td>
                             <td>{{ $eq['uptime'] ?? 'N/A' }}</td>
-                            <td>{{ \App\Models\MonitorHost::find($eq['id'])?->last_seen ? Carbon::parse(\App\Models\MonitorHost::find($eq['id'])->last_seen)->timezone('Europe/Madrid')->format('d/m/Y H:i:s') : 'N/A' }}</td>
+                            <td>{{ \App\Models\MonitorHost::find($eq['id'])?->last_seen ? \Illuminate\Support\Carbon::parse(\App\Models\MonitorHost::find($eq['id'])->last_seen)->timezone('Europe/Madrid')->format('d/m/Y H:i:s') : 'N/A' }}</td>
                         </tr>
                         @empty
                         <tr><td colspan="8" class="text-center text-muted">Ningún equipo en este estado</td></tr>
@@ -157,7 +160,7 @@
                             <td class="fw-bold @if($eq['mem']>=70) text-danger @elseif($eq['mem']>=50) text-warning @else text-success @endif">{{ $eq['mem'] }}%</td>
                             <td class="fw-bold @if($eq['disk']>=70) text-danger @elseif($eq['disk']>=50) text-warning @else text-success @endif">{{ $eq['disk'] }}%</td>
                             <td>{{ $eq['uptime'] ?? 'N/A' }}</td>
-                            <td>{{ \App\Models\MonitorHost::find($eq['id'])?->last_seen ? Carbon::parse(\App\Models\MonitorHost::find($eq['id'])->last_seen)->timezone('Europe/Madrid')->format('d/m/Y H:i:s') : 'N/A' }}</td>
+                            <td>{{ \App\Models\MonitorHost::find($eq['id'])?->last_seen ? \Illuminate\Support\Carbon::parse(\App\Models\MonitorHost::find($eq['id'])->last_seen)->timezone('Europe/Madrid')->format('d/m/Y H:i:s') : 'N/A' }}</td>
                         </tr>
                         @empty
                         <tr><td colspan="8" class="text-center text-muted">Ningún equipo en este estado</td></tr>
@@ -196,7 +199,7 @@
                             <td class="fw-bold @if($eq['mem']>=70) text-danger @elseif($eq['mem']>=50) text-warning @else text-success @endif">{{ $eq['mem'] }}%</td>
                             <td class="fw-bold @if($eq['disk']>=70) text-danger @elseif($eq['disk']>=50) text-warning @else text-success @endif">{{ $eq['disk'] }}%</td>
                             <td>{{ $eq['uptime'] ?? 'N/A' }}</td>
-                            <td>{{ \App\Models\MonitorHost::find($eq['id'])?->last_seen ? Carbon::parse(\App\Models\MonitorHost::find($eq['id'])->last_seen)->timezone('Europe/Madrid')->format('d/m/Y H:i:s') : 'N/A' }}</td>
+                            <td>{{ \App\Models\MonitorHost::find($eq['id'])?->last_seen ? \Illuminate\Support\Carbon::parse(\App\Models\MonitorHost::find($eq['id'])->last_seen)->timezone('Europe/Madrid')->format('d/m/Y H:i:s') : 'N/A' }}</td>
                         </tr>
                         @empty
                         <tr><td colspan="8" class="text-center text-muted">Ningún equipo en este estado</td></tr>
