@@ -218,4 +218,6 @@ Route::post('/api/debug/log', function(\Illuminate\Http\Request $request) {
 // Routes for SSH Terminal
 // Route::post('/terminal/send', [App\Http\Controllers\MonitorController::class, 'terminalSend'])->name('terminal.send');
 
+Route::get('/monitor/estado-global', [App\Http\Controllers\MonitorController::class, 'healthStatus'])->name('monitor.health');
+
 

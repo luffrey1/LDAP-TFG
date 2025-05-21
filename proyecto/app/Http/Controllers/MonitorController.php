@@ -903,4 +903,50 @@ class MonitorController extends Controller
             return redirect()->back()->with('error', 'Error al eliminar el host: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Mostrar el estado global de los equipos
+     */
+    public function healthStatus()
+    {
+        $hosts = \App\Models\MonitorHost::all();
+        $summary = [
+            'saludable' => 0,
+            'critico' => 0,
+            'grave' => 0,
+            'encendidos_8h' => 0,
+        ];
+        $equipos = [];
+        foreach ($hosts as $host) {
+            $cpu = is_array($host->cpu_usage) ? ($host->cpu_usage['percentage'] ?? 0) : ($host->cpu_usage ?? 0);
+            $mem = is_array($host->memory_usage) ? ($host->memory_usage['percentage'] ?? 0) : ($host->memory_usage ?? 0);
+            $disk = is_array($host->disk_usage) ? ($host->disk_usage['percentage'] ?? 0) : ($host->disk_usage ?? 0);
+            $max = max($cpu, $mem, $disk);
+            if ($max < 50) $estado = 'saludable';
+            elseif ($max < 70) $estado = 'critico';
+            else $estado = 'grave';
+            $summary[$estado]++;
+            // Uptime en horas
+            $uptime_h = 0;
+            if ($host->uptime) {
+                if (preg_match('/(\d+)h/', $host->uptime, $m)) {
+                    $uptime_h = (int)$m[1];
+                }
+            }
+            $encendido_8h = $uptime_h >= 8;
+            if ($encendido_8h) $summary['encendidos_8h']++;
+            $equipos[] = [
+                'id' => $host->id,
+                'hostname' => $host->hostname,
+                'ip_address' => $host->ip_address,
+                'cpu' => $cpu,
+                'mem' => $mem,
+                'disk' => $disk,
+                'estado' => $estado,
+                'uptime' => $host->uptime,
+                'encendido_8h' => $encendido_8h,
+            ];
+        }
+        return view('monitor.health_status', compact('summary', 'equipos'));
+    }
 }
