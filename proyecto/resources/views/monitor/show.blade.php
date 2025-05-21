@@ -528,13 +528,15 @@
 <!-- Dependencias Xterm.js y jQuery -->
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
 <script>
+var webssh2Host = "172.20.0.6"; // IP de tu servidor
+var webssh2Port = "2222"; // Puerto de WebSSH2
 $(function() {
     var $sshBtn = $('#connect-terminal-button');
     if ($sshBtn.length) {
         $sshBtn.on('click', function(e) {
             e.preventDefault();
             var ip = $('#info-ip_address').text().trim();
-            var url = `http://localhost:2222/ssh/host/${ip}?username=root`;
+            var url = `http://${webssh2Host}:${webssh2Port}/ssh/host/${ip}?username=root`;
             var win = window.open(url, '_blank');
             if (!win) {
                 alert('El navegador ha bloqueado la nueva pestaña. Permite popups para este sitio.');
