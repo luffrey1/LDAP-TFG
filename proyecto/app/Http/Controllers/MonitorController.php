@@ -292,7 +292,6 @@ class MonitorController extends Controller
                 'users' => 'nullable|array',
                 'uptime' => 'nullable|string',
                 'last_boot' => 'nullable|string',
-                'agent_version' => 'nullable|string',
             ]);
             
             if ($validator->fails()) {
@@ -372,13 +371,6 @@ class MonitorController extends Controller
             // Actualizar información en el host
             MonitorHost::updateSystemInfo($host->id, $systemData);
             MonitorHost::updateStatus($host->id, $request->status);
-            
-            // Actualizar versión del agente si está disponible
-            if (!empty($request->agent_version)) {
-                $host->agent_version = $request->agent_version;
-                $host->save();
-                Log::debug('Versión del agente actualizada: ' . $request->agent_version);
-            }
             
             return response()->json([
                 'status' => 'success', 

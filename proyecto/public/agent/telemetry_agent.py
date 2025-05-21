@@ -66,8 +66,7 @@ def main():
             "cpu_model": platform.processor(),
             "memory_total": f"{mem.total // (1024**2)} MB",
             "disk_total": f"{disk.total // (1024**3)} GB"
-        },
-        "agent_version": "1.0"
+        }
     }
 
     try:
