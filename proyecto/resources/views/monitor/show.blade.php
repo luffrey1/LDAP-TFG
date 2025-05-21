@@ -90,43 +90,34 @@
                 </div>
                 
                 <!-- Usuarios conectados si están disponibles -->
-                @if(isset($host->system_info['users']))
-                <div class="card">
+                @if(is_array($host->users) && count($host->users) > 0)
+                <div class="card mb-4">
                     <div class="card-header">
                         <h4><i class="fas fa-users mr-2"></i> Usuarios conectados</h4>
                     </div>
                     <div class="card-body">
-                        @if(count($host->system_info['users']['users'] ?? []) > 0)
-                            <div class="table-responsive">
-                                <table class="table table-sm table-hover">
-                                    <thead>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Usuario</th>
+                                        <th>Terminal</th>
+                                        <th>Desde</th>
+                                        <th>Tiempo</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($host->users as $user)
                                         <tr>
-                                            <th>Usuario</th>
-                                            <th>Terminal</th>
-                                            <th>Desde</th>
-                                            <th>Tiempo</th>
+                                            <td>{{ $user['username'] ?? 'N/A' }}</td>
+                                            <td>{{ $user['terminal'] ?? 'N/A' }}</td>
+                                            <td>{{ $user['from'] ?? 'local' }}</td>
+                                            <td>{{ $user['login_time'] ?? 'N/A' }}</td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($host->system_info['users']['users'] as $user)
-                                            <tr>
-                                                <td>{{ $user['username'] ?? 'N/A' }}</td>
-                                                <td>{{ $user['terminal'] ?? 'N/A' }}</td>
-                                                <td>{{ $user['from'] ?? 'local' }}</td>
-                                                <td>{{ $user['login_time'] ?? 'N/A' }}</td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                            @if(isset($host->system_info['users']['last_login']))
-                                <div class="mt-2 text-muted small">
-                                    <strong>Último login:</strong> {{ $host->system_info['users']['last_login'] }}
-                                </div>
-                            @endif
-                        @else
-                            <p class="text-muted">No hay usuarios conectados actualmente.</p>
-                        @endif
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
                 @endif
@@ -166,7 +157,9 @@
                             <div class="card-header bg-primary text-white">CPU</div>
                             <div class="card-body">
                                 <canvas id="gauge-cpu" width="120" height="120"></canvas>
-                                <div class="mt-2 h5">{{ $host->cpu_usage !== null ? $host->cpu_usage . '%' : 'N/A' }}</div>
+                                <div class="mt-2 h5">
+                                    {{ is_array($host->cpu_usage) && isset($host->cpu_usage['percentage']) ? $host->cpu_usage['percentage'] . '%' : ($host->cpu_usage ?? 'N/A') }}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -175,7 +168,9 @@
                             <div class="card-header bg-warning text-white">Memoria</div>
                             <div class="card-body">
                                 <canvas id="gauge-mem" width="120" height="120"></canvas>
-                                <div class="mt-2 h5">{{ $host->memory_usage !== null ? $host->memory_usage . '%' : 'N/A' }}</div>
+                                <div class="mt-2 h5">
+                                    {{ is_array($host->memory_usage) && isset($host->memory_usage['percentage']) ? $host->memory_usage['percentage'] . '%' : ($host->memory_usage ?? 'N/A') }}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -184,7 +179,9 @@
                             <div class="card-header bg-success text-white">Disco</div>
                             <div class="card-body">
                                 <canvas id="gauge-disk" width="120" height="120"></canvas>
-                                <div class="mt-2 h5">{{ $host->disk_usage !== null ? $host->disk_usage . '%' : 'N/A' }}</div>
+                                <div class="mt-2 h5">
+                                    {{ is_array($host->disk_usage) && isset($host->disk_usage['percentage']) ? $host->disk_usage['percentage'] . '%' : ($host->disk_usage ?? 'N/A') }}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -193,51 +190,33 @@
                             <div class="card-header bg-info text-white">Uptime</div>
                             <div class="card-body">
                                 <div class="display-6">{{ $host->uptime ?? 'N/A' }}</div>
+                                @if($host->last_boot)
+                                    <div class="text-muted small">Último arranque: {{ \Carbon\Carbon::parse($host->last_boot)->format('d/m/Y H:i:s') }}</div>
+                                @endif
                             </div>
                         </div>
                     </div>
                 </div>
                 
-                {{-- Procesos en ejecución si están disponibles --}}
-                @if(isset($host->system_info['processes']))
+                {{-- Información del sistema si está disponible --}}
+                @if(is_array($host->system_info) && count($host->system_info) > 0)
                 <div class="card mb-4">
                     <div class="card-header">
-                        <h4><i class="fas fa-tasks mr-2"></i> Principales procesos</h4>
+                        <h4><i class="fas fa-desktop mr-2"></i> Información del sistema</h4>
                     </div>
                     <div class="card-body">
-                        @if(count($host->system_info['processes']['processes'] ?? []) > 0)
-                            <div class="table-responsive">
-                                <table class="table table-sm table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>PID</th>
-                                            <th>Usuario</th>
-                                            <th>CPU %</th>
-                                            <th>Mem %</th>
-                                            <th>Comando</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach(array_slice($host->system_info['processes']['processes'], 0, 5) as $process)
-                                            <tr>
-                                                <td>{{ $process['pid'] ?? 'N/A' }}</td>
-                                                <td>{{ $process['user'] ?? 'N/A' }}</td>
-                                                <td>{{ $process['cpu'] ?? '0' }}%</td>
-                                                <td>{{ $process['memory'] ?? '0' }}%</td>
-                                                <td><code>{{ $process['command'] ?? 'N/A' }}</code></td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                            @if(isset($host->system_info['processes']['total_count']))
-                                <div class="mt-2 text-muted small">
-                                    <strong>Total de procesos:</strong> {{ $host->system_info['processes']['total_count'] }}
-                                </div>
-                            @endif
-                        @else
-                            <p class="text-muted">No hay información de procesos disponible.</p>
-                        @endif
+                        <ul class="list-group list-group-flush">
+                            @foreach($host->system_info as $key => $value)
+                                <li class="list-group-item">
+                                    <strong>{{ ucfirst(str_replace('_', ' ', $key)) }}:</strong>
+                                    @if(is_array($value))
+                                        <pre class="mb-0">{{ json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
+                                    @else
+                                        {{ $value }}
+                                    @endif
+                                </li>
+                            @endforeach
+                        </ul>
                     </div>
                 </div>
                 @endif

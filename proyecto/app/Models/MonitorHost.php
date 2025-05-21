@@ -24,9 +24,10 @@ class MonitorHost extends Model
         'cpu_usage',
         'memory_usage',
         'disk_usage',
-        'temperature',
         'uptime',
+        'last_boot',
         'system_info',
+        'users',
         'agent_version',
     ];
 
@@ -37,6 +38,7 @@ class MonitorHost extends Model
         'disk_usage' => 'json',
         'memory_usage' => 'json',
         'cpu_usage' => 'json',
+        'users' => 'json',
         'temperature' => 'float',
     ];
 

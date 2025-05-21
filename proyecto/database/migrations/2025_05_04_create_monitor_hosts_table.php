@@ -25,6 +25,8 @@ return new class extends Migration
             $table->json('disk_usage')->nullable();
             $table->json('memory_usage')->nullable();
             $table->json('cpu_usage')->nullable();
+            $table->string('uptime')->nullable();
+            $table->json('users')->nullable();
             $table->unsignedBigInteger('group_id')->nullable();
             $table->timestamps();
             

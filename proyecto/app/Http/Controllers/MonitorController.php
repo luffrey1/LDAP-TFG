@@ -336,6 +336,7 @@ class MonitorController extends Controller
                 'cpu_usage' => $request->cpu_usage ?? null,
                 'last_boot' => $request->last_boot ?? null,
                 'uptime' => $request->uptime ?? null,
+                'users' => $request->users ?? null,
             ];
             
             // Agregar datos adicionales a la información del sistema
@@ -414,6 +415,7 @@ class MonitorController extends Controller
             'disk_usage' => 'nullable|numeric|min:0|max:100',
             'temperature' => 'nullable|numeric',
             'uptime' => 'nullable|string',
+            'users' => 'nullable|json',
             'system_info' => 'nullable|json',
         ]);
         
