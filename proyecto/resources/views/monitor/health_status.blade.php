@@ -46,7 +46,6 @@
             </div>
         </div>
     </div>
-    @if($encendidos8h->count())
     <div class="card mb-4 border-info">
         <div class="card-header bg-info text-white"><i class="fas fa-clock"></i> Equipos encendidos &gt; 8h <span class="ms-2 small">(Recomendado apagar)</span></div>
         <div class="card-body p-0">
@@ -92,8 +91,6 @@
             </div>
         </div>
     </div>
-    @endif
-    @if($graves->count())
     <div class="card mb-4 border-danger">
         <div class="card-header bg-danger text-white"><i class="fas fa-skull-crossbones"></i> Equipos en estado grave</div>
         <div class="card-body p-0">
@@ -131,8 +128,6 @@
             </div>
         </div>
     </div>
-    @endif
-    @if($criticos->count())
     <div class="card mb-4 border-warning">
         <div class="card-header bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> Equipos en estado crítico</div>
         <div class="card-body p-0">
@@ -170,8 +165,6 @@
             </div>
         </div>
     </div>
-    @endif
-    @if($saludables->count())
     <div class="card mb-4 border-success">
         <div class="card-header bg-success text-white"><i class="fas fa-check-circle"></i> Equipos saludables</div>
         <div class="card-body p-0">
@@ -209,6 +202,5 @@
             </div>
         </div>
     </div>
-    @endif
 </div>
 @endsection 
