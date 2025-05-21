@@ -18,10 +18,14 @@
 <section class="section">
     <div class="section-header">
         <h1>{{ $host->hostname }}</h1>
-        <div class="section-header-breadcrumb">
+        <div class="section-header-breadcrumb d-flex align-items-center">
             <div class="breadcrumb-item"><a href="{{ route('dashboard.index') }}">Dashboard</a></div>
             <div class="breadcrumb-item"><a href="{{ route('monitor.index') }}">Monitoreo</a></div>
             <div class="breadcrumb-item">{{ $host->hostname }}</div>
+            <!-- Botón SSH a la derecha del nombre -->
+            <button type="button" class="btn btn-primary btn-icon ms-3" id="open-ssh-terminal-header" title="Abrir terminal SSH">
+                <i class="fas fa-terminal"></i> SSH
+            </button>
         </div>
     </div>
 
@@ -32,11 +36,6 @@
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h4>Información del Host</h4>
-                        <div class="card-header-action">
-                            <button class="btn btn-icon btn-primary btn-sm ping-button" data-id="{{ $host->id }}">
-                                <i class="fas fa-network-wired"></i> Ping
-                            </button>
-                        </div>
                     </div>
                     <div class="card-body text-center">
                         <div id="status-badge-container" class="mb-3">
@@ -65,31 +64,20 @@
                         </div>
                     </div>
                 </div>
-                
-                <div class="card">
-                    <div class="card-header"><h4>Acciones</h4></div>
-                    <div class="card-body">
-                        <div class="buttons">
-                            <a href="{{ route('monitor.edit', $host->id) }}" class="btn btn-warning btn-icon icon-left btn-block mb-2">
-                                <i class="fas fa-edit"></i> Editar Host
-                            </a>
-                            <button class="btn btn-danger btn-icon icon-left btn-block delete-host-button" data-id="{{ $host->id }}" data-hostname="{{ $host->hostname }}">
-                                <i class="fas fa-trash"></i> Eliminar Host
-                            </button>
-                            @if(!empty($host->mac_address))
-                            <a href="{{ route('monitor.wol', $host->id) }}" class="btn btn-success btn-icon icon-left btn-block mt-2">
-                                <i class="fas fa-power-off"></i> Encender (WOL)
-                            </a>
-                            @endif
-                            <!-- Botón para abrir la terminal SSH real en webssh2 -->
-                            <button type="button" class="btn btn-primary btn-icon icon-left btn-block mt-2" id="open-ssh-terminal">
-                                <i class="fas fa-terminal"></i> Terminal SSH
-                            </button>
-                        </div>
+
+                {{-- Información del sistema en tarjeta --}}
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white"><i class="fas fa-desktop me-2"></i> Sistema</div>
+                    <div class="card-body text-center">
+                        <div><strong>OS:</strong> {{ $host->system_info['os'] ?? 'N/A' }}</div>
+                        <div><strong>CPU:</strong> {{ $host->system_info['cpu_model'] ?? 'N/A' }}</div>
+                        <div><strong>RAM:</strong> {{ $host->system_info['memory_total'] ?? 'N/A' }}</div>
+                        <div><strong>Disco:</strong> {{ $host->system_info['disk_total'] ?? 'N/A' }}</div>
                     </div>
                 </div>
-                
+
                 <!-- Usuarios conectados si están disponibles -->
+                @php $currentUser = get_current_user(); @endphp
                 @if(is_array($host->users) && count($host->users) > 0)
                 <div class="card mb-4">
                     <div class="card-header">
@@ -103,18 +91,29 @@
                                         <th>Usuario</th>
                                         <th>Terminal</th>
                                         <th>Desde</th>
-                                        <th>Tiempo</th>
+                                        <th>Hora de login</th>
+                                        <th>Actual</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach($host->users as $user)
-                                        <tr>
-                                            <td>{{ $user['username'] ?? 'N/A' }}</td>
-                                            <td>{{ $user['terminal'] ?? 'N/A' }}</td>
-                                            <td>{{ $user['from'] ?? 'local' }}</td>
-                                            <td>{{ $user['login_time'] ?? 'N/A' }}</td>
-                                        </tr>
-                                    @endforeach
+                                @foreach($host->users as $user)
+                                    <tr @if($user['username'] === $currentUser) class="table-success" @endif>
+                                        <td>
+                                            {{ $user['username'] }}
+                                            @if($user['username'] === $currentUser)
+                                                <span class="badge bg-primary ms-1">Actual</span>
+                                            @endif
+                                        </td>
+                                        <td>{{ $user['terminal'] }}</td>
+                                        <td>{{ $user['from'] }}</td>
+                                        <td>{{ $user['login_time'] }}</td>
+                                        <td>
+                                            @if($user['username'] === $currentUser)
+                                                <i class="fas fa-user-check text-success"></i>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
                                 </tbody>
                             </table>
                         </div>
@@ -160,6 +159,12 @@
                                 <div class="mt-2 h5">
                                     {{ is_array($host->cpu_usage) && isset($host->cpu_usage['percentage']) ? $host->cpu_usage['percentage'] . '%' : ($host->cpu_usage ?? 'N/A') }}
                                 </div>
+                                @if(isset($host->system_info['cpu_model']))
+                                    <div class="small text-muted">Modelo: {{ $host->system_info['cpu_model'] }}</div>
+                                @endif
+                                @if(isset($host->system_info['cpu_cores']))
+                                    <div class="small text-muted">Núcleos: {{ $host->system_info['cpu_cores'] }}</div>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -171,6 +176,12 @@
                                 <div class="mt-2 h5">
                                     {{ is_array($host->memory_usage) && isset($host->memory_usage['percentage']) ? $host->memory_usage['percentage'] . '%' : ($host->memory_usage ?? 'N/A') }}
                                 </div>
+                                @if(isset($host->system_info['memory_total']))
+                                    <div class="small text-muted">Total: {{ $host->system_info['memory_total'] }}</div>
+                                @endif
+                                @if(isset($host->memory_usage['used']))
+                                    <div class="small text-muted">Usado: {{ $host->memory_usage['used'] }} MB</div>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -182,6 +193,12 @@
                                 <div class="mt-2 h5">
                                     {{ is_array($host->disk_usage) && isset($host->disk_usage['percentage']) ? $host->disk_usage['percentage'] . '%' : ($host->disk_usage ?? 'N/A') }}
                                 </div>
+                                @if(isset($host->system_info['disk_total']))
+                                    <div class="small text-muted">Total: {{ $host->system_info['disk_total'] }}</div>
+                                @endif
+                                @if(isset($host->disk_usage['used']))
+                                    <div class="small text-muted">Usado: {{ $host->disk_usage['used'] }} GB</div>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -198,58 +215,7 @@
                     </div>
                 </div>
                 
-                {{-- Información del sistema si está disponible --}}
-                @if(is_array($host->system_info) && count($host->system_info) > 0)
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h4><i class="fas fa-desktop mr-2"></i> Información del sistema</h4>
-                    </div>
-                    <div class="card-body">
-                        <ul class="list-group list-group-flush">
-                            @foreach($host->system_info as $key => $value)
-                                <li class="list-group-item">
-                                    <strong>{{ ucfirst(str_replace('_', ' ', $key)) }}:</strong>
-                                    @if(is_array($value))
-                                        <pre class="mb-0">{{ json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
-                                    @else
-                                        {{ $value }}
-                                    @endif
-                                </li>
-                            @endforeach
-                        </ul>
-                    </div>
-                </div>
-                @endif
-                
-                {{-- TERMINAL SSH REAL --}}
-                <div class="card mt-4">
-                    <div class="card-header d-flex align-items-center" style="padding: 0; background: none; border: none;">
-                        <div class="terminal-titlebar" id="ubuntuTitleBar" style="width: 100%;">
-                            <div class="terminal-titlebar-buttons">
-                                <div class="terminal-button terminal-button-close"></div>
-                                <div class="terminal-button terminal-button-minimize"></div>
-                                <div class="terminal-button terminal-button-maximize"></div>
-                            </div>
-                            <span class="terminal-title">ubuntu@{{ $host->hostname }}: ~</span>
-                        </div>
-                        <span id="connectionStatus" class="connection-indicator connection-inactive ms-3"></span>
-                        <span id="connectionText" class="ms-2">Desconectado</span>
-                        <button id="connect-terminal-button" class="btn btn-primary ms-auto"><i class="fas fa-terminal"></i> Conectar</button>
-                    </div>
-                    <!-- Tabs -->
-                    <ul class="nav nav-tabs" id="terminalTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="terminal-tab" data-toggle="tab" data-target="#terminal-pane" type="button" role="tab" aria-controls="terminal-pane" aria-selected="true">Terminal</button>
-                        </li>
-                    </ul>
-                    <div class="tab-content" id="terminalTabsContent">
-                        <div class="tab-pane fade show active" id="terminal-pane" role="tabpanel" aria-labelledby="terminal-tab">
-                            <div class="card-body p-0" style="background: #1e1e1e;">
-                                <div id="terminal-container"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                {{-- TERMINAL SSH REAL (solo en la cabecera ahora) --}}
             </div>
         </div>
     </div>
@@ -293,6 +259,20 @@
 var webssh2Host = "172.20.0.6"; // IP de tu servidor
 var webssh2Port = "2222"; // Puerto de WebSSH2
 $(function() {
+    // Botón SSH en la cabecera
+    var $sshBtnHeader = $('#open-ssh-terminal-header');
+    if ($sshBtnHeader.length) {
+        $sshBtnHeader.on('click', function(e) {
+            e.preventDefault();
+            var ip = $('#info-ip_address').text().trim();
+            var url = `http://${webssh2Host}:${webssh2Port}/ssh/host/${ip}?username=root`;
+            var win = window.open(url, '_blank');
+            if (!win) {
+                alert('El navegador ha bloqueado la nueva pestaña. Permite popups para este sitio.');
+            }
+        });
+    }
+    // Botón SSH antiguo (por compatibilidad)
     var $sshBtn = $('#connect-terminal-button');
     if ($sshBtn.length) {
         $sshBtn.on('click', function(e) {
