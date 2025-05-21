@@ -147,15 +147,15 @@
                         <div class="card text-center">
                             <div class="card-header bg-primary text-white">CPU</div>
                             <div class="card-body">
-                                @if(isset($host->system_info['cpu_cores']))
-                                    <div class="fw-bold mb-1">Núcleos: {{ $host->system_info['cpu_cores'] }}</div>
-                                @endif
                                 <canvas id="gauge-cpu" width="120" height="120"></canvas>
                                 <div class="mt-2 h5">
                                     {{ is_array($host->cpu_usage) && isset($host->cpu_usage['percentage']) ? $host->cpu_usage['percentage'] . '%' : ($host->cpu_usage ?? 'N/A') }}
                                 </div>
                                 @if(isset($host->system_info['cpu_model']))
                                     <div class="small text-muted">Modelo: {{ $host->system_info['cpu_model'] }}</div>
+                                @endif
+                                @if(isset($host->system_info['cpu_cores']))
+                                    <div class="small text-muted">Núcleos: {{ $host->system_info['cpu_cores'] }}</div>
                                 @endif
                             </div>
                         </div>
@@ -164,15 +164,16 @@
                         <div class="card text-center">
                             <div class="card-header bg-warning text-white">Memoria</div>
                             <div class="card-body">
-                                @if(isset($host->system_info['memory_total']) && isset($host->memory_usage['used']))
-                                    <div class="fw-bold mb-1">Usado: {{ $host->memory_usage['used'] }} MB / {{ $host->system_info['memory_total'] }}</div>
-                                @elseif(isset($host->system_info['memory_total']))
-                                    <div class="fw-bold mb-1">Total: {{ $host->system_info['memory_total'] }}</div>
-                                @endif
                                 <canvas id="gauge-mem" width="120" height="120"></canvas>
                                 <div class="mt-2 h5">
                                     {{ is_array($host->memory_usage) && isset($host->memory_usage['percentage']) ? $host->memory_usage['percentage'] . '%' : ($host->memory_usage ?? 'N/A') }}
                                 </div>
+                                @if(isset($host->system_info['memory_total']))
+                                    <div class="small text-muted">Total: {{ $host->system_info['memory_total'] }}</div>
+                                @endif
+                                @if(isset($host->memory_usage['used']))
+                                    <div class="small text-muted">Usado: {{ $host->memory_usage['used'] }} MB</div>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -180,15 +181,16 @@
                         <div class="card text-center">
                             <div class="card-header bg-success text-white">Disco</div>
                             <div class="card-body">
-                                @if(isset($host->system_info['disk_total']) && isset($host->disk_usage['used']))
-                                    <div class="fw-bold mb-1">Usado: {{ $host->disk_usage['used'] }} GB / {{ $host->system_info['disk_total'] }}</div>
-                                @elseif(isset($host->system_info['disk_total']))
-                                    <div class="fw-bold mb-1">Total: {{ $host->system_info['disk_total'] }}</div>
-                                @endif
                                 <canvas id="gauge-disk" width="120" height="120"></canvas>
                                 <div class="mt-2 h5">
                                     {{ is_array($host->disk_usage) && isset($host->disk_usage['percentage']) ? $host->disk_usage['percentage'] . '%' : ($host->disk_usage ?? 'N/A') }}
                                 </div>
+                                @if(isset($host->system_info['disk_total']))
+                                    <div class="small text-muted">Total: {{ $host->system_info['disk_total'] }}</div>
+                                @endif
+                                @if(isset($host->disk_usage['used']))
+                                    <div class="small text-muted">Usado: {{ $host->disk_usage['used'] }} GB</div>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -205,50 +207,7 @@
                     </div>
                 </div>
                 
-                {{-- Usuarios conectados en su propia tarjeta --}}
-                @php $currentUser = get_current_user(); @endphp
-                @if(is_array($host->users) && count($host->users) > 0)
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h4><i class="fas fa-users mr-2"></i> Usuarios conectados</h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Usuario</th>
-                                        <th>Terminal</th>
-                                        <th>Desde</th>
-                                        <th>Hora de login</th>
-                                        <th>Actual</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                @foreach($host->users as $user)
-                                    <tr @if($user['username'] === $currentUser) class="table-success" @endif>
-                                        <td>
-                                            {{ $user['username'] }}
-                                            @if($user['username'] === $currentUser)
-                                                <span class="badge bg-primary ms-1">Actual</span>
-                                            @endif
-                                        </td>
-                                        <td>{{ $user['terminal'] }}</td>
-                                        <td>{{ $user['from'] }}</td>
-                                        <td>{{ $user['login_time'] }}</td>
-                                        <td>
-                                            @if($user['username'] === $currentUser)
-                                                <i class="fas fa-user-check text-success"></i>
-                                            @endif
-                                        </td>
-                                    </tr>
-                                @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                @endif
+                {{-- TERMINAL SSH REAL (solo en la cabecera ahora) --}}
             </div>
         </div>
     </div>
