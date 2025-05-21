@@ -3,9 +3,11 @@
 ## Tareas Inmediatas
 1- **mensajeria no deja subir archivos algo del sql posiblemente**
 2- **Al crear un usuario creo que es solo string y no permite numeros mirar eso, y editar no comprobe pero habria que confirmar**
-
+3- **Arreglar sistema de mensajeria, que aparezcan datos reales y todos los profesores y tal o hacerlo de una manera mejor porque con muchos profesores sera...**
+4- **Que los eventos se cuenten en el dashboard lo de eventos : 1 ...**
 ##No tan inmediatas
-3- **que se puedan eliminar equipos, no funciona y redirige al dashboard, mirar temas de rutas lo más posible o alguna configuracion sql**
+3.1 **Que se puedan ordenanr clases**
+3.2- **que se puedan eliminar equipos, no funciona y redirige al dashboard, mirar temas de rutas lo más posible o alguna configuracion sql**
 
 4- **Hacer lo de acceder por vpn y tal**
 

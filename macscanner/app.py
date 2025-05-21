@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 import subprocess
 import re
+import socket
 
 app = Flask(__name__)
 
@@ -48,6 +49,12 @@ def get_mac_nmap(ip):
         pass
     return None
 
+def get_hostname(ip):
+    try:
+        return socket.gethostbyaddr(ip)[0]
+    except Exception:
+        return None
+
 @app.route('/scan', methods=['GET'])
 def scan_mac():
     ip = request.args.get('ip')
@@ -73,6 +80,27 @@ def scan_mac():
         return jsonify({'success': True, 'ip': ip, 'mac': mac})
     else:
         return jsonify({'success': False, 'ip': ip, 'error': 'MAC not found'})
+
+@app.route('/scanall', methods=['GET'])
+def scan_all():
+    # Puedes ajustar el rango según tu red
+    network = request.args.get('network', '172.20.0.0/24')
+    try:
+        result = subprocess.run([
+            'arp-scan', '--interface=eth0', network
+        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=30)
+        hosts = []
+        for line in result.stdout.splitlines():
+            # Formato típico: 172.20.0.10  bc:24:11:32:30:1b  SomeHost
+            parts = line.strip().split()
+            if len(parts) >= 2 and re.match(r'\d+\.\d+\.\d+\.\d+', parts[0]):
+                ip = parts[0]
+                mac = parts[1].lower()
+                hostname = get_hostname(ip)
+                hosts.append({'ip': ip, 'mac': mac, 'hostname': hostname or ''})
+        return jsonify({'success': True, 'hosts': hosts})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000) 

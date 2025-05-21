@@ -91,75 +91,87 @@
                                 </div>
                                 <div class="card-body">
                                     @if(count($hosts) > 0)
-                                        <div class="table-responsive">
-                                            <table class="table table-hover">
-                                                <thead class="table-light">
-                                                    <tr>
-                                                        <th>Estado</th>
-                                                        <th>Hostname</th>
-                                                        <th>IP</th>
-                                                        <th>Grupo/Aula</th>
-                                                        <th>Último visto</th>
-                                                        <th>Acciones</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @foreach($hosts as $host)
-                                                        <tr>
-                                                            <td>
-                                                                <span class="badge bg-{{ $host->status_color }}">
-                                                                    <i class="fas fa-{{ $host->status == 'online' ? 'check-circle' : ($host->status == 'offline' ? 'times-circle' : 'exclamation-circle') }} me-1"></i>
-                                                                    {{ $host->status_text }}
-                                                                </span>
-                                                            </td>
-                                                            <td>{{ $host->hostname }}</td>
-                                                            <td>{{ $host->ip_address }}</td>
-                                                            <td>
-                                                                @if($host->group)
-                                                                    <a href="{{ route('monitor.groups.show', $host->group_id) }}" class="badge bg-info text-decoration-none">
-                                                                        <i class="fas fa-{{ $host->group->type == 'classroom' ? 'chalkboard-teacher' : 'building' }} me-1"></i>
-                                                                        {{ $host->group->name }}
-                                                                    </a>
-                                                                @else
-                                                                    <span class="badge bg-secondary">Sin grupo</span>
-                                                                @endif
-                                                            </td>
-                                                            <td>{{ $host->last_seen ? $host->last_seen->format('d/m/Y H:i:s') : 'Nunca' }}</td>
-                                                            <td>
-                                                                <div class="btn-group" role="group">
-                                                                    <a href="{{ route('monitor.show', $host->id) }}" class="btn btn-sm btn-primary" title="Ver detalles">
-                                                                        <i class="fas fa-eye"></i>
-                                                                    </a>
-                                                                    <a href="{{ route('monitor.ping', $host->id) }}" class="btn btn-sm btn-info" title="Ping">
-                                                                        <i class="fas fa-exchange-alt"></i>
-                                                                    </a>
+                                        @php
+                                            $hostsByGroup = $hosts->groupBy(function($host) {
+                                                return $host->group ? $host->group->name : 'Sin grupo';
+                                            });
+                                        @endphp
+
+                                        @foreach($hostsByGroup as $groupName => $groupHosts)
+                                            <div class="mb-4">
+                                                <h5 class="bg-light p-2 border-start border-4 border-primary mb-0">
+                                                    <i class="fas fa-{{ $groupHosts->first()->group && $groupHosts->first()->group->type == 'classroom' ? 'chalkboard-teacher' : ($groupName == 'Infraestructura' ? 'network-wired' : 'server') }} me-2"></i>
+                                                    {{ $groupName }}
+                                                    <span class="badge bg-secondary ms-2">{{ $groupHosts->count() }} equipos</span>
+                                                </h5>
+                                                <div class="table-responsive">
+                                                    <table class="table table-hover mb-0">
+                                                        <thead class="table-light">
+                                                            <tr>
+                                                                <th>Estado</th>
+                                                                <th>Hostname</th>
+                                                                <th>IP</th>
+                                                                <th>MAC</th>
+                                                                <th>Último visto</th>
+                                                                <th>Acciones</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                        @foreach($groupHosts as $host)
+                                                            <tr>
+                                                                <td>
+                                                                    <span class="badge bg-{{ $host->status_color }}">
+                                                                        <i class="fas fa-{{ $host->status == 'online' ? 'check-circle' : ($host->status == 'offline' ? 'times-circle' : 'exclamation-circle') }} me-1"></i>
+                                                                        {{ $host->status_text }}
+                                                                    </span>
+                                                                </td>
+                                                                <td>{{ $host->hostname }}</td>
+                                                                <td>{{ $host->ip_address }}</td>
+                                                                <td>
                                                                     @if($host->mac_address)
-                                                                        <a href="{{ route('monitor.wol', $host->id) }}" 
-                                                                           class="btn btn-sm btn-dark" 
-                                                                           onclick="return confirm('¿Enviar señal Wake-on-LAN a {{ $host->hostname }}?');" 
-                                                                           title="Wake-on-LAN">
-                                                                            <i class="fas fa-power-off"></i>
-                                                                        </a>
+                                                                        <span class="text-success"><i class="fas fa-check-circle"></i> {{ $host->mac_address }}</span>
+                                                                    @else
+                                                                        <span class="text-danger"><i class="fas fa-times-circle"></i> Sin MAC</span>
                                                                     @endif
-                                                                    <a href="{{ route('monitor.edit', $host->id) }}" class="btn btn-sm btn-warning" title="Editar">
-                                                                        <i class="fas fa-edit"></i>
-                                                                    </a>
-                                                                    <button type="button" class="btn btn-sm btn-danger" 
-                                                                            onclick="eliminarHost({{ $host->id }}, '{{ $host->hostname }}')"
-                                                                            title="Eliminar">
-                                                                        <i class="fas fa-trash"></i>
-                                                                    </button>
-                                                                </div>
-                                                                <form id="form-eliminar-{{ $host->id }}" action="{{ route('monitor.destroy', $host->id) }}" method="POST" style="display: none;">
-                                                                    @csrf
-                                                                    @method('DELETE')
-                                                                </form>
-                                                            </td>
-                                                        </tr>
-                                                    @endforeach
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                                                </td>
+                                                                <td>{{ $host->last_seen ? $host->last_seen->format('d/m/Y H:i:s') : 'Nunca' }}</td>
+                                                                <td>
+                                                                    <div class="btn-group" role="group">
+                                                                        <a href="{{ route('monitor.show', $host->id) }}" class="btn btn-sm btn-primary" title="Ver detalles">
+                                                                            <i class="fas fa-eye"></i>
+                                                                        </a>
+                                                                        <a href="{{ route('monitor.ping', $host->id) }}" class="btn btn-sm btn-info" title="Ping">
+                                                                            <i class="fas fa-exchange-alt"></i>
+                                                                        </a>
+                                                                        @if($host->mac_address)
+                                                                            <a href="{{ route('monitor.wol', $host->id) }}" 
+                                                                               class="btn btn-sm btn-dark" 
+                                                                               onclick="return confirm('¿Enviar señal Wake-on-LAN a {{ $host->hostname }}?');" 
+                                                                               title="Wake-on-LAN">
+                                                                                <i class="fas fa-power-off"></i>
+                                                                            </a>
+                                                                        @endif
+                                                                        <a href="{{ route('monitor.edit', $host->id) }}" class="btn btn-sm btn-warning" title="Editar">
+                                                                            <i class="fas fa-edit"></i>
+                                                                        </a>
+                                                                        <button type="button" class="btn btn-sm btn-danger" 
+                                                                                onclick="eliminarHost({{ $host->id }}, '{{ $host->hostname }}')"
+                                                                                title="Eliminar">
+                                                                            <i class="fas fa-trash"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                    <form id="form-eliminar-{{ $host->id }}" action="{{ route('monitor.destroy', $host->id) }}" method="POST" style="display: none;">
+                                                                        @csrf
+                                                                        @method('DELETE')
+                                                                    </form>
+                                                                </td>
+                                                            </tr>
+                                                        @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        @endforeach
                                     @else
                                         <div class="alert alert-info">
                                             <i class="fas fa-info-circle me-2"></i> No hay equipos registrados para monitorear.
