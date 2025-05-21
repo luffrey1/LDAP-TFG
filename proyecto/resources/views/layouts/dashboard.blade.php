@@ -715,8 +715,13 @@
                         
                         @if(\App\Models\SistemaConfig::obtenerConfig('modulo_monitoreo_activo', true))
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('monitor.*') ? 'active' : '' }}" href="{{ route('monitor.index') }}">
+                            <a class="nav-link {{ request()->routeIs('monitor.index') ? 'active' : '' }}" href="{{ route('monitor.index') }}">
                                 <i class="fas fa-desktop"></i> Monitor de Equipos
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('monitor.health') ? 'active' : '' }}" href="{{ route('monitor.health') }}">
+                                <i class="fas fa-heartbeat"></i> Estado global de equipos
                             </a>
                         </li>
                         @endif
