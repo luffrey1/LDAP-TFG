@@ -86,18 +86,31 @@ def scan_all():
     # Puedes ajustar el rango según tu red
     network = request.args.get('network', '172.20.0.0/24')
     try:
+        # Usar nmap para escanear la red y obtener IP, MAC y hostname
         result = subprocess.run([
-            'arp-scan', '--interface=eth0', network
-        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=30)
+            'nmap', '-sn', network, '-R'
+        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=120)
         hosts = []
+        current_ip = None
         for line in result.stdout.splitlines():
-            # Formato típico: 172.20.0.10  bc:24:11:32:30:1b  SomeHost
-            parts = line.strip().split()
-            if len(parts) >= 2 and re.match(r'\d+\.\d+\.\d+\.\d+', parts[0]):
-                ip = parts[0]
-                mac = parts[1].lower()
-                hostname = get_hostname(ip)
-                hosts.append({'ip': ip, 'mac': mac, 'hostname': hostname or ''})
+            # Detectar IP y hostname (si hay)
+            m = re.match(r'Nmap scan report for (.+) \((\d+\.\d+\.\d+\.\d+)\)', line)
+            if m:
+                hostname = m.group(1)
+                current_ip = m.group(2)
+                current_hostname = hostname
+            else:
+                m = re.match(r'Nmap scan report for (\d+\.\d+\.\d+\.\d+)', line)
+                if m:
+                    current_ip = m.group(1)
+                    current_hostname = ''
+            # Detectar MAC
+            m = re.match(r'MAC Address: ([0-9A-Fa-f:]{17})', line)
+            if m and current_ip:
+                mac = m.group(1).lower()
+                hosts.append({'ip': current_ip, 'mac': mac, 'hostname': current_hostname if 'current_hostname' in locals() else ''})
+                current_ip = None
+                current_hostname = ''
         return jsonify({'success': True, 'hosts': hosts})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
