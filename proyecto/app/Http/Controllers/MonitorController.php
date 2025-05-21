@@ -114,7 +114,7 @@ class MonitorController extends Controller
     }
     
     /**
-     * Verifica el estado de todos los hosts usando el microservicio Python
+     * Verifica el estado de todos los hosts usando el microservicio Python y redirige con mensaje
      */
     public function pingAll()
     {
@@ -122,19 +122,19 @@ class MonitorController extends Controller
             $pythonServiceUrl = env('MACSCANNER_URL', 'http://macscanner:5000/scanall?network=172.20.0.0/16');
             $response = @file_get_contents($pythonServiceUrl);
             if ($response === false) {
-                Log::error('No se pudo conectar al microservicio Python para pingAll: ' . $pythonServiceUrl);
-                return response()->json(['status' => 'error', 'message' => 'No se pudo conectar al microservicio de red.']);
+                \Log::error('No se pudo conectar al microservicio Python para pingAll: ' . $pythonServiceUrl);
+                return redirect()->route('monitor.index')->with('error', 'No se pudo conectar al microservicio de red.');
             }
             $data = json_decode($response, true);
             if (!$data || !isset($data['hosts'])) {
-                Log::error('Respuesta inválida del microservicio Python (pingAll): ' . $response);
-                return response()->json(['status' => 'error', 'message' => 'Respuesta inválida del microservicio de red.']);
+                \Log::error('Respuesta inválida del microservicio Python (pingAll): ' . $response);
+                return redirect()->route('monitor.index')->with('error', 'Respuesta inválida del microservicio de red.');
             }
             $updated = 0;
             $errors = 0;
             foreach ($data['hosts'] as $hostData) {
                 try {
-                    $host = MonitorHost::where('ip_address', $hostData['ip'])->first();
+                    $host = \App\Models\MonitorHost::where('ip_address', $hostData['ip'])->first();
                     if ($host) {
                         $host->status = $hostData['status'] === 'online' ? 'online' : 'offline';
                         $host->last_seen = $hostData['status'] === 'online' ? now() : $host->last_seen;
@@ -144,19 +144,15 @@ class MonitorController extends Controller
                         $updated++;
                     }
                 } catch (\Exception $e) {
-                    Log::error('Error actualizando host en pingAll: ' . $e->getMessage());
+                    \Log::error('Error actualizando host en pingAll: ' . $e->getMessage());
                     $errors++;
                 }
             }
-            return response()->json([
-                'status' => 'success',
-                'message' => "Se actualizaron {$updated} hosts con {$errors} errores.",
-                'updated' => $updated,
-                'errors' => $errors
-            ]);
+            $msg = "Estado actualizado. {$updated} hosts actualizados, {$errors} errores.";
+            return redirect()->route('monitor.index')->with('success', $msg);
         } catch (\Exception $e) {
-            Log::error('Error en pingAll (Python): ' . $e->getMessage());
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()]);
+            \Log::error('Error en pingAll (Python): ' . $e->getMessage());
+            return redirect()->route('monitor.index')->with('error', 'Error al actualizar estado: ' . $e->getMessage());
         }
     }
     
@@ -807,4 +803,20 @@ class MonitorController extends Controller
         return $result;
     }
     
+    /**
+     * Ver detalles de un host
+     */
+    public function show($id)
+    {
+        try {
+            $host = \App\Models\MonitorHost::findOrFail($id);
+            $user = \Auth::user();
+            // Permitir a cualquier usuario autenticado ver cualquier host
+            return view('monitor.show', compact('host'));
+        } catch (\Exception $e) {
+            \Log::error('Error al mostrar host: ' . $e->getMessage());
+            return redirect()->route('monitor.index')
+                ->with('error', 'Error al obtener detalles del host: ' . $e->getMessage());
+        }
+    }
 }
