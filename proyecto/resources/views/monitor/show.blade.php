@@ -73,25 +73,17 @@
                         <div><strong>CPU:</strong> {{ $host->system_info['cpu_model'] ?? 'N/A' }}</div>
                         <div><strong>RAM:</strong> {{ $host->system_info['memory_total'] ?? 'N/A' }}</div>
                         <div><strong>Disco:</strong> {{ $host->system_info['disk_total'] ?? 'N/A' }}</div>
-                    </div>
-                </div>
-
-                <!-- Usuarios conectados si están disponibles -->
-                @php $currentUser = get_current_user(); @endphp
-                @if(is_array($host->users) && count($host->users) > 0)
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h4><i class="fas fa-users mr-2"></i> Usuarios conectados</h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead>
+                        @php $currentUser = get_current_user(); @endphp
+                        @if(is_array($host->users) && count($host->users) > 0)
+                        <div class="mt-3">
+                            <h6 class="mb-2"><i class="fas fa-users me-1"></i> Usuarios conectados</h6>
+                            <table class="table table-sm table-bordered mb-0">
+                                <thead class="table-light">
                                     <tr>
                                         <th>Usuario</th>
                                         <th>Terminal</th>
                                         <th>Desde</th>
-                                        <th>Hora de login</th>
+                                        <th>Login</th>
                                         <th>Actual</th>
                                     </tr>
                                 </thead>
@@ -117,9 +109,9 @@
                                 </tbody>
                             </table>
                         </div>
+                        @endif
                     </div>
                 </div>
-                @endif
             </div>
             
             {{-- Columna Derecha: Métricas y Terminal --}}
@@ -262,6 +254,7 @@ $(function() {
     // Botón SSH en la cabecera
     var $sshBtnHeader = $('#open-ssh-terminal-header');
     if ($sshBtnHeader.length) {
+        $sshBtnHeader.addClass('ssh-btn-long').html('<i class="fas fa-terminal"></i> Conectar SSH');
         $sshBtnHeader.on('click', function(e) {
             e.preventDefault();
             var ip = $('#info-ip_address').text().trim();
@@ -288,7 +281,7 @@ $(function() {
 });
 
 document.addEventListener('DOMContentLoaded', function() {
-    function renderGauge(ctx, value, label, color) {
+    function renderGauge(ctx, value, label, color, tooltipText) {
         return new Chart(ctx, {
             type: 'doughnut',
             data: {
@@ -303,7 +296,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 cutout: '75%',
                 plugins: {
                     legend: { display: false },
-                    tooltip: { enabled: false },
+                    tooltip: {
+                        enabled: true,
+                        callbacks: {
+                            label: function(context) {
+                                if (context.dataIndex === 0 && tooltipText) {
+                                    return tooltipText;
+                                }
+                                return null;
+                            }
+                        }
+                    },
                     title: {
                         display: true,
                         text: label,
@@ -320,17 +323,35 @@ document.addEventListener('DOMContentLoaded', function() {
     renderGauge(
         document.getElementById('gauge-cpu'),
         {{ is_array($host->cpu_usage) && isset($host->cpu_usage['percentage']) ? $host->cpu_usage['percentage'] : ($host->cpu_usage ?? 0) }},
-        'CPU', '#007bff');
+        'CPU', '#007bff',
+        @if(isset($host->cpu_usage['percentage']) && isset($host->system_info['cpu_cores']))
+            'Uso: {{ $host->cpu_usage['percentage'] }}% de {{ $host->system_info['cpu_cores'] }} núcleos'
+        @else
+            null
+        @endif
+    );
     // Memoria
     renderGauge(
         document.getElementById('gauge-mem'),
         {{ is_array($host->memory_usage) && isset($host->memory_usage['percentage']) ? $host->memory_usage['percentage'] : ($host->memory_usage ?? 0) }},
-        'Memoria', '#ffc107');
+        'Memoria', '#ffc107',
+        @if(isset($host->memory_usage['used']) && isset($host->system_info['memory_total']))
+            'Usado: {{ $host->memory_usage['used'] }} MB de {{ $host->system_info['memory_total'] }}'
+        @else
+            null
+        @endif
+    );
     // Disco
     renderGauge(
         document.getElementById('gauge-disk'),
         {{ is_array($host->disk_usage) && isset($host->disk_usage['percentage']) ? $host->disk_usage['percentage'] : ($host->disk_usage ?? 0) }},
-        'Disco', '#28a745');
+        'Disco', '#28a745',
+        @if(isset($host->disk_usage['used']) && isset($host->system_info['disk_total']))
+            'Usado: {{ $host->disk_usage['used'] }} GB de {{ $host->system_info['disk_total'] }}'
+        @else
+            null
+        @endif
+    );
 });
 
 $(function() {
@@ -365,3 +386,21 @@ $(function() {
     });
 });
 </script>
+
+<!-- Botón SSH mejorado -->
+<style>
+    .ssh-btn-long {
+        padding: 0.75rem 2.5rem;
+        font-size: 1.15rem;
+        border-radius: 2rem;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        box-shadow: 0 2px 8px #007bff22;
+        display: flex;
+        align-items: center;
+        gap: 0.7em;
+    }
+    .ssh-btn-long i {
+        font-size: 1.5em;
+    }
+</style>
