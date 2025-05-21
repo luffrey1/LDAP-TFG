@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import subprocess
 import re
 import socket
+from wakeonlan import send_magic_packet
 
 app = Flask(__name__)
 
@@ -109,6 +110,19 @@ def scan_all():
                 current_ip = None
                 current_hostname = ''
         return jsonify({'success': True, 'hosts': hosts})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/wol', methods=['POST'])
+def wol():
+    data = request.get_json(force=True)
+    mac = data.get('mac')
+    broadcast = data.get('broadcast', '255.255.255.255')
+    if not mac:
+        return jsonify({'success': False, 'error': 'No MAC provided'}), 400
+    try:
+        send_magic_packet(mac, ip_address=broadcast)
+        return jsonify({'success': True, 'message': f'WoL enviado a {mac} (broadcast {broadcast})'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 

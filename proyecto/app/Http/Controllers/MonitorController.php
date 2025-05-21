@@ -435,43 +435,48 @@ class MonitorController extends Controller
     }
     
     /**
-     * Enviar Wake-on-LAN a un host
+     * Enviar Wake-on-LAN a un host usando el microservicio Python
      */
     public function wakeOnLan($id)
     {
         try {
             $host = MonitorHost::findOrFail($id);
-            
-            // Verificar si el usuario actual es administrador
             $user = Auth::user();
             $isAdmin = $user && ($user->is_admin || $user->role === 'admin');
-            
-            // Si no es admin ni el creador, no tiene permiso
             if (!$isAdmin && $host->created_by != $user->id) {
                 abort(403, 'No tienes permiso para despertar este host');
             }
-            
             if (empty($host->mac_address)) {
                 return redirect()->back()
                     ->with('error', 'No se puede enviar Wake-on-LAN: El host no tiene una dirección MAC real configurada. Intente detectar la MAC primero.');
             }
-            
-            $result = $host->wakeOnLan();
-            
-            if ($result) {
-                // Registrar el evento
-                Log::info("Usuario {".Auth::user()->username."} envió Wake-on-LAN a {$host->hostname} ({$host->mac_address})");
-                
-                return redirect()->back()
-                    ->with('success', "Paquete Wake-on-LAN enviado a {$host->hostname}");
-            } else {
-                return redirect()->back()
-                    ->with('error', 'Error al enviar el paquete Wake-on-LAN. Revise los logs para más detalles.');
+            $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
+            $wolUrl = rtrim($baseUrl, '/') . '/wol';
+            $payload = json_encode(['mac' => $host->mac_address]);
+            $opts = [
+                'http' => [
+                    'method' => 'POST',
+                    'header' => "Content-Type: application/json\r\n",
+                    'content' => $payload,
+                    'timeout' => 5
+                ]
+            ];
+            $context = stream_context_create($opts);
+            $response = @file_get_contents($wolUrl, false, $context);
+            if ($response === false) {
+                Log::error('No se pudo conectar al microservicio Python para WoL: ' . $wolUrl);
+                return redirect()->back()->with('error', 'No se pudo conectar al microservicio de red para WoL.');
             }
+            $data = json_decode($response, true);
+            if (!isset($data['success']) || !$data['success']) {
+                Log::error('Error en respuesta WoL Python: ' . $response);
+                return redirect()->back()->with('error', 'Error al enviar WoL: ' . ($data['error'] ?? 'Error desconocido'));
+            }
+            Log::info("Usuario {".Auth::user()->username."} envió Wake-on-LAN a {$host->hostname} ({$host->mac_address})");
+            return redirect()->back()->with('success', "Paquete Wake-on-LAN enviado a {$host->hostname}");
         } catch (\Exception $e) {
             Log::error('Error en wakeOnLan: ' . $e->getMessage());
-            return redirect()->back()
-                ->with('error', 'Error al despertar el host: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Error al despertar el host: ' . $e->getMessage());
         }
     }
     
@@ -649,44 +654,52 @@ class MonitorController extends Controller
     }
     
     /**
-     * Enviar Wake-on-LAN a todos los equipos de un grupo
+     * Enviar Wake-on-LAN a todos los hosts de un grupo usando el microservicio Python
      */
     public function wakeOnLanGroup($id)
     {
         try {
             $group = MonitorGroup::findOrFail($id);
-            
-            // Si es administrador o creador, puede despertar
             if (!Auth::user()->is_admin && $group->created_by != Auth::id()) {
                 abort(403, 'No tienes permiso para despertar los hosts de este grupo');
             }
-            
             $hosts = $group->hosts()->whereNotNull('mac_address')->get();
             $sentCount = 0;
             $errorCount = 0;
-            
+            $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
+            $wolUrl = rtrim($baseUrl, '/') . '/wol';
             foreach ($hosts as $host) {
-                $result = $host->wakeOnLan();
-                if ($result) {
+                $payload = json_encode(['mac' => $host->mac_address]);
+                $opts = [
+                    'http' => [
+                        'method' => 'POST',
+                        'header' => "Content-Type: application/json\r\n",
+                        'content' => $payload,
+                        'timeout' => 5
+                    ]
+                ];
+                $context = stream_context_create($opts);
+                $response = @file_get_contents($wolUrl, false, $context);
+                $ok = false;
+                if ($response !== false) {
+                    $data = json_decode($response, true);
+                    $ok = isset($data['success']) && $data['success'];
+                }
+                if ($ok) {
                     Log::info("Usuario {".Auth::user()->username."} envió Wake-on-LAN a {$host->hostname} ({$host->mac_address}) del grupo {$group->name}");
                     $sentCount++;
                 } else {
                     $errorCount++;
                 }
             }
-            
             if ($sentCount > 0) {
-                return redirect()->back()
-                    ->with('success', "Paquetes Wake-on-LAN enviados a {$sentCount} equipos del grupo '{$group->name}'." . 
-                           ($errorCount > 0 ? " {$errorCount} equipos fallaron." : ""));
+                return redirect()->back()->with('success', "Paquetes Wake-on-LAN enviados a {$sentCount} equipos del grupo '{$group->name}'." . ($errorCount > 0 ? " {$errorCount} equipos fallaron." : ""));
             } else {
-                return redirect()->back()
-                    ->with('error', "No se pudo enviar Wake-on-LAN a ningún equipo del grupo '{$group->name}'. Verifica que tengan MAC configurada.");
+                return redirect()->back()->with('error', "No se pudo enviar Wake-on-LAN a ningún equipo del grupo '{$group->name}'. Verifica que tengan MAC configurada.");
             }
         } catch (\Exception $e) {
             Log::error('Error en wakeOnLanGroup: ' . $e->getMessage());
-            return redirect()->back()
-                ->with('error', 'Error al despertar los hosts del grupo: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Error al despertar los hosts del grupo: ' . $e->getMessage());
         }
     }
     
