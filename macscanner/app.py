@@ -61,25 +61,22 @@ def scan_mac():
     if not ip:
         return jsonify({'success': False, 'error': 'No IP provided'}), 400
 
-    # 1. Forzar actualización ARP
+    # 1. Forzar actualización ARP con ping
     try:
         subprocess.run(['ping', '-c', '2', '-W', '1', ip], timeout=3)
     except Exception:
         pass
 
-    # 2. Buscar MAC con diferentes métodos
-    mac = get_mac_arp_scan(ip)
-    if not mac:
-        mac = get_mac_ip_neigh(ip)
-    if not mac:
-        mac = get_mac_arp(ip)
-    if not mac:
-        mac = get_mac_nmap(ip)
-
-    if mac:
-        return jsonify({'success': True, 'ip': ip, 'mac': mac})
-    else:
-        return jsonify({'success': False, 'ip': ip, 'error': 'MAC not found'})
+    # 2. Buscar MAC solo con arp tras ping
+    try:
+        result = subprocess.run(['arp', '-n', ip], stdout=subprocess.PIPE, text=True, timeout=2)
+        match = re.search(r'([0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5})', result.stdout)
+        if match:
+            mac = match.group(1).lower()
+            return jsonify({'success': True, 'ip': ip, 'mac': mac})
+    except Exception:
+        pass
+    return jsonify({'success': False, 'ip': ip, 'error': 'MAC not found'})
 
 @app.route('/scanall', methods=['GET'])
 def scan_all():

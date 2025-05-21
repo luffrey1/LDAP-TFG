@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y \
     iproute2 \
     net-tools \
     sudo \
+    iputils-ping \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install flask
