@@ -80,28 +80,28 @@ class MonitorController extends Controller
     
     /**
      * Verifica el estado de un host específico usando el microservicio Python
-     * Llama SIEMPRE a /ping?ip=... en el microservicio, nunca a /ping/{id}
+     * Llama a /scan?ip=... en el microservicio, nunca a /ping/{id}
      */
     public function ping($id)
     {
         try {
             $host = MonitorHost::findOrFail($id);
             $ip = $host->ip_address;
-            // Construir SIEMPRE la URL con la IP, nunca con el ID
+            // Usar /scan?ip=... porque /ping?ip=... no existe en el microservicio
             $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
-            $pythonServiceUrl = rtrim($baseUrl, '/') . '/ping?ip=' . urlencode($ip);
+            $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($ip);
             $response = @file_get_contents($pythonServiceUrl);
             if ($response === false) {
                 Log::error('No se pudo conectar al microservicio Python para ping: ' . $pythonServiceUrl);
                 return response()->json(['status' => 'error', 'message' => 'No se pudo conectar al microservicio de red.']);
             }
             $data = json_decode($response, true);
-            if (!$data || !isset($data['status'])) {
-                Log::error('Respuesta inválida del microservicio Python (ping): ' . $response);
+            if (!$data || !isset($data['success'])) {
+                Log::error('Respuesta inválida del microservicio Python (scan): ' . $response);
                 return response()->json(['status' => 'error', 'message' => 'Respuesta inválida del microservicio de red.']);
             }
-            $host->status = $data['status'] === 'online' ? 'online' : 'offline';
-            $host->last_seen = $data['status'] === 'online' ? now() : $host->last_seen;
+            $host->status = $data['success'] ? 'online' : 'offline';
+            $host->last_seen = $data['success'] ? now() : $host->last_seen;
             if (!empty($data['mac'])) $host->mac_address = $data['mac'];
             if (!empty($data['hostname'])) $host->hostname = $data['hostname'];
             $host->save();
