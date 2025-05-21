@@ -140,7 +140,7 @@
                                                                         <a href="{{ route('monitor.show', $host->id) }}" class="btn btn-sm btn-primary" title="Ver detalles">
                                                                             <i class="fas fa-eye"></i>
                                                                         </a>
-                                                                        <a href="{{ route('monitor.ping', $host->id) }}" class="btn btn-sm btn-info" title="Ping">
+                                                                        <a href="{{ route('monitor.ping', $host->id) }}" class="btn btn-sm btn-info btn-ping" data-host-id="{{ $host->id }}" title="Ping">
                                                                             <i class="fas fa-exchange-alt"></i>
                                                                         </a>
                                                                         @if($host->mac_address)
@@ -260,6 +260,38 @@
         setTimeout(function() {
             $('.alert').alert('close');
         }, 5000);
+
+        // Función para hacer ping a un host individual
+        $('.btn-ping').on('click', function() {
+            const hostId = $(this).data('host-id');
+            const row = $(this).closest('tr');
+            const statusBadge = row.find('.status-badge');
+            // Cambiar ícono a animación de carga
+            $(this).html('<i class="fas fa-spinner fa-spin"></i>');
+            $.ajax({
+                url: "{{ route('monitor.ping', ['id' => '__id__']) }}".replace('__id__', hostId),
+                type: 'GET',
+                dataType: 'json',
+                beforeSend: function() {
+                    statusBadge.removeClass('badge-success badge-danger badge-warning');
+                    statusBadge.addClass('badge-warning');
+                    statusBadge.text('Verificando...');
+                },
+                success: function(response) {
+                    // Recargar la página para mostrar el estado actualizado
+                    location.reload();
+                },
+                error: function(xhr) {
+                    console.error('Error al hacer ping:', xhr.responseText);
+                    statusBadge.removeClass('badge-success badge-danger badge-warning');
+                    statusBadge.addClass('badge-danger');
+                    statusBadge.text('Error');
+                    // Restaurar ícono original
+                    row.find('.btn-ping').html('<i class="fas fa-sync"></i>');
+                    toastr.error('Error al hacer ping al host');
+                }
+            });
+        });
     });
     
     function eliminarHost(id, nombre) {

@@ -139,8 +139,9 @@ class MonitorController extends Controller
                 try {
                     $host = \App\Models\MonitorHost::where('ip_address', $hostData['ip'])->first();
                     if ($host) {
-                        $host->status = $hostData['status'] === 'online' ? 'online' : 'offline';
-                        $host->last_seen = $hostData['status'] === 'online' ? now() : $host->last_seen;
+                        // Considerar online si tiene MAC, offline si no
+                        $host->status = !empty($hostData['mac']) ? 'online' : 'offline';
+                        $host->last_seen = !empty($hostData['mac']) ? now() : $host->last_seen;
                         if (!empty($hostData['mac'])) $host->mac_address = $hostData['mac'];
                         if (!empty($hostData['hostname'])) $host->hostname = $hostData['hostname'];
                         $host->save();

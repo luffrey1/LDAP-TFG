@@ -221,28 +221,14 @@
         $('.ping-host').click(function() {
             var hostId = $(this).data('host-id');
             var button = $(this);
-            
             button.html('<i class="fas fa-spinner fa-spin"></i>').prop('disabled', true);
-            
             $.ajax({
                 url: '/monitor/ping/' + hostId,
                 type: 'GET',
                 dataType: 'json',
                 success: function(response) {
-                    button.html('<i class="fas fa-exchange-alt"></i>').prop('disabled', false);
-                    
-                    var statusBadge = $('.host-status[data-host-id="' + hostId + '"]');
-                    
-                    if (response.status === 'online') {
-                        statusBadge.removeClass('bg-danger bg-warning bg-secondary').addClass('bg-success');
-                        statusBadge.html('<i class="fas fa-check-circle me-1"></i> En línea');
-                    } else if (response.status === 'offline') {
-                        statusBadge.removeClass('bg-success bg-warning bg-secondary').addClass('bg-danger');
-                        statusBadge.html('<i class="fas fa-times-circle me-1"></i> Desconectado');
-                    } else {
-                        statusBadge.removeClass('bg-success bg-danger bg-secondary').addClass('bg-warning');
-                        statusBadge.html('<i class="fas fa-exclamation-circle me-1"></i> Error');
-                    }
+                    // Recargar la página para mostrar el estado actualizado
+                    location.reload();
                 },
                 error: function() {
                     button.html('<i class="fas fa-exchange-alt"></i>').prop('disabled', false);
