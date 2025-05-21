@@ -337,11 +337,20 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     // CPU
-    renderGauge(document.getElementById('gauge-cpu'), {{ $host->cpu_usage ?? '0' }}, 'CPU', '#007bff');
+    renderGauge(
+        document.getElementById('gauge-cpu'),
+        {{ is_array($host->cpu_usage) && isset($host->cpu_usage['percentage']) ? $host->cpu_usage['percentage'] : ($host->cpu_usage ?? 0) }},
+        'CPU', '#007bff');
     // Memoria
-    renderGauge(document.getElementById('gauge-mem'), {{ $host->memory_usage ?? '0' }}, 'Memoria', '#ffc107');
+    renderGauge(
+        document.getElementById('gauge-mem'),
+        {{ is_array($host->memory_usage) && isset($host->memory_usage['percentage']) ? $host->memory_usage['percentage'] : ($host->memory_usage ?? 0) }},
+        'Memoria', '#ffc107');
     // Disco
-    renderGauge(document.getElementById('gauge-disk'), {{ $host->disk_usage ?? '0' }}, 'Disco', '#28a745');
+    renderGauge(
+        document.getElementById('gauge-disk'),
+        {{ is_array($host->disk_usage) && isset($host->disk_usage['percentage']) ? $host->disk_usage['percentage'] : ($host->disk_usage ?? 0) }},
+        'Disco', '#28a745');
 });
 
 $(function() {
