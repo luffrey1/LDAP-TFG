@@ -125,6 +125,10 @@ class MonitorHost extends Model
                 $host->last_boot = $data['last_boot'];
             }
             
+            if (isset($data['users'])) {
+                $host->users = $data['users'];
+            }
+            
             $host->last_seen = now();
             return $host->save();
         } catch (\Exception $e) {

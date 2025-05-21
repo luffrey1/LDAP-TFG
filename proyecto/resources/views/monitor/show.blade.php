@@ -147,15 +147,15 @@
                         <div class="card text-center">
                             <div class="card-header bg-primary text-white">CPU</div>
                             <div class="card-body">
+                                @if(isset($host->system_info['cpu_cores']) && isset($host->cpu_usage['percentage']))
+                                    <div class="fw-bold mb-1 text-primary">Uso: {{ $host->cpu_usage['percentage'] }}% de {{ $host->system_info['cpu_cores'] }} núcleos</div>
+                                @endif
                                 <canvas id="gauge-cpu" width="120" height="120"></canvas>
                                 <div class="mt-2 h5">
                                     {{ is_array($host->cpu_usage) && isset($host->cpu_usage['percentage']) ? $host->cpu_usage['percentage'] . '%' : ($host->cpu_usage ?? 'N/A') }}
                                 </div>
                                 @if(isset($host->system_info['cpu_model']))
                                     <div class="small text-muted">Modelo: {{ $host->system_info['cpu_model'] }}</div>
-                                @endif
-                                @if(isset($host->system_info['cpu_cores']))
-                                    <div class="small text-muted">Núcleos: {{ $host->system_info['cpu_cores'] }}</div>
                                 @endif
                             </div>
                         </div>
@@ -164,16 +164,13 @@
                         <div class="card text-center">
                             <div class="card-header bg-warning text-white">Memoria</div>
                             <div class="card-body">
+                                @if(isset($host->system_info['memory_total']) && isset($host->memory_usage['used']))
+                                    <div class="fw-bold mb-1 text-warning">Usado: {{ $host->memory_usage['used'] }} MB / {{ $host->system_info['memory_total'] }}</div>
+                                @endif
                                 <canvas id="gauge-mem" width="120" height="120"></canvas>
                                 <div class="mt-2 h5">
                                     {{ is_array($host->memory_usage) && isset($host->memory_usage['percentage']) ? $host->memory_usage['percentage'] . '%' : ($host->memory_usage ?? 'N/A') }}
                                 </div>
-                                @if(isset($host->system_info['memory_total']))
-                                    <div class="small text-muted">Total: {{ $host->system_info['memory_total'] }}</div>
-                                @endif
-                                @if(isset($host->memory_usage['used']))
-                                    <div class="small text-muted">Usado: {{ $host->memory_usage['used'] }} MB</div>
-                                @endif
                             </div>
                         </div>
                     </div>
@@ -181,16 +178,13 @@
                         <div class="card text-center">
                             <div class="card-header bg-success text-white">Disco</div>
                             <div class="card-body">
+                                @if(isset($host->system_info['disk_total']) && isset($host->disk_usage['used']))
+                                    <div class="fw-bold mb-1 text-success">Usado: {{ $host->disk_usage['used'] }} GB / {{ $host->system_info['disk_total'] }}</div>
+                                @endif
                                 <canvas id="gauge-disk" width="120" height="120"></canvas>
                                 <div class="mt-2 h5">
                                     {{ is_array($host->disk_usage) && isset($host->disk_usage['percentage']) ? $host->disk_usage['percentage'] . '%' : ($host->disk_usage ?? 'N/A') }}
                                 </div>
-                                @if(isset($host->system_info['disk_total']))
-                                    <div class="small text-muted">Total: {{ $host->system_info['disk_total'] }}</div>
-                                @endif
-                                @if(isset($host->disk_usage['used']))
-                                    <div class="small text-muted">Usado: {{ $host->disk_usage['used'] }} GB</div>
-                                @endif
                             </div>
                         </div>
                     </div>
