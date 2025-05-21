@@ -6,6 +6,8 @@ import psutil
 import time
 import uuid
 import os
+import getpass
+import subprocess
 
 # CONFIGURA AQUÍ la URL de tu Laravel
 LARAVEL_URL = "http://172.20.0.6:8000/api/telemetry/update"
@@ -35,6 +37,29 @@ def get_ip():
 def get_uptime():
     return int(time.time() - psutil.boot_time())
 
+def get_users():
+    users = []
+    try:
+        output = subprocess.check_output(['who'], universal_newlines=True)
+        for line in output.strip().split('\n'):
+            if not line.strip():
+                continue
+            parts = line.split()
+            if len(parts) >= 4:
+                username = parts[0]
+                terminal = parts[1]
+                login_time = ' '.join(parts[2:4])
+                from_host = parts[4] if len(parts) > 4 else 'local'
+                users.append({
+                    'username': username,
+                    'terminal': terminal,
+                    'from': from_host.strip('()'),
+                    'login_time': login_time
+                })
+    except Exception as e:
+        pass
+    return users
+
 def main():
     hostname = socket.gethostname()
     ip_address = get_ip()
@@ -51,6 +76,9 @@ def main():
     disk = psutil.disk_usage('/')
     disk_percent = disk.percent
 
+    # Usuarios conectados
+    users = get_users()
+
     # Datos para Laravel
     data = {
         "hostname": hostname,
@@ -61,6 +89,7 @@ def main():
         "cpu_usage": {"percentage": cpu_percent},
         "memory_usage": {"percentage": mem_percent},
         "disk_usage": {"percentage": disk_percent},
+        "users": users,
         "system_info": {
             "os": platform.platform(),
             "cpu_model": platform.processor(),
