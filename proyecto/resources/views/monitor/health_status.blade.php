@@ -6,9 +6,9 @@
     Carbon::setLocale('es');
     date_default_timezone_set('Europe/Madrid');
     $encendidos8h = collect($equipos)->where('encendido_8h', true);
-    $graves = collect($equipos)->where('estado', 'grave')->where('encendido_8h', false);
-    $criticos = collect($equipos)->where('estado', 'critico')->where('encendido_8h', false);
-    $saludables = collect($equipos)->where('estado', 'saludable')->where('encendido_8h', false);
+    $graves = collect($equipos)->where('estado', 'grave');
+    $criticos = collect($equipos)->where('estado', 'critico');
+    $saludables = collect($equipos)->where('estado', 'saludable');
 @endphp
 <div class="container my-4">
     <h1 class="mb-4"><i class="fas fa-server"></i> Estado global de los equipos</h1>
