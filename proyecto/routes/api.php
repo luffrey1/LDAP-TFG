@@ -23,4 +23,6 @@ Route::prefix('terminal')->middleware('auth:sanctum')->group(function () {
     Route::post('/connect', [App\Http\Controllers\SshTerminalController::class, 'connect']);
     Route::post('/send', [App\Http\Controllers\SshTerminalController::class, 'execute']);
     Route::post('/disconnect', [App\Http\Controllers\SshTerminalController::class, 'disconnect']);
-}); 
+});
+
+Route::post('/telemetry/update', [\App\Http\Controllers\MonitorController::class, 'updateTelemetry']); 

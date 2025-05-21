@@ -176,9 +176,6 @@ Route::middleware(['App\Http\Middleware\LdapAuthMiddleware'])->prefix('profesor'
     Route::post('alumnos/ldap/importar', [App\Http\Controllers\Profesor\AlumnoController::class, 'importarAlumnosLdap'])->name('alumnos.ldap.importar');
 });
 
-// Endpoint para recibir actualizaciones de telemetría desde agentes
-Route::post('/api/telemetry/update', [MonitorController::class, 'updateTelemetry'])->name('api.telemetry.update');
-
 // Rutas para la gestión de scripts
 Route::get('/monitor/scripts/available', [MonitorController::class, 'getAvailableScripts'])->name('monitor.scripts.available');
 Route::post('/monitor/scripts/transfer', [MonitorController::class, 'transferScript'])->name('monitor.scripts.transfer');
