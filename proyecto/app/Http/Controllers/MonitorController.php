@@ -122,7 +122,7 @@ class MonitorController extends Controller
     public function pingAll()
     {
         try {
-            $pythonServiceUrl = env('MACSCANNER_URL', 'http://macscanner:5000/scanall?network=172.20.0.0/16');
+            $pythonServiceUrl = 'http://172.20.0.6:5000/scanall?network=172.20.0.0/16';
             $response = @file_get_contents($pythonServiceUrl);
             if ($response === false) {
                 \Log::error('No se pudo conectar al microservicio Python para pingAll: ' . $pythonServiceUrl);

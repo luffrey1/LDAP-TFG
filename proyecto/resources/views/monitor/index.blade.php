@@ -104,7 +104,7 @@
                                                     {{ $groupName }}
                                                     <span class="badge bg-secondary ms-2">{{ $groupHosts->count() }} equipos</span>
                                                 </h5>
-                                                <div class="table-responsive">
+                                                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
                                                     <table class="table table-hover mb-0">
                                                         <thead class="table-light">
                                                             <tr>
