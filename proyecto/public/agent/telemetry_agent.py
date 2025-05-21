@@ -61,52 +61,54 @@ def get_users():
     return users
 
 def main():
-    hostname = socket.gethostname()
-    ip_address = get_ip()
-    mac_address = get_mac()
-    status = "online"
-    uptime = get_uptime()
+    while True:
+        hostname = socket.gethostname()
+        ip_address = get_ip()
+        mac_address = get_mac()
+        status = "online"
+        uptime = get_uptime()
 
-    # CPU
-    cpu_percent = psutil.cpu_percent(interval=1)
-    # Memoria
-    mem = psutil.virtual_memory()
-    mem_percent = mem.percent
-    mem_used = mem.used // (1024**2)  # MB usados
-    mem_total = mem.total // (1024**2)  # MB totales
-    # Disco
-    disk = psutil.disk_usage('/')
-    disk_percent = disk.percent
-    disk_used = disk.used // (1024**3)  # GB usados
-    disk_total = disk.total // (1024**3)  # GB totales
+        # CPU
+        cpu_percent = psutil.cpu_percent(interval=1)
+        # Memoria
+        mem = psutil.virtual_memory()
+        mem_percent = mem.percent
+        mem_used = mem.used // (1024**2)  # MB usados
+        mem_total = mem.total // (1024**2)  # MB totales
+        # Disco
+        disk = psutil.disk_usage('/')
+        disk_percent = disk.percent
+        disk_used = disk.used // (1024**3)  # GB usados
+        disk_total = disk.total // (1024**3)  # GB totales
 
-    # Usuarios conectados
-    users = get_users()
+        # Usuarios conectados
+        users = get_users()
 
-    # Datos para Laravel
-    data = {
-        "hostname": hostname,
-        "ip_address": ip_address,
-        "mac_address": mac_address,
-        "status": status,
-        "uptime": f"{uptime // 3600}h {(uptime % 3600) // 60}m",
-        "cpu_usage": {"percentage": cpu_percent},
-        "memory_usage": {"percentage": mem_percent, "used": mem_used, "total": mem_total},
-        "disk_usage": {"percentage": disk_percent, "used": disk_used, "total": disk_total},
-        "users": users,
-        "system_info": {
-            "os": platform.platform(),
-            "cpu_model": platform.processor(),
-            "memory_total": f"{mem.total // (1024**2)} MB",
-            "disk_total": f"{disk.total // (1024**3)} GB"
+        # Datos para Laravel
+        data = {
+            "hostname": hostname,
+            "ip_address": ip_address,
+            "mac_address": mac_address,
+            "status": status,
+            "uptime": f"{uptime // 3600}h {(uptime % 3600) // 60}m",
+            "cpu_usage": {"percentage": cpu_percent},
+            "memory_usage": {"percentage": mem_percent, "used": mem_used, "total": mem_total},
+            "disk_usage": {"percentage": disk_percent, "used": disk_used, "total": disk_total},
+            "users": users,
+            "system_info": {
+                "os": platform.platform(),
+                "cpu_model": platform.processor(),
+                "memory_total": f"{mem.total // (1024**2)} MB",
+                "disk_total": f"{disk.total // (1024**3)} GB"
+            }
         }
-    }
 
-    try:
-        resp = requests.post(LARAVEL_URL, json=data, timeout=5)
-        print("Respuesta Laravel:", resp.status_code, resp.text)
-    except Exception as e:
-        print("Error enviando telemetría:", e)
+        try:
+            resp = requests.post(LARAVEL_URL, json=data, timeout=5)
+            print("Respuesta Laravel:", resp.status_code, resp.text)
+        except Exception as e:
+            print("Error enviando telemetría:", e)
+        time.sleep(3600)
 
 if __name__ == "__main__":
     main()

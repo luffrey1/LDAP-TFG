@@ -841,6 +841,15 @@ class MonitorController extends Controller
         try {
             $host = \App\Models\MonitorHost::findOrFail($id);
             $user = \Auth::user();
+            // Forzar actualización de telemetría si el host es local
+            if ($host->ip_address === '127.0.0.1' || $host->ip_address === 'localhost') {
+                // Ejecutar el agente localmente (solo si el servidor es el host)
+                try {
+                    exec('python3 ' . base_path('public/agent/telemetry_agent.py') . ' > /dev/null 2>&1 &');
+                } catch (\Exception $e) {
+                    \Log::warning('No se pudo ejecutar el agente de telemetría local: ' . $e->getMessage());
+                }
+            }
             // Permitir a cualquier usuario autenticado ver cualquier host
             return view('monitor.show', compact('host'));
         } catch (\Exception $e) {
