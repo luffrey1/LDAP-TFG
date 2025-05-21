@@ -58,10 +58,11 @@
                             <th>Memoria (%)</th>
                             <th>Disco (%)</th>
                             <th>Uptime</th>
+                            <th>Última telemetría</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($encendidos8h as $eq)
+                        @forelse($encendidos8h as $eq)
                         <tr>
                             <td>
                                 @if($eq['estado'] === 'saludable')
@@ -78,8 +79,11 @@
                             <td class="fw-bold @if($eq['mem']>=70) text-danger @elseif($eq['mem']>=50) text-warning @else text-success @endif">{{ $eq['mem'] }}%</td>
                             <td class="fw-bold @if($eq['disk']>=70) text-danger @elseif($eq['disk']>=50) text-warning @else text-success @endif">{{ $eq['disk'] }}%</td>
                             <td>{{ $eq['uptime'] ?? 'N/A' }}</td>
+                            <td>{{ \App\Models\MonitorHost::find($eq['id'])?->last_seen ? Carbon::parse(\App\Models\MonitorHost::find($eq['id'])->last_seen)->timezone('Europe/Madrid')->format('d/m/Y H:i:s') : 'N/A' }}</td>
                         </tr>
-                        @endforeach
+                        @empty
+                        <tr><td colspan="8" class="text-center text-muted">Ningún equipo en este estado</td></tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -101,10 +105,11 @@
                             <th>Memoria (%)</th>
                             <th>Disco (%)</th>
                             <th>Uptime</th>
+                            <th>Última telemetría</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($graves as $eq)
+                        @forelse($graves as $eq)
                         <tr>
                             <td><span class="badge bg-danger">Grave</span></td>
                             <td>{{ $eq['hostname'] }}</td>
@@ -113,8 +118,11 @@
                             <td class="fw-bold @if($eq['mem']>=70) text-danger @elseif($eq['mem']>=50) text-warning @else text-success @endif">{{ $eq['mem'] }}%</td>
                             <td class="fw-bold @if($eq['disk']>=70) text-danger @elseif($eq['disk']>=50) text-warning @else text-success @endif">{{ $eq['disk'] }}%</td>
                             <td>{{ $eq['uptime'] ?? 'N/A' }}</td>
+                            <td>{{ \App\Models\MonitorHost::find($eq['id'])?->last_seen ? Carbon::parse(\App\Models\MonitorHost::find($eq['id'])->last_seen)->timezone('Europe/Madrid')->format('d/m/Y H:i:s') : 'N/A' }}</td>
                         </tr>
-                        @endforeach
+                        @empty
+                        <tr><td colspan="8" class="text-center text-muted">Ningún equipo en este estado</td></tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -136,10 +144,11 @@
                             <th>Memoria (%)</th>
                             <th>Disco (%)</th>
                             <th>Uptime</th>
+                            <th>Última telemetría</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($criticos as $eq)
+                        @forelse($criticos as $eq)
                         <tr>
                             <td><span class="badge bg-warning text-dark">Crítico</span></td>
                             <td>{{ $eq['hostname'] }}</td>
@@ -148,8 +157,11 @@
                             <td class="fw-bold @if($eq['mem']>=70) text-danger @elseif($eq['mem']>=50) text-warning @else text-success @endif">{{ $eq['mem'] }}%</td>
                             <td class="fw-bold @if($eq['disk']>=70) text-danger @elseif($eq['disk']>=50) text-warning @else text-success @endif">{{ $eq['disk'] }}%</td>
                             <td>{{ $eq['uptime'] ?? 'N/A' }}</td>
+                            <td>{{ \App\Models\MonitorHost::find($eq['id'])?->last_seen ? Carbon::parse(\App\Models\MonitorHost::find($eq['id'])->last_seen)->timezone('Europe/Madrid')->format('d/m/Y H:i:s') : 'N/A' }}</td>
                         </tr>
-                        @endforeach
+                        @empty
+                        <tr><td colspan="8" class="text-center text-muted">Ningún equipo en este estado</td></tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -171,10 +183,11 @@
                             <th>Memoria (%)</th>
                             <th>Disco (%)</th>
                             <th>Uptime</th>
+                            <th>Última telemetría</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($saludables as $eq)
+                        @forelse($saludables as $eq)
                         <tr>
                             <td><span class="badge bg-success">Saludable</span></td>
                             <td>{{ $eq['hostname'] }}</td>
@@ -183,8 +196,11 @@
                             <td class="fw-bold @if($eq['mem']>=70) text-danger @elseif($eq['mem']>=50) text-warning @else text-success @endif">{{ $eq['mem'] }}%</td>
                             <td class="fw-bold @if($eq['disk']>=70) text-danger @elseif($eq['disk']>=50) text-warning @else text-success @endif">{{ $eq['disk'] }}%</td>
                             <td>{{ $eq['uptime'] ?? 'N/A' }}</td>
+                            <td>{{ \App\Models\MonitorHost::find($eq['id'])?->last_seen ? Carbon::parse(\App\Models\MonitorHost::find($eq['id'])->last_seen)->timezone('Europe/Madrid')->format('d/m/Y H:i:s') : 'N/A' }}</td>
                         </tr>
-                        @endforeach
+                        @empty
+                        <tr><td colspan="8" class="text-center text-muted">Ningún equipo en este estado</td></tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
