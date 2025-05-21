@@ -7,210 +7,6 @@
     {{-- Terminal CSS --}}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.css" />
-    <style>
-        /* Estilos para terminal */
-        #terminal-container {
-            width: 100%;
-            height: 400px;
-            min-height: 300px;
-            background-color: #300a24 !important; /* Color de fondo Ubuntu */
-            border-radius: 8px;
-            padding: 0;
-            overflow: hidden;
-            position: relative;
-            margin: 0 auto;
-            box-sizing: border-box;
-        }
-        
-        /* Barra de título estilo Ubuntu */
-        .terminal-titlebar {
-            height: 30px;
-            background-color: #3c3b37;
-            display: flex;
-            align-items: center;
-            padding: 0 10px;
-            border-radius: 8px 8px 0 0;
-            user-select: none;
-        }
-        
-        .terminal-titlebar-buttons {
-            display: flex;
-        }
-        
-        .terminal-button {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-        
-        .terminal-button-close {
-            background-color: #e95420;
-        }
-        
-        .terminal-button-minimize {
-            background-color: #f6c856;
-            }
-            
-        .terminal-button-maximize {
-            background-color: #5cb85c;
-        }
-        
-        .terminal-title {
-            flex-grow: 1;
-            text-align: center;
-            color: #fff;
-            font-size: 14px;
-            font-family: 'Ubuntu', sans-serif;
-        }
-        
-        /* Barra de estado */
-        .terminal-statusbar {
-            height: 24px;
-            background-color: #3c3b37;
-            border-radius: 0 0 8px 8px;
-            display: flex;
-            align-items: center;
-            padding: 0 10px;
-            color: #ddd;
-            font-size: 12px;
-            font-family: monospace;
-        }
-        
-        .connection-indicator {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-        
-        .connection-active {
-            background-color: #5cb85c;
-        }
-        
-        .connection-inactive {
-            background-color: #d9534f;
-        }
-        
-        /* Terminal básico */
-        #terminal-basic {
-            height: calc(100% - 54px);
-            min-height: 300px;
-            width: 100%;
-            padding: 8px;
-        }
-        
-        /* Spinner de carga */
-        .terminal-loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-        }
-        
-        .terminal-spinner {
-            border: 4px solid rgba(255, 255, 255, 0.1);
-            border-left-color: #e95420;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        /* Comandos rápidos */
-        .quick-command {
-            cursor: pointer;
-            padding: 5px 10px;
-            margin: 5px 0;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-            transition: background-color 0.2s;
-        }
-        
-        .quick-command:hover {
-            background-color: #e9ecef;
-        }
-
-        /* Scrollbar personalizado */
-        .terminal .xterm-viewport::-webkit-scrollbar {
-            width: 8px;
-        }
-        
-        .terminal .xterm-viewport::-webkit-scrollbar-track {
-            background: #300a24;
-        }
-        
-        .terminal .xterm-viewport::-webkit-scrollbar-thumb {
-            background: #666;
-            border-radius: 4px;
-        }
-        
-        .terminal .xterm-viewport::-webkit-scrollbar-thumb:hover {
-            background: #888;
-        }
-
-        #ssh-card {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-        }
-        .card-body.p-0 {
-            padding: 0 !important;
-            display: flex;
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        #terminal-container canvas, #terminal-basic canvas, .xterm-canvas {
-            width: 100% !important;
-            height: 100% !important;
-            display: block;
-            max-width: 100vw;
-            max-height: 100vh;
-            box-sizing: border-box;
-        }
-
-        /* Estilos Ubuntu-like solo cuando la terminal está conectada */
-        #terminal-container.ubuntu-terminal-active {
-            background: linear-gradient(135deg, #300a24 0%, #4f2350 100%) !important;
-            border-radius: 10px;
-            box-shadow: 0 4px 24px #0004;
-            border: 2px solid #5e2750;
-        }
-        .terminal-titlebar.ubuntu-terminal-active {
-            background: linear-gradient(90deg, #3c3b37 0%, #5e2750 100%);
-            border-radius: 10px 10px 0 0;
-            font-family: 'Ubuntu', 'Fira Mono', monospace;
-            font-size: 15px;
-            letter-spacing: 0.5px;
-        }
-        .terminal-titlebar-buttons.ubuntu-terminal-active .terminal-button {
-            width: 13px;
-            height: 13px;
-            margin-right: 0;
-        }
-        .terminal-titlebar-buttons.ubuntu-terminal-active {
-            gap: 7px;
-        }
-        .terminal-title.ubuntu-terminal-active {
-            font-family: 'Ubuntu', 'Fira Mono', monospace;
-            font-size: 15px;
-        }
-        .xterm.ubuntu-terminal-active {
-            font-family: 'Ubuntu Mono', 'Fira Mono', monospace !important;
-            font-size: 15px !important;
-            color: #e0e0e0 !important;
-            background: transparent !important;
-            padding: 12px 18px 12px 18px !important;
-            border-radius: 0 0 10px 10px;
-        }
-    </style>
 @endsection
 
 @section('content')
@@ -338,79 +134,65 @@
             
             {{-- Columna Derecha: Métricas y Terminal --}}
             <div class="col-12 col-md-8">
+                @php
+                    $isAgentActive = false;
+                    $lastSeen = $host->last_seen;
+                    if ($lastSeen) {
+                        $isAgentActive = \Carbon\Carbon::parse($lastSeen)->gt(now()->subMinutes(10));
+                    }
+                @endphp
+
+                <div class="mb-4">
+                    <div class="alert {{ $isAgentActive ? 'alert-success' : 'alert-danger' }} d-flex align-items-center justify-content-between" role="alert" style="font-size:1.1em;">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-{{ $isAgentActive ? 'check-circle' : 'times-circle' }} me-2"></i>
+                            <div>
+                                <strong>Agente de telemetría: </strong>
+                                <span id="agent-status-text">{{ $isAgentActive ? 'Activo' : 'Inactivo' }}</span>
+                                @if($lastSeen)
+                                    <span class="ms-2 text-muted small" id="agent-last-seen">(Último dato: {{ \Carbon\Carbon::parse($lastSeen)->diffForHumans() }})</span>
+                                @endif
+                            </div>
+                        </div>
+                        <button id="btn-refresh-agent" class="btn btn-outline-primary btn-sm ms-3" title="Comprobar ahora">
+                            <i class="fas fa-sync-alt"></i> Comprobar ahora
+                        </button>
+                    </div>
+                </div>
+
                 <div class="row">
-                    {{-- CPU --}}
-                    <div class="col-md-6 col-sm-6 col-12">
-                        <div class="card card-statistic-1">
-                            <div class="card-icon bg-primary"><i class="fas fa-microchip"></i></div>
-                            <div class="card-wrap">
-                                <div class="card-header"><h4>CPU</h4></div>
-                                <div class="card-body" id="metric-cpu-usage">
-                                    {{ $host->cpu_usage !== null ? $host->cpu_usage . '%' : 'N/A' }}
-                                </div>
-                                @if($host->cpu_usage !== null)
-                                <div class="progress mb-2" style="height: 6px;">
-                                    <div id="metric-cpu-progress" class="progress-bar bg-{{ $host->cpu_color }}" role="progressbar" style="width: {{ $host->cpu_usage }}%" aria-valuenow="{{ $host->cpu_usage }}" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
-                                @else
-                                <div class="progress mb-2" style="height: 6px;">
-                                     <div id="metric-cpu-progress" class="progress-bar bg-light" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
-                                @endif
+                    <div class="col-md-4 col-sm-6 col-12 mb-4">
+                        <div class="card text-center">
+                            <div class="card-header bg-primary text-white">CPU</div>
+                            <div class="card-body">
+                                <canvas id="gauge-cpu" width="120" height="120"></canvas>
+                                <div class="mt-2 h5">{{ $host->cpu_usage !== null ? $host->cpu_usage . '%' : 'N/A' }}</div>
                             </div>
                         </div>
                     </div>
-                    {{-- Memoria --}}
-                    <div class="col-md-6 col-sm-6 col-12">
-                        <div class="card card-statistic-1">
-                            <div class="card-icon bg-warning"><i class="fas fa-memory"></i></div>
-                            <div class="card-wrap">
-                                <div class="card-header"><h4>Memoria</h4></div>
-                                <div class="card-body" id="metric-memory-usage">
-                                    {{ $host->memory_usage !== null ? $host->memory_usage . '%' : 'N/A' }}
-                                </div>
-                                @if($host->memory_usage !== null)
-                                <div class="progress mb-2" style="height: 6px;">
-                                    <div id="metric-memory-progress" class="progress-bar bg-{{ $host->memory_color }}" role="progressbar" style="width: {{ $host->memory_usage }}%" aria-valuenow="{{ $host->memory_usage }}" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
-                                @else
-                                <div class="progress mb-2" style="height: 6px;">
-                                     <div id="metric-memory-progress" class="progress-bar bg-light" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
-                                @endif
+                    <div class="col-md-4 col-sm-6 col-12 mb-4">
+                        <div class="card text-center">
+                            <div class="card-header bg-warning text-white">Memoria</div>
+                            <div class="card-body">
+                                <canvas id="gauge-mem" width="120" height="120"></canvas>
+                                <div class="mt-2 h5">{{ $host->memory_usage !== null ? $host->memory_usage . '%' : 'N/A' }}</div>
                             </div>
                         </div>
                     </div>
-                    {{-- Disco --}}
-                    <div class="col-md-6 col-sm-6 col-12">
-                        <div class="card card-statistic-1">
-                            <div class="card-icon bg-success"><i class="fas fa-hdd"></i></div>
-                            <div class="card-wrap">
-                                <div class="card-header"><h4>Disco</h4></div>
-                                <div class="card-body" id="metric-disk-usage">
-                                    {{ $host->disk_usage !== null ? $host->disk_usage . '%' : 'N/A' }}
-                                </div>
-                                @if($host->disk_usage !== null)
-                                <div class="progress mb-2" style="height: 6px;">
-                                    <div id="metric-disk-progress" class="progress-bar bg-{{ $host->disk_color }}" role="progressbar" style="width: {{ $host->disk_usage }}%" aria-valuenow="{{ $host->disk_usage }}" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
-                                @else
-                                 <div class="progress mb-2" style="height: 6px;">
-                                     <div id="metric-disk-progress" class="progress-bar bg-light" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
-                                @endif
+                    <div class="col-md-4 col-sm-6 col-12 mb-4">
+                        <div class="card text-center">
+                            <div class="card-header bg-success text-white">Disco</div>
+                            <div class="card-body">
+                                <canvas id="gauge-disk" width="120" height="120"></canvas>
+                                <div class="mt-2 h5">{{ $host->disk_usage !== null ? $host->disk_usage . '%' : 'N/A' }}</div>
                             </div>
                         </div>
                     </div>
-                    {{-- Uptime --}}
-                    <div class="col-md-6 col-sm-6 col-12">
-                        <div class="card card-statistic-1">
-                            <div class="card-icon bg-info"><i class="fas fa-clock"></i></div>
-                            <div class="card-wrap">
-                                <div class="card-header"><h4>Uptime</h4></div>
-                                <div class="card-body" id="metric-uptime">
-                                    {{ $host->uptime ?? 'N/A' }}
-                                </div>
+                    <div class="col-md-12 col-sm-12 col-12 mb-4">
+                        <div class="card text-center">
+                            <div class="card-header bg-info text-white">Uptime</div>
+                            <div class="card-body">
+                                <div class="display-6">{{ $host->uptime ?? 'N/A' }}</div>
                             </div>
                         </div>
                     </div>
@@ -527,6 +309,7 @@
 
 <!-- Dependencias Xterm.js y jQuery -->
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 var webssh2Host = "172.20.0.6"; // IP de tu servidor
 var webssh2Port = "2222"; // Puerto de WebSSH2
@@ -543,5 +326,74 @@ $(function() {
             }
         });
     }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    function renderGauge(ctx, value, label, color) {
+        return new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [value ?? 0, 100 - (value ?? 0)],
+                    backgroundColor: [color, '#e9ecef'],
+                    borderWidth: 0
+                }],
+                labels: [label, 'Libre']
+            },
+            options: {
+                cutout: '75%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false },
+                    title: {
+                        display: true,
+                        text: label,
+                        font: { size: 16 }
+                    },
+                    datalabels: { display: false }
+                },
+                circumference: 180,
+                rotation: 270
+            }
+        });
+    }
+    // CPU
+    renderGauge(document.getElementById('gauge-cpu'), {{ $host->cpu_usage ?? '0' }}, 'CPU', '#007bff');
+    // Memoria
+    renderGauge(document.getElementById('gauge-mem'), {{ $host->memory_usage ?? '0' }}, 'Memoria', '#ffc107');
+    // Disco
+    renderGauge(document.getElementById('gauge-disk'), {{ $host->disk_usage ?? '0' }}, 'Disco', '#28a745');
+});
+
+$(function() {
+    $('#btn-refresh-agent').on('click', function() {
+        var btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Comprobando...');
+        $.ajax({
+            url: "{{ route('monitor.ping', ['id' => $host->id]) }}",
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                // Actualizar el recuadro de estado del agente
+                if (response.status === 'online') {
+                    $('#agent-status-text').text('Activo');
+                    btn.closest('.alert').removeClass('alert-danger').addClass('alert-success');
+                } else {
+                    $('#agent-status-text').text('Inactivo');
+                    btn.closest('.alert').removeClass('alert-success').addClass('alert-danger');
+                }
+                if (response.last_seen) {
+                    $('#agent-last-seen').text('(Último dato: ' + response.last_seen + ')');
+                }
+                btn.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Comprobar ahora');
+                // Opcional: recargar la página para actualizar los gráficos
+                location.reload();
+            },
+            error: function() {
+                btn.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Comprobar ahora');
+                toastr.error('Error al comprobar el estado del agente');
+            }
+        });
+    });
 });
 </script>
