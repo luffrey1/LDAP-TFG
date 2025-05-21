@@ -122,31 +122,31 @@ class MonitorController extends Controller
     public function pingAll()
     {
         try {
-            $pythonServiceUrl = 'http://172.20.0.6:5000/scanall?network=172.20.0.0/16';
-            $response = @file_get_contents($pythonServiceUrl);
-            if ($response === false) {
-                \Log::error('No se pudo conectar al microservicio Python para pingAll: ' . $pythonServiceUrl);
-                return redirect()->route('monitor.index')->with('error', 'No se pudo conectar al microservicio de red.');
-            }
-            $data = json_decode($response, true);
-            if (!$data || !isset($data['hosts'])) {
-                \Log::error('Respuesta inválida del microservicio Python (pingAll): ' . $response);
-                return redirect()->route('monitor.index')->with('error', 'Respuesta inválida del microservicio de red.');
-            }
+            $hosts = \App\Models\MonitorHost::all();
             $updated = 0;
             $errors = 0;
-            foreach ($data['hosts'] as $hostData) {
+            foreach ($hosts as $host) {
+                $ip = $host->ip_address;
+                $pythonServiceUrl = 'http://172.20.0.6:5000/scan?ip=' . urlencode($ip);
+                $response = @file_get_contents($pythonServiceUrl);
+                if ($response === false) {
+                    \Log::error('No se pudo conectar al microservicio Python para pingAll (host ' . $ip . '): ' . $pythonServiceUrl);
+                    $errors++;
+                    continue;
+                }
+                $data = json_decode($response, true);
+                if (!$data || !isset($data['success'])) {
+                    \Log::error('Respuesta inválida del microservicio Python (pingAll, host ' . $ip . '): ' . $response);
+                    $errors++;
+                    continue;
+                }
                 try {
-                    $host = \App\Models\MonitorHost::where('ip_address', $hostData['ip'])->first();
-                    if ($host) {
-                        // Considerar online si tiene MAC, offline si no
-                        $host->status = !empty($hostData['mac']) ? 'online' : 'offline';
-                        $host->last_seen = !empty($hostData['mac']) ? now() : $host->last_seen;
-                        if (!empty($hostData['mac'])) $host->mac_address = $hostData['mac'];
-                        if (!empty($hostData['hostname'])) $host->hostname = $hostData['hostname'];
-                        $host->save();
-                        $updated++;
-                    }
+                    $host->status = $data['success'] ? 'online' : 'offline';
+                    $host->last_seen = $data['success'] ? now() : $host->last_seen;
+                    if (!empty($data['mac'])) $host->mac_address = $data['mac'];
+                    if (!empty($data['hostname'])) $host->hostname = $data['hostname'];
+                    $host->save();
+                    $updated++;
                 } catch (\Exception $e) {
                     \Log::error('Error actualizando host en pingAll: ' . $e->getMessage());
                     $errors++;
