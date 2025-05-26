@@ -28,10 +28,10 @@ return [
     'connections' => [
         'default' => [
             'hosts' => [env('LDAP_DEFAULT_HOSTS', env('LDAP_HOST', '172.19.0.4'))],
-            'username' => env('LDAP_DEFAULT_USERNAME', env('LDAP_USERNAME', 'cn=admin,dc=test,dc=tierno,dc=es')),
+            'username' => env('LDAP_DEFAULT_USERNAME', env('LDAP_USERNAME', 'cn=admin,dc=tierno,dc=es')),
             'password' => env('LDAP_DEFAULT_PASSWORD', env('LDAP_PASSWORD', 'admin')),
             'port' => env('LDAP_DEFAULT_PORT', env('LDAP_PORT', 389)),
-            'base_dn' => env('LDAP_DEFAULT_BASE_DN', env('LDAP_BASE_DN', 'dc=test,dc=tierno,dc=es')),
+            'base_dn' => env('LDAP_DEFAULT_BASE_DN', env('LDAP_BASE_DN', 'dc=tierno,dc=es')),
             'timeout' => env('LDAP_DEFAULT_TIMEOUT', env('LDAP_TIMEOUT', 5)),
             'use_ssl' => env('LDAP_DEFAULT_SSL', env('LDAP_SSL', false)),
             'use_tls' => env('LDAP_DEFAULT_TLS', env('LDAP_TLS', false)),

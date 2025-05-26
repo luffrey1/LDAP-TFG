@@ -28,12 +28,12 @@ olcAccess: to *
 #       configurado SSSD, que debe de hacer la búsqueda con el root y aquí no lo podemos evitar.
 #       Para SSSD además hay que poner `enumerate = false` en sssd.conf
 olcAccess: to attrs=uniqueMember
-           by group/groupOfUniqueNames/uniqueMember="cn=alumnos,ou=groups,dc=test,dc=tierno,dc=es" none
+           by group/groupOfUniqueNames/uniqueMember="cn=alumnos,ou=groups,dc=tierno,dc=es" none
            by * read
 #
 # Únicamente los profesores pueden cambiar su password.
 olcAccess: to attrs=userPassword,shadowLastChange 
-           by group/groupOfUniqueNames/uniqueMember="cn=profesores,ou=groups,dc=test,dc=tierno,dc=es" write
+           by group/groupOfUniqueNames/uniqueMember="cn=profesores,ou=groups,dc=tierno,dc=es" write
            by self auth
            by anonymous auth 
            by * auth
