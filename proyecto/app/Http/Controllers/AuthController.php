@@ -302,7 +302,6 @@ class AuthController extends Controller
             Log::debug("Buscando grupos con uniqueMember={$userDn}");
             
             $uniqueGroups = $ldap->query()
-                ->where('objectClass', '=', 'groupOfUniqueNames')
                 ->where('uniqueMember', '=', $userDn)
                 ->get();
             
