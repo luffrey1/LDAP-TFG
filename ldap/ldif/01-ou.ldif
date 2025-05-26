@@ -5,7 +5,7 @@
 # ldapadd -x -D cn=admin,dc=dc=tierno,dc=es -W -f informatica.ldif
 #
 
-dn: ou=people,dc=dc=tierno,dc=es
+dn: ou=people,dc=tierno,dc=es
 objectClass: organizationalUnit
 ou: people
 
