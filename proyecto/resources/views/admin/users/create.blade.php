@@ -34,8 +34,8 @@
 
                         <div class="mb-3">
                             <label for="uid" class="form-label">{{ __('Nombre de Usuario') }} <span class="text-danger">*</span></label>
-                            <input id="uid" type="text" class="form-control @error('uid') is-invalid @enderror" name="uid" value="{{ old('uid') }}" required autocomplete="uid" autofocus>
-                            <div class="form-text">{{ __('El nombre de usuario no podrá cambiarse después de la creación.') }}</div>
+                            <input id="uid" type="text" class="form-control @error('uid') is-invalid @enderror" name="uid" value="{{ old('uid') }}" required autocomplete="uid" readonly>
+                            <div class="form-text">{{ __('Se genera automáticamente a partir del nombre y apellido.') }}</div>
                             @error('uid')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>
@@ -76,33 +76,33 @@
 
                         <div class="mb-3">
                             <label for="dn_preview" class="form-label">{{ __('DN (Canonical Name)') }}</label>
-                            <input id="dn_preview" type="text" class="form-control bg-light" disabled>
+                            <input id="dn_preview" type="text" class="form-control" disabled>
                             <div class="form-text">{{ __('Este será el identificador único del usuario en LDAP.') }}</div>
                         </div>
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label for="uidNumber" class="form-label">{{ __('UID Number') }}</label>
-                                <input id="uidNumber" type="number" class="form-control bg-light" name="uidNumber" value="{{ old('uidNumber') }}">
+                                <input id="uidNumber" type="number" class="form-control" name="uidNumber" value="{{ old('uidNumber') }}">
                                 <div class="form-text">{{ __('Se asignará automáticamente si se deja vacío.') }}</div>
                             </div>
 
                             <div class="col-md-6 mb-3">
                                 <label for="gidNumber" class="form-label">{{ __('GID Number') }}</label>
-                                <input id="gidNumber" type="number" class="form-control bg-light" name="gidNumber" value="{{ old('gidNumber', '9000') }}">
+                                <input id="gidNumber" type="number" class="form-control" name="gidNumber" value="{{ old('gidNumber', '9000') }}">
                                 <div class="form-text">{{ __('Grupo principal del usuario (9000 para everybody).') }}</div>
                             </div>
                         </div>
 
                         <div class="mb-3">
                             <label for="homeDirectory" class="form-label">{{ __('Home Directory') }}</label>
-                            <input id="homeDirectory" type="text" class="form-control bg-light" name="homeDirectory" value="{{ old('homeDirectory', '/home/') }}" readonly>
+                            <input id="homeDirectory" type="text" class="form-control" name="homeDirectory" value="{{ old('homeDirectory', '/home/') }}" readonly>
                             <div class="form-text">{{ __('Se genera automáticamente a partir del nombre de usuario.') }}</div>
                         </div>
 
                         <div class="mb-3">
                             <label for="loginShell" class="form-label">{{ __('Shell') }}</label>
-                            <input id="loginShell" type="text" class="form-control bg-light" name="loginShell" value="{{ old('loginShell', '/bin/bash') }}">
+                            <input id="loginShell" type="text" class="form-control" name="loginShell" value="{{ old('loginShell', '/bin/bash') }}">
                             <div class="form-text">{{ __('Shell por defecto del usuario.') }}</div>
                         </div>
 
@@ -193,6 +193,26 @@
         const btnRoleAlumno = document.getElementById('btn-role-alumno');
         const gruposSelect = document.getElementById('grupos');
 
+        // Función para actualizar el nombre de usuario basado en nombre y apellidos
+        function updateUsername() {
+            if (nombreInput.value) {
+                // Obtener el nombre en minúsculas sin acentos
+                const nombre = nombreInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
+                
+                // Obtener la primera inicial del apellido
+                let inicialApellido = '';
+                if (apellidosInput.value) {
+                    inicialApellido = apellidosInput.value.charAt(0).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                }
+                
+                // Combinar para formar el nombre de usuario
+                uidInput.value = nombre + inicialApellido;
+                
+                // Actualizar también el DN y el homeDirectory
+                updateDnAndHome();
+            }
+        }
+
         // Función para actualizar el email basado en nombre y apellidos
         function updateEmail() {
             if (nombreInput.value && apellidosInput.value) {
@@ -261,12 +281,16 @@
             }
         }
 
-        // Eventos para actualizar el email
-        nombreInput.addEventListener('input', updateEmail);
-        apellidosInput.addEventListener('input', updateEmail);
-
-        // Evento para actualizar el DN y home directory
-        uidInput.addEventListener('input', updateDnAndHome);
+        // Eventos para actualizar el nombre de usuario y email
+        nombreInput.addEventListener('input', function() {
+            updateUsername();
+            updateEmail();
+        });
+        
+        apellidosInput.addEventListener('input', function() {
+            updateUsername();
+            updateEmail();
+        });
 
         // Eventos para los botones de rol
         btnRoleAdmin.addEventListener('click', () => selectGroupsByRole('admin'));
@@ -274,7 +298,7 @@
         btnRoleAlumno.addEventListener('click', () => selectGroupsByRole('alumno'));
 
         // Inicializar valores
-        updateDnAndHome();
+        updateUsername();
         updateEmail();
     });
 </script>

@@ -35,13 +35,13 @@
 
                         <div class="mb-3">
                             <label for="uid" class="form-label">{{ __('Nombre de Usuario') }}</label>
-                            <input id="uid" type="text" class="form-control bg-light" name="uid" value="{{ is_array($user) ? ($user['uid'][0] ?? '') : $user->getFirstAttribute('uid') }}" disabled>
+                            <input id="uid" type="text" class="form-control" name="uid" value="{{ is_array($user) ? ($user['uid'][0] ?? '') : $user->getFirstAttribute('uid') }}" disabled>
                             <div class="form-text">{{ __('El nombre de usuario no puede cambiarse.') }}</div>
                         </div>
 
                         <div class="mb-3">
                             <label for="dn_preview" class="form-label">{{ __('DN (Canonical Name)') }}</label>
-                            <input id="dn_preview" type="text" class="form-control bg-light" value="{{ base64_decode($encoded_dn) }}" disabled>
+                            <input id="dn_preview" type="text" class="form-control" value="{{ base64_decode($encoded_dn) }}" disabled>
                             <div class="form-text">{{ __('Identificador único del usuario en LDAP.') }}</div>
                         </div>
 
@@ -79,26 +79,26 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label for="uidNumber" class="form-label">{{ __('UID Number') }}</label>
-                                <input id="uidNumber" type="number" class="form-control bg-light" name="uidNumber" value="{{ old('uidNumber', is_array($user) ? ($user['uidnumber'][0] ?? '') : $user->getFirstAttribute('uidnumber')) }}">
+                                <input id="uidNumber" type="number" class="form-control" name="uidNumber" value="{{ old('uidNumber', is_array($user) ? ($user['uidnumber'][0] ?? '') : $user->getFirstAttribute('uidnumber')) }}">
                                 <div class="form-text">{{ __('Identificador numérico del usuario.') }}</div>
                             </div>
 
                             <div class="col-md-6 mb-3">
                                 <label for="gidNumber" class="form-label">{{ __('GID Number') }}</label>
-                                <input id="gidNumber" type="number" class="form-control bg-light" name="gidNumber" value="{{ old('gidNumber', is_array($user) ? ($user['gidnumber'][0] ?? '') : $user->getFirstAttribute('gidnumber')) }}">
+                                <input id="gidNumber" type="number" class="form-control" name="gidNumber" value="{{ old('gidNumber', is_array($user) ? ($user['gidnumber'][0] ?? '') : $user->getFirstAttribute('gidnumber')) }}">
                                 <div class="form-text">{{ __('Grupo principal del usuario.') }}</div>
                             </div>
                         </div>
 
                         <div class="mb-3">
                             <label for="homeDirectory" class="form-label">{{ __('Home Directory') }}</label>
-                            <input id="homeDirectory" type="text" class="form-control bg-light" name="homeDirectory" value="{{ old('homeDirectory', is_array($user) ? ($user['homedirectory'][0] ?? '') : $user->getFirstAttribute('homedirectory')) }}" readonly>
+                            <input id="homeDirectory" type="text" class="form-control" name="homeDirectory" value="{{ old('homeDirectory', is_array($user) ? ($user['homedirectory'][0] ?? '') : $user->getFirstAttribute('homedirectory')) }}" readonly>
                             <div class="form-text">{{ __('Directorio home del usuario.') }}</div>
                         </div>
 
                         <div class="mb-3">
                             <label for="loginShell" class="form-label">{{ __('Shell') }}</label>
-                            <input id="loginShell" type="text" class="form-control bg-light" name="loginShell" value="{{ old('loginShell', is_array($user) ? ($user['loginshell'][0] ?? '/bin/bash') : ($user->getFirstAttribute('loginshell') ?? '/bin/bash')) }}">
+                            <input id="loginShell" type="text" class="form-control" name="loginShell" value="{{ old('loginShell', is_array($user) ? ($user['loginshell'][0] ?? '/bin/bash') : ($user->getFirstAttribute('loginshell') ?? '/bin/bash')) }}">
                             <div class="form-text">{{ __('Shell por defecto del usuario.') }}</div>
                         </div>
 
@@ -287,6 +287,15 @@
             }
         }
 
+        // Eventos para actualizar el email
+        nombreInput.addEventListener('input', updateEmail);
+        apellidosInput.addEventListener('input', updateEmail);
+
+        // Eventos para los botones de rol
+        btnRoleAdmin.addEventListener('click', () => selectGroupsByRole('admin'));
+        btnRoleProfesor.addEventListener('click', () => selectGroupsByRole('profesor'));
+        btnRoleAlumno.addEventListener('click', () => selectGroupsByRole('alumno'));
+
         // Marcar el botón de rol activo según los grupos actuales
         function checkActiveRole() {
             const selectedGroups = Array.from(gruposSelect.selectedOptions).map(option => option.value);
@@ -302,15 +311,6 @@
                 btnRoleAlumno.classList.remove('btn-outline-secondary');
             }
         }
-
-        // Eventos para actualizar el email
-        nombreInput.addEventListener('input', updateEmail);
-        apellidosInput.addEventListener('input', updateEmail);
-
-        // Eventos para los botones de rol
-        btnRoleAdmin.addEventListener('click', () => selectGroupsByRole('admin'));
-        btnRoleProfesor.addEventListener('click', () => selectGroupsByRole('profesor'));
-        btnRoleAlumno.addEventListener('click', () => selectGroupsByRole('alumno'));
 
         // Inicializar
         checkActiveRole();
