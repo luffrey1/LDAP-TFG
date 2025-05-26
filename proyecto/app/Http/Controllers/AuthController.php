@@ -171,8 +171,8 @@ class AuthController extends Controller
             Log::debug("Valores extraídos: CN=$cn, Mail=$mail, UID=$uid");
             
             try {
-                // Buscar usuario por email o crear uno nuevo
-                $user = User::where('email', $mail)->first();
+                // Buscar usuario por email o username
+                $user = User::where('email', $mail)->orWhere('username', $uid)->first();
                 
                 if (!$user) {
                     // Si no existe, crear nuevo usuario
@@ -192,6 +192,7 @@ class AuthController extends Controller
                     // Actualizar usuario existente
                     Log::debug("Usuario encontrado en la base de datos, actualizando");
                     $user->name = $cn;
+                    $user->email = $mail;
                     $user->username = $uid; // Asegurarnos de tener username
                     $user->guid = $uid;
                     $user->domain = env('LDAP_BASE_DN', 'dc=tierno,dc=es');
