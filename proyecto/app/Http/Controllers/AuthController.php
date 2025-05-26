@@ -77,7 +77,7 @@ class AuthController extends Controller
             
             // Construir DN de usuario
             $userDn = "uid={$credentials['username']},ou=people," . $basedn;
-          //  Log::debug("Intentando autenticar usuario con DN: {$userDn}");
+            Log::debug("Intentando autenticar usuario con DN: {$userDn}");
             
             // Crear conexión manual para el usuario
             $connection = new Connection([
@@ -98,7 +98,7 @@ class AuthController extends Controller
             // Intentar conexión con credenciales de usuario
             try {
                 $connection->connect();
-            //    Log::debug("Conexión LdapRecord exitosa para usuario: {$credentials['username']}");
+                Log::debug("Conexión LdapRecord exitosa para usuario: {$credentials['username']}");
                 
                 // Usuario autenticado, buscar información adicional usando admin
                 try {
@@ -119,7 +119,7 @@ class AuthController extends Controller
                     ]);
                     
                     $adminConnection->connect();
-                //    Log::debug("Conexión admin LdapRecord exitosa");
+                    Log::debug("Conexión admin LdapRecord exitosa");
                     
                     // Buscar usuario con la conexión admin
                     $query = $adminConnection->query();
@@ -128,22 +128,24 @@ class AuthController extends Controller
                                     ->first();
                     
                     if ($results) {
-                //        Log::debug("Información de usuario encontrada: " . json_encode(array_keys($results)));
-                        return $this->processLdapUser($results, $credentials);
+                        Log::debug("Información de usuario encontrada: " . json_encode(array_keys($results)));
+                        $processResult = $this->processLdapUser($results, $credentials);
+                        Log::debug("Resultado del procesamiento: " . ($processResult ? 'Exitoso' : 'Fallido'));
+                        return $processResult;
                     } else {
-                //        Log::warning("Usuario autenticado pero no encontrado en búsqueda LDAP: {$credentials['username']}");
+                        Log::warning("Usuario autenticado pero no encontrado en búsqueda LDAP: {$credentials['username']}");
                         return false;
                     }
                 } catch (\Exception $e) {
-                //    Log::warning("Error al buscar información con admin: " . $e->getMessage());
+                    Log::warning("Error al buscar información con admin: " . $e->getMessage());
                     return false;
                 }
             } catch (\Exception $e) {
-                //    Log::warning("Fallo en autenticación de usuario: " . $e->getMessage());
+                Log::warning("Fallo en autenticación de usuario: " . $e->getMessage());
                 return false;
             }
         } catch (\Exception $e) {
-            //    Log::error("Error LdapRecord: " . $e->getMessage());
+            Log::error("Error LdapRecord: " . $e->getMessage());
             return false;
         }
     }
@@ -155,18 +157,18 @@ class AuthController extends Controller
     {
         try {
             // Los datos del usuario vienen de ldap_get_entries, que utiliza un formato específico
-            //    Log::debug("Procesando datos de usuario LDAP: " . json_encode(array_keys($ldapUser)));
+            Log::debug("Procesando datos de usuario LDAP: " . json_encode(array_keys($ldapUser)));
             
             // Determinar rol basado en grupos LDAP
             $role = $this->determineRoleFromLdapGroups($ldapUser, $credentials['username']);
-            //    Log::debug("Rol asignado al usuario: {$role}");
+            Log::debug("Rol asignado al usuario: {$role}");
             
             // Obtener valores de los atributos LDAP en formato nativo
             $cn = isset($ldapUser['cn'][0]) ? $ldapUser['cn'][0] : $credentials['username'];
             $mail = isset($ldapUser['mail'][0]) ? $ldapUser['mail'][0] : $credentials['username'] . '@test.tierno.es';
             $uid = isset($ldapUser['uid'][0]) ? $ldapUser['uid'][0] : $credentials['username'];
             
-            //    Log::debug("Valores extraídos: CN=$cn, Mail=$mail, UID=$uid");
+            Log::debug("Valores extraídos: CN=$cn, Mail=$mail, UID=$uid");
             
             // Buscar usuario por email o crear uno nuevo
             $user = User::where('email', $mail)->first();
@@ -183,7 +185,7 @@ class AuthController extends Controller
                 $user->role = $role; // Establecer el rol correcto
                 $user->save();
                 
-                //    Log::debug("Usuario creado en base de datos: " . $user->id);
+                Log::debug("Usuario creado en base de datos: " . $user->id);
             } else {
                 // Actualizar usuario existente
                 $user->name = $cn;
@@ -193,12 +195,12 @@ class AuthController extends Controller
                 $user->role = $role; // Actualizar el rol
                 $user->save();
                 
-                //    Log::debug("Usuario actualizado en base de datos: " . $user->id);
+                Log::debug("Usuario actualizado en base de datos: " . $user->id);
             }
             
             // Autenticar usuario local
             Auth::login($user);
-            //    Log::debug("Usuario autenticado en el sistema");
+            Log::debug("Usuario autenticado en el sistema");
             
             // Guardar datos en sesión
             session([
@@ -213,11 +215,11 @@ class AuthController extends Controller
                 ]
             ]);
             
-            //    Log::info("Autenticación LDAP exitosa para usuario: {$credentials['username']} con rol: {$role}");
+            Log::info("Autenticación LDAP exitosa para usuario: {$credentials['username']} con rol: {$role}");
             return true;
         } catch (\Exception $e) {
-            //    Log::error("Error procesando usuario LDAP: " . $e->getMessage());
-            //    Log::error("Traza: " . $e->getTraceAsString());
+            Log::error("Error procesando usuario LDAP: " . $e->getMessage());
+            Log::error("Traza: " . $e->getTraceAsString());
             return false;
         }
     }
