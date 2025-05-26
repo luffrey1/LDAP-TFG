@@ -1,7 +1,7 @@
 #
 # CAUTION: this file gas automatically generated running make.sh. Do not edit.
 #
-dn: cn=lastGID,dc=test,dc=tierno,dc=es
+dn: cn=lastGID,dc=tierno,dc=es
 cn: lastGID
 objectClass: device
 objectClass: top
@@ -9,7 +9,7 @@ description: Records the last GID used to create a Posix group. This prevent
  s the re-use of a GID from a deleted group.
 serialNumber: 10001
 
-dn: cn=lastUID,dc=test,dc=tierno,dc=es
+dn: cn=lastUID,dc=tierno,dc=es
 cn: lastUID
 objectClass: device
 objectClass: top

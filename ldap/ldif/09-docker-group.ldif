@@ -1,12 +1,12 @@
 #
 # CAUTION: this file gas automatically generated running make.sh. Do not edit.
 #
-dn: cn=docker,ou=groups,dc=test,dc=tierno,dc=es
+dn: cn=docker,ou=groups,dc=tierno,dc=es
 objectClass: top
 objectClass: posixGroup
 # objectClass: groupOfUniqueNames
 cn: docker
-#uniqueMember: uid=diurno,ou=people,dc=test,dc=tierno,dc=es
-#uniqueMember: uid=vespertino,ou=people,dc=test,dc=tierno,dc=es
-#uniqueMember: uid=profesor,ou=people,dc=test,dc=tierno,dc=es
+#uniqueMember: uid=diurno,ou=people,dc=tierno,dc=es
+#uniqueMember: uid=vespertino,ou=people,dc=tierno,dc=es
+#uniqueMember: uid=profesor,ou=people,dc=tierno,dc=es
 gidNumber: 999

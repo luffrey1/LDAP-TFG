@@ -5,7 +5,7 @@
 # ldapmodify -Y EXTERNAL -H ldapi:/// -f 12-sudo-profesores.ldif
 #
 # Hacer sudo al grupo profesor
-dn: cn=%profesores,ou=sudoers,dc=test,dc=tierno,dc=es
+dn: cn=%profesores,ou=sudoers,dc=tierno,dc=es
 objectClass: top
 objectClass: sudoRole
 cn: %profesores
