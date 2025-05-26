@@ -1,50 +1,76 @@
 # Pendiente
 
 ## Tareas Inmediatas
-1- **mensajeria no deja subir archivos algo del sql posiblemente**
-2- **Al crear un usuario creo que es solo string y no permite numeros mirar eso, y editar no comprobe pero habria que confirmar**
-3- **Arreglar sistema de mensajeria, que aparezcan datos reales y todos los profesores y tal o hacerlo de una manera mejor porque con muchos profesores sera...**
-4- **Que los eventos se cuenten en el dashboard lo de eventos : 1 ...**
-##No tan inmediatas
-3.1 **Que se puedan ordenanr clases**
-3.2- **que se puedan eliminar equipos, no funciona y redirige al dashboard, mirar temas de rutas lo más posible o alguna configuracion sql**
 
-4- **Hacer lo de acceder por vpn y tal**
+### General
+- **Revisar colores en toda la aplicación**
+- **Mensajería no deja subir archivos (posible problema SQL)**
+- **Al crear un usuario comprobar que permite números en el nombre**
+- **Arreglar sistema de mensajería: mostrar datos reales y todos los profesores**
+- **Que los eventos se cuenten en el dashboard (eventos: 1...)**
 
-6- **Implementar sistema de avisos para contraseñas que no cumplan requisitos (7 días de plazo)NO FUNCIONA**
+### LDAP
+- **✅ Mostrar UID, GID, directorio con autocompletado del nombre**
+- **✅ Añadir shell a /bin/bash (por defecto)**
+- **✅ Home directory autocompletado**
+- **✅ Mostrar nombre de LDAP en formato uid=usuario,ou=people,dc=tierno,dc=es (CN)**
+- **Al ver perfil de usuario, mostrar grupos en dos columnas o con grupos marcados**
+- **Al crear usuario, añadir botón para generar contraseña aleatoria**
+- **Al importar de archivo, generar contraseñas aleatorias en JS y mostrarlas en tabla**
+- **Añadir botón para descargar tabla con contraseñas**
+- **Indicar mensaje "Las contraseñas solo las puedes ver ahora, se almacenarán hasheadas"**
+- **Crear y editar grupos (GID y descripción opcional) - Solo ldapadmins**
 
-## Futuras Implementaciones
+### Seguridad
+- **Desactivación global de acceso SSH en Configuración de administración**
+- **Quitar días de aviso en password**
+- **Aclarar "Rol Admin" en el perfil de usuario**
 
-### Gestión de equipos y usuarios
-- Organizar ordenadores por clases
+### Agente de Telemetría
+- **Agente con API REST usando Flask, se llama al pulsar botón "Comprobar ahora"**
 
+### Equipos
+- **En detalles de equipo, mostrar aula con enlace a detalles del aula**
+- **Al crear equipo, implementar dos tipos diferentes:**
+  - **IP Fija: Se escribe IP y hostname**
+  - **DHCP: Se escribe hostname, IP se detecta**
+  - **En ambos casos, MAC se detecta**
+- **Al crear equipo, mostrar botón DETECTAR:**
+  - **Si hay éxito, mostrar botón GUARDAR**
+  - **Si no, mostrar botón GUARDAR SIN COMPROBAR**
+  - **El botón DETECTAR debe permanecer visible para repetir detección**
+- **Escaneo de red: mover a sección al fondo llamada "Utilidades"**
 
-### Administración remota
-- Permitir ejecución masiva de comandos en equipos remotos
+### SSSD (Configuración en clientes)
+```bash
+apt-get install -y sssd-ldap ldap-utils libsss-sudo sssd-tools
+# Configurar fichero /etc/sssd/sssd.conf como se muestra abajo
+systemctl restart sssd.service
+```
 
-## Ideas Conceptuales
+**Archivo de configuración para SSSD:**
+```
+# IES Enrique Tierno Galván
 
-### Perfiles móviles avanzados
-- Permitir inicio de sesión independiente del ordenador físico
-- Implementar carga de archivos personales entre sesiones
-- Sistema de sincronización de configuraciones personales
-- Asignar perfiles LDAP personalizados a cada alumno
+[sssd]
+config_file_version = 2
+domains = tierno.es
 
-### Sistema de seguridad proactivo
-- Monitorizar y notificar acciones críticas que puedan afectar negativamente a equipos
-- Detección de comportamientos sospechosos
-- Sistema predictivo de problemas basado en patrones de uso
+[domain/lan.tiernogalvan.es]
+id_provider = ldap
+auth_provider = ldap
+ldap_uri = ldap://ldap.tierno.es
+ldap_id_use_start_tls = true
+ldap_schema = rfc2307bis
+ldap_search_base = dc=tierno,dc=es
+ldap_group_member = uniqueMember
+cache_credentials = True
 
-### Modo examen inteligente
-- Detectar acceso a sitios no permitidos (IA, webs específicas)
-- Bloquear ordenador automáticamente si se detectan infracciones
-- Capturar pantalla como evidencia antes del bloqueo
-- Enviar notificación con sonido al profesor que tenga iniciada la sesión
+# Evitamos listar usuarios del ldap por privacidad
+enumerate = false
+```
 
-### Analítica de uso avanzada
-- Monitorizar actividad detallada de cada usuario
-- Controlar descargas y uso del espacio
-- Generar informes periódicos de actividad por aula/grupo
+## Tareas No Tan Inmediatas
+- **Que se puedan ordenar clases**
+- **Implementar filtrado al escribir en LDAP**
 
----
-*Más funcionalidades por definir próximamente...*
