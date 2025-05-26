@@ -253,7 +253,7 @@ class AuthController extends Controller
         try {
             // Si el UID parece ser LDAPAdmin, asignar rol admin sin más comprobaciones
             if ($uid === 'LDAPAdmin' || strtolower($uid) === 'ldapadmin') {
-                //    Log::debug("Usuario con UID={$uid} detectado, asignando rol de administrador directamente");
+                Log::debug("Usuario con UID={$uid} detectado, asignando rol de administrador directamente");
                 return 'admin';
             }
             
@@ -280,22 +280,34 @@ class AuthController extends Controller
                 ],
             ];
             
-            //    Log::debug("Usando configuración LDAP para buscar grupos: host={$ldapHost}, port={$ldapPort}");
+            Log::debug("Usando configuración LDAP para buscar grupos: host={$ldapHost}, port={$ldapPort}");
             
             $ldap = new Connection($ldapConfig);
             $ldap->connect();
             
             $baseDn = $ldapConfig['base_dn'];
             
-            //    Log::debug("Buscando grupos para el usuario con UID=$uid");
+            Log::debug("Buscando grupos para el usuario con UID=$uid");
             
-            // Buscar grupos a los que pertenece el usuario
+            // Buscar grupos a los que pertenece el usuario por memberUid (posixGroup)
             $groups = $ldap->query()
                 ->where('objectClass', '=', 'posixGroup')
                 ->where('memberUid', '=', $uid)
                 ->get();
             
+            // También buscar grupos por uniqueMember (groupOfUniqueNames)
+            $userDn = "uid={$uid},ou=people,{$baseDn}";
+            Log::debug("Buscando grupos con uniqueMember={$userDn}");
+            
+            $uniqueGroups = $ldap->query()
+                ->where('objectClass', '=', 'groupOfUniqueNames')
+                ->where('uniqueMember', '=', $userDn)
+                ->get();
+            
+            // Combinar los resultados
             $groupNames = [];
+            
+            // Extraer nombres de grupos posixGroup
             foreach ($groups as $group) {
                 $groupCn = null;
                 if (is_object($group)) {
@@ -309,31 +321,45 @@ class AuthController extends Controller
                 }
             }
             
-            //    Log::debug("Grupos encontrados para {$uid}: " . json_encode($groupNames));
+            // Extraer nombres de grupos groupOfUniqueNames
+            foreach ($uniqueGroups as $group) {
+                $groupCn = null;
+                if (is_object($group)) {
+                    $groupCn = $group->getFirstAttribute('cn');
+                } elseif (is_array($group) && isset($group['cn'])) {
+                    $groupCn = is_array($group['cn']) ? $group['cn'][0] : $group['cn'];
+                }
+                
+                if ($groupCn && !in_array($groupCn, $groupNames)) {
+                    $groupNames[] = $groupCn;
+                }
+            }
+            
+            Log::debug("Grupos encontrados para {$uid}: " . json_encode($groupNames));
             
             // Asignar rol basado en grupos
             if (in_array('ldapadmins', $groupNames)) {
-                //    Log::debug("Usuario {$uid} es admin por pertenecer al grupo ldapadmins");
+                Log::debug("Usuario {$uid} es admin por pertenecer al grupo ldapadmins");
                 return 'admin';
             }
             
             if (in_array('profesores', $groupNames)) {
-                //    Log::debug("Usuario {$uid} es profesor por pertenecer al grupo profesores");
+                Log::debug("Usuario {$uid} es profesor por pertenecer al grupo profesores");
                 return 'profesor';
             }
             
             if (in_array('alumnos', $groupNames)) {
-                //    Log::debug("Usuario {$uid} es alumno por pertenecer al grupo alumnos");
+                Log::debug("Usuario {$uid} es alumno por pertenecer al grupo alumnos");
                 return 'alumno';
             }
             
             // Por defecto, si pertenece a everybody, es usuario normal
             if (in_array('everybody', $groupNames)) {
-                //    Log::debug("Usuario {$uid} asignado como usuario básico (pertenece a everybody)");
+                Log::debug("Usuario {$uid} asignado como usuario básico (pertenece a everybody)");
                 return 'usuario';
             }
             
-            //    Log::warning("Usuario {$uid} no pertenece a ningún grupo conocido, asignando rol por defecto");
+            Log::warning("Usuario {$uid} no pertenece a ningún grupo conocido, asignando rol por defecto");
             return 'usuario';
             
         } catch (\Exception $e) {
