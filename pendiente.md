@@ -1,12 +1,12 @@
 # Pendiente
 
 ## Tareas Inmediatas
-
+- **Que el panel de usuario de creacion y ver lo puedan ver todos pero solo pueda dar admin otro admin**
 ### General
 - **Revisar colores en toda la aplicación**
 - **Mensajería no deja subir archivos (posible problema SQL)**
 - **Al crear un usuario comprobar que permite números en el nombre**
-- **Arreglar sistema de mensajería: mostrar datos reales y todos los profesores**
+- **Arreglar sistema de mensajería: mostrar datos reales y todos los profesores de otra manera porque cuando haya muchos será raro quizás como gmail y tal buscar y que se vaya completando mientras busques o te sugiera sabes**
 - **Que los eventos se cuenten en el dashboard (eventos: 1...)**
 
 ### LDAP
@@ -14,10 +14,10 @@
 - **✅ Añadir shell a /bin/bash (por defecto)**
 - **✅ Home directory autocompletado**
 - **✅ Mostrar nombre de LDAP en formato uid=usuario,ou=people,dc=tierno,dc=es (CN)**
-- **Al ver perfil de usuario, mostrar grupos en dos columnas o con grupos marcados**
-- **Al crear usuario, añadir botón para generar contraseña aleatoria**
-- **Al importar de archivo, generar contraseñas aleatorias en JS y mostrarlas en tabla**
-- **Añadir botón para descargar tabla con contraseñas**
+- **✅Al ver perfil de usuario, mostrar grupos en dos columnas o con grupos marcados**
+- **Al crear usuario(para alumnos), añadir botón para generar contraseña aleatoria**
+- **Al importar de archivo(para alumnos), generar contraseñas aleatorias en JS y mostrarlas en tabla**
+- **Añadir botón para descargar tabla con contraseñas(para alumnos)**
 - **Indicar mensaje "Las contraseñas solo las puedes ver ahora, se almacenarán hasheadas"**
 - **Crear y editar grupos (GID y descripción opcional) - Solo ldapadmins**
 
@@ -72,5 +72,5 @@ enumerate = false
 
 ## Tareas No Tan Inmediatas
 - **Que se puedan ordenar clases**
-- **Implementar filtrado al escribir en LDAP**
+- **Implementar filtrado al escribir en LDAP lo de gestion de usuarios**
 
