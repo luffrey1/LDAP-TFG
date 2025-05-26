@@ -139,7 +139,7 @@
 
 <style>
     .form-control:disabled {
-        color: var(--text-muted) !important;
+        color: black !important;
         border-color: var(--border-color) !important;
         cursor: not-allowed;
     }
