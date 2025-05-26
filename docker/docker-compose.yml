@@ -61,11 +61,11 @@ services:
       - DB_DATABASE=laravel
       - DB_USERNAME=laravel
       - DB_PASSWORD=password
-      - APP_URL=https://tierno.es
     volumes:
       - ../proyecto:/var/www/html
       - document_data:/var/www/html/public/documentos
-      - /path/to/ssl/certificates:/etc/ssl/certs/site
+      - /root/tierno.es.crt:/etc/ssl/certs/site/certificate.crt
+      - /root/tierno.es.key:/etc/ssl/certs/site/private.key
     depends_on:
       - ldap
       - mysql

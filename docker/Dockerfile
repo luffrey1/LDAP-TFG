@@ -25,6 +25,9 @@ RUN apt-get update && apt-get install -y \
 RUN docker-php-ext-configure pcntl --enable-pcntl \
     && docker-php-ext-install pcntl
 
+# Crear directorio para certificados SSL
+RUN mkdir -p /etc/ssl/certs/site
+
 # Habilitar módulos de Apache para SSL
 RUN a2enmod ssl
 
