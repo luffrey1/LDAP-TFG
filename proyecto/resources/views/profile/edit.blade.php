@@ -139,7 +139,6 @@
 
 <style>
     .form-control:disabled {
-        background-color: var(--card-bg) !important;
         color: var(--text-muted) !important;
         border-color: var(--border-color) !important;
         cursor: not-allowed;
