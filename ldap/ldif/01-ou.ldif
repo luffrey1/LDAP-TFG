@@ -2,14 +2,14 @@
 # CAUTION: this file gas automatically generated running make.sh. Do not edit.
 #
 # Para importar este fichero:
-# ldapadd -x -D cn=admin,dc=dc=tierno,dc=es -W -f informatica.ldif
+# ldapadd -x -D cn=admin,dc=tierno,dc=es -W -f informatica.ldif
 #
 
 dn: ou=people,dc=tierno,dc=es
 objectClass: organizationalUnit
 ou: people
 
-dn: ou=groups,dc=dc=tierno,dc=es
+dn: ou=groups,dc=tierno,dc=es
 objectClass: organizationalUnit
 ou: groups
 
