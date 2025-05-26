@@ -13,12 +13,12 @@ use Exception;
 class LdapUserController extends Controller
 {
     protected $connection;
-    protected $baseDn = 'dc=test,dc=tierno,dc=es';
-    protected $peopleOu = 'ou=people,dc=test,dc=tierno,dc=es';
-    protected $groupsOu = 'ou=groups,dc=test,dc=tierno,dc=es';
-    protected $adminGroupDn = 'cn=ldapadmins,ou=groups,dc=test,dc=tierno,dc=es';
-    protected $profesoresGroupDn = 'cn=profesores,ou=groups,dc=test,dc=tierno,dc=es';
-    protected $alumnosGroupDn = 'cn=alumnos,ou=groups,dc=test,dc=tierno,dc=es';
+    protected $baseDn = 'dc=tierno,dc=es';
+    protected $peopleOu = 'ou=people,dc=tierno,dc=es';
+    protected $groupsOu = 'ou=groups,dc=tierno,dc=es';
+    protected $adminGroupDn = 'cn=ldapadmins,ou=groups,dc=tierno,dc=es';
+    protected $profesoresGroupDn = 'cn=profesores,ou=groups,dc=tierno,dc=es';
+    protected $alumnosGroupDn = 'cn=alumnos,ou=groups,dc=tierno,dc=es';
     
     public function __construct()
     {
@@ -104,32 +104,7 @@ class LdapUserController extends Controller
             $users = $query->get();
             
             // Obtener usuarios admin para marcarlos
-            $adminGroup = $this->connection->query()
-                ->in($this->adminGroupDn)
-                ->first();
-            
-            // Buscar con una consulta más genérica si no se encuentra el grupo de admins específico
-            $adminUsers = [];
-            if ($adminGroup && isset($adminGroup['uniquemember'])) {
-                $adminUsers = is_array($adminGroup['uniquemember']) 
-                    ? $adminGroup['uniquemember'] 
-                    : [$adminGroup['uniquemember']];
-            } else {
-                // Buscar cualquier grupo de admins en toda la base
-                $possibleAdminGroups = $this->connection->query()
-                    ->in($this->baseDn)
-                    ->whereContains('cn', 'admin')
-                    ->get();
-                    
-                foreach ($possibleAdminGroups as $group) {
-                    if (isset($group['uniquemember'])) {
-                        $members = is_array($group['uniquemember']) 
-                            ? $group['uniquemember'] 
-                            : [$group['uniquemember']];
-                        $adminUsers = array_merge($adminUsers, $members);
-                    }
-                }
-            }
+            $adminUsers = $this->getAdminUsers();
             
             // Obtener todos los grupos disponibles para verificación
             $allGroups = $this->connection->query()
@@ -980,12 +955,23 @@ class LdapUserController extends Controller
                         
             // Verificar si el usuario ya es miembro del grupo admin
             $isAdmin = false;
+            
+            // Verificar memberUid (posixGroup)
             if (isset($adminGroup['memberuid'])) {
                 $memberUids = is_array($adminGroup['memberuid']) 
                     ? $adminGroup['memberuid'] 
                     : [$adminGroup['memberuid']];
                 
                 $isAdmin = in_array($uid, $memberUids);
+            }
+            
+            // Verificar uniqueMember (groupOfUniqueNames)
+            if (!$isAdmin && isset($adminGroup['uniquemember'])) {
+                $uniqueMembers = is_array($adminGroup['uniquemember']) 
+                    ? $adminGroup['uniquemember'] 
+                    : [$adminGroup['uniquemember']];
+                
+                $isAdmin = in_array($userDn, $uniqueMembers);
             }
             
             // Usar la conexión LDAP directamente
@@ -1011,70 +997,131 @@ class LdapUserController extends Controller
             }
             
             $groupDn = $adminGroup['dn'];
+            $hasErrors = false;
+            $errorMessages = [];
             
             // Cambiar estado de admin
             if ($isAdmin) {
                 // Eliminar el usuario del grupo
+                
+                // 1. Actualizar memberUid (posixGroup)
                 $result = ldap_read($ldapConnection, $groupDn, "(objectclass=*)", ["memberUid"]);
                 
-                if (!$result) {
-                    return back()->with('error', 'Error al leer grupo admin');
-                }
-                
-                $entries = ldap_get_entries($ldapConnection, $result);
-                $memberUids = [];
-                
-                if (isset($entries[0]['memberuid'])) {
-                    for ($i = 0; $i < $entries[0]['memberuid']['count']; $i++) {
-                        if ($entries[0]['memberuid'][$i] != $uid) {
-                            $memberUids[] = $entries[0]['memberuid'][$i];
+                if ($result) {
+                    $entries = ldap_get_entries($ldapConnection, $result);
+                    $memberUids = [];
+                    
+                    if (isset($entries[0]['memberuid'])) {
+                        for ($i = 0; $i < $entries[0]['memberuid']['count']; $i++) {
+                            if ($entries[0]['memberuid'][$i] != $uid) {
+                                $memberUids[] = $entries[0]['memberuid'][$i];
+                            }
+                        }
+                        
+                        // Actualizar el grupo sin el usuario
+                        $entry = ["memberUid" => $memberUids];
+                        $resultModify = ldap_modify($ldapConnection, $groupDn, $entry);
+                        
+                        if (!$resultModify) {
+                            $hasErrors = true;
+                            $errorMessages[] = 'Error al eliminar usuario del grupo admin (memberUid)';
                         }
                     }
                 }
                 
-                // Actualizar el grupo sin el usuario
-                $entry = ["memberUid" => $memberUids];
-                $result = ldap_modify($ldapConnection, $groupDn, $entry);
+                // 2. Actualizar uniqueMember (groupOfUniqueNames)
+                $result = ldap_read($ldapConnection, $groupDn, "(objectclass=*)", ["uniqueMember"]);
                 
-                if (!$result) {
-                    return back()->with('error', 'Error al eliminar usuario del grupo admin');
+                if ($result) {
+                    $entries = ldap_get_entries($ldapConnection, $result);
+                    $uniqueMembers = [];
+                    
+                    if (isset($entries[0]['uniquemember'])) {
+                        for ($i = 0; $i < $entries[0]['uniquemember']['count']; $i++) {
+                            if ($entries[0]['uniquemember'][$i] != $userDn) {
+                                $uniqueMembers[] = $entries[0]['uniquemember'][$i];
+                            }
+                        }
+                        
+                        // Actualizar el grupo sin el usuario
+                        $entry = ["uniqueMember" => $uniqueMembers];
+                        $resultModify = ldap_modify($ldapConnection, $groupDn, $entry);
+                        
+                        if (!$resultModify) {
+                            $hasErrors = true;
+                            $errorMessages[] = 'Error al eliminar usuario del grupo admin (uniqueMember)';
+                        }
+                    }
                 }
                 
                 $message = 'Usuario removido del grupo de administradores';
             } else {
                 // Añadir el usuario al grupo
+                
+                // 1. Actualizar memberUid (posixGroup)
                 $result = ldap_read($ldapConnection, $groupDn, "(objectclass=*)", ["memberUid"]);
                 
-                if (!$result) {
-                    return back()->with('error', 'Error al leer grupo admin');
-                }
-                
-                $entries = ldap_get_entries($ldapConnection, $result);
-                $memberUids = [];
-                
-                if (isset($entries[0]['memberuid'])) {
-                    for ($i = 0; $i < $entries[0]['memberuid']['count']; $i++) {
-                        $memberUids[] = $entries[0]['memberuid'][$i];
+                if ($result) {
+                    $entries = ldap_get_entries($ldapConnection, $result);
+                    $memberUids = [];
+                    
+                    if (isset($entries[0]['memberuid'])) {
+                        for ($i = 0; $i < $entries[0]['memberuid']['count']; $i++) {
+                            $memberUids[] = $entries[0]['memberuid'][$i];
+                        }
+                    }
+                    
+                    // Añadir el usuario solo si no existe
+                    if (!in_array($uid, $memberUids)) {
+                        $memberUids[] = $uid;
+                    }
+                    
+                    // Actualizar el grupo con el nuevo usuario
+                    $entry = ["memberUid" => $memberUids];
+                    $resultModify = ldap_modify($ldapConnection, $groupDn, $entry);
+                    
+                    if (!$resultModify) {
+                        $hasErrors = true;
+                        $errorMessages[] = 'Error al añadir usuario al grupo admin (memberUid)';
                     }
                 }
                 
-                // Añadir el usuario solo si no existe
-                if (!in_array($uid, $memberUids)) {
-                    $memberUids[] = $uid;
-                }
+                // 2. Actualizar uniqueMember (groupOfUniqueNames)
+                $result = ldap_read($ldapConnection, $groupDn, "(objectclass=*)", ["uniqueMember"]);
                 
-                // Actualizar el grupo con el nuevo usuario
-                $entry = ["memberUid" => $memberUids];
-                $result = ldap_modify($ldapConnection, $groupDn, $entry);
-                
-                if (!$result) {
-                    return back()->with('error', 'Error al añadir usuario al grupo admin');
+                if ($result) {
+                    $entries = ldap_get_entries($ldapConnection, $result);
+                    $uniqueMembers = [];
+                    
+                    if (isset($entries[0]['uniquemember'])) {
+                        for ($i = 0; $i < $entries[0]['uniquemember']['count']; $i++) {
+                            $uniqueMembers[] = $entries[0]['uniquemember'][$i];
+                        }
+                    }
+                    
+                    // Añadir el usuario solo si no existe
+                    if (!in_array($userDn, $uniqueMembers)) {
+                        $uniqueMembers[] = $userDn;
+                    }
+                    
+                    // Actualizar el grupo con el nuevo usuario
+                    $entry = ["uniqueMember" => $uniqueMembers];
+                    $resultModify = ldap_modify($ldapConnection, $groupDn, $entry);
+                    
+                    if (!$resultModify) {
+                        $hasErrors = true;
+                        $errorMessages[] = 'Error al añadir usuario al grupo admin (uniqueMember)';
+                    }
                 }
                 
                 $message = 'Usuario añadido al grupo de administradores';
             }
             
             ldap_close($ldapConnection);
+            
+            if ($hasErrors) {
+                return back()->with('warning', $message . ' con advertencias: ' . implode(', ', $errorMessages));
+            }
             
             return redirect()->route('admin.users.index')
                 ->with('success', $message);
@@ -1961,10 +2008,35 @@ class LdapUserController extends Controller
                 ->in($this->adminGroupDn)
                 ->first();
                 
-            if ($adminGroup && isset($adminGroup['uniquemember'])) {
-                $adminUsers = is_array($adminGroup['uniquemember']) 
-                    ? $adminGroup['uniquemember'] 
-                    : [$adminGroup['uniquemember']];
+            if ($adminGroup) {
+                // Buscar por uniquemember (groupOfUniqueNames)
+                if (isset($adminGroup['uniquemember'])) {
+                    $adminUsers = is_array($adminGroup['uniquemember']) 
+                        ? $adminGroup['uniquemember'] 
+                        : [$adminGroup['uniquemember']];
+                }
+                
+                // Buscar también por memberUid (posixGroup)
+                if (isset($adminGroup['memberuid'])) {
+                    $memberUids = is_array($adminGroup['memberuid']) 
+                        ? $adminGroup['memberuid'] 
+                        : [$adminGroup['memberuid']];
+                    
+                    // Para cada memberUid, buscar su DN completo
+                    foreach ($memberUids as $uid) {
+                        $user = $this->connection->query()
+                            ->in($this->peopleOu)
+                            ->where('uid', '=', $uid)
+                            ->first();
+                            
+                        if ($user) {
+                            $userDn = is_array($user) ? $user['dn'] : $user->getDn();
+                            if (!in_array($userDn, $adminUsers)) {
+                                $adminUsers[] = $userDn;
+                            }
+                        }
+                    }
+                }
             }
             
         } catch (Exception $e) {
