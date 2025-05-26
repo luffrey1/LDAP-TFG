@@ -2,10 +2,10 @@
 # Agente de Monitorización para Linux
 # Recopila información del sistema y la envía al servidor de monitorización
 # Soporta ejecución de comandos remotos y recopilación avanzada de telemetría
-# Uso: bash MonitorAgent.sh -s "http://tuservidor.com"
+# Uso: bash MonitorAgent.sh -s "https://tuservidor.com"
 
 # Parámetros por defecto
-SERVER_URL="http://localhost:8000"
+SERVER_URL="https://localhost:8000"
 INTERVAL=300  # Intervalo de envío en segundos (por defecto 5 minutos)
 RUN_ONCE=false
 AGENT_VERSION="1.2.0"
@@ -17,7 +17,7 @@ AGENT_ID=""
 usage() {
     echo "Uso: $0 [opciones]"
     echo "Opciones:"
-    echo "  -s, --server URL    URL del servidor de monitoreo (por defecto: http://localhost:8000)"
+    echo "  -s, --server URL    URL del servidor de monitoreo (por defecto: https://localhost:8000)"
     echo "  -i, --interval N    Intervalo de envío en segundos (por defecto: 300)"
     echo "  -c, --commands N    Intervalo para verificar comandos en segundos (por defecto: 60)"
     echo "  -t, --token TOKEN   Token de autenticación para el servidor"

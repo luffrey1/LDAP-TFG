@@ -179,7 +179,7 @@ class AuthController extends Controller
                 $user->username = $uid; // Asegurarnos de guardar el username
                 $user->password = Hash::make(Str::random(16));
                 $user->guid = $uid;
-                $user->domain = env('LDAP_BASE_DN', 'dc=test,dc=tierno,dc=es');
+                $user->domain = env('LDAP_BASE_DN', 'dc=tierno,dc=es');
                 $user->role = $role; // Establecer el rol correcto
                 $user->save();
                 
@@ -189,7 +189,7 @@ class AuthController extends Controller
                 $user->name = $cn;
                 $user->username = $uid; // Asegurarnos de tener username
                 $user->guid = $uid;
-                $user->domain = env('LDAP_BASE_DN', 'dc=test,dc=tierno,dc=es');
+                $user->domain = env('LDAP_BASE_DN', 'dc=tierno,dc=es');
                 $user->role = $role; // Actualizar el rol
                 $user->save();
                 
@@ -261,8 +261,8 @@ class AuthController extends Controller
             // Obtener los mismos valores que en attemptLdapAuth para consistencia
             $ldapHost = env('LDAP_HOST', '172.19.0.4');
             $ldapPort = (int)env('LDAP_PORT', 389);
-            $baseDn = env('LDAP_BASE_DN', 'dc=test,dc=tierno,dc=es');
-            $adminDn = env('LDAP_USERNAME', 'cn=admin,dc=test,dc=tierno,dc=es');
+            $baseDn = env('LDAP_BASE_DN', 'dc=tierno,dc=es');
+            $adminDn = env('LDAP_USERNAME', 'cn=admin,dc=tierno,dc=es');
             $adminPassword = env('LDAP_PASSWORD', 'admin');
             
             $ldapConfig = [

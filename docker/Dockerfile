@@ -25,6 +25,9 @@ RUN apt-get update && apt-get install -y \
 RUN docker-php-ext-configure pcntl --enable-pcntl \
     && docker-php-ext-install pcntl
 
+# Habilitar módulos de Apache para SSL
+RUN a2enmod ssl
+
 # Cambia el root de Apache a /public de Laravel
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf
@@ -38,8 +41,8 @@ RUN a2enmod rewrite
 # Establecer variables de entorno para LDAP
 ENV LDAP_HOST=openldap-osixia
 ENV LDAP_PORT=389
-ENV LDAP_BASE_DN=dc=test,dc=tierno,dc=es
-ENV LDAP_USERNAME=cn=admin,dc=test,dc=tierno,dc=es
+ENV LDAP_BASE_DN=dc=tierno,dc=es
+ENV LDAP_USERNAME=cn=admin,dc=tierno,dc=es
 ENV LDAP_PASSWORD=admin
 ENV LDAP_SSL=false
 ENV LDAP_TLS=false
@@ -57,10 +60,10 @@ ENV REVERB_APP_KEY=proyectoDArevkey
 ENV REVERB_APP_SECRET=proyectoDAreverbsecret
 ENV REVERB_HOST=0.0.0.0
 ENV REVERB_PORT=8080
-ENV REVERB_SCHEME=http
+ENV REVERB_SCHEME=https
 ENV BROADCAST_DRIVER=reverb
 
-# Copiar el script de iniciot
+# Copiar el script de inicio
 COPY docker/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
@@ -111,6 +114,7 @@ RUN npm install && npm run build
 
 # Puertos
 EXPOSE 80
+EXPOSE 443
 
 # Comando para iniciar el contenedor
 CMD ["/usr/local/bin/start.sh"]

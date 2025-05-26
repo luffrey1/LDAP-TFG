@@ -8,7 +8,7 @@ services:
       - "636:636"
     environment:
       - LDAP_ORGANISATION=informatica
-      - LDAP_DOMAIN=test.tierno.es
+      - LDAP_DOMAIN=tierno.es
       - LDAP_ADMIN_PASSWORD=admin
       - LDAP_REMOVE_CONFIG_AFTER_SETUP=false
     volumes:
@@ -45,13 +45,14 @@ services:
     container_name: laravel-app
     restart: unless-stopped
     ports:
-      - "8000:80"
+      - "80:80"
+      - "443:443"
       - "8080:8080"
     environment:
       - LDAP_HOST=172.19.0.3
       - LDAP_PORT=389
-      - LDAP_BASE_DN=dc=test,dc=tierno,dc=es
-      - LDAP_USERNAME=cn=admin,dc=test,dc=tierno,dc=es
+      - LDAP_BASE_DN=dc=tierno,dc=es
+      - LDAP_USERNAME=cn=admin,dc=tierno,dc=es
       - LDAP_PASSWORD=admin
       - LDAP_AUTH_LOGIN_FALLBACK=false
       - DB_CONNECTION=mysql
@@ -60,16 +61,18 @@ services:
       - DB_DATABASE=laravel
       - DB_USERNAME=laravel
       - DB_PASSWORD=password
+      - APP_URL=https://tierno.es
     volumes:
       - ../proyecto:/var/www/html
       - document_data:/var/www/html/public/documentos
+      - /path/to/ssl/certificates:/etc/ssl/certs/site
     depends_on:
       - ldap
       - mysql
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/"]
+      test: ["CMD", "curl", "-f", "https://localhost/"]
       interval: 10s
       timeout: 5s
       retries: 3

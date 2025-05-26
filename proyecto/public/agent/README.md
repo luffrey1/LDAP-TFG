@@ -26,7 +26,7 @@ chmod +x MonitorAgent.sh
 ./MonitorAgent.sh --once
 
 # Enviar a un servidor específico
-./MonitorAgent.sh --server "http://miservidor.com"
+./MonitorAgent.sh --server "https://miservidor.com"
 
 # Cambiar el intervalo de envío a 60 segundos
 ./MonitorAgent.sh --interval 60
@@ -47,7 +47,7 @@ Description=Monitor Agent Service
 After=network.target
 
 [Service]
-ExecStart=/bin/bash /ruta/a/MonitorAgent.sh --server "http://miservidor.com"
+ExecStart=/bin/bash /ruta/a/MonitorAgent.sh --server "https://miservidor.com"
 Restart=always
 User=root
 Group=root

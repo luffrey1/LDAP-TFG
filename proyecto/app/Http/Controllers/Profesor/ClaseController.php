@@ -63,7 +63,7 @@ class ClaseController extends Controller
                     try {
                         Log::info("Buscando todos los usuarios en LDAP...");
                         $ldapUsers = $connection->query()
-                            ->in('ou=people,dc=test,dc=tierno,dc=es')
+                            ->in('ou=people,dc=tierno,dc=es')
                             ->where('objectclass', '=', 'inetOrgPerson')
                             ->get();
                         
@@ -71,7 +71,7 @@ class ClaseController extends Controller
                         
                         // Buscar el grupo de profesores para verificar membresía
                         $profesoresGroup = $connection->query()
-                            ->in('ou=groups,dc=test,dc=tierno,dc=es')
+                            ->in('ou=groups,dc=tierno,dc=es')
                             ->where('cn', '=', 'profesores')
                             ->first();
                             
@@ -84,7 +84,7 @@ class ClaseController extends Controller
                         
                         // También verificar grupo de administradores
                         $adminGroup = $connection->query()
-                            ->in('ou=groups,dc=test,dc=tierno,dc=es')
+                            ->in('ou=groups,dc=tierno,dc=es')
                             ->where('cn', '=', 'ldapadmins')
                             ->first();
                             
@@ -306,7 +306,7 @@ class ClaseController extends Controller
                         
                         if ($connection->isConnected()) {
                             $ldapUser = $connection->query()
-                                ->in('ou=people,dc=test,dc=tierno,dc=es')
+                                ->in('ou=people,dc=tierno,dc=es')
                                 ->where('uid', '=', $profesorId)
                                 ->first();
                                 
@@ -317,7 +317,7 @@ class ClaseController extends Controller
                                 $esAdmin = false;
                                 try {
                                     $adminGroup = $connection->query()
-                                        ->in('ou=groups,dc=test,dc=tierno,dc=es')
+                                        ->in('ou=groups,dc=tierno,dc=es')
                                         ->where('cn', '=', 'ldapadmins')
                                         ->first();
                                         

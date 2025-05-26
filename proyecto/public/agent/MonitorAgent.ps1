@@ -1,9 +1,11 @@
 # Monitor Agent para Windows
 # Este script recopila información del sistema y la envía a un servidor central de monitorización
-# Uso: powershell -ExecutionPolicy Bypass -File MonitorAgent.ps1 -ServerUrl "http://servidor:puerto"
+# Uso: powershell -ExecutionPolicy Bypass -File MonitorAgent.ps1 -ServerUrl "https://servidor:puerto"
 
 param (
-    [string]$ServerUrl = "http://localhost:8000",
+    [Parameter(Mandatory=$false)]
+    [string]$ServerUrl = "https://localhost:8000",
+    [Parameter(Mandatory=$false)]
     [int]$Interval = 300,
     [switch]$RunOnce = $false
 )

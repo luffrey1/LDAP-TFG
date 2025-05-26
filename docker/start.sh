@@ -29,16 +29,27 @@ echo "OpenLDAP está disponible."
 echo "Verificando red..."
 ping -c 2 $LDAP_HOST || echo "No se puede hacer ping a LDAP, pero seguimos con la configuración"
 
+# Copiar la configuración de Apache
+echo "Copiando configuración de Apache..."
+cp /var/www/html/apache-config.conf /etc/apache2/sites-available/000-default.conf
+cp /var/www/html/apache-config.conf /etc/apache2/sites-available/default-ssl.conf
+
+# Habilitar módulos de Apache necesarios para SSL
+echo "Habilitando módulos de Apache para SSL..."
+a2enmod ssl
+a2enmod rewrite
+
 # Asegurar que las variables de entorno en .env son correctas
 echo "Actualizando variables de entorno en .env..."
 sed -i "s/LDAP_HOST=.*/LDAP_HOST=$LDAP_HOST/" /var/www/html/.env
 sed -i "s/LDAP_PORT=.*/LDAP_PORT=$LDAP_PORT/" /var/www/html/.env
-sed -i "s/LDAP_BASE_DN=.*/LDAP_BASE_DN=dc=test,dc=tierno,dc=es/" /var/www/html/.env
-sed -i "s/LDAP_USERNAME=.*/LDAP_USERNAME=cn=admin,dc=test,dc=tierno,dc=es/" /var/www/html/.env
+sed -i "s/LDAP_BASE_DN=.*/LDAP_BASE_DN=dc=tierno,dc=es/" /var/www/html/.env
+sed -i "s/LDAP_USERNAME=.*/LDAP_USERNAME=cn=admin,dc=tierno,dc=es/" /var/www/html/.env
 sed -i "s/LDAP_PASSWORD=.*/LDAP_PASSWORD=admin/" /var/www/html/.env
 sed -i "s/LDAP_AUTH_LOGIN_FALLBACK=.*/LDAP_AUTH_LOGIN_FALLBACK=false/" /var/www/html/.env
 sed -i "s/DB_HOST=.*/DB_HOST=$DB_HOST/" /var/www/html/.env
 sed -i "s/DB_PORT=.*/DB_PORT=$DB_PORT/" /var/www/html/.env
+sed -i "s#APP_URL=.*#APP_URL=https://tierno.es#" /var/www/html/.env
 
 # Ejecutar comandos de inicialización de Laravel
 cd /var/www/html
@@ -88,8 +99,8 @@ try {
     \$connection = new \LdapRecord\Connection([
         'hosts' => ['$LDAP_HOST'],
         'port' => $LDAP_PORT,
-        'base_dn' => 'dc=test,dc=tierno,dc=es',
-        'username' => 'cn=admin,dc=test,dc=tierno,dc=es',
+        'base_dn' => 'dc=tierno,dc=es',
+        'username' => 'cn=admin,dc=tierno,dc=es',
         'password' => 'admin',
     ]);
     \$connection->connect();

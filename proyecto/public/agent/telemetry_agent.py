@@ -10,7 +10,7 @@ import getpass
 import subprocess
 
 # CONFIGURA AQUÍ la URL de tu Laravel
-LARAVEL_URL = "http://172.20.0.6:8000/api/telemetry/update"
+LARAVEL_URL = "https://172.20.0.6:8000/api/telemetry/update"
 
 def get_mac():
     # Obtiene la MAC real de la interfaz principal
