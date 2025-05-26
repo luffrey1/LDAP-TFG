@@ -76,7 +76,7 @@
 
                         <div class="mb-3">
                             <label for="dn_preview" class="form-label">{{ __('DN (Canonical Name)') }}</label>
-                            <input id="dn_preview" type="text" class="form-control" disabled>
+                            <input id="dn_preview" type="text" class="form-control" disabled style="background-color: white !important;">
                             <div class="form-text">{{ __('Este será el identificador único del usuario en LDAP.') }}</div>
                         </div>
 

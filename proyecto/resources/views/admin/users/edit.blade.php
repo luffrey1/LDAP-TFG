@@ -35,13 +35,13 @@
 
                         <div class="mb-3">
                             <label for="uid" class="form-label">{{ __('Nombre de Usuario') }}</label>
-                            <input id="uid" type="text" class="form-control" name="uid" value="{{ is_array($user) ? ($user['uid'][0] ?? '') : $user->getFirstAttribute('uid') }}" disabled>
+                            <input id="uid" type="text" class="form-control" name="uid" value="{{ is_array($user) ? ($user['uid'][0] ?? '') : $user->getFirstAttribute('uid') }}" disabled style="background-color: white !important;">
                             <div class="form-text">{{ __('El nombre de usuario no puede cambiarse.') }}</div>
                         </div>
 
                         <div class="mb-3">
                             <label for="dn_preview" class="form-label">{{ __('DN (Canonical Name)') }}</label>
-                            <input id="dn_preview" type="text" class="form-control" value="{{ base64_decode($encoded_dn) }}" disabled>
+                            <input id="dn_preview" type="text" class="form-control" value="{{ base64_decode($encoded_dn) }}" disabled style="background-color: white !important;">
                             <div class="form-text">{{ __('Identificador único del usuario en LDAP.') }}</div>
                         </div>
 
