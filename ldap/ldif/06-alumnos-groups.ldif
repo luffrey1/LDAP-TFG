@@ -4,8 +4,8 @@
 dn: cn=alumnos,ou=groups,dc=tierno,dc=es
 objectClass: top
 objectClass: posixGroup
-# objectClass: groupOfUniqueNames
+objectClass: groupOfUniqueNames
 cn: alumnos
-#uniqueMember: uid=diurno,ou=people,dc=tierno,dc=es
-#uniqueMember: uid=vespertino,ou=people,dc=tierno,dc=es
 gidNumber: 10001
+uniqueMember: uid=diurno,ou=people,dc=tierno,dc=es
+uniqueMember: uid=vespertino,ou=people,dc=tierno,dc=es

@@ -77,6 +77,15 @@ sed -i "s/LDAP_BASE_DN=.*/LDAP_BASE_DN=dc=tierno,dc=es/" /var/www/html/.env
 sed -i "s/LDAP_USERNAME=.*/LDAP_USERNAME=cn=admin,dc=tierno,dc=es/" /var/www/html/.env
 sed -i "s/LDAP_PASSWORD=.*/LDAP_PASSWORD=admin/" /var/www/html/.env
 sed -i "s/LDAP_AUTH_LOGIN_FALLBACK=.*/LDAP_AUTH_LOGIN_FALLBACK=false/" /var/www/html/.env
+
+# Variables LdapRecord específicas
+sed -i "s/LDAP_DEFAULT_HOSTS=.*/LDAP_DEFAULT_HOSTS=$LDAP_HOST/" /var/www/html/.env
+sed -i "s/LDAP_DEFAULT_PORT=.*/LDAP_DEFAULT_PORT=$LDAP_PORT/" /var/www/html/.env
+sed -i "s/LDAP_DEFAULT_BASE_DN=.*/LDAP_DEFAULT_BASE_DN=dc=tierno,dc=es/" /var/www/html/.env
+sed -i "s/LDAP_DEFAULT_USERNAME=.*/LDAP_DEFAULT_USERNAME=cn=admin,dc=tierno,dc=es/" /var/www/html/.env
+sed -i "s/LDAP_DEFAULT_SSL=.*/LDAP_DEFAULT_SSL=false/" /var/www/html/.env
+sed -i "s/LDAP_DEFAULT_TLS=.*/LDAP_DEFAULT_TLS=false/" /var/www/html/.env
+
 sed -i "s/DB_HOST=.*/DB_HOST=$DB_HOST/" /var/www/html/.env
 sed -i "s/DB_PORT=.*/DB_PORT=$DB_PORT/" /var/www/html/.env
 sed -i "s#APP_URL=.*#APP_URL=https://tierno.es#" /var/www/html/.env

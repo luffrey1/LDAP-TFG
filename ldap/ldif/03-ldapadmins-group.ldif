@@ -4,7 +4,7 @@
 dn: cn=ldapadmins,ou=groups,dc=tierno,dc=es
 objectClass: top
 objectClass: posixGroup
-# objectClass: groupOfUniqueNames
+objectClass: groupOfUniqueNames
 cn: ldapadmins
 gidNumber: 9001
-# uniqueMember: uid=ldap-admin,ou=people,dc=tierno,dc=es
+uniqueMember: uid=ldap-admin,ou=people,dc=tierno,dc=es

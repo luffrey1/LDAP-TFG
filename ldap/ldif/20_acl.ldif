@@ -40,7 +40,7 @@ olcAccess: to attrs=userPassword,shadowLastChange
 #
 # El usuario admin (creado por osixia/docker-openldap) puede modificar todo.
 olcAccess: to * 
-           by dn="cn=admin,dc=test,dc=tierno,dc=es" write 
+           by dn="cn=admin,dc=tierno,dc=es" write 
            by * read
 
 
@@ -83,7 +83,7 @@ olcAccess: to *
 # pero esto no funciona con groupOfUniqueNames (ver explicación al final) porque
 # group.exact utiliza el atributo `member`, y nosotros tenemos `uniqueMember`.
 # Para que funcione debemos usar:
-#           by group/groupOfUniqueNames/uniqueMember="cn=alumnos,ou=groups,dc=test,dc=tierno,dc=es" none
+#           by group/groupOfUniqueNames/uniqueMember="cn=alumnos,ou=groups,dc=tierno,dc=es" none
 # Ver: 8.4.4. Managing access with Groups
 # https://www.openldap.org/doc/admin24/access-control.html
 #
