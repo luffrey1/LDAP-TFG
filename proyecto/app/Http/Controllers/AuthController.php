@@ -170,53 +170,66 @@ class AuthController extends Controller
             
             Log::debug("Valores extraídos: CN=$cn, Mail=$mail, UID=$uid");
             
-            // Buscar usuario por email o crear uno nuevo
-            $user = User::where('email', $mail)->first();
-            
-            if (!$user) {
-                // Si no existe, crear nuevo usuario
-                $user = new User();
-                $user->name = $cn;
-                $user->email = $mail;
-                $user->username = $uid; // Asegurarnos de guardar el username
-                $user->password = Hash::make(Str::random(16));
-                $user->guid = $uid;
-                $user->domain = env('LDAP_BASE_DN', 'dc=tierno,dc=es');
-                $user->role = $role; // Establecer el rol correcto
-                $user->save();
+            try {
+                // Buscar usuario por email o crear uno nuevo
+                $user = User::where('email', $mail)->first();
                 
-                Log::debug("Usuario creado en base de datos: " . $user->id);
-            } else {
-                // Actualizar usuario existente
-                $user->name = $cn;
-                $user->username = $uid; // Asegurarnos de tener username
-                $user->guid = $uid;
-                $user->domain = env('LDAP_BASE_DN', 'dc=tierno,dc=es');
-                $user->role = $role; // Actualizar el rol
-                $user->save();
+                if (!$user) {
+                    // Si no existe, crear nuevo usuario
+                    Log::debug("Usuario no encontrado en la base de datos, creando nuevo usuario");
+                    $user = new User();
+                    $user->name = $cn;
+                    $user->email = $mail;
+                    $user->username = $uid; // Asegurarnos de guardar el username
+                    $user->password = Hash::make(Str::random(16));
+                    $user->guid = $uid;
+                    $user->domain = env('LDAP_BASE_DN', 'dc=tierno,dc=es');
+                    $user->role = $role; // Establecer el rol correcto
+                    $user->save();
+                    
+                    Log::debug("Usuario creado en base de datos: " . $user->id);
+                } else {
+                    // Actualizar usuario existente
+                    Log::debug("Usuario encontrado en la base de datos, actualizando");
+                    $user->name = $cn;
+                    $user->username = $uid; // Asegurarnos de tener username
+                    $user->guid = $uid;
+                    $user->domain = env('LDAP_BASE_DN', 'dc=tierno,dc=es');
+                    $user->role = $role; // Actualizar el rol
+                    $user->save();
+                    
+                    Log::debug("Usuario actualizado en base de datos: " . $user->id);
+                }
                 
-                Log::debug("Usuario actualizado en base de datos: " . $user->id);
+                try {
+                    // Autenticar usuario local
+                    Auth::login($user);
+                    Log::debug("Usuario autenticado en el sistema con Auth::login()");
+                    
+                    // Guardar datos en sesión
+                    session([
+                        'auth_user' => [
+                            'id' => $user->id,
+                            'username' => $credentials['username'],
+                            'nombre' => $user->name,
+                            'email' => $user->email,
+                            'role' => $role,
+                            'is_admin' => ($role === 'admin'),
+                            'auth_type' => 'ldap'
+                        ]
+                    ]);
+                    
+                    Log::debug("Datos guardados en sesión");
+                    Log::info("Autenticación LDAP exitosa para usuario: {$credentials['username']} con rol: {$role}");
+                    return true;
+                } catch (\Exception $e) {
+                    Log::error("Error en Auth::login o session(): " . $e->getMessage());
+                    return false;
+                }
+            } catch (\Exception $e) {
+                Log::error("Error al crear/actualizar usuario en base de datos: " . $e->getMessage());
+                return false;
             }
-            
-            // Autenticar usuario local
-            Auth::login($user);
-            Log::debug("Usuario autenticado en el sistema");
-            
-            // Guardar datos en sesión
-            session([
-                'auth_user' => [
-                    'id' => $user->id,
-                    'username' => $credentials['username'],
-                    'nombre' => $user->name,
-                    'email' => $user->email,
-                    'role' => $role,
-                    'is_admin' => ($role === 'admin'),
-                    'auth_type' => 'ldap'
-                ]
-            ]);
-            
-            Log::info("Autenticación LDAP exitosa para usuario: {$credentials['username']} con rol: {$role}");
-            return true;
         } catch (\Exception $e) {
             Log::error("Error procesando usuario LDAP: " . $e->getMessage());
             Log::error("Traza: " . $e->getTraceAsString());
@@ -231,7 +244,7 @@ class AuthController extends Controller
     {
         // Para el caso especial de ldap-admin o LDAPAdmin, otorgar rol de administrador inmediatamente
         if ($username === 'ldap-admin' || $username === 'LDAPAdmin' || strtolower($username) === 'ldapadmin') {
-            //    Log::debug("Usuario {$username} detectado, asignando rol de administrador directamente");
+            Log::debug("Usuario {$username} detectado directamente, asignando rol de administrador por nombre");
             return 'admin';
         }
         
@@ -249,13 +262,21 @@ class AuthController extends Controller
         // Si no podemos obtener el UID, usamos el nombre de usuario
         if (!$uid) {
             $uid = $username;
-            //    Log::warning("No se pudo extraer UID del objeto LDAP, usando username: $username");
+            Log::warning("No se pudo extraer UID del objeto LDAP, usando username: $username");
         }
+        
+        Log::debug("UID extraído del objeto LDAP: $uid");
         
         try {
             // Si el UID parece ser LDAPAdmin, asignar rol admin sin más comprobaciones
             if ($uid === 'LDAPAdmin' || strtolower($uid) === 'ldapadmin') {
                 Log::debug("Usuario con UID={$uid} detectado, asignando rol de administrador directamente");
+                return 'admin';
+            }
+            
+            // Para usuario ldap-admin, asignar rol admin directamente
+            if ($uid === 'ldap-admin') {
+                Log::debug("Usuario ldap-admin detectado por UID, asignando rol de administrador directamente");
                 return 'admin';
             }
             
@@ -297,6 +318,8 @@ class AuthController extends Controller
                 ->where('memberUid', '=', $uid)
                 ->get();
             
+            Log::debug("Grupos encontrados por memberUid: " . count($groups));
+            
             // También buscar grupos por uniqueMember (groupOfUniqueNames)
             $userDn = "uid={$uid},ou=people,{$baseDn}";
             Log::debug("Buscando grupos con uniqueMember={$userDn}");
@@ -304,6 +327,8 @@ class AuthController extends Controller
             $uniqueGroups = $ldap->query()
                 ->where('uniqueMember', '=', $userDn)
                 ->get();
+            
+            Log::debug("Grupos encontrados por uniqueMember: " . count($uniqueGroups));
             
             // Combinar los resultados
             $groupNames = [];
@@ -319,6 +344,7 @@ class AuthController extends Controller
                 
                 if ($groupCn) {
                     $groupNames[] = $groupCn;
+                    Log::debug("Grupo encontrado por memberUid: $groupCn");
                 }
             }
             
@@ -333,6 +359,7 @@ class AuthController extends Controller
                 
                 if ($groupCn && !in_array($groupCn, $groupNames)) {
                     $groupNames[] = $groupCn;
+                    Log::debug("Grupo encontrado por uniqueMember: $groupCn");
                 }
             }
             
@@ -360,15 +387,22 @@ class AuthController extends Controller
                 return 'usuario';
             }
             
+            // Si el usuario es ldap-admin pero no está en ningún grupo, asignar admin por defecto
+            if ($uid === 'ldap-admin') {
+                Log::debug("Usuario ldap-admin no pertenece a ningún grupo conocido, asignando rol admin por defecto");
+                return 'admin';
+            }
+            
             Log::warning("Usuario {$uid} no pertenece a ningún grupo conocido, asignando rol por defecto");
             return 'usuario';
             
         } catch (\Exception $e) {
-            //Log::error("Error buscando grupos LDAP: " . $e->getMessage());
-            //  Log::error("Traza: " . $e->getTraceAsString());
+            Log::error("Error buscando grupos LDAP: " . $e->getMessage());
+            Log::error("Traza: " . $e->getTraceAsString());
             
             // En caso de error, asignar un rol por defecto según el nombre de usuario
             if (strpos($username, 'admin') !== false || $username === 'LDAPAdmin') {
+                Log::debug("Asignando rol admin por contener 'admin' en el nombre de usuario");
                 return 'admin';
             } elseif (strpos($username, 'profesor') !== false) {
                 return 'profesor';
