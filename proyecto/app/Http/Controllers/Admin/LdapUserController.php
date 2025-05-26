@@ -306,7 +306,11 @@ class LdapUserController extends Controller
             'apellidos' => 'required|string|max:100',
             'email' => 'required|email|max:100',
             'password' => 'required|string|min:6',
-            'grupos' => 'required|array|min:1'
+            'grupos' => 'required|array|min:1',
+            'homeDirectory' => 'nullable|string',
+            'loginShell' => 'nullable|string',
+            'uidNumber' => 'nullable|numeric',
+            'gidNumber' => 'nullable|numeric'
         ]);
         
         try {
@@ -323,18 +327,15 @@ class LdapUserController extends Controller
             }
             
             // Calcular UID y GID
-            $uidNumber = $this->getNextUidNumber();
-            $gidNumber = '9000';  // GID por defecto para 'everybody'
+            $uidNumber = $request->uidNumber ? $request->uidNumber : $this->getNextUidNumber();
+            $gidNumber = $request->gidNumber ? $request->gidNumber : '9000';  // GID por defecto para 'everybody'
             
-            // Preparar contraseña: usar formato directo para garantizar compatibilidad
-            // Método 1: Contraseña simple en texto plano (funcional pero menos seguro)
-            $plainPassword = $request->password;
-            
-            // Método 2: Contraseña con hash SSHA usando algoritmo optimizado
+            // Preparar contraseña con hash SSHA
             $hashedPassword = $this->hashPassword($request->password);
             
-            // Método 3: Contraseña con formato simple SHA
-            // $hashedPassword = '{SHA}' . base64_encode(sha1($request->password, true));
+            // Preparar home directory
+            $homeDirectory = $request->homeDirectory ? $request->homeDirectory : '/home/' . $request->uid;
+            $loginShell = $request->loginShell ? $request->loginShell : '/bin/bash';
             
             // Preparar datos del usuario
             $userDn = 'uid=' . $request->uid . ',' . $this->peopleOu;
@@ -346,8 +347,8 @@ class LdapUserController extends Controller
                 'uid' => $request->uid,
                 'mail' => $request->email,
                 'userpassword' => $hashedPassword,
-                'homedirectory' => '/home/' . $request->uid,
-                'loginShell' => '/bin/bash',
+                'homedirectory' => $homeDirectory,
+                'loginShell' => $loginShell,
                 'gidnumber' => $gidNumber,
                 'uidnumber' => $uidNumber,
                 'shadowLastChange' => floor(time() / 86400)  // Añadir atributo shadowLastChange
@@ -412,7 +413,7 @@ class LdapUserController extends Controller
                 // Si tenemos un DN, añadir el usuario al grupo
                 if ($groupDn) {
                     // Añadir como uniqueMember para groupOfUniqueNames
-                    $groupInfo = ldap_read($ldapConn, $groupDn, "(objectclass=*)");
+                    $groupInfo = ldap_read($ldapConn, $groupDn, "(objectclass=*)", ["objectClass"]);
                     if ($groupInfo) {
                         $groupEntry = ldap_get_entries($ldapConn, $groupInfo);
                         
@@ -666,7 +667,11 @@ class LdapUserController extends Controller
             'nombre' => 'required|string|max:100',
             'apellidos' => 'required|string|max:100',
             'email' => 'required|email|max:100',
-            'grupos' => 'sometimes|array'
+            'grupos' => 'sometimes|array',
+            'homeDirectory' => 'nullable|string',
+            'loginShell' => 'nullable|string',
+            'uidNumber' => 'nullable|numeric',
+            'gidNumber' => 'nullable|numeric'
         ]);
         
         try {
@@ -750,6 +755,26 @@ class LdapUserController extends Controller
                 'givenname' => $request->nombre,
                 'mail' => $request->email
             ];
+            
+            // Actualizar uidNumber si se proporciona
+            if ($request->filled('uidNumber')) {
+                $updateData['uidnumber'] = $request->uidNumber;
+            }
+            
+            // Actualizar gidNumber si se proporciona
+            if ($request->filled('gidNumber')) {
+                $updateData['gidnumber'] = $request->gidNumber;
+            }
+            
+            // Actualizar homeDirectory si se proporciona
+            if ($request->filled('homeDirectory')) {
+                $updateData['homedirectory'] = $request->homeDirectory;
+            }
+            
+            // Actualizar loginShell si se proporciona
+            if ($request->filled('loginShell')) {
+                $updateData['loginshell'] = $request->loginShell;
+            }
             
             // Si hay contraseña, actualizarla correctamente
             if (!empty($request->password)) {

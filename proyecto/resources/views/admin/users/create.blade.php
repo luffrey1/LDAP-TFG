@@ -74,6 +74,36 @@
                         </div>
 
                         <div class="mb-3">
+                            <label for="dn_preview" class="form-label">{{ __('DN (Canonical Name)') }}</label>
+                            <input id="dn_preview" type="text" class="form-control" disabled>
+                            <div class="form-text">{{ __('Este será el identificador único del usuario en LDAP.') }}</div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="uidNumber" class="form-label">{{ __('UID Number') }}</label>
+                                <input id="uidNumber" type="number" class="form-control" name="uidNumber" value="{{ old('uidNumber') }}">
+                                <div class="form-text">{{ __('Se asignará automáticamente si se deja vacío.') }}</div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="gidNumber" class="form-label">{{ __('GID Number') }}</label>
+                                <input id="gidNumber" type="number" class="form-control" name="gidNumber" value="{{ old('gidNumber', '9000') }}">
+                                <div class="form-text">{{ __('Grupo principal del usuario (9000 para everybody).') }}</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="homeDirectory" class="form-label">{{ __('Home Directory') }}</label>
+                            <input id="homeDirectory" type="text" class="form-control" name="homeDirectory" value="{{ old('homeDirectory', '/home/') }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="loginShell" class="form-label">{{ __('Shell') }}</label>
+                            <input id="loginShell" type="text" class="form-control" name="loginShell" value="{{ old('loginShell', '/bin/bash') }}">
+                        </div>
+
+                        <div class="mb-3">
                             <label for="password" class="form-label">{{ __('Contraseña') }} <span class="text-danger">*</span></label>
                             <input id="password" type="password" class="form-control @error('password') is-invalid @enderror" name="password" required>
                             <div class="form-text">{{ __('Mínimo 8 caracteres.') }}</div>
@@ -87,6 +117,16 @@
                         <div class="mb-3">
                             <label for="password_confirmation" class="form-label">{{ __('Confirmar Contraseña') }} <span class="text-danger">*</span></label>
                             <input id="password_confirmation" type="password" class="form-control" name="password_confirmation" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">{{ __('Rol Predefinido') }}</label>
+                            <div class="btn-group w-100" role="group">
+                                <button type="button" class="btn btn-outline-secondary" id="btn-role-admin">Administrador</button>
+                                <button type="button" class="btn btn-outline-secondary" id="btn-role-profesor">Profesor</button>
+                                <button type="button" class="btn btn-outline-secondary" id="btn-role-alumno">Alumno</button>
+                            </div>
+                            <div class="form-text">{{ __('Seleccione un rol para preconfigurar los grupos.') }}</div>
                         </div>
 
                         <div class="mb-4">
@@ -108,7 +148,8 @@
                                         }
                                     @endphp
                                     <option value="{{ $groupName }}" {{ in_array($groupName, old('grupos', [])) ? 'selected' : '' }}
-                                        style="padding: 8px !important; margin: 2px !important;">
+                                        style="padding: 8px !important; margin: 2px !important;"
+                                        class="group-option {{ $groupName }}">
                                         {{ $groupName }}
                                     </option>
                                 @endforeach
@@ -134,4 +175,105 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const uidInput = document.getElementById('uid');
+        const nombreInput = document.getElementById('nombre');
+        const apellidosInput = document.getElementById('apellidos');
+        const emailInput = document.getElementById('email');
+        const dnPreview = document.getElementById('dn_preview');
+        const homeDirectory = document.getElementById('homeDirectory');
+        const btnRoleAdmin = document.getElementById('btn-role-admin');
+        const btnRoleProfesor = document.getElementById('btn-role-profesor');
+        const btnRoleAlumno = document.getElementById('btn-role-alumno');
+        const gruposSelect = document.getElementById('grupos');
+
+        // Función para actualizar el email basado en nombre y apellidos
+        function updateEmail() {
+            if (nombreInput.value && apellidosInput.value) {
+                const nombre = nombreInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
+                const apellido = apellidosInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
+                emailInput.value = nombre + apellido + '@tierno.es';
+            }
+        }
+
+        // Función para actualizar el DN y home directory
+        function updateDnAndHome() {
+            if (uidInput.value) {
+                dnPreview.value = `uid=${uidInput.value},ou=people,dc=tierno,dc=es`;
+                homeDirectory.value = `/home/${uidInput.value}`;
+            } else {
+                dnPreview.value = '';
+                homeDirectory.value = '/home/';
+            }
+        }
+
+        // Función para seleccionar grupos según el rol
+        function selectGroupsByRole(role) {
+            // Primero deseleccionamos todos los grupos
+            for (let i = 0; i < gruposSelect.options.length; i++) {
+                gruposSelect.options[i].selected = false;
+            }
+
+            // Luego seleccionamos los grupos según el rol
+            const commonGroups = ['everybody'];
+            let roleGroups = [];
+
+            if (role === 'admin') {
+                roleGroups = ['ldapadmins', 'docker'];
+                btnRoleAdmin.classList.add('active', 'btn-secondary');
+                btnRoleAdmin.classList.remove('btn-outline-secondary');
+                btnRoleProfesor.classList.remove('active', 'btn-secondary');
+                btnRoleProfesor.classList.add('btn-outline-secondary');
+                btnRoleAlumno.classList.remove('active', 'btn-secondary');
+                btnRoleAlumno.classList.add('btn-outline-secondary');
+            } else if (role === 'profesor') {
+                roleGroups = ['profesores', 'docker'];
+                btnRoleProfesor.classList.add('active', 'btn-secondary');
+                btnRoleProfesor.classList.remove('btn-outline-secondary');
+                btnRoleAdmin.classList.remove('active', 'btn-secondary');
+                btnRoleAdmin.classList.add('btn-outline-secondary');
+                btnRoleAlumno.classList.remove('active', 'btn-secondary');
+                btnRoleAlumno.classList.add('btn-outline-secondary');
+            } else if (role === 'alumno') {
+                roleGroups = ['alumnos'];
+                btnRoleAlumno.classList.add('active', 'btn-secondary');
+                btnRoleAlumno.classList.remove('btn-outline-secondary');
+                btnRoleAdmin.classList.remove('active', 'btn-secondary');
+                btnRoleAdmin.classList.add('btn-outline-secondary');
+                btnRoleProfesor.classList.remove('active', 'btn-secondary');
+                btnRoleProfesor.classList.add('btn-outline-secondary');
+            }
+
+            const allGroups = [...commonGroups, ...roleGroups];
+
+            // Seleccionar los grupos correspondientes
+            for (let i = 0; i < gruposSelect.options.length; i++) {
+                const option = gruposSelect.options[i];
+                if (allGroups.includes(option.value)) {
+                    option.selected = true;
+                }
+            }
+        }
+
+        // Eventos para actualizar el email
+        nombreInput.addEventListener('input', updateEmail);
+        apellidosInput.addEventListener('input', updateEmail);
+
+        // Evento para actualizar el DN y home directory
+        uidInput.addEventListener('input', updateDnAndHome);
+
+        // Eventos para los botones de rol
+        btnRoleAdmin.addEventListener('click', () => selectGroupsByRole('admin'));
+        btnRoleProfesor.addEventListener('click', () => selectGroupsByRole('profesor'));
+        btnRoleAlumno.addEventListener('click', () => selectGroupsByRole('alumno'));
+
+        // Inicializar valores
+        updateDnAndHome();
+        updateEmail();
+    });
+</script>
+@endpush
 @endsection 
