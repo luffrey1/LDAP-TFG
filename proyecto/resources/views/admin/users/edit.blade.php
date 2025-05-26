@@ -35,13 +35,13 @@
 
                         <div class="mb-3">
                             <label for="uid" class="form-label">{{ __('Nombre de Usuario') }}</label>
-                            <input id="uid" type="text" class="form-control" name="uid" value="{{ is_array($user) ? ($user['uid'][0] ?? '') : $user->getFirstAttribute('uid') }}" disabled>
+                            <input id="uid" type="text" class="form-control bg-light" name="uid" value="{{ is_array($user) ? ($user['uid'][0] ?? '') : $user->getFirstAttribute('uid') }}" disabled>
                             <div class="form-text">{{ __('El nombre de usuario no puede cambiarse.') }}</div>
                         </div>
 
                         <div class="mb-3">
                             <label for="dn_preview" class="form-label">{{ __('DN (Canonical Name)') }}</label>
-                            <input id="dn_preview" type="text" class="form-control" value="{{ base64_decode($encoded_dn) }}" disabled>
+                            <input id="dn_preview" type="text" class="form-control bg-light" value="{{ base64_decode($encoded_dn) }}" disabled>
                             <div class="form-text">{{ __('Identificador único del usuario en LDAP.') }}</div>
                         </div>
 
@@ -67,7 +67,8 @@
 
                         <div class="mb-3">
                             <label for="email" class="form-label">{{ __('Correo Electrónico') }} <span class="text-danger">*</span></label>
-                            <input id="email" type="email" class="form-control @error('email') is-invalid @enderror" name="email" value="{{ old('email', is_array($user) ? ($user['mail'][0] ?? '') : $user->getFirstAttribute('mail')) }}" required>
+                            <input id="email" type="email" class="form-control @error('email') is-invalid @enderror" name="email" value="{{ old('email', is_array($user) ? ($user['mail'][0] ?? '') : $user->getFirstAttribute('mail')) }}" required readonly>
+                            <div class="form-text">{{ __('Se genera automáticamente a partir del nombre y apellidos.') }}</div>
                             @error('email')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>
@@ -78,26 +79,26 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label for="uidNumber" class="form-label">{{ __('UID Number') }}</label>
-                                <input id="uidNumber" type="number" class="form-control" name="uidNumber" value="{{ old('uidNumber', is_array($user) ? ($user['uidnumber'][0] ?? '') : $user->getFirstAttribute('uidnumber')) }}">
+                                <input id="uidNumber" type="number" class="form-control bg-light" name="uidNumber" value="{{ old('uidNumber', is_array($user) ? ($user['uidnumber'][0] ?? '') : $user->getFirstAttribute('uidnumber')) }}">
                                 <div class="form-text">{{ __('Identificador numérico del usuario.') }}</div>
                             </div>
 
                             <div class="col-md-6 mb-3">
                                 <label for="gidNumber" class="form-label">{{ __('GID Number') }}</label>
-                                <input id="gidNumber" type="number" class="form-control" name="gidNumber" value="{{ old('gidNumber', is_array($user) ? ($user['gidnumber'][0] ?? '') : $user->getFirstAttribute('gidnumber')) }}">
+                                <input id="gidNumber" type="number" class="form-control bg-light" name="gidNumber" value="{{ old('gidNumber', is_array($user) ? ($user['gidnumber'][0] ?? '') : $user->getFirstAttribute('gidnumber')) }}">
                                 <div class="form-text">{{ __('Grupo principal del usuario.') }}</div>
                             </div>
                         </div>
 
                         <div class="mb-3">
                             <label for="homeDirectory" class="form-label">{{ __('Home Directory') }}</label>
-                            <input id="homeDirectory" type="text" class="form-control" name="homeDirectory" value="{{ old('homeDirectory', is_array($user) ? ($user['homedirectory'][0] ?? '') : $user->getFirstAttribute('homedirectory')) }}">
+                            <input id="homeDirectory" type="text" class="form-control bg-light" name="homeDirectory" value="{{ old('homeDirectory', is_array($user) ? ($user['homedirectory'][0] ?? '') : $user->getFirstAttribute('homedirectory')) }}" readonly>
                             <div class="form-text">{{ __('Directorio home del usuario.') }}</div>
                         </div>
 
                         <div class="mb-3">
                             <label for="loginShell" class="form-label">{{ __('Shell') }}</label>
-                            <input id="loginShell" type="text" class="form-control" name="loginShell" value="{{ old('loginShell', is_array($user) ? ($user['loginshell'][0] ?? '/bin/bash') : ($user->getFirstAttribute('loginshell') ?? '/bin/bash')) }}">
+                            <input id="loginShell" type="text" class="form-control bg-light" name="loginShell" value="{{ old('loginShell', is_array($user) ? ($user['loginshell'][0] ?? '/bin/bash') : ($user->getFirstAttribute('loginshell') ?? '/bin/bash')) }}">
                             <div class="form-text">{{ __('Shell por defecto del usuario.') }}</div>
                         </div>
 

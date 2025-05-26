@@ -65,7 +65,8 @@
 
                         <div class="mb-3">
                             <label for="email" class="form-label">{{ __('Correo Electrónico') }} <span class="text-danger">*</span></label>
-                            <input id="email" type="email" class="form-control @error('email') is-invalid @enderror" name="email" value="{{ old('email') }}" required>
+                            <input id="email" type="email" class="form-control @error('email') is-invalid @enderror" name="email" value="{{ old('email') }}" required readonly>
+                            <div class="form-text">{{ __('Se genera automáticamente a partir del nombre y apellidos.') }}</div>
                             @error('email')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>
@@ -75,32 +76,34 @@
 
                         <div class="mb-3">
                             <label for="dn_preview" class="form-label">{{ __('DN (Canonical Name)') }}</label>
-                            <input id="dn_preview" type="text" class="form-control" disabled>
+                            <input id="dn_preview" type="text" class="form-control bg-light" disabled>
                             <div class="form-text">{{ __('Este será el identificador único del usuario en LDAP.') }}</div>
                         </div>
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label for="uidNumber" class="form-label">{{ __('UID Number') }}</label>
-                                <input id="uidNumber" type="number" class="form-control" name="uidNumber" value="{{ old('uidNumber') }}">
+                                <input id="uidNumber" type="number" class="form-control bg-light" name="uidNumber" value="{{ old('uidNumber') }}">
                                 <div class="form-text">{{ __('Se asignará automáticamente si se deja vacío.') }}</div>
                             </div>
 
                             <div class="col-md-6 mb-3">
                                 <label for="gidNumber" class="form-label">{{ __('GID Number') }}</label>
-                                <input id="gidNumber" type="number" class="form-control" name="gidNumber" value="{{ old('gidNumber', '9000') }}">
+                                <input id="gidNumber" type="number" class="form-control bg-light" name="gidNumber" value="{{ old('gidNumber', '9000') }}">
                                 <div class="form-text">{{ __('Grupo principal del usuario (9000 para everybody).') }}</div>
                             </div>
                         </div>
 
                         <div class="mb-3">
                             <label for="homeDirectory" class="form-label">{{ __('Home Directory') }}</label>
-                            <input id="homeDirectory" type="text" class="form-control" name="homeDirectory" value="{{ old('homeDirectory', '/home/') }}">
+                            <input id="homeDirectory" type="text" class="form-control bg-light" name="homeDirectory" value="{{ old('homeDirectory', '/home/') }}" readonly>
+                            <div class="form-text">{{ __('Se genera automáticamente a partir del nombre de usuario.') }}</div>
                         </div>
 
                         <div class="mb-3">
                             <label for="loginShell" class="form-label">{{ __('Shell') }}</label>
-                            <input id="loginShell" type="text" class="form-control" name="loginShell" value="{{ old('loginShell', '/bin/bash') }}">
+                            <input id="loginShell" type="text" class="form-control bg-light" name="loginShell" value="{{ old('loginShell', '/bin/bash') }}">
+                            <div class="form-text">{{ __('Shell por defecto del usuario.') }}</div>
                         </div>
 
                         <div class="mb-3">
