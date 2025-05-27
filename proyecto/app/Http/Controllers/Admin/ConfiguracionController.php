@@ -48,7 +48,7 @@ class ConfiguracionController extends Controller
                 'politica_password_mayusculas' => 'nullable|boolean',
                 'politica_password_numeros' => 'nullable|boolean',
                 'politica_password_especiales' => 'nullable|boolean',
-                'dias_aviso_password' => 'required|integer|min:1|max:30'
+                'ssh_acceso_global' => 'nullable|boolean'
             ]);
             
             // Actualizar configuración de módulos
@@ -101,11 +101,12 @@ class ConfiguracionController extends Controller
                 Auth::id()
             );
             
+            // Actualizar configuración de acceso SSH
             SistemaConfig::establecerConfig(
-                'dias_aviso_password',
-                $request->dias_aviso_password,
-                'integer',
-                'Días de aviso antes de forzar cambio de contraseña',
+                'ssh_acceso_global',
+                $request->has('ssh_acceso_global') ? 'true' : 'false',
+                'boolean',
+                'Permitir acceso SSH global',
                 Auth::id()
             );
             

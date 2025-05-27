@@ -25,9 +25,9 @@
 - **Crear y editar grupos (GID y descripción opcional) - Solo ldapadmins**
 
 ### Seguridad(Anieto)
-- **Desactivación global de acceso SSH en Configuración de administración**
-- **Quitar días de aviso en password**
-- **Aclarar "Rol Admin" en el perfil de usuario**
+- ✅**Desactivación global de acceso SSH en Configuración de administración**
+- ✅**Quitar días de aviso en password**
+- ✅**Aclarar "Rol Admin" en el perfil de usuario**
 
 ### Agente de Telemetría (Dani)
 - **Agente con API REST usando Flask, se llama al pulsar botón "Comprobar ahora"**

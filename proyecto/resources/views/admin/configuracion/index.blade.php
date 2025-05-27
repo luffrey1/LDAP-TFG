@@ -207,18 +207,22 @@
                             <small class="form-text text-muted">Al menos un carácter especial (!@#$%^&*)</small>
                         </div>
                         
-                        <div class="seguridad-item">
-                            <label for="dias_aviso_password" class="form-label">Días de aviso</label>
-                            <input type="number" class="form-control" id="dias_aviso_password" name="dias_aviso_password" min="1" max="30" 
-                                value="{{ isset($configuraciones['general']) ? $configuraciones['general']->where('clave', 'dias_aviso_password')->first()->valor : '7' }}">
-                            <small class="form-text text-muted">Días de aviso antes de forzar cambio de contraseña</small>
-                        </div>
-                        
                         <h6 class="text-gray-800 mb-3 mt-4">Configuración de VPN</h6>
                         <div class="d-grid">
                             <button type="submit" name="generar_vpn_password" value="1" class="btn btn-secondary">
                                 <i class="fas fa-key mr-2"></i>Generar Nueva Contraseña VPN
                             </button>
+                        </div>
+
+                        <h6 class="text-gray-800 mb-3 mt-4">Configuración de Acceso SSH</h6>
+                        <div class="seguridad-item">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" role="switch" id="ssh_acceso_global" name="ssh_acceso_global" value="1"
+                                    @if(isset($configuraciones['seguridad']) && $configuraciones['seguridad']->where('clave', 'ssh_acceso_global')->first() && 
+                                    $configuraciones['seguridad']->where('clave', 'ssh_acceso_global')->first()->valor == 'true') checked @endif>
+                                <label class="form-check-label" for="ssh_acceso_global">Permitir acceso SSH global</label>
+                            </div>
+                            <small class="form-text text-muted">Activa o desactiva el acceso SSH para todos los usuarios</small>
                         </div>
                     </div>
                 </div>

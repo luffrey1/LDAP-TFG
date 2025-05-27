@@ -97,18 +97,18 @@ return new class extends Migration
                 'updated_at' => now()
             ],
             [
-                'clave' => 'dias_aviso_password',
-                'valor' => '7',
-                'tipo' => 'integer',
-                'descripcion' => 'Días de aviso antes de forzar cambio de contraseña',
-                'created_at' => now(),
-                'updated_at' => now()
-            ],
-            [
                 'clave' => 'vpn_password',
                 'valor' => '',
                 'tipo' => 'string',
                 'descripcion' => 'Contraseña de acceso VPN',
+                'created_at' => now(),
+                'updated_at' => now()
+            ],
+            [
+                'clave' => 'ssh_acceso_global',
+                'valor' => 'true',
+                'tipo' => 'boolean',
+                'descripcion' => 'Permitir acceso SSH global',
                 'created_at' => now(),
                 'updated_at' => now()
             ],

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Log;
 use phpseclib3\Net\SSH2;
+use App\Models\SistemaConfig;
 
 class RemoteExecutionService
 {
@@ -27,6 +28,21 @@ class RemoteExecutionService
     }
 
     /**
+     * Verifica si el acceso SSH está permitido globalmente
+     * @return bool
+     */
+    protected function isSshAccessAllowed()
+    {
+        try {
+            $config = SistemaConfig::where('clave', 'ssh_acceso_global')->first();
+            return $config && $config->valor === 'true';
+        } catch (\Exception $e) {
+            Log::error("Error verificando configuración de acceso SSH: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Establece la conexión SSH con el nodo de ejecución
      * @return bool
      */
@@ -34,6 +50,12 @@ class RemoteExecutionService
     {
         if ($this->connected) {
             return true;
+        }
+        
+        // Verificar si el acceso SSH está permitido
+        if (!$this->isSshAccessAllowed()) {
+            Log::warning("Intento de conexión SSH bloqueado: Acceso SSH desactivado globalmente");
+            return false;
         }
         
         try {
@@ -220,24 +242,32 @@ class RemoteExecutionService
     }
     
     /**
-     * Ejecuta un comando en un host remoto a través de SSH
+     * Ejecuta un comando en un host remoto
      * @param string $ip La dirección IP del host
      * @param string $command El comando a ejecutar
-     * @param string $username Usuario SSH (opcional)
-     * @param string $password Contraseña SSH (opcional)
+     * @param string|null $username Usuario SSH (opcional)
+     * @param string|null $password Contraseña SSH (opcional)
      * @return array Resultado con estado y detalles
      */
-    public function executeRemoteCommand($ip, $command, $username = null, $password = null)
+    public function executeCommand($ip, $command, $username = null, $password = null)
     {
         try {
+            // Verificar si el acceso SSH está permitido
+            if (!$this->isSshAccessAllowed()) {
+                return [
+                    'success' => false,
+                    'message' => 'Acceso SSH desactivado globalmente',
+                    'output' => 'El acceso SSH ha sido desactivado por el administrador del sistema.'
+                ];
+            }
+
             // Configuración por defecto para conexiones SSH
             $username = $username ?? 'root';
-            $password = $password ?? 'password'; // Contraseña configurada en ldap-setup.sh
+            $password = $password ?? 'password';
             $port = 22;
             
             Log::debug("Ejecutando comando en {$ip} con usuario {$username}: {$command}");
             
-            // Usar el método de fallback que funciona sin problemas 
             return $this->fallbackSshCommand($ip, $command, $username, $password, $port);
         } catch (\Exception $e) {
             Log::error("Error ejecutando comando remoto: " . $e->getMessage());
