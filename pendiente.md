@@ -1,36 +1,38 @@
 # Pendiente
 
 ## Tareas Inmediatas
-
-### General
 - **Revisar colores en toda la aplicación..**
+### General
+(Ambos)
 - **Mensajería no deja subir archivos (posible problema SQL)**
 - **Al crear un usuario comprobar que permite números en el nombre**
 - **Arreglar sistema de mensajería: mostrar datos reales y todos los profesores de otra manera porque cuando haya muchos será raro quizás como gmail y tal buscar y que se vaya completando mientras busques o te sugiera sabes**
 - **Que los eventos se cuenten en el dashboard (eventos: 1...)**
 
 ### LDAP
+(Dani)
 - **✅Que el panel de usuario de creacion y ver lo puedan ver todos pero solo pueda dar admin otro admin**
 - **✅ Mostrar UID, GID, directorio con autocompletado del nombre**
 - **✅ Añadir shell a /bin/bash (por defecto)**
 - **✅ Home directory autocompletado**
 - **✅ Mostrar nombre de LDAP en formato uid=usuario,ou=people,dc=tierno,dc=es (CN)**
 - **✅Al ver perfil de usuario, mostrar grupos en dos columnas o con grupos marcados**
+(Anieto)
 - **Al crear usuario(para alumnos), añadir botón para generar contraseña aleatoria**
 - **Al importar de archivo(para alumnos), generar contraseñas aleatorias en JS y mostrarlas en tabla**
 - **Añadir botón para descargar tabla con contraseñas(para alumnos)**
 - **Indicar mensaje "Las contraseñas solo las puedes ver ahora, se almacenarán hasheadas"**
 - **Crear y editar grupos (GID y descripción opcional) - Solo ldapadmins**
 
-### Seguridad
+### Seguridad(Anieto)
 - **Desactivación global de acceso SSH en Configuración de administración**
 - **Quitar días de aviso en password**
 - **Aclarar "Rol Admin" en el perfil de usuario**
 
-### Agente de Telemetría
+### Agente de Telemetría (Dani)
 - **Agente con API REST usando Flask, se llama al pulsar botón "Comprobar ahora"**
 
-### Equipos
+### Equipos (Dani)
 - **En detalles de equipo, mostrar aula con enlace a detalles del aula**
 - **Al crear equipo, implementar dos tipos diferentes:**
   - **IP Fija: Se escribe IP y hostname**
