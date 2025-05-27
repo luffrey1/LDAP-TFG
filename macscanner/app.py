@@ -153,13 +153,17 @@ def scan_hostnames():
     filas_raw = data.get('filas', list(range(1, 7)))
     dominio = data.get('dominio', 'tierno.es')
 
-    # Convertir a listas si son strings
-    if isinstance(columnas_raw, str):
+    # Convertir a listas si son strings o arrays con strings
+    if isinstance(columnas_raw, list) and len(columnas_raw) == 1 and isinstance(columnas_raw[0], str):
+        columnas = [c.strip() for c in columnas_raw[0].split(',')]
+    elif isinstance(columnas_raw, str):
         columnas = [c.strip() for c in columnas_raw.split(',')]
     else:
         columnas = columnas_raw
 
-    if isinstance(filas_raw, str):
+    if isinstance(filas_raw, list) and len(filas_raw) == 1 and isinstance(filas_raw[0], str):
+        filas = [int(f.strip()) for f in filas_raw[0].split(',')]
+    elif isinstance(filas_raw, str):
         filas = [int(f.strip()) for f in filas_raw.split(',')]
     else:
         filas = filas_raw
