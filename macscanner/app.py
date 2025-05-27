@@ -156,14 +156,20 @@ def scan_hostnames():
             # Ping rápido con soporte para IPv6
             ping_cmd = ['ping', '-c', '1', '-W', '1']
             if ':' in ip:  # Si es IPv6
-                ping_cmd = ['ping6', '-c', '1', '-W', '1']
+                ping_cmd.append('-6')
             ping_cmd.append(fqdn)
             
-            ping = subprocess.run(ping_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print(f"Intentando ping a {fqdn} con comando: {' '.join(ping_cmd)}")
+            ping = subprocess.run(ping_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            print(f"Resultado del ping: {ping.stdout}")
+            
             if ping.returncode == 0:
                 # MAC opcional
                 mac = get_mac_arp(ip) or get_mac_ip_neigh(ip) or get_mac_nmap(ip)
+                print(f"Host {fqdn} encontrado - IP: {ip}, MAC: {mac}")
                 resultados.append({'hostname': fqdn, 'ip': ip, 'mac': mac})
+            else:
+                print(f"Host {fqdn} no responde al ping")
         except Exception as e:
             print(f"Error checking host {fqdn}: {str(e)}")
             pass
