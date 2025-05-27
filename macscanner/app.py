@@ -148,103 +148,38 @@ def scan_hostnames():
         try:
             print(f"\nProbando hostname: {fqdn}")
             
-            # Intentar resolver tanto IPv4 como IPv6
-            ip = None
+            # 1. Intentar resolver la IP
             try:
-                # Primero intentar IPv4
                 ip = socket.gethostbyname(fqdn)
                 print(f"Resolución IPv4 exitosa: {ip}")
             except socket.gaierror:
-                try:
-                    # Si falla IPv4, intentar IPv6
-                    ip = socket.getaddrinfo(fqdn, None, socket.AF_INET6)[0][4][0]
-                    print(f"Resolución IPv6 exitosa: {ip}")
-                except Exception as e:
-                    print(f"Error en resolución DNS: {str(e)}")
-                    return
+                print(f"No se pudo resolver el hostname {fqdn}")
+                return
             
-            # Verificar que la IP no sea localhost o no especificada
-            if ip in ['::1', '127.0.0.1', '::']:
-                print("IP inválida (localhost o no especificada), intentando obtener IP real...")
-                # Intentar obtener la IP real usando dig
-                try:
-                    dig_cmd = ['dig', '+short', 'A', fqdn]
-                    dig_result = subprocess.run(dig_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                    if dig_result.stdout.strip():
-                        ip = dig_result.stdout.strip()
-                        print(f"Nueva IP obtenida con dig: {ip}")
-                    else:
-                        print("No se pudo obtener IP real con dig")
-                        return
-                except Exception as e:
-                    print(f"Error obteniendo IP real: {str(e)}")
-                    return
-            
-            # Verificar que la IP no sea la del propio contenedor
+            # 2. Forzar actualización ARP con ping
+            ping_ok = False
             try:
-                container_ip = socket.gethostbyname(socket.gethostname())
-                if ip == container_ip:
-                    print(f"IP coincide con la del contenedor ({container_ip}), ignorando...")
-                    return
+                result = subprocess.run(['ping', '-c', '2', '-W', '1', ip], timeout=3)
+                ping_ok = (result.returncode == 0)
+                print(f"Ping a {ip}: {'exitoso' if ping_ok else 'fallido'}")
             except Exception as e:
-                print(f"Error verificando IP del contenedor: {str(e)}")
-            
-            # Ping rápido con soporte para IPv6
-            ping_cmd = ['ping', '-c', '1', '-W', '1']
-            if ':' in ip:  # Si es IPv6
-                ping_cmd.append('-6')
-            ping_cmd.append(fqdn)
-            
-            print(f"Ejecutando ping: {' '.join(ping_cmd)}")
-            ping = subprocess.run(ping_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            print(f"Resultado del ping: {ping.stdout}")
-            
-            if ping.returncode == 0:
-                # MAC opcional
-                mac = None
-                try:
-                    # Intentar obtener MAC con arp-scan primero
-                    arp_cmd = ['arp-scan', '--interface=eth0', ip]
-                    arp_result = subprocess.run(arp_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                    match = re.search(r'([0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5})', arp_result.stdout)
-                    if match:
-                        mac = match.group(1).lower()
-                        print(f"MAC obtenida con arp-scan: {mac}")
-                    
-                    if not mac:
-                        mac = get_mac_arp(ip)
-                        if mac:
-                            print(f"MAC obtenida con arp: {mac}")
-                    
-                    if not mac:
-                        mac = get_mac_ip_neigh(ip)
-                        if mac:
-                            print(f"MAC obtenida con ip neigh: {mac}")
-                    
-                    if not mac:
-                        mac = get_mac_nmap(ip)
-                        if mac:
-                            print(f"MAC obtenida con nmap: {mac}")
-                    
-                    # Verificar que la MAC no sea la del propio contenedor
-                    if mac:
-                        try:
-                            with open('/sys/class/net/eth0/address', 'r') as f:
-                                container_mac = f.read().strip()
-                            if mac.lower() == container_mac.lower():
-                                print(f"MAC coincide con la del contenedor ({mac}), ignorando...")
-                                return
-                        except Exception as e:
-                            print(f"Error verificando MAC del contenedor: {str(e)}")
-                    
-                except Exception as e:
-                    print(f"Error obteniendo MAC: {str(e)}")
-                
-                if ip and ip not in ['::1', '127.0.0.1', '::']:
-                    print(f"Host {fqdn} encontrado - IP: {ip}, MAC: {mac}")
-                    resultados.append({'hostname': fqdn, 'ip': ip, 'mac': mac})
-                else:
-                    print(f"Host {fqdn} tiene IP inválida: {ip}")
+                print(f"Error en ping: {str(e)}")
+                return
+
+            # 3. Buscar MAC solo con arp tras ping
+            mac = None
+            try:
+                result = subprocess.run(['arp', '-n', ip], stdout=subprocess.PIPE, text=True, timeout=2)
+                match = re.search(r'([0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5})', result.stdout)
+                if match:
+                    mac = match.group(1).lower()
+                    print(f"MAC obtenida con arp: {mac}")
+            except Exception as e:
+                print(f"Error obteniendo MAC: {str(e)}")
+
+            if ping_ok:
+                print(f"Host {fqdn} encontrado - IP: {ip}, MAC: {mac}")
+                resultados.append({'hostname': fqdn, 'ip': ip, 'mac': mac})
             else:
                 print(f"Host {fqdn} no responde al ping")
         except Exception as e:
