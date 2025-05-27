@@ -148,38 +148,74 @@ def scan_hostnames():
         try:
             print(f"\nProbando hostname: {fqdn}")
             
-            # 1. Intentar resolver la IP
-            try:
-                ip = socket.gethostbyname(fqdn)
-                print(f"Resolución IPv4 exitosa: {ip}")
-            except socket.gaierror:
-                print(f"No se pudo resolver el hostname {fqdn}")
-                return
-            
-            # 2. Forzar actualización ARP con ping
+            # 1. Hacer ping directamente al hostname
             ping_ok = False
             try:
-                result = subprocess.run(['ping', '-c', '2', '-W', '1', ip], timeout=3)
+                result = subprocess.run(['ping', '-c', '2', '-W', '1', fqdn], 
+                                      stdout=subprocess.PIPE, 
+                                      stderr=subprocess.PIPE, 
+                                      text=True, 
+                                      timeout=3)
                 ping_ok = (result.returncode == 0)
-                print(f"Ping a {ip}: {'exitoso' if ping_ok else 'fallido'}")
+                print(f"Ping a {fqdn}: {'exitoso' if ping_ok else 'fallido'}")
+                print(f"Salida del ping: {result.stdout}")
             except Exception as e:
                 print(f"Error en ping: {str(e)}")
                 return
 
-            # 3. Buscar MAC solo con arp tras ping
-            mac = None
-            try:
-                result = subprocess.run(['arp', '-n', ip], stdout=subprocess.PIPE, text=True, timeout=2)
-                match = re.search(r'([0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5})', result.stdout)
-                if match:
-                    mac = match.group(1).lower()
-                    print(f"MAC obtenida con arp: {mac}")
-            except Exception as e:
-                print(f"Error obteniendo MAC: {str(e)}")
-
             if ping_ok:
-                print(f"Host {fqdn} encontrado - IP: {ip}, MAC: {mac}")
-                resultados.append({'hostname': fqdn, 'ip': ip, 'mac': mac})
+                # 2. Si el ping fue exitoso, obtener la IP usando host
+                try:
+                    host_result = subprocess.run(['host', fqdn], 
+                                              stdout=subprocess.PIPE, 
+                                              stderr=subprocess.PIPE, 
+                                              text=True, 
+                                              timeout=2)
+                    print(f"Resultado de host: {host_result.stdout}")
+                    
+                    # Extraer la IP del resultado de host
+                    ip_match = re.search(r'has address (\d+\.\d+\.\d+\.\d+)', host_result.stdout)
+                    if not ip_match:
+                        print(f"No se pudo extraer la IP del resultado de host")
+                        return
+                    
+                    ip = ip_match.group(1)
+                    print(f"IP obtenida: {ip}")
+
+                    # 3. Obtener la MAC usando arp-scan
+                    mac = None
+                    try:
+                        arp_result = subprocess.run(['arp-scan', '--interface=eth0', ip], 
+                                                 stdout=subprocess.PIPE, 
+                                                 stderr=subprocess.PIPE, 
+                                                 text=True, 
+                                                 timeout=5)
+                        print(f"Resultado de arp-scan: {arp_result.stdout}")
+                        
+                        mac_match = re.search(r'([0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5})', arp_result.stdout)
+                        if mac_match:
+                            mac = mac_match.group(1).lower()
+                            print(f"MAC obtenida: {mac}")
+                    except Exception as e:
+                        print(f"Error obteniendo MAC con arp-scan: {str(e)}")
+                        
+                        # Si arp-scan falla, intentar con arp
+                        try:
+                            arp_result = subprocess.run(['arp', '-n', ip], 
+                                                     stdout=subprocess.PIPE, 
+                                                     text=True, 
+                                                     timeout=2)
+                            mac_match = re.search(r'([0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5})', arp_result.stdout)
+                            if mac_match:
+                                mac = mac_match.group(1).lower()
+                                print(f"MAC obtenida con arp: {mac}")
+                        except Exception as e:
+                            print(f"Error obteniendo MAC con arp: {str(e)}")
+
+                    print(f"Host {fqdn} encontrado - IP: {ip}, MAC: {mac}")
+                    resultados.append({'hostname': fqdn, 'ip': ip, 'mac': mac})
+                except Exception as e:
+                    print(f"Error obteniendo IP o MAC: {str(e)}")
             else:
                 print(f"Host {fqdn} no responde al ping")
         except Exception as e:
