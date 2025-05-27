@@ -146,14 +146,26 @@ def scan_hostnames():
     def check_host(hostname, resultados):
         fqdn = f"{hostname}.{dominio}"
         try:
-            ip = socket.gethostbyname(fqdn)
-            # Ping rápido
-            ping = subprocess.run(['ping', '-c', '1', '-W', '1', fqdn], stdout=subprocess.DEVNULL)
+            # Intentar resolver tanto IPv4 como IPv6
+            try:
+                ip = socket.gethostbyname(fqdn)
+            except socket.gaierror:
+                # Si falla IPv4, intentar IPv6
+                ip = socket.getaddrinfo(fqdn, None, socket.AF_INET6)[0][4][0]
+            
+            # Ping rápido con soporte para IPv6
+            ping_cmd = ['ping', '-c', '1', '-W', '1']
+            if ':' in ip:  # Si es IPv6
+                ping_cmd = ['ping6', '-c', '1', '-W', '1']
+            ping_cmd.append(fqdn)
+            
+            ping = subprocess.run(ping_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             if ping.returncode == 0:
                 # MAC opcional
-                mac = get_mac_arp(ip) or get_mac_ip_neigh(ip)
+                mac = get_mac_arp(ip) or get_mac_ip_neigh(ip) or get_mac_nmap(ip)
                 resultados.append({'hostname': fqdn, 'ip': ip, 'mac': mac})
-        except Exception:
+        except Exception as e:
+            print(f"Error checking host {fqdn}: {str(e)}")
             pass
 
     threads = []

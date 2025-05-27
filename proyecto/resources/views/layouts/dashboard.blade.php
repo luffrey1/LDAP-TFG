@@ -39,10 +39,13 @@
             --dark-color: #1a1c24;
             --darker-color: #13141a;
             --text-color: #e0e0e0;
-            --text-muted: #b3b3b3;
+            
+            /*--text-muted: #b3b3b3; !*/
+             --text-muted:rgb(0, 0, 0);
             --border-color: #2e3140;
             --card-bg: #222533;
         }
+        
         
         body {
             font-family: 'Poppins', sans-serif;
@@ -236,6 +239,14 @@
         
         .text-muted {
             color: var(--text-muted) !important;
+        }
+        
+        /* Form text */
+        .form-text {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            font-style: italic;
         }
         
         /* Tablas */
