@@ -23,9 +23,12 @@
             <div class="breadcrumb-item"><a href="{{ route('monitor.index') }}">Monitoreo</a></div>
             <div class="breadcrumb-item">{{ $host->hostname }}</div>
             <!-- Botón SSH a la derecha del nombre -->
+            @if(isset($configuraciones['seguridad']) && $configuraciones['seguridad']->where('clave', 'ssh_acceso_global')->first() && 
+                $configuraciones['seguridad']->where('clave', 'ssh_acceso_global')->first()->valor == 'true')
             <button type="button" class="btn btn-primary btn-icon ms-3" id="open-ssh-terminal-header" title="Abrir terminal SSH">
                 <i class="fas fa-terminal"></i> SSH
             </button>
+            @endif
         </div>
     </div>
 
