@@ -110,25 +110,24 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
         Route::get('/groups/{id}/wol', [MonitorController::class, 'wakeOnLanGroup'])->name('groups.wol');
     });
     
-    // Ruta para gestión de usuarios LDAP - acceso directo a admin users
-    Route::get('/usuarios', [App\Http\Controllers\Admin\LdapUserController::class, 'index'])->name('ldap.users.index');
+    // Gestión de usuarios LDAP - Accesible para todos los usuarios
+    Route::prefix('admin/usuarios')->name('admin.users.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\LdapUserController::class, 'index'])->name('index');
+        Route::get('/crear', [App\Http\Controllers\Admin\LdapUserController::class, 'create'])->name('create');
+        Route::post('/', [App\Http\Controllers\Admin\LdapUserController::class, 'store'])->name('store');
+        Route::get('/{dn}', [App\Http\Controllers\Admin\LdapUserController::class, 'show'])->name('show');
+        Route::get('/{dn}/editar', [App\Http\Controllers\Admin\LdapUserController::class, 'edit'])->name('edit');
+        Route::put('/{dn}', [App\Http\Controllers\Admin\LdapUserController::class, 'update'])->name('update');
+        Route::delete('/{dn}', [App\Http\Controllers\Admin\LdapUserController::class, 'destroy'])->name('destroy');
+        Route::post('/{dn}/reset-password', [App\Http\Controllers\Admin\LdapUserController::class, 'resetPassword'])->name('reset-password');
+    });
 });
 
-// Rutas de administración de usuarios LDAP (solo para administradores)
+// Rutas que requieren permisos de administrador
 Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware', 'App\Http\Middleware\AdminMiddleware'])->prefix('admin')->name('admin.')->group(function () {
-    // Gestión de usuarios LDAP - asegurando que los nombres de rutas sumen admin.users.* correctamente
-    Route::get('/usuarios', [App\Http\Controllers\Admin\LdapUserController::class, 'index'])->name('users.index');
-    Route::get('/usuarios/crear', [App\Http\Controllers\Admin\LdapUserController::class, 'create'])->name('users.create');
-    Route::post('/usuarios', [App\Http\Controllers\Admin\LdapUserController::class, 'store'])->name('users.store');
-    Route::get('/usuarios/{dn}', [App\Http\Controllers\Admin\LdapUserController::class, 'show'])->name('users.show');
-    Route::get('/usuarios/{dn}/editar', [App\Http\Controllers\Admin\LdapUserController::class, 'edit'])->name('users.edit');
-    Route::put('/usuarios/{dn}', [App\Http\Controllers\Admin\LdapUserController::class, 'update'])->name('users.update');
-    Route::delete('/usuarios/{dn}', [App\Http\Controllers\Admin\LdapUserController::class, 'destroy'])->name('users.destroy');
+    // Operaciones exclusivas para administradores de usuarios LDAP
     Route::post('/usuarios/{dn}/toggle-admin', [App\Http\Controllers\Admin\LdapUserController::class, 'toggleAdmin'])->name('users.toggle-admin');
-    Route::post('/usuarios/{dn}/reset-password', [App\Http\Controllers\Admin\LdapUserController::class, 'resetPassword'])->name('users.reset-password');
     Route::get('/usuarios-exportar', [App\Http\Controllers\Admin\LdapUserController::class, 'exportExcel'])->name('users.export');
-    
-    // Ruta para reparar usuario (UID no codificado)
     Route::post('/usuarios/reparar/{uid}', [App\Http\Controllers\Admin\LdapUserController::class, 'repairUser'])->name('users.repair');
     
     // Logs de actividad LDAP
