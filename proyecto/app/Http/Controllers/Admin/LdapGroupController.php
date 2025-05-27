@@ -1,0 +1,319 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use LdapRecord\Connection;
+use Illuminate\Support\Facades\Log;
+
+class LdapGroupController extends Controller
+{
+    public function index()
+    {
+        try {
+            Log::debug('Iniciando búsqueda de grupos LDAP');
+            
+            $config = config('ldap.connections.default');
+            Log::debug('Configuración LDAP: ' . json_encode($config));
+            
+            $connection = new Connection([
+                'hosts' => $config['hosts'],
+                'port' => $config['port'],
+                'base_dn' => $config['base_dn'],
+                'username' => $config['username'],
+                'password' => $config['password'],
+                'use_ssl' => $config['use_ssl'],
+                'use_tls' => $config['use_tls'],
+                'timeout' => $config['timeout'],
+                'options' => [
+                    LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                    LDAP_OPT_REFERRALS => 0,
+                ],
+            ]);
+
+            Log::debug('Intentando conectar al servidor LDAP');
+            $connection->connect();
+            Log::debug('Conexión LDAP establecida');
+
+            $query = $connection->query()->in('ou=groups,dc=tierno,dc=es');
+            Log::debug('Query LDAP creada: ' . json_encode($query));
+            
+            $groups = $query->get();
+            Log::debug('Grupos encontrados (raw): ' . json_encode($groups));
+
+            if (empty($groups)) {
+                Log::warning('No se encontraron grupos LDAP');
+                return view('admin.groups.index', ['groups' => []]);
+            }
+
+            $groupData = [];
+            foreach ($groups as $group) {
+                Log::debug('Procesando grupo: ' . json_encode($group));
+                
+                try {
+                    $groupData[] = [
+                        'cn' => is_array($group['cn']) ? $group['cn'][0] : $group['cn'],
+                        'gidNumber' => is_array($group['gidnumber']) ? $group['gidnumber'][0] : $group['gidnumber'],
+                        'description' => isset($group['description']) ? (is_array($group['description']) ? $group['description'][0] : $group['description']) : '',
+                        'member' => $group['member'] ?? [],
+                    ];
+                } catch (\Exception $e) {
+                    Log::error('Error procesando grupo: ' . $e->getMessage());
+                    Log::error('Datos del grupo: ' . json_encode($group));
+                }
+            }
+
+            Log::debug('Grupos procesados: ' . json_encode($groupData));
+            Log::debug('Renderizando vista con ' . count($groupData) . ' grupos');
+
+            return view('admin.groups.index', ['groups' => $groupData]);
+        } catch (\Exception $e) {
+            Log::error('Error al obtener grupos LDAP: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            return redirect()->back()->with('error', 'Error al obtener los grupos LDAP: ' . $e->getMessage());
+        }
+    }
+
+    public function create()
+    {
+        return view('admin.groups.create');
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'cn' => 'required|string|max:255|regex:/^[a-zA-Z0-9_-]+$/',
+            'gidNumber' => 'required|integer|min:1000',
+            'description' => 'nullable|string|max:255',
+        ], [
+            'cn.regex' => 'El nombre del grupo solo puede contener letras, números, guiones y guiones bajos',
+            'gidNumber.min' => 'El GID debe ser mayor o igual a 1000',
+        ]);
+
+        try {
+            Log::debug('Iniciando creación de grupo LDAP');
+            Log::debug('Datos del grupo: ' . json_encode($request->all()));
+            
+            $config = config('ldap.connections.default');
+            Log::debug('Configuración LDAP: ' . json_encode($config));
+            
+            $connection = new Connection([
+                'hosts' => $config['hosts'],
+                'port' => $config['port'],
+                'base_dn' => $config['base_dn'],
+                'username' => $config['username'],
+                'password' => $config['password'],
+                'use_ssl' => $config['use_ssl'],
+                'use_tls' => $config['use_tls'],
+                'timeout' => $config['timeout'],
+                'options' => [
+                    LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                    LDAP_OPT_REFERRALS => 0,
+                ],
+            ]);
+
+            Log::debug('Conectando al servidor LDAP');
+            $connection->connect();
+            Log::debug('Conexión LDAP establecida');
+
+            // Verificar si el grupo ya existe
+            $existingGroup = $connection->query()
+                ->in('ou=groups,dc=tierno,dc=es')
+                ->where('cn', '=', $request->cn)
+                ->first();
+
+            if ($existingGroup) {
+                Log::warning('El grupo ya existe: ' . $request->cn);
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', 'Ya existe un grupo con ese nombre');
+            }
+
+            // Verificar si el GID ya está en uso
+            $existingGid = $connection->query()
+                ->in('ou=groups,dc=tierno,dc=es')
+                ->where('gidnumber', '=', $request->gidNumber)
+                ->first();
+
+            if ($existingGid) {
+                Log::warning('El GID ya está en uso: ' . $request->gidNumber);
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', 'El GID especificado ya está en uso');
+            }
+
+            $dn = "cn={$request->cn},ou=groups,dc=tierno,dc=es";
+            Log::debug('DN del nuevo grupo: ' . $dn);
+            
+            // Crear el grupo usando el modelo de LdapRecord
+            $group = new \LdapRecord\Models\OpenLDAP\Group();
+            $group->setDn($dn);
+            $group->setAttribute('objectClass', ['top', 'posixGroup']);
+            $group->setAttribute('cn', $request->cn);
+            $group->setAttribute('gidNumber', (string)$request->gidNumber);
+            
+            if ($request->description) {
+                $group->setAttribute('description', $request->description);
+            }
+
+            Log::debug('Intentando guardar el grupo');
+            $group->save();
+            Log::info('Grupo creado exitosamente: ' . $request->cn);
+
+            return redirect()->route('admin.groups.index')
+                ->with('success', 'Grupo creado correctamente');
+
+        } catch (\Exception $e) {
+            Log::error('Error al crear grupo LDAP: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Error al crear el grupo: ' . $e->getMessage());
+        }
+    }
+
+    public function edit($cn)
+    {
+        try {
+            $config = config('ldap.connections.default');
+            $connection = new Connection([
+                'hosts' => $config['hosts'],
+                'port' => $config['port'],
+                'base_dn' => $config['base_dn'],
+                'username' => $config['username'],
+                'password' => $config['password'],
+                'use_ssl' => $config['use_ssl'],
+                'use_tls' => $config['use_tls'],
+                'timeout' => $config['timeout'],
+                'options' => [
+                    LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                    LDAP_OPT_REFERRALS => 0,
+                ],
+            ]);
+
+            $connection->connect();
+
+            $group = $connection->query()
+                ->in('ou=groups,dc=tierno,dc=es')
+                ->where('cn', '=', $cn)
+                ->first();
+
+            if (!$group) {
+                return redirect()->route('admin.groups.index')
+                    ->with('error', 'Grupo no encontrado');
+            }
+
+            $groupData = [
+                'cn' => is_array($group['cn']) ? $group['cn'][0] : $group['cn'],
+                'gidNumber' => is_array($group['gidnumber']) ? $group['gidnumber'][0] : $group['gidnumber'],
+                'description' => isset($group['description']) ? (is_array($group['description']) ? $group['description'][0] : $group['description']) : '',
+            ];
+
+            return view('admin.groups.edit', ['groupData' => $groupData]);
+        } catch (\Exception $e) {
+            Log::error('Error al obtener grupo LDAP: ' . $e->getMessage());
+            return redirect()->route('admin.groups.index')
+                ->with('error', 'Error al obtener el grupo: ' . $e->getMessage());
+        }
+    }
+
+    public function update(Request $request, $cn)
+    {
+        $request->validate([
+            'gidNumber' => 'required|integer',
+            'description' => 'nullable|string|max:255',
+        ]);
+
+        try {
+            $config = config('ldap.connections.default');
+            $connection = new Connection([
+                'hosts' => $config['hosts'],
+                'port' => $config['port'],
+                'base_dn' => $config['base_dn'],
+                'username' => $config['username'],
+                'password' => $config['password'],
+                'use_ssl' => $config['use_ssl'],
+                'use_tls' => $config['use_tls'],
+                'timeout' => $config['timeout'],
+                'options' => [
+                    LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                    LDAP_OPT_REFERRALS => 0,
+                ],
+            ]);
+
+            $connection->connect();
+
+            $dn = "cn={$cn},ou=groups,dc=tierno,dc=es";
+            
+            $entry = [
+                'gidNumber' => $request->gidNumber,
+            ];
+
+            if ($request->description) {
+                $entry['description'] = $request->description;
+            }
+
+            $connection->query()->update($dn, $entry);
+
+            return redirect()->route('admin.groups.index')
+                ->with('success', 'Grupo actualizado correctamente');
+        } catch (\Exception $e) {
+            Log::error('Error al actualizar grupo LDAP: ' . $e->getMessage());
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Error al actualizar el grupo: ' . $e->getMessage());
+        }
+    }
+
+    public function destroy($cn)
+    {
+        try {
+            $config = config('ldap.connections.default');
+            $connection = new Connection([
+                'hosts' => $config['hosts'],
+                'port' => $config['port'],
+                'base_dn' => $config['base_dn'],
+                'username' => $config['username'],
+                'password' => $config['password'],
+                'use_ssl' => $config['use_ssl'],
+                'use_tls' => $config['use_tls'],
+                'timeout' => $config['timeout'],
+                'options' => [
+                    LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                    LDAP_OPT_REFERRALS => 0,
+                ],
+            ]);
+
+            $connection->connect();
+
+            // Verificar si el grupo existe
+            $group = $connection->query()
+                ->in('ou=groups,dc=tierno,dc=es')
+                ->where('cn', '=', $cn)
+                ->first();
+
+            if (!$group) {
+                return redirect()->route('admin.groups.index')
+                    ->with('error', 'Grupo no encontrado');
+            }
+
+            // Verificar si el grupo está protegido
+            $protectedGroups = ['admin', 'ldapadmins', 'sudo'];
+            if (in_array($cn, $protectedGroups)) {
+                return redirect()->route('admin.groups.index')
+                    ->with('error', 'No se puede eliminar un grupo protegido');
+            }
+
+            $dn = "cn={$cn},ou=groups,dc=tierno,dc=es";
+            $connection->query()->delete($dn);
+
+            return redirect()->route('admin.groups.index')
+                ->with('success', 'Grupo eliminado correctamente');
+        } catch (\Exception $e) {
+            Log::error('Error al eliminar grupo LDAP: ' . $e->getMessage());
+            return redirect()->route('admin.groups.index')
+                ->with('error', 'Error al eliminar el grupo: ' . $e->getMessage());
+        }
+    }
+} 
