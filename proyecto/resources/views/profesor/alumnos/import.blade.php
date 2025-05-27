@@ -101,10 +101,21 @@
                             <!-- Previsualización simple -->
                             <div id="preview" class="table-responsive mt-3" style="display: none;">
                                 <h5>Previsualización:</h5>
-                                <table class="table table-bordered table-striped">
-                                    <tbody id="preview-content">
-                                    </tbody>
-                                </table>
+                                <div style="max-height: 400px; overflow-y: auto;">
+                                    <table class="table table-bordered table-striped">
+                                        <thead style="position: sticky; top: 0; background-color: #f8f9fa;">
+                                            <tr id="preview-header">
+                                            </tr>
+                                        </thead>
+                                        <tbody id="preview-content">
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="mt-3">
+                                    <button type="button" id="download-csv" class="btn btn-success">
+                                        <i class="fas fa-download"></i> Descargar CSV con Contraseñas
+                                    </button>
+                                </div>
                             </div>
 
                             <div class="form-group">
@@ -124,6 +135,16 @@
 @section('scripts')
 <script>
     $(document).ready(function() {
+        // Función para generar contraseña aleatoria
+        function generatePassword() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+            let password = '';
+            for (let i = 0; i < 12; i++) {
+                password += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return password;
+        }
+
         // Mostrar nombre del archivo y previsualizar
         $('.custom-file-input').on('change', function() {
             let fileName = $(this).val().split('\\').pop();
@@ -138,29 +159,39 @@
                 const text = e.target.result;
                 const lines = text.split('\n');
                 let html = '';
+                let csvData = [];
                 
                 // Mostrar todas las líneas
                 lines.forEach((line, index) => {
                     if (line.trim() !== '') {  // Ignorar líneas vacías
                         const cells = line.split(separator);
                         if (index === 0) {  // Primera fila (títulos)
-                            html += '<tr>';
+                            let headerHtml = '';
                             cells.forEach(cell => {
-                                html += `<th style="font-weight: bold;">${cell.trim()}</th>`;
+                                headerHtml += `<th style="font-weight: bold;">${cell.trim()}</th>`;
                             });
-                            html += '</tr>';
+                            headerHtml += '<th style="font-weight: bold;">Contraseña</th>';
+                            $('#preview-header').html(headerHtml);
+                            csvData.push([...cells, 'Contraseña']);
                         } else {  // Resto de filas (datos)
                             html += '<tr>';
                             cells.forEach(cell => {
                                 html += `<td>${cell.trim()}</td>`;
                             });
+                            // Añadir columna de contraseña
+                            const password = generatePassword();
+                            html += `<td><span class="password">${password}</span></td>`;
                             html += '</tr>';
+                            csvData.push([...cells, password]);
                         }
                     }
                 });
                 
                 $('#preview-content').html(html);
                 $('#preview').show();
+
+                // Guardar los datos del CSV generado para la descarga
+                window.csvData = csvData;
             };
             
             reader.readAsText(file);
@@ -172,6 +203,22 @@
             if(fileInput.files.length > 0) {
                 $(fileInput).trigger('change');
             }
+        });
+
+        // Botón para descargar el CSV generado
+        $('#download-csv').on('click', function() {
+            if (!window.csvData) return;
+            const separator = $('#separador').val();
+            let csvContent = window.csvData.map(row => row.join(separator)).join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'alumnos_con_contraseñas.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         });
 
         // Inicializar select2
