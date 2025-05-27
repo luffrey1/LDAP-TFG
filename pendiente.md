@@ -3,7 +3,7 @@
 ## Tareas Inmediatas
 - **Que el panel de usuario de creacion y ver lo puedan ver todos pero solo pueda dar admin otro admin**
 ### General
-- **Revisar colores en toda la aplicación**
+- **Revisar colores en toda la aplicación..**
 - **Mensajería no deja subir archivos (posible problema SQL)**
 - **Al crear un usuario comprobar que permite números en el nombre**
 - **Arreglar sistema de mensajería: mostrar datos reales y todos los profesores de otra manera porque cuando haya muchos será raro quizás como gmail y tal buscar y que se vaya completando mientras busques o te sugiera sabes**
