@@ -39,9 +39,7 @@
             --dark-color: #1a1c24;
             --darker-color: #13141a;
             --text-color: #e0e0e0;
-            
-            /*--text-muted: #b3b3b3; !*/
-             --text-muted:rgb(0, 0, 0);
+            --text-muted: #b3b3b3;
             --border-color: #2e3140;
             --card-bg: #222533;
         }
