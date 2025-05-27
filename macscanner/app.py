@@ -180,43 +180,44 @@ def scan_hostnames():
         try:
             logger.info(f"\nProbando hostname: {fqdn}")
             
-            # 1. Hacer ping directamente al hostname con IPv4
-            ping_ok = False
+            # 1. Primero intentar resolver el hostname
             try:
-                ping_cmd = ['ping', '-4', '-c', '2', '-W', '1', fqdn]
-                logger.debug(f"Ejecutando comando: {' '.join(ping_cmd)}")
-                result = subprocess.run(ping_cmd, 
-                                     stdout=subprocess.PIPE, 
-                                     stderr=subprocess.PIPE, 
-                                     text=True, 
-                                     timeout=3)
-                ping_ok = (result.returncode == 0)
-                logger.info(f"Ping a {fqdn}: {'exitoso' if ping_ok else 'fallido'}")
-                logger.debug(f"Salida del ping: {result.stdout}")
-            except Exception as e:
-                logger.error(f"Error en ping: {str(e)}")
-                return
-
-            if ping_ok:
-                # 2. Si el ping fue exitoso, obtener la IP usando dig con IPv4
+                nslookup_cmd = ['nslookup', fqdn]
+                logger.debug(f"Ejecutando comando: {' '.join(nslookup_cmd)}")
+                nslookup_result = subprocess.run(nslookup_cmd,
+                                              stdout=subprocess.PIPE,
+                                              stderr=subprocess.PIPE,
+                                              text=True,
+                                              timeout=2)
+                logger.debug(f"Resultado de nslookup: {nslookup_result.stdout}")
+                
+                # Extraer la IP del resultado de nslookup
+                ip_match = re.search(r'Address: (\d+\.\d+\.\d+\.\d+)', nslookup_result.stdout)
+                if not ip_match:
+                    logger.warning(f"No se pudo resolver {fqdn}")
+                    return
+                
+                ip = ip_match.group(1)
+                logger.info(f"IP resuelta: {ip}")
+                
+                # 2. Hacer ping a la IP resuelta
+                ping_ok = False
                 try:
-                    dig_cmd = ['dig', '+short', '-4', fqdn]
-                    logger.debug(f"Ejecutando comando: {' '.join(dig_cmd)}")
-                    dig_result = subprocess.run(dig_cmd, 
-                                             stdout=subprocess.PIPE, 
-                                             stderr=subprocess.PIPE, 
-                                             text=True, 
-                                             timeout=2)
-                    logger.debug(f"Resultado de dig: {dig_result.stdout}")
-                    
-                    # Extraer la IP del resultado de dig
-                    ip = dig_result.stdout.strip()
-                    if not ip or ip == '::':
-                        logger.warning(f"No se pudo obtener una IP válida para {fqdn}")
-                        return
-                    
-                    logger.info(f"IP obtenida: {ip}")
+                    ping_cmd = ['ping', '-c', '2', '-W', '1', ip]
+                    logger.debug(f"Ejecutando comando: {' '.join(ping_cmd)}")
+                    result = subprocess.run(ping_cmd, 
+                                         stdout=subprocess.PIPE, 
+                                         stderr=subprocess.PIPE, 
+                                         text=True, 
+                                         timeout=3)
+                    ping_ok = (result.returncode == 0)
+                    logger.info(f"Ping a {ip}: {'exitoso' if ping_ok else 'fallido'}")
+                    logger.debug(f"Salida del ping: {result.stdout}")
+                except Exception as e:
+                    logger.error(f"Error en ping: {str(e)}")
+                    return
 
+                if ping_ok:
                     # 3. Obtener la MAC usando arp-scan
                     mac = None
                     try:
@@ -254,10 +255,11 @@ def scan_hostnames():
 
                     logger.info(f"Host {fqdn} encontrado - IP: {ip}, MAC: {mac}")
                     resultados.append({'hostname': fqdn, 'ip': ip, 'mac': mac})
-                except Exception as e:
-                    logger.error(f"Error obteniendo IP o MAC: {str(e)}")
-            else:
-                logger.warning(f"Host {fqdn} no responde al ping")
+                else:
+                    logger.warning(f"Host {fqdn} no responde al ping")
+            except Exception as e:
+                logger.error(f"Error en resolución DNS: {str(e)}")
+                return
         except Exception as e:
             logger.error(f"Error checking host {fqdn}: {str(e)}")
             pass
