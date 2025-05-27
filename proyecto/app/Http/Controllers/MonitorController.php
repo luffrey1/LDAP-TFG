@@ -88,7 +88,7 @@ class MonitorController extends Controller
             $host = MonitorHost::findOrFail($id);
             $ip = $host->ip_address;
             // Usar /scan?ip=... porque /ping?ip=... no existe en el microservicio
-            $baseUrl = env('MACSCANNER_URL', 'https://172.20.0.6:5000');
+            $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
             $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($ip);
             $response = @file_get_contents($pythonServiceUrl);
             if ($response === false) {
@@ -127,7 +127,7 @@ class MonitorController extends Controller
             $errors = 0;
             foreach ($hosts as $host) {
                 $ip = $host->ip_address;
-                $pythonServiceUrl = 'https://172.20.0.6:5000/scan?ip=' . urlencode($ip);
+                $pythonServiceUrl = 'http://172.20.0.6:5000/scan?ip=' . urlencode($ip);
                 $response = @file_get_contents($pythonServiceUrl);
                 if ($response === false) {
                     \Log::error('No se pudo conectar al microservicio Python para pingAll (host ' . $ip . '): ' . $pythonServiceUrl);
@@ -175,7 +175,7 @@ class MonitorController extends Controller
                 $groupId = $request->input('group_id');
                 $forceRegister = $request->has('force_register');
 
-                $macscannerUrl = env('MACSCANNER_URL', 'http://macscanner:5000/scan-hostnames');
+                $macscannerUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000/scan-hostnames');
                 $payload = [
                     'aula' => $aula,
                     'columnas' => $columnas,
@@ -262,7 +262,7 @@ class MonitorController extends Controller
             $updated = 0;
             $errors = 0;
             foreach ($ipsToScan as $ip) {
-                $pythonServiceUrl = 'https://172.20.0.6:5000/scan?ip=' . urlencode($ip);
+                $pythonServiceUrl = 'http://172.20.0.6:5000/scan?ip=' . urlencode($ip);
                 $response = @file_get_contents($pythonServiceUrl);
                 if ($response === false) {
                     \Log::error('No se pudo conectar al microservicio Python para escaneo (host ' . $ip . '): ' . $pythonServiceUrl);
@@ -508,7 +508,7 @@ class MonitorController extends Controller
                 return redirect()->back()
                     ->with('error', 'No se puede enviar Wake-on-LAN: El host no tiene una dirección MAC real configurada. Intente detectar la MAC primero.');
             }
-            $baseUrl = env('MACSCANNER_URL', 'https://172.20.0.6:5000');
+            $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
             $wolUrl = rtrim($baseUrl, '/') . '/wol';
             $payload = json_encode(['mac' => $host->mac_address]);
             $opts = [
@@ -724,7 +724,7 @@ class MonitorController extends Controller
             $hosts = $group->hosts()->whereNotNull('mac_address')->get();
             $sentCount = 0;
             $errorCount = 0;
-            $baseUrl = env('MACSCANNER_URL', 'https://172.20.0.6:5000');
+            $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
             $wolUrl = rtrim($baseUrl, '/') . '/wol';
             foreach ($hosts as $host) {
                 $payload = json_encode(['mac' => $host->mac_address]);

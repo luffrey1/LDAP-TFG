@@ -44,6 +44,7 @@
             --card-bg: #222533;
         }
         
+        
         body {
             font-family: 'Poppins', sans-serif;
             background-color: var(--dark-color);
@@ -236,6 +237,14 @@
         
         .text-muted {
             color: var(--text-muted) !important;
+        }
+        
+        /* Form text */
+        .form-text {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            font-style: italic;
         }
         
         /* Tablas */
