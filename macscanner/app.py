@@ -147,11 +147,27 @@ def wol():
 def scan_hostnames():
     data = request.get_json(force=True)
     aula = data.get('aula')
-    columnas = data.get('columnas', ['A','B','C','D','E','F'])
-    filas = data.get('filas', list(range(1, 7)))
+    
+    # Procesar columnas y filas
+    columnas_raw = data.get('columnas', ['A','B','C','D','E','F'])
+    filas_raw = data.get('filas', list(range(1, 7)))
     dominio = data.get('dominio', 'tierno.es')
 
-    logger.info(f"Iniciando escaneo de hostnames - Aula: {aula}, Columnas: {columnas}, Filas: {filas}")
+    # Convertir a listas si son strings
+    if isinstance(columnas_raw, str):
+        columnas = [c.strip() for c in columnas_raw.split(',')]
+    else:
+        columnas = columnas_raw
+
+    if isinstance(filas_raw, str):
+        filas = [int(f.strip()) for f in filas_raw.split(',')]
+    else:
+        filas = filas_raw
+
+    logger.info(f"Iniciando escaneo de hostnames - Aula: {aula}")
+    logger.info(f"Columnas a escanear: {columnas}")
+    logger.info(f"Filas a escanear: {filas}")
+    
     resultados = []
     import threading
 
