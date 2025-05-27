@@ -150,26 +150,6 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware', 'App\Http\Mi
         ->name('configuracion.index');
     Route::post('/configuracion', [App\Http\Controllers\Admin\ConfiguracionController::class, 'guardar'])
         ->name('configuracion.guardar');
-
-    // Rutas para gestión de grupos LDAP
-    Route::prefix('gestion/grupos')->name('groups.')->group(function () {
-        Route::get('/', [App\Http\Controllers\Admin\LdapGroupController::class, 'index'])->name('index');
-        Route::get('/crear', [App\Http\Controllers\Admin\LdapGroupController::class, 'create'])->name('create');
-        Route::post('/', [App\Http\Controllers\Admin\LdapGroupController::class, 'store'])->name('store');
-        Route::get('/{cn}/editar', [App\Http\Controllers\Admin\LdapGroupController::class, 'edit'])->name('edit');
-        Route::put('/{cn}', [App\Http\Controllers\Admin\LdapGroupController::class, 'update'])->name('update');
-        Route::delete('/{cn}', [App\Http\Controllers\Admin\LdapGroupController::class, 'destroy'])->name('destroy');
-    });
-
-    // Rutas para la gestión de grupos LDAP
-    Route::prefix('admin/groups')->name('admin.groups.')->group(function () {
-        Route::get('/', [App\Http\Controllers\Admin\LdapGroupController::class, 'index'])->name('index');
-        Route::get('/create', [App\Http\Controllers\Admin\LdapGroupController::class, 'create'])->name('create');
-        Route::post('/', [App\Http\Controllers\Admin\LdapGroupController::class, 'store'])->name('store');
-        Route::get('/{cn}/edit', [App\Http\Controllers\Admin\LdapGroupController::class, 'edit'])->name('edit');
-        Route::put('/{cn}', [App\Http\Controllers\Admin\LdapGroupController::class, 'update'])->name('update');
-        Route::delete('/{cn}', [App\Http\Controllers\Admin\LdapGroupController::class, 'destroy'])->name('destroy');
-    });
 });
 
 // Rutas para la gestión de alumnos

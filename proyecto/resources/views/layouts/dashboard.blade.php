@@ -757,7 +757,6 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->is('admin/gestion/grupos*') ? 'active' : '' }}" href="{{ route('admin.groups.index') }}">
                                 <i class="fas fa-users-cog"></i>
                                 <span>Gestión de Grupos LDAP</span>
                             </a>
