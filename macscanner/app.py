@@ -180,9 +180,9 @@ def scan_hostnames():
         try:
             logger.info(f"\nProbando hostname: {fqdn}")
             
-            # 1. Primero intentar resolver el hostname
+            # 1. Primero intentar resolver el hostname con IPv4
             try:
-                nslookup_cmd = ['nslookup', fqdn]
+                nslookup_cmd = ['nslookup', '-type=A', fqdn]
                 logger.debug(f"Ejecutando comando: {' '.join(nslookup_cmd)}")
                 nslookup_result = subprocess.run(nslookup_cmd,
                                               stdout=subprocess.PIPE,
@@ -194,7 +194,7 @@ def scan_hostnames():
                 # Extraer la IP del resultado de nslookup
                 ip_match = re.search(r'Address: (\d+\.\d+\.\d+\.\d+)', nslookup_result.stdout)
                 if not ip_match:
-                    logger.warning(f"No se pudo resolver {fqdn}")
+                    logger.warning(f"No se pudo resolver {fqdn} a IPv4")
                     return
                 
                 ip = ip_match.group(1)
