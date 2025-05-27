@@ -18,7 +18,7 @@
 - **✅ Mostrar nombre de LDAP en formato uid=usuario,ou=people,dc=tierno,dc=es (CN)**
 - **✅Al ver perfil de usuario, mostrar grupos en dos columnas o con grupos marcados**
 (Anieto)
-- **Al crear usuario(para alumnos), añadir botón para generar contraseña aleatoria**
+- ✅**Al crear usuario(para alumnos), añadir botón para generar contraseña aleatoria**
 - **Al importar de archivo(para alumnos), generar contraseñas aleatorias en JS y mostrarlas en tabla**
 - **Añadir botón para descargar tabla con contraseñas(para alumnos)**
 - **Indicar mensaje "Las contraseñas solo las puedes ver ahora, se almacenarán hasheadas"**

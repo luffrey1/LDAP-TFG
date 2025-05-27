@@ -60,6 +60,37 @@
                             </div>
 
                             <div class="form-group row">
+                                <label for="password" class="col-sm-3 col-form-label">Contraseña <span class="text-danger">*</span></label>
+                                <div class="col-sm-9">
+                                    <div class="input-group">
+                                        <input type="password" name="password" id="password" class="form-control @error('password') is-invalid @enderror" required>
+                                        <button type="button" class="btn btn-outline-secondary" id="toggle-password">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary" id="generate-password">
+                                            <i class="fas fa-key"></i> Generar
+                                        </button>
+                                    </div>
+                                    @error('password')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <small class="form-text text-muted">Mínimo 8 caracteres. La contraseña se usará para la cuenta LDAP.</small>
+                                </div>
+                            </div>
+
+                            <div class="form-group row">
+                                <label for="password_confirmation" class="col-sm-3 col-form-label">Confirmar Contraseña <span class="text-danger">*</span></label>
+                                <div class="col-sm-9">
+                                    <div class="input-group">
+                                        <input type="password" name="password_confirmation" id="password_confirmation" class="form-control" required>
+                                        <button type="button" class="btn btn-outline-secondary" id="toggle-password-confirmation">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group row">
                                 <label for="dni" class="col-sm-3 col-form-label">DNI / Documento</label>
                                 <div class="col-sm-9">
                                     <input type="text" name="dni" id="dni" class="form-control @error('dni') is-invalid @enderror" value="{{ old('dni') }}">
@@ -133,4 +164,44 @@
         </div>
     </div>
 </section>
+@endsection
+
+@section('scripts')
+<script>
+document.getElementById('generate-password').addEventListener('click', function() {
+    // Generar contraseña aleatoria de 12 caracteres
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    
+    // Actualizar campos de contraseña
+    document.getElementById('password').value = password;
+    document.getElementById('password_confirmation').value = password;
+});
+
+// Función para alternar la visibilidad de la contraseña
+function togglePasswordVisibility(inputId, buttonId) {
+    const input = document.getElementById(inputId);
+    const button = document.getElementById(buttonId);
+    const icon = button.querySelector('i');
+    
+    button.addEventListener('click', function() {
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    });
+}
+
+// Inicializar los botones de visibilidad
+togglePasswordVisibility('password', 'toggle-password');
+togglePasswordVisibility('password_confirmation', 'toggle-password-confirmation');
+</script>
 @endsection 
