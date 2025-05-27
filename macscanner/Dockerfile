@@ -7,6 +7,8 @@ RUN apt-get update && apt-get install -y \
     net-tools \
     sudo \
     iputils-ping \
+    curl \
+    dnsutils \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install flask wakeonlan

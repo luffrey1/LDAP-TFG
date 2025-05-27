@@ -146,12 +146,39 @@ def scan_hostnames():
     def check_host(hostname, resultados):
         fqdn = f"{hostname}.{dominio}"
         try:
+            print(f"\nProbando hostname: {fqdn}")
+            
             # Intentar resolver tanto IPv4 como IPv6
             try:
+                # Primero intentar IPv4
                 ip = socket.gethostbyname(fqdn)
+                print(f"Resolución IPv4 exitosa: {ip}")
             except socket.gaierror:
-                # Si falla IPv4, intentar IPv6
-                ip = socket.getaddrinfo(fqdn, None, socket.AF_INET6)[0][4][0]
+                try:
+                    # Si falla IPv4, intentar IPv6
+                    ip = socket.getaddrinfo(fqdn, None, socket.AF_INET6)[0][4][0]
+                    print(f"Resolución IPv6 exitosa: {ip}")
+                except Exception as e:
+                    print(f"Error en resolución DNS: {str(e)}")
+                    return
+            
+            # Si la IP es localhost (::1), intentar obtener la IP real
+            if ip == '::1' or ip == '127.0.0.1':
+                print("IP es localhost, intentando obtener IP real...")
+                # Intentar obtener la IP real usando nmap
+                try:
+                    nmap_cmd = ['nmap', '-6' if ':' in ip else '', '-sn', fqdn]
+                    nmap_result = subprocess.run(nmap_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                    print(f"Nmap resultado: {nmap_result.stdout}")
+                    
+                    # Intentar obtener la IP usando dig
+                    dig_cmd = ['dig', '+short', 'AAAA' if ':' in ip else 'A', fqdn]
+                    dig_result = subprocess.run(dig_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                    if dig_result.stdout.strip():
+                        ip = dig_result.stdout.strip()
+                        print(f"Nueva IP obtenida con dig: {ip}")
+                except Exception as e:
+                    print(f"Error obteniendo IP real: {str(e)}")
             
             # Ping rápido con soporte para IPv6
             ping_cmd = ['ping', '-c', '1', '-W', '1']
@@ -159,13 +186,29 @@ def scan_hostnames():
                 ping_cmd.append('-6')
             ping_cmd.append(fqdn)
             
-            print(f"Intentando ping a {fqdn} con comando: {' '.join(ping_cmd)}")
+            print(f"Ejecutando ping: {' '.join(ping_cmd)}")
             ping = subprocess.run(ping_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             print(f"Resultado del ping: {ping.stdout}")
             
             if ping.returncode == 0:
                 # MAC opcional
-                mac = get_mac_arp(ip) or get_mac_ip_neigh(ip) or get_mac_nmap(ip)
+                mac = None
+                try:
+                    mac = get_mac_arp(ip)
+                    if not mac:
+                        mac = get_mac_ip_neigh(ip)
+                    if not mac:
+                        mac = get_mac_nmap(ip)
+                    if not mac:
+                        # Intentar obtener MAC con arp-scan
+                        arp_cmd = ['arp-scan', '--interface=eth0', ip]
+                        arp_result = subprocess.run(arp_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                        match = re.search(r'([0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5})', arp_result.stdout)
+                        if match:
+                            mac = match.group(1).lower()
+                except Exception as e:
+                    print(f"Error obteniendo MAC: {str(e)}")
+                
                 print(f"Host {fqdn} encontrado - IP: {ip}, MAC: {mac}")
                 resultados.append({'hostname': fqdn, 'ip': ip, 'mac': mac})
             else:
