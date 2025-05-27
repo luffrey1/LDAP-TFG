@@ -34,13 +34,23 @@ echo "Verificando certificados SSL..."
 if [ -f "/etc/ssl/certs/site/certificate.crt" ] && [ -f "/etc/ssl/certs/site/private.key" ]; then
   echo "Certificados SSL encontrados."
   
+  # Verificar certificado intermedio
+  if [ -f "/etc/ssl/certs/site/ca_bundle.crt" ]; then
+    echo "Certificado intermedio encontrado."
+  else
+    echo "ADVERTENCIA: No se encontró certificado intermedio."
+  fi
+  
   # Copiar la configuración de Apache con SSL
   echo "Copiando configuración de Apache con SSL..."
   cp /var/www/html/apache-config.conf /etc/apache2/sites-available/000-default.conf
   
   # Configurar permisos de los certificados
   chmod 644 /etc/ssl/certs/site/certificate.crt
+  chmod 644 /etc/ssl/certs/site/ca_bundle.crt
   chmod 600 /etc/ssl/certs/site/private.key
+  
+  echo "Configuración SSL completada para ldap.tierno.es"
 else
   echo "ADVERTENCIA: No se encontraron certificados SSL. Usando configuración sin SSL."
   
@@ -88,7 +98,7 @@ sed -i "s/LDAP_DEFAULT_TLS=.*/LDAP_DEFAULT_TLS=false/" /var/www/html/.env
 
 sed -i "s/DB_HOST=.*/DB_HOST=$DB_HOST/" /var/www/html/.env
 sed -i "s/DB_PORT=.*/DB_PORT=$DB_PORT/" /var/www/html/.env
-sed -i "s#APP_URL=.*#APP_URL=https://tierno.es#" /var/www/html/.env
+sed -i "s#APP_URL=.*#APP_URL=https://ldap.tierno.es#" /var/www/html/.env
 
 # Ejecutar comandos de inicialización de Laravel
 cd /var/www/html
