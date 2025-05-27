@@ -3,8 +3,19 @@ import subprocess
 import re
 import socket
 from wakeonlan import send_magic_packet
+import logging
+import sys
+
+# Configurar logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    stream=sys.stdout
+)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+app.debug = True  # Activar modo debug
 
 # Utilidades para obtener la MAC address
 
@@ -140,86 +151,96 @@ def scan_hostnames():
     filas = data.get('filas', list(range(1, 7)))
     dominio = data.get('dominio', 'tierno.es')
 
+    logger.info(f"Iniciando escaneo de hostnames - Aula: {aula}, Columnas: {columnas}, Filas: {filas}")
     resultados = []
     import threading
 
     def check_host(hostname, resultados):
         fqdn = f"{hostname}.{dominio}"
         try:
-            print(f"\nProbando hostname: {fqdn}")
+            logger.info(f"\nProbando hostname: {fqdn}")
             
             # 1. Hacer ping directamente al hostname
             ping_ok = False
             try:
-                result = subprocess.run(['ping', '-c', '2', '-W', '1', fqdn], 
-                                      stdout=subprocess.PIPE, 
-                                      stderr=subprocess.PIPE, 
-                                      text=True, 
-                                      timeout=3)
+                ping_cmd = ['ping', '-c', '2', '-W', '1', fqdn]
+                logger.debug(f"Ejecutando comando: {' '.join(ping_cmd)}")
+                result = subprocess.run(ping_cmd, 
+                                     stdout=subprocess.PIPE, 
+                                     stderr=subprocess.PIPE, 
+                                     text=True, 
+                                     timeout=3)
                 ping_ok = (result.returncode == 0)
-                print(f"Ping a {fqdn}: {'exitoso' if ping_ok else 'fallido'}")
-                print(f"Salida del ping: {result.stdout}")
+                logger.info(f"Ping a {fqdn}: {'exitoso' if ping_ok else 'fallido'}")
+                logger.debug(f"Salida del ping: {result.stdout}")
             except Exception as e:
-                print(f"Error en ping: {str(e)}")
+                logger.error(f"Error en ping: {str(e)}")
                 return
 
             if ping_ok:
                 # 2. Si el ping fue exitoso, obtener la IP usando host
                 try:
-                    host_result = subprocess.run(['host', fqdn], 
+                    host_cmd = ['host', fqdn]
+                    logger.debug(f"Ejecutando comando: {' '.join(host_cmd)}")
+                    host_result = subprocess.run(host_cmd, 
                                               stdout=subprocess.PIPE, 
                                               stderr=subprocess.PIPE, 
                                               text=True, 
                                               timeout=2)
-                    print(f"Resultado de host: {host_result.stdout}")
+                    logger.debug(f"Resultado de host: {host_result.stdout}")
                     
                     # Extraer la IP del resultado de host
                     ip_match = re.search(r'has address (\d+\.\d+\.\d+\.\d+)', host_result.stdout)
                     if not ip_match:
-                        print(f"No se pudo extraer la IP del resultado de host")
+                        logger.warning(f"No se pudo extraer la IP del resultado de host")
                         return
                     
                     ip = ip_match.group(1)
-                    print(f"IP obtenida: {ip}")
+                    logger.info(f"IP obtenida: {ip}")
 
                     # 3. Obtener la MAC usando arp-scan
                     mac = None
                     try:
-                        arp_result = subprocess.run(['arp-scan', '--interface=eth0', ip], 
+                        arp_cmd = ['arp-scan', '--interface=eth0', ip]
+                        logger.debug(f"Ejecutando comando: {' '.join(arp_cmd)}")
+                        arp_result = subprocess.run(arp_cmd, 
                                                  stdout=subprocess.PIPE, 
                                                  stderr=subprocess.PIPE, 
                                                  text=True, 
                                                  timeout=5)
-                        print(f"Resultado de arp-scan: {arp_result.stdout}")
+                        logger.debug(f"Resultado de arp-scan: {arp_result.stdout}")
                         
                         mac_match = re.search(r'([0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5})', arp_result.stdout)
                         if mac_match:
                             mac = mac_match.group(1).lower()
-                            print(f"MAC obtenida: {mac}")
+                            logger.info(f"MAC obtenida con arp-scan: {mac}")
                     except Exception as e:
-                        print(f"Error obteniendo MAC con arp-scan: {str(e)}")
+                        logger.warning(f"Error obteniendo MAC con arp-scan: {str(e)}")
                         
                         # Si arp-scan falla, intentar con arp
                         try:
-                            arp_result = subprocess.run(['arp', '-n', ip], 
+                            arp_cmd = ['arp', '-n', ip]
+                            logger.debug(f"Ejecutando comando: {' '.join(arp_cmd)}")
+                            arp_result = subprocess.run(arp_cmd, 
                                                      stdout=subprocess.PIPE, 
                                                      text=True, 
                                                      timeout=2)
+                            logger.debug(f"Resultado de arp: {arp_result.stdout}")
                             mac_match = re.search(r'([0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5})', arp_result.stdout)
                             if mac_match:
                                 mac = mac_match.group(1).lower()
-                                print(f"MAC obtenida con arp: {mac}")
+                                logger.info(f"MAC obtenida con arp: {mac}")
                         except Exception as e:
-                            print(f"Error obteniendo MAC con arp: {str(e)}")
+                            logger.error(f"Error obteniendo MAC con arp: {str(e)}")
 
-                    print(f"Host {fqdn} encontrado - IP: {ip}, MAC: {mac}")
+                    logger.info(f"Host {fqdn} encontrado - IP: {ip}, MAC: {mac}")
                     resultados.append({'hostname': fqdn, 'ip': ip, 'mac': mac})
                 except Exception as e:
-                    print(f"Error obteniendo IP o MAC: {str(e)}")
+                    logger.error(f"Error obteniendo IP o MAC: {str(e)}")
             else:
-                print(f"Host {fqdn} no responde al ping")
+                logger.warning(f"Host {fqdn} no responde al ping")
         except Exception as e:
-            print(f"Error checking host {fqdn}: {str(e)}")
+            logger.error(f"Error checking host {fqdn}: {str(e)}")
             pass
 
     threads = []
@@ -232,7 +253,8 @@ def scan_hostnames():
     for t in threads:
         t.join()
 
+    logger.info(f"Escaneo completado. Hosts encontrados: {len(resultados)}")
     return jsonify({'success': True, 'hosts': resultados})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000) 
+    app.run(host='0.0.0.0', port=5000, debug=True) 
