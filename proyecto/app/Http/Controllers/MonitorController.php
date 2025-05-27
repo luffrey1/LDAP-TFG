@@ -175,7 +175,7 @@ class MonitorController extends Controller
                 $groupId = $request->input('group_id');
                 $forceRegister = $request->has('force_register');
 
-                $macscannerUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000/scan-hostnames');
+                $macscannerUrl = env('MACSCANNER_URL', 'http://macscanner:5000/scan-hostnames');
                 $payload = [
                     'aula' => $aula,
                     'columnas' => $columnas,

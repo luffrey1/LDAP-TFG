@@ -257,7 +257,6 @@ def scan_hostnames():
                 logger.warning(f"Host {fqdn} no responde al ping")
         except Exception as e:
             logger.error(f"Error checking host {fqdn}: {str(e)}")
-            pass
 
     threads = []
     for col in columnas:
