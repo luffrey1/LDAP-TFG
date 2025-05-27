@@ -180,10 +180,10 @@ def scan_hostnames():
         try:
             logger.info(f"\nProbando hostname: {fqdn}")
             
-            # 1. Hacer ping directamente al hostname
+            # 1. Hacer ping directamente al hostname con IPv4
             ping_ok = False
             try:
-                ping_cmd = ['ping', '-c', '2', '-W', '1', fqdn]
+                ping_cmd = ['ping', '-4', '-c', '2', '-W', '1', fqdn]
                 logger.debug(f"Ejecutando comando: {' '.join(ping_cmd)}")
                 result = subprocess.run(ping_cmd, 
                                      stdout=subprocess.PIPE, 
@@ -198,24 +198,23 @@ def scan_hostnames():
                 return
 
             if ping_ok:
-                # 2. Si el ping fue exitoso, obtener la IP usando host
+                # 2. Si el ping fue exitoso, obtener la IP usando dig con IPv4
                 try:
-                    host_cmd = ['host', fqdn]
-                    logger.debug(f"Ejecutando comando: {' '.join(host_cmd)}")
-                    host_result = subprocess.run(host_cmd, 
-                                              stdout=subprocess.PIPE, 
-                                              stderr=subprocess.PIPE, 
-                                              text=True, 
-                                              timeout=2)
-                    logger.debug(f"Resultado de host: {host_result.stdout}")
+                    dig_cmd = ['dig', '+short', '-4', fqdn]
+                    logger.debug(f"Ejecutando comando: {' '.join(dig_cmd)}")
+                    dig_result = subprocess.run(dig_cmd, 
+                                             stdout=subprocess.PIPE, 
+                                             stderr=subprocess.PIPE, 
+                                             text=True, 
+                                             timeout=2)
+                    logger.debug(f"Resultado de dig: {dig_result.stdout}")
                     
-                    # Extraer la IP del resultado de host
-                    ip_match = re.search(r'has address (\d+\.\d+\.\d+\.\d+)', host_result.stdout)
-                    if not ip_match:
-                        logger.warning(f"No se pudo extraer la IP del resultado de host")
+                    # Extraer la IP del resultado de dig
+                    ip = dig_result.stdout.strip()
+                    if not ip or ip == '::':
+                        logger.warning(f"No se pudo obtener una IP válida para {fqdn}")
                         return
                     
-                    ip = ip_match.group(1)
                     logger.info(f"IP obtenida: {ip}")
 
                     # 3. Obtener la MAC usando arp-scan
