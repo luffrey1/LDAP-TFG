@@ -480,7 +480,8 @@ class LdapUserController extends Controller
                 
         } catch (Exception $e) {
             Log::error('Error al crear usuario LDAP: ' . $e->getMessage());
-            return back()->withInput()->with('error', 'Error al crear el usuario: ' . $e->getMessage());
+            Log::error('Traza: ' . $e->getTraceAsString());
+            return back()->with('error', 'Error al crear el usuario: ' . $e->getMessage());
         }
     }
 
@@ -579,7 +580,8 @@ class LdapUserController extends Controller
                 
             if (!$user) {
                 Log::error("Usuario no encontrado para DN: " . $decodedDn);
-                return back()->with('error', 'Usuario no encontrado. Por favor, inténtelo de nuevo desde la lista de usuarios.');
+                return redirect()->route('admin.users.index')
+                    ->with('error', 'Usuario no encontrado. Por favor, inténtelo de nuevo desde la lista de usuarios.');
             }
             
             Log::debug("Usuario encontrado: " . json_encode(is_array($user) ? $user : $user->toArray()));

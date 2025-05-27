@@ -250,28 +250,46 @@
 
             if (role === 'admin') {
                 roleGroups = ['ldapadmins', 'docker'];
-                btnRoleAdmin.classList.add('active', 'btn-secondary');
-                btnRoleAdmin.classList.remove('btn-outline-secondary');
-                btnRoleProfesor.classList.remove('active', 'btn-secondary');
-                btnRoleProfesor.classList.add('btn-outline-secondary');
-                btnRoleAlumno.classList.remove('active', 'btn-secondary');
-                btnRoleAlumno.classList.add('btn-outline-secondary');
+                if (btnRoleAdmin) {
+                    btnRoleAdmin.classList.add('active', 'btn-secondary');
+                    btnRoleAdmin.classList.remove('btn-outline-secondary');
+                }
+                if (btnRoleProfesor) {
+                    btnRoleProfesor.classList.remove('active', 'btn-secondary');
+                    btnRoleProfesor.classList.add('btn-outline-secondary');
+                }
+                if (btnRoleAlumno) {
+                    btnRoleAlumno.classList.remove('active', 'btn-secondary');
+                    btnRoleAlumno.classList.add('btn-outline-secondary');
+                }
             } else if (role === 'profesor') {
                 roleGroups = ['profesores', 'docker'];
-                btnRoleProfesor.classList.add('active', 'btn-secondary');
-                btnRoleProfesor.classList.remove('btn-outline-secondary');
-                btnRoleAdmin.classList.remove('active', 'btn-secondary');
-                btnRoleAdmin.classList.add('btn-outline-secondary');
-                btnRoleAlumno.classList.remove('active', 'btn-secondary');
-                btnRoleAlumno.classList.add('btn-outline-secondary');
+                if (btnRoleProfesor) {
+                    btnRoleProfesor.classList.add('active', 'btn-secondary');
+                    btnRoleProfesor.classList.remove('btn-outline-secondary');
+                }
+                if (btnRoleAdmin) {
+                    btnRoleAdmin.classList.remove('active', 'btn-secondary');
+                    btnRoleAdmin.classList.add('btn-outline-secondary');
+                }
+                if (btnRoleAlumno) {
+                    btnRoleAlumno.classList.remove('active', 'btn-secondary');
+                    btnRoleAlumno.classList.add('btn-outline-secondary');
+                }
             } else if (role === 'alumno') {
                 roleGroups = ['alumnos'];
-                btnRoleAlumno.classList.add('active', 'btn-secondary');
-                btnRoleAlumno.classList.remove('btn-outline-secondary');
-                btnRoleAdmin.classList.remove('active', 'btn-secondary');
-                btnRoleAdmin.classList.add('btn-outline-secondary');
-                btnRoleProfesor.classList.remove('active', 'btn-secondary');
-                btnRoleProfesor.classList.add('btn-outline-secondary');
+                if (btnRoleAlumno) {
+                    btnRoleAlumno.classList.add('active', 'btn-secondary');
+                    btnRoleAlumno.classList.remove('btn-outline-secondary');
+                }
+                if (btnRoleAdmin) {
+                    btnRoleAdmin.classList.remove('active', 'btn-secondary');
+                    btnRoleAdmin.classList.add('btn-outline-secondary');
+                }
+                if (btnRoleProfesor) {
+                    btnRoleProfesor.classList.remove('active', 'btn-secondary');
+                    btnRoleProfesor.classList.add('btn-outline-secondary');
+                }
             }
 
             const allGroups = [...commonGroups, ...roleGroups];
@@ -297,9 +315,15 @@
         });
 
         // Eventos para los botones de rol
-        btnRoleAdmin.addEventListener('click', () => selectGroupsByRole('admin'));
-        btnRoleProfesor.addEventListener('click', () => selectGroupsByRole('profesor'));
-        btnRoleAlumno.addEventListener('click', () => selectGroupsByRole('alumno'));
+        if (btnRoleAdmin) {
+            btnRoleAdmin.addEventListener('click', () => selectGroupsByRole('admin'));
+        }
+        if (btnRoleProfesor) {
+            btnRoleProfesor.addEventListener('click', () => selectGroupsByRole('profesor'));
+        }
+        if (btnRoleAlumno) {
+            btnRoleAlumno.addEventListener('click', () => selectGroupsByRole('alumno'));
+        }
 
         // Inicializar valores
         updateUsername();
