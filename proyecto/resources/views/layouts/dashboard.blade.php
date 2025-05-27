@@ -684,6 +684,13 @@
                             </a>
                         </li>
                         
+                        <!-- Usuarios LDAP - Visible para todos -->
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->is('admin/usuarios*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}">
+                                <i class="fas fa-users-cog"></i> Usuarios LDAP
+                            </a>
+                        </li>
+                        
                         @if(\App\Models\SistemaConfig::obtenerConfig('modulo_documentos_activo', true))
                         <div class="sidebar-divider"></div>
                         <div class="nav-item-header">Documentos</div>
@@ -730,11 +737,6 @@
                         @if(session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
                         <div class="sidebar-divider"></div>
                         <div class="nav-item-header">Administración</div>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->is('admin/usuarios*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}">
-                                <i class="fas fa-users-cog"></i> Usuarios LDAP
-                            </a>
-                        </li>
                         <li class="nav-item">
                             <a class="nav-link {{ request()->is('admin/logs') ? 'active' : '' }}" href="{{ route('admin.logs') }}">
                                 <i class="fas fa-clipboard-list"></i> Logs LDAP

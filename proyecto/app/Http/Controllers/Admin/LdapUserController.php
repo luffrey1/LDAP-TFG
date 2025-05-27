@@ -677,67 +677,54 @@ class LdapUserController extends Controller
         try {
             $this->connection->connect();
             
-            // Añadir logs para depuración
-            Log::debug("Intentando actualizar usuario con DN codificado: " . $dn);
+            // Decodificar el DN
+            $decodedDn = base64_decode($dn);
             
-            // Decodificar el DN y validar
-            $userDn = base64_decode($dn);
-            if (!$userDn) {
-                Log::error("Error al decodificar DN: " . $dn);
-                return back()->with('error', 'Error: DN inválido');
-            }
-            
-            Log::debug("DN decodificado: " . $userDn);
-            
-            // Extraer uid del DN decodificado
-            $uid = '';
-            if (preg_match('/uid=([^,]+)/', $userDn, $matches)) {
-                $uid = $matches[1];
-                Log::debug("UID extraído del DN: " . $uid);
-            }
-            
-            // Buscar el usuario de manera más específica
-            $user = null;
-            $query = $this->connection->query();
-            
-            // Primero intentar buscar por UID en ou=people, que es más fiable
-            if (!empty($uid)) {
-                $user = $query->in($this->peopleOu)
-                    ->where('uid', '=', $uid)
-                    ->first();
+            // Buscar el usuario por DN
+            $user = $this->connection->query()
+                ->where('dn', '=', $decodedDn)
+                ->first();
                 
-                if ($user) {
-                    Log::debug("Usuario encontrado por UID: " . $uid);
-                    // Si encontramos por UID, actualizar el userDn para usarlo en las operaciones
-                    if (is_array($user)) {
-                        $userDn = $user['dn'];
+            if (!$user) {
+                Log::error("Usuario con DN '{$decodedDn}' no encontrado para actualizar");
+                return redirect()->route('admin.users.index')
+                    ->with('error', 'Usuario no encontrado');
+            }
+            
+            // Verificar si el usuario es administrador
+            $isAdminUser = false;
+            $userGroups = $this->getUserGroups($decodedDn);
+            foreach ($userGroups as $group) {
+                $groupName = '';
+                if (is_array($group)) {
+                    $groupName = $group['cn'][0] ?? '';
+                } else {
+                    $groupName = $group->getFirstAttribute('cn') ?? '';
+                }
+                
+                if ($groupName === 'ldapadmins') {
+                    $isAdminUser = true;
+                    break;
+                }
+            }
+            
+            // Si el usuario es administrador y el usuario actual no es administrador, solo permitir editar campos básicos
+            $isCurrentUserAdmin = session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin';
+            if ($isAdminUser && !$isCurrentUserAdmin) {
+                // Preservar los grupos actuales en lugar de permitir cambiarlos
+                $request->merge(['grupos' => []]);
+                foreach ($userGroups as $group) {
+                    if (is_array($group)) {
+                        $groupName = $group['cn'][0] ?? '';
                     } else {
-                        $userDn = $user->getDn();
+                        $groupName = $group->getFirstAttribute('cn') ?? '';
                     }
+                    $request->grupos[] = $groupName;
                 }
             }
             
-            // Si no se encontró por UID, intentar por DN directamente
-            if (!$user) {
-                // Intentar buscar primero en ou=people
-                $user = $query->in($this->peopleOu)
-                    ->where('dn', '=', $userDn)
-                    ->first();
-                    
-                // Si no lo encuentra, intentar en toda la base
-                if (!$user) {
-                    Log::debug("Usuario no encontrado en ou=people, buscando en toda la base");
-                    $user = $query->newInstance()
-                        ->in($this->baseDn)
-                        ->where('dn', '=', $userDn)
-                        ->first();
-                }
-            }
-                
-            if (!$user) {
-                Log::error("Usuario no encontrado para actualizar. UID: " . $uid . ", DN: " . $userDn);
-                return back()->with('error', 'Usuario no encontrado. Por favor, inténtelo de nuevo desde la lista de usuarios.');
-            }
+            // Obtener atributos del usuario
+            $uid = is_array($user) ? ($user['uid'][0] ?? '') : $user->getFirstAttribute('uid');
             
             // Obtener el uid del usuario para los logs
             if (empty($uid)) {
@@ -787,7 +774,7 @@ class LdapUserController extends Controller
             }
             
             // Nos aseguramos de que el usuario tenga todos los objectClass necesarios
-            $this->ensureUserHasRequiredClasses($userDn);
+            $this->ensureUserHasRequiredClasses($decodedDn);
             
             // Modificar atributos con LDAP nativo para mayor control
             $ldapConn = ldap_connect(config('ldap.connections.default.hosts')[0], config('ldap.connections.default.port'));
@@ -806,7 +793,7 @@ class LdapUserController extends Controller
             }
             
             // Modificar el usuario
-            $result = ldap_modify($ldapConn, $userDn, $updateData);
+            $result = ldap_modify($ldapConn, $decodedDn, $updateData);
             
             if (!$result) {
                 throw new Exception("Error al actualizar usuario: " . ldap_error($ldapConn));
@@ -815,7 +802,7 @@ class LdapUserController extends Controller
             // Actualizar grupos del usuario
             if ($request->has('grupos')) {
                 // Usar una implementación más directa
-                $this->updateUserGroupsDirect($userDn, $request->grupos, $ldapConn);
+                $this->updateUserGroupsDirect($decodedDn, $request->grupos, $ldapConn);
             }
             
             ldap_close($ldapConn);
@@ -875,6 +862,29 @@ class LdapUserController extends Controller
             if (!$user) {
                 Log::error("Usuario no encontrado para eliminar con DN: " . $userDn);
                 return back()->with('error', 'Usuario no encontrado');
+            }
+            
+            // Verificar si el usuario es administrador
+            $isAdminUser = false;
+            $userGroups = $this->getUserGroups($userDn);
+            foreach ($userGroups as $group) {
+                $groupName = '';
+                if (is_array($group)) {
+                    $groupName = $group['cn'][0] ?? '';
+                } else {
+                    $groupName = $group->getFirstAttribute('cn') ?? '';
+                }
+                
+                if ($groupName === 'ldapadmins') {
+                    $isAdminUser = true;
+                    break;
+                }
+            }
+            
+            // Si el usuario es administrador y el usuario actual no es administrador, no permitir eliminarlo
+            $isCurrentUserAdmin = session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin';
+            if ($isAdminUser && !$isCurrentUserAdmin) {
+                return back()->with('error', 'No tienes permisos para eliminar a un administrador');
             }
             
             // Obtener el uid del usuario para los logs

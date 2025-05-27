@@ -125,7 +125,9 @@
                         <div class="mb-3">
                             <label class="form-label">{{ __('Rol Predefinido') }}</label>
                             <div class="btn-group w-100" role="group">
+                                @if(session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
                                 <button type="button" class="btn btn-outline-secondary" id="btn-role-admin">Administrador</button>
+                                @endif
                                 <button type="button" class="btn btn-outline-secondary" id="btn-role-profesor">Profesor</button>
                                 <button type="button" class="btn btn-outline-secondary" id="btn-role-alumno">Alumno</button>
                             </div>
@@ -150,11 +152,13 @@
                                             $groupName = $group->getFirstAttribute('cn') ?? 'Grupo sin nombre';
                                         }
                                     @endphp
+                                    @if($groupName != 'ldapadmins' || session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
                                     <option value="{{ $groupName }}" {{ in_array($groupName, old('grupos', [])) ? 'selected' : '' }}
                                         style="padding: 8px !important; margin: 2px !important;"
                                         class="group-option {{ $groupName }}">
                                         {{ $groupName }}
                                     </option>
+                                    @endif
                                 @endforeach
                             </select>
                             
