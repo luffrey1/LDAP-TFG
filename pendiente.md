@@ -1,7 +1,7 @@
 # Pendiente
 
 ## Tareas Inmediatas
-- **Que el panel de usuario de creacion y ver lo puedan ver todos pero solo pueda dar admin otro admin**
+
 ### General
 - **Revisar colores en toda la aplicación..**
 - **Mensajería no deja subir archivos (posible problema SQL)**
@@ -10,6 +10,7 @@
 - **Que los eventos se cuenten en el dashboard (eventos: 1...)**
 
 ### LDAP
+- **✅Que el panel de usuario de creacion y ver lo puedan ver todos pero solo pueda dar admin otro admin**
 - **✅ Mostrar UID, GID, directorio con autocompletado del nombre**
 - **✅ Añadir shell a /bin/bash (por defecto)**
 - **✅ Home directory autocompletado**
