@@ -115,18 +115,7 @@
                                         </div>
                                     </div>
                                     <div class="row mb-3">
-                                        <div class="col-md-4">
-                                            <div class="form-group">
-                                                <label for="group_id" class="form-label"><i class="fas fa-layer-group me-1"></i> Asignar al grupo</label>
-                                                <select class="form-select" id="group_id" name="group_id">
-                                                    <option value="">Sin grupo</option>
-                                                    @foreach($groups as $group)
-                                                        <option value="{{ $group->id }}">{{ $group->name }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-8 d-flex align-items-end">
+                                        <div class="col-md-12 d-flex align-items-end">
                                             <button type="submit" class="btn btn-primary ms-auto">
                                                 <i class="fas fa-search me-1"></i> Iniciar Escaneo por Hostnames
                                             </button>
