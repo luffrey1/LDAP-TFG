@@ -132,5 +132,41 @@ def wol():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/scan-hostnames', methods=['POST'])
+def scan_hostnames():
+    data = request.get_json(force=True)
+    aula = data.get('aula')
+    columnas = data.get('columnas', ['A','B','C','D','E','F'])
+    filas = data.get('filas', list(range(1, 7)))
+    dominio = data.get('dominio', 'tierno.es')
+
+    resultados = []
+    import threading
+
+    def check_host(hostname, resultados):
+        fqdn = f"{hostname}.{dominio}"
+        try:
+            ip = socket.gethostbyname(fqdn)
+            # Ping rápido
+            ping = subprocess.run(['ping', '-c', '1', '-W', '1', fqdn], stdout=subprocess.DEVNULL)
+            if ping.returncode == 0:
+                # MAC opcional
+                mac = get_mac_arp(ip) or get_mac_ip_neigh(ip)
+                resultados.append({'hostname': fqdn, 'ip': ip, 'mac': mac})
+        except Exception:
+            pass
+
+    threads = []
+    for col in columnas:
+        for fila in filas:
+            hostname = f"{aula}-{col}{fila}"
+            t = threading.Thread(target=check_host, args=(hostname, resultados))
+            t.start()
+            threads.append(t)
+    for t in threads:
+        t.join()
+
+    return jsonify({'success': True, 'hosts': resultados})
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000) 

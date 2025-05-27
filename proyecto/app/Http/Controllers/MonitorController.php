@@ -166,6 +166,70 @@ class MonitorController extends Controller
     public function scanNetwork(Request $request)
     {
         try {
+            // Nuevo: Si el usuario selecciona escaneo por hostname
+            if ($request->has('scan_by_hostname')) {
+                $aula = $request->input('aula');
+                $columnas = $request->input('columnas', ['A','B','C','D','E','F']);
+                $filas = $request->input('filas', range(1, 6));
+                $dominio = 'tierno.es';
+                $groupId = $request->input('group_id');
+                $forceRegister = $request->has('force_register');
+
+                $macscannerUrl = env('MACSCANNER_URL', 'http://macscanner:5000/scan-hostnames');
+                $payload = [
+                    'aula' => $aula,
+                    'columnas' => $columnas,
+                    'filas' => $filas,
+                    'dominio' => $dominio
+                ];
+                $options = [
+                    'http' => [
+                        'header'  => "Content-type: application/json\r\n",
+                        'method'  => 'POST',
+                        'content' => json_encode($payload),
+                        'timeout' => 60
+                    ]
+                ];
+                $context  = stream_context_create($options);
+                $result = file_get_contents($macscannerUrl, false, $context);
+                $data = json_decode($result, true);
+                if (!$data || !isset($data['success']) || !$data['success']) {
+                    return back()->with('error', 'Error al escanear hostnames');
+                }
+                $created = 0;
+                $updated = 0;
+                $errors = 0;
+                foreach ($data['hosts'] as $hostData) {
+                    try {
+                        $host = MonitorHost::where('hostname', $hostData['hostname'])->first();
+                        $isNew = false;
+                        if (!$host) {
+                            $host = new MonitorHost();
+                            $host->hostname = $hostData['hostname'];
+                            $host->created_by = \Auth::id() ?: 1;
+                            $isNew = true;
+                        }
+                        $host->ip_address = $hostData['ip'] ?? null;
+                        $host->mac_address = $hostData['mac'] ?? null;
+                        $host->status = 'online';
+                        $host->last_seen = now();
+                        if ($groupId) $host->group_id = $groupId;
+                        $host->save();
+                        if ($isNew) {
+                            $created++;
+                        } else {
+                            $updated++;
+                        }
+                    } catch (\Exception $e) {
+                        \Log::error('Error guardando host en scanNetwork (hostname): ' . $e->getMessage());
+                        $errors++;
+                    }
+                }
+                $msg = "Escaneo por hostname completado. {$created} equipos nuevos, {$updated} actualizados, {$errors} errores.";
+                return redirect()->route('monitor.index')->with('success', $msg);
+            }
+
+            // Lógica original: escaneo por IP
             // Leer parámetros del formulario
             $baseIp = $request->input('base_ip', '172.20.200');
             $rangeStart = (int) $request->input('range_start', 1);

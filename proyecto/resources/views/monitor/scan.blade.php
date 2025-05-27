@@ -67,94 +67,165 @@
                         </div>
                     </div>
 
-                    <form action="{{ route('monitor.scan.execute') }}" method="POST" id="scanForm" class="mb-5">
-                        @csrf
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="base_ip" class="form-label"><i class="fas fa-network-wired me-1"></i> IP Base</label>
-                                    <div class="input-group">
-                                        <input type="text" class="form-control" id="base_ip" name="base_ip" value="{{ $baseIp }}" required>
-                                        <button class="btn btn-outline-secondary" type="button" id="detectNetwork"><i class="fas fa-magic"></i> Detectar</button>
-                                    </div>
-                                    <div class="form-text">Primeros 3 octetos (ej: 172.20.200)</div>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="form-group">
-                                    <label for="range_start" class="form-label">Inicio</label>
-                                    <input type="number" class="form-control" id="range_start" name="range_start" min="1" max="254" value="1" required>
-                                    <div class="form-text">Primer host</div>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="form-group">
-                                    <label for="range_end" class="form-label">Fin</label>
-                                    <input type="number" class="form-control" id="range_end" name="range_end" min="1" max="254" value="254" required>
-                                    <div class="form-text">Último host</div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="group_id" class="form-label"><i class="fas fa-layer-group me-1"></i> Asignar al grupo</label>
-                                    <select class="form-select" id="group_id" name="group_id">
-                                        <option value="">Sin grupo</option>
-                                        @foreach($groups as $group)
-                                            <option value="{{ $group->id }}">{{ $group->name }}</option>
-                                        @endforeach
-                                    </select>
-                                    <div class="form-text">Opcional - Grupo para hosts sin aula detectada</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="alert alert-warning">
-                            <i class="fas fa-exclamation-triangle me-2"></i> <strong>Importante:</strong> Verifique que está conectado a la VPN o red local del instituto antes de continuar.
-                        </div>
-
-                        <div class="row mb-3">
-                            <div class="col-md-12">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="force_register" name="force_register" value="1">
-                                    <label class="form-check-label" for="force_register">
-                                        <i class="fas fa-magic me-1"></i> Forzar registro de hosts (incluso si no responden al ping)
-                                    </label>
-                                    <div class="form-text">Active esta opción para registrar equipos aunque no respondan al ping actualmente.</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row mb-3">
-                            <div class="col-md-12">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="scan_additional_ranges" name="scan_additional_ranges" value="1" checked>
-                                    <label class="form-check-label" for="scan_additional_ranges">
-                                        <i class="fas fa-layer-group me-1"></i> Escanear rangos adicionales (Infraestructura + muestras DHCP)
-                                    </label>
-                                    <div class="form-text">Incluye automáticamente dispositivos críticos y muestras de otros rangos DHCP del instituto.</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="force_register" name="force_register" value="1">
-                                <label class="form-check-label" for="force_register">
-                                    <strong>Forzar registro de equipos</strong> aunque no respondan al ping
-                                </label>
-                                <div class="form-text">Útil cuando los equipos están apagados pero desea registrarlos igualmente</div>
-                            </div>
-                            
-                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                <a href="{{ route('monitor.index') }}" class="btn btn-secondary me-md-2">
-                                    <i class="fas fa-times me-1"></i> Cancelar
-                                </a>
-                                <button type="submit" class="btn btn-primary" id="scanButton">
-                                    <i class="fas fa-search me-1"></i> Iniciar Escaneo
+                    <div class="mb-4">
+                        <ul class="nav nav-tabs" id="scanModeTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="hostnames-tab" data-bs-toggle="tab" data-bs-target="#hostnames" type="button" role="tab" aria-controls="hostnames" aria-selected="true">
+                                    Escanear por Hostnames
                                 </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="ips-tab" data-bs-toggle="tab" data-bs-target="#ips" type="button" role="tab" aria-controls="ips" aria-selected="false">
+                                    Escanear por IP
+                                </button>
+                            </li>
+                        </ul>
+                        <div class="tab-content mt-3" id="scanModeTabsContent">
+                            <div class="tab-pane fade show active" id="hostnames" role="tabpanel" aria-labelledby="hostnames-tab">
+                                <form action="{{ route('monitor.scan.execute') }}" method="POST" id="scanHostnamesForm">
+                                    @csrf
+                                    <input type="hidden" name="scan_by_hostname" value="1">
+                                    <div class="row mb-3">
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="aula" class="form-label">Aula</label>
+                                                <select name="aula" id="aula" class="form-select" required>
+                                                    <option value="B21">B21</option>
+                                                    <option value="B22">B22</option>
+                                                    <option value="B23">B23</option>
+                                                    <option value="B24">B24</option>
+                                                    <option value="B25">B25</option>
+                                                    <option value="B27">B27</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="columnas" class="form-label">Columnas</label>
+                                                <input type="text" class="form-control" name="columnas[]" value="A,B,C,D,E,F" placeholder="Ej: A,B,C,D,E,F" required>
+                                                <div class="form-text">Separadas por coma</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="filas" class="form-label">Filas</label>
+                                                <input type="text" class="form-control" name="filas[]" value="1,2,3,4,5,6" placeholder="Ej: 1,2,3,4,5,6" required>
+                                                <div class="form-text">Separadas por coma</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="group_id" class="form-label"><i class="fas fa-layer-group me-1"></i> Asignar al grupo</label>
+                                                <select class="form-select" id="group_id" name="group_id">
+                                                    <option value="">Sin grupo</option>
+                                                    @foreach($groups as $group)
+                                                        <option value="{{ $group->id }}">{{ $group->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-8 d-flex align-items-end">
+                                            <button type="submit" class="btn btn-primary ms-auto">
+                                                <i class="fas fa-search me-1"></i> Iniciar Escaneo por Hostnames
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="tab-pane fade" id="ips" role="tabpanel" aria-labelledby="ips-tab">
+                                <form action="{{ route('monitor.scan.execute') }}" method="POST" id="scanForm" class="mb-5">
+                                    @csrf
+                                    <div class="row mb-3">
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="base_ip" class="form-label"><i class="fas fa-network-wired me-1"></i> IP Base</label>
+                                                <div class="input-group">
+                                                    <input type="text" class="form-control" id="base_ip" name="base_ip" value="{{ $baseIp }}" required>
+                                                    <button class="btn btn-outline-secondary" type="button" id="detectNetwork"><i class="fas fa-magic"></i> Detectar</button>
+                                                </div>
+                                                <div class="form-text">Primeros 3 octetos (ej: 172.20.200)</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="form-group">
+                                                <label for="range_start" class="form-label">Inicio</label>
+                                                <input type="number" class="form-control" id="range_start" name="range_start" min="1" max="254" value="1" required>
+                                                <div class="form-text">Primer host</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="form-group">
+                                                <label for="range_end" class="form-label">Fin</label>
+                                                <input type="number" class="form-control" id="range_end" name="range_end" min="1" max="254" value="254" required>
+                                                <div class="form-text">Último host</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="group_id" class="form-label"><i class="fas fa-layer-group me-1"></i> Asignar al grupo</label>
+                                                <select class="form-select" id="group_id" name="group_id">
+                                                    <option value="">Sin grupo</option>
+                                                    @foreach($groups as $group)
+                                                        <option value="{{ $group->id }}">{{ $group->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                                <div class="form-text">Opcional - Grupo para hosts sin aula detectada</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="alert alert-warning">
+                                        <i class="fas fa-exclamation-triangle me-2"></i> <strong>Importante:</strong> Verifique que está conectado a la VPN o red local del instituto antes de continuar.
+                                    </div>
+
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="force_register" name="force_register" value="1">
+                                                <label class="form-check-label" for="force_register">
+                                                    <i class="fas fa-magic me-1"></i> Forzar registro de hosts (incluso si no responden al ping)
+                                                </label>
+                                                <div class="form-text">Active esta opción para registrar equipos aunque no respondan al ping actualmente.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="scan_additional_ranges" name="scan_additional_ranges" value="1" checked>
+                                                <label class="form-check-label" for="scan_additional_ranges">
+                                                    <i class="fas fa-layer-group me-1"></i> Escanear rangos adicionales (Infraestructura + muestras DHCP)
+                                                </label>
+                                                <div class="form-text">Incluye automáticamente dispositivos críticos y muestras de otros rangos DHCP del instituto.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="force_register" name="force_register" value="1">
+                                            <label class="form-check-label" for="force_register">
+                                                <strong>Forzar registro de equipos</strong> aunque no respondan al ping
+                                            </label>
+                                            <div class="form-text">Útil cuando los equipos están apagados pero desea registrarlos igualmente</div>
+                                        </div>
+                                        
+                                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                            <a href="{{ route('monitor.index') }}" class="btn btn-secondary me-md-2">
+                                                <i class="fas fa-times me-1"></i> Cancelar
+                                            </a>
+                                            <button type="submit" class="btn btn-primary" id="scanButton">
+                                                <i class="fas fa-search me-1"></i> Iniciar Escaneo
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
                             </div>
                         </div>
-                    </form>
+                    </div>
 
                     <div id="progressSection" style="display: none;">
                         <h4 class="mb-3"><i class="fas fa-sync fa-spin me-2"></i> Escaneando red...</h4>
