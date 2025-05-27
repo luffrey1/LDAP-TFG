@@ -72,9 +72,9 @@ services:
     volumes:
       - ../proyecto:/var/www/html
       - document_data:/var/www/html/public/documentos
-      - ../ldap/certs/cert-tierno.es/fullchain.pem:/etc/ssl/certs/site/certificate.crt
-      - ../ldap/certs/cert-tierno.es/privkey.pem:/etc/ssl/certs/site/private.key
-      - ../ldap/certs/cert-tierno.es/chain.pem:/etc/ssl/certs/site/ca_bundle.crt
+      - ../certs/cert-tierno.es/fullchain.pem:/etc/ssl/certs/site/certificate.crt
+      - ../certs/cert-tierno.es/privkey.pem:/etc/ssl/certs/site/private.key
+      - ../certs/cert-tierno.es/chain.pem:/etc/ssl/certs/site/ca_bundle.crt
     depends_on:
       - ldap
       - mysql
