@@ -686,7 +686,7 @@
                         
                         <!-- Usuarios LDAP - Visible para todos -->
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->is('admin/usuarios*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}">
+                            <a class="nav-link {{ request()->is('gestion/usuarios*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}">
                                 <i class="fas fa-users-cog"></i> Usuarios LDAP
                             </a>
                         </li>

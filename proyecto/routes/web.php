@@ -111,7 +111,7 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
     });
     
     // Gestión de usuarios LDAP - Accesible para todos los usuarios
-    Route::prefix('admin/usuarios')->name('admin.users.')->group(function () {
+    Route::prefix('gestion/usuarios')->name('admin.users.')->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\LdapUserController::class, 'index'])->name('index');
         Route::get('/crear', [App\Http\Controllers\Admin\LdapUserController::class, 'create'])->name('create');
         Route::post('/', [App\Http\Controllers\Admin\LdapUserController::class, 'store'])->name('store');
