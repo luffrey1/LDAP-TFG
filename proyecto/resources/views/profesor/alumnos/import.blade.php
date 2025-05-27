@@ -116,6 +116,10 @@
                                         <i class="fas fa-download"></i> Descargar CSV con Contraseñas
                                     </button>
                                 </div>
+                                <div class="alert alert-warning mt-3">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <strong>Importante:</strong> Las contraseñas solo las puedes ver ahora. Se almacenarán hasheadas en el sistema por seguridad.
+                                </div>
                             </div>
 
                             <div class="form-group">

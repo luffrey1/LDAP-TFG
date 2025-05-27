@@ -156,6 +156,16 @@
                                     $configuraciones['modulos']->where('clave', 'modulo_monitoreo_activo')->first()->valor == 'true') checked @endif>
                             </div>
                         </div>
+
+                        <div class="modulo-card">
+                            <div class="modulo-titulo">Acceso SSH</div>
+                            <div class="modulo-descripcion">Gestión de acceso SSH a equipos</div>
+                            <div class="form-check form-switch modulo-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="modulo_ssh_activo" name="modulos[]" value="modulo_ssh_activo"
+                                    @if(isset($configuraciones['modulos']) && $configuraciones['modulos']->where('clave', 'modulo_ssh_activo')->first() && 
+                                    $configuraciones['modulos']->where('clave', 'modulo_ssh_activo')->first()->valor == 'true') checked @endif>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -212,17 +222,6 @@
                             <button type="submit" name="generar_vpn_password" value="1" class="btn btn-secondary">
                                 <i class="fas fa-key mr-2"></i>Generar Nueva Contraseña VPN
                             </button>
-                        </div>
-
-                        <h6 class="text-gray-800 mb-3 mt-4">Configuración de Acceso SSH</h6>
-                        <div class="seguridad-item">
-                            <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" role="switch" id="ssh_acceso_global" name="ssh_acceso_global" value="1"
-                                    @if(isset($configuraciones['seguridad']) && $configuraciones['seguridad']->where('clave', 'ssh_acceso_global')->first() && 
-                                    $configuraciones['seguridad']->where('clave', 'ssh_acceso_global')->first()->valor == 'true') checked @endif>
-                                <label class="form-check-label" for="ssh_acceso_global">Permitir acceso SSH global</label>
-                            </div>
-                            <small class="form-text text-muted">Activa o desactiva el acceso SSH para todos los usuarios</small>
                         </div>
                     </div>
                 </div>

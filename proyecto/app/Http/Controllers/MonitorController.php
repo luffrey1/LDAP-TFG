@@ -850,12 +850,8 @@ class MonitorController extends Controller
                     \Log::warning('No se pudo ejecutar el agente de telemetría local: ' . $e->getMessage());
                 }
             }
-            // Obtener configuración de SSH
-            $configuraciones = [
-                'seguridad' => \App\Models\SistemaConfig::where('clave', 'ssh_acceso_global')->get()
-            ];
             // Permitir a cualquier usuario autenticado ver cualquier host
-            return view('monitor.show', compact('host', 'configuraciones'));
+            return view('monitor.show', compact('host'));
         } catch (\Exception $e) {
             \Log::error('Error al mostrar host: ' . $e->getMessage());
             return redirect()->route('monitor.index')

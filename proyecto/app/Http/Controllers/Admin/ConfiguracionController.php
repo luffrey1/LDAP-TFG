@@ -47,8 +47,7 @@ class ConfiguracionController extends Controller
                 'politica_password_longitud' => 'required|integer|min:6|max:20',
                 'politica_password_mayusculas' => 'nullable|boolean',
                 'politica_password_numeros' => 'nullable|boolean',
-                'politica_password_especiales' => 'nullable|boolean',
-                'ssh_acceso_global' => 'nullable|boolean'
+                'politica_password_especiales' => 'nullable|boolean'
             ]);
             
             // Actualizar configuración de módulos
@@ -56,7 +55,8 @@ class ConfiguracionController extends Controller
                 'modulo_calendario_activo',
                 'modulo_mensajeria_activo',
                 'modulo_documentos_activo',
-                'modulo_monitoreo_activo'
+                'modulo_monitoreo_activo',
+                'modulo_ssh_activo'
             ];
             
             foreach ($modulos as $modulo) {
@@ -98,15 +98,6 @@ class ConfiguracionController extends Controller
                 $request->has('politica_password_especiales') ? 'true' : 'false',
                 'boolean',
                 'Requerir al menos un carácter especial en contraseñas',
-                Auth::id()
-            );
-            
-            // Actualizar configuración de acceso SSH
-            SistemaConfig::establecerConfig(
-                'ssh_acceso_global',
-                $request->has('ssh_acceso_global') ? 'true' : 'false',
-                'boolean',
-                'Permitir acceso SSH global',
                 Auth::id()
             );
             

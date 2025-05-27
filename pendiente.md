@@ -18,16 +18,16 @@
 - **✅ Mostrar nombre de LDAP en formato uid=usuario,ou=people,dc=tierno,dc=es (CN)**
 - **✅Al ver perfil de usuario, mostrar grupos en dos columnas o con grupos marcados**
 (Anieto)
-- ✅**Al crear usuario(para alumnos), añadir botón para generar contraseña aleatoria**
-- **Al importar de archivo(para alumnos), generar contraseñas aleatorias en JS y mostrarlas en tabla**
-- **Añadir botón para descargar tabla con contraseñas(para alumnos)**
-- **Indicar mensaje "Las contraseñas solo las puedes ver ahora, se almacenarán hasheadas"**
+-**✅ Al crear usuario(para alumnos), añadir botón para generar contraseña aleatoria**
+-**✅ Al importar de archivo(para alumnos), generar contraseñas aleatorias en JS y mostrarlas en tabla**
+-**✅ Añadir botón para descargar tabla con contraseñas(para alumnos)**
+-**✅ Indicar mensaje "Las contraseñas solo las puedes ver ahora, se almacenarán hasheadas"**
 - **Crear y editar grupos (GID y descripción opcional) - Solo ldapadmins**
 
 ### Seguridad(Anieto)
-- ✅**Desactivación global de acceso SSH en Configuración de administración**
-- ✅**Quitar días de aviso en password**
-- ✅**Aclarar "Rol Admin" en el perfil de usuario**
+-**✅ Desactivación global de acceso SSH en Configuración de administración**
+-**✅Quitar días de aviso en password**
+-**✅ Aclarar "Rol Admin" en el perfil de usuario**
 
 ### Agente de Telemetría (Dani)
 - **Agente con API REST usando Flask, se llama al pulsar botón "Comprobar ahora"**
