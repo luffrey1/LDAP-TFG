@@ -63,69 +63,108 @@ class MonitorController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'hostname' => 'required|string|max:255',
-            'tipo_host' => 'required|in:dhcp,fija',
-            'ip_address' => 'required_if:tipo_host,fija|nullable|ip',
-            'mac_address' => 'nullable|string|max:17',
-            'description' => 'nullable|string|max:255',
-            'group_id' => 'nullable|exists:monitor_groups,id'
-        ]);
+        \Log::info('Iniciando store de host con datos:', $request->all());
 
         try {
+            $request->validate([
+                'hostname' => 'required|string|max:255',
+                'tipo_host' => 'required|in:dhcp,fija',
+                'ip_address' => 'required_if:tipo_host,fija|nullable|ip',
+                'mac_address' => 'nullable|string|max:17',
+                'description' => 'nullable|string|max:255',
+                'group_id' => 'nullable|exists:monitor_groups,id'
+            ]);
+
+            \Log::info('Validación pasada correctamente');
+
             // Obtener la URL del microservicio desde la configuración
-            $scannerUrl = config('services.macscanner.url', 'http://172.20.0.6:5000');
+            $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
             
-            // Intentar obtener la MAC
-            $macAddress = null;
-            $detectionStatus = 'error';
-            $detectionMessage = 'No se pudo detectar la MAC del equipo';
+            // Intentar obtener la MAC usando el hostname primero (más fiable con DHCP)
+            $macObtenida = false;
+            $mac = null;
+            $ipDetectada = null;
+            $hostnameDetectado = $request->hostname;
+            $status = 'offline';
             
-            try {
-                // Primero intentar por hostname
-                $response = Http::timeout(5)->post("{$scannerUrl}/get-mac", [
-                    'hostname' => $request->hostname
-                ]);
-                
-                if ($response->successful() && $response->json('success')) {
-                    $macAddress = $response->json('data.mac_address');
-                    $detectionStatus = 'success';
-                    $detectionMessage = 'MAC detectada por hostname';
-                } else {
-                    // Si falla por hostname y tenemos IP, intentar por IP
-                    if ($request->ip_address) {
-                        $response = Http::timeout(5)->post("{$scannerUrl}/get-mac", [
-                            'ip_address' => $request->ip_address
-                        ]);
-                        
-                        if ($response->successful() && $response->json('success')) {
-                            $macAddress = $response->json('data.mac_address');
-                            $detectionStatus = 'success';
-                            $detectionMessage = 'MAC detectada por IP';
+            // 1. Intentar con el hostname tal cual
+            if (!empty($request->hostname)) {
+                $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($request->hostname);
+                $response = @file_get_contents($pythonServiceUrl);
+                if ($response !== false) {
+                    $data = json_decode($response, true);
+                    if (isset($data['success']) && $data['success']) {
+                        $mac = $data['mac'] ?? null;
+                        $ipDetectada = $data['ip'] ?? $request->ip_address;
+                        $hostnameDetectado = $request->hostname;
+                        $status = 'online';
+                        if (!empty($mac)) {
+                            $macObtenida = true;
+                            \Log::info("MAC detectada para hostname {$request->hostname}: {$mac}");
                         }
                     }
                 }
-            } catch (\Exception $e) {
-                \Log::error('Error al detectar MAC: ' . $e->getMessage());
             }
             
-            // Si no se pudo detectar la MAC, usar la proporcionada en el formulario
-            if (!$macAddress) {
-                $macAddress = $request->mac_address;
+            // 2. Si no se obtuvo la MAC y el hostname no tiene punto, intentar con .tierno.es
+            if (!$macObtenida && !empty($request->hostname) && !str_contains($request->hostname, '.')) {
+                $hostnameCompleto = $request->hostname . '.tierno.es';
+                $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostnameCompleto);
+                $response = @file_get_contents($pythonServiceUrl);
+                if ($response !== false) {
+                    $data = json_decode($response, true);
+                    if (isset($data['success']) && $data['success']) {
+                        $mac = $data['mac'] ?? null;
+                        $ipDetectada = $data['ip'] ?? $request->ip_address;
+                        $hostnameDetectado = $hostnameCompleto;
+                        $status = 'online';
+                        if (!empty($mac)) {
+                            $macObtenida = true;
+                            \Log::info("MAC detectada para hostname {$hostnameCompleto}: {$mac}");
+                        }
+                    }
+                }
             }
             
+            // 3. Si no se obtuvo la MAC, intentar con IP
+            if (!$macObtenida && !empty($request->ip_address)) {
+                $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($request->ip_address);
+                $response = @file_get_contents($pythonServiceUrl);
+                if ($response !== false) {
+                    $data = json_decode($response, true);
+                    if (isset($data['success']) && $data['success']) {
+                        $mac = $data['mac'] ?? $mac;
+                        $ipDetectada = $request->ip_address;
+                        $hostnameDetectado = $data['hostname'] ?? $hostnameDetectado;
+                        $status = 'online';
+                        if (!empty($mac)) {
+                            $macObtenida = true;
+                            \Log::info("MAC detectada para IP {$request->ip_address}: {$mac}");
+                        }
+                    }
+                }
+            }
+            
+            // Si no se pudo obtener la MAC, usar la proporcionada en el formulario
+            if (!$macObtenida) {
+                $mac = $request->mac_address;
+                \Log::info('Usando MAC del formulario: ' . $mac);
+            }
+            
+            \Log::info('Creando nuevo host...');
             // Crear el host
             $host = new MonitorHost();
-            $host->hostname = preg_replace('/\.tierno\.es$/i', '', $request->hostname);
-            $host->ip_address = $request->ip_address;
-            $host->mac_address = $macAddress;
+            $host->hostname = preg_replace('/\.tierno\.es$/i', '', $hostnameDetectado);
+            $host->ip_address = $ipDetectada ?? $request->ip_address;
+            $host->mac_address = $mac;
             $host->description = $request->description;
-            $host->status = 'unknown';
+            $host->status = $status;
             $host->created_by = Auth::id();
             
             // Asignar grupo automáticamente si no se especificó uno
             if (preg_match('/^(B[0-9]{2})-/', $host->hostname, $matches)) {
                 $nombreGrupo = $matches[1];
+                \Log::info('Detectado grupo automático: ' . $nombreGrupo);
                 $grupoDetectado = MonitorGroup::firstOrCreate(
                     ['name' => $nombreGrupo],
                     [
@@ -135,17 +174,26 @@ class MonitorController extends Controller
                     ]
                 );
                 $host->group_id = $grupoDetectado->id;
+                \Log::info('Grupo asignado: ' . $grupoDetectado->id);
             } else {
                 $host->group_id = $request->group_id;
+                \Log::info('Usando grupo del formulario: ' . $request->group_id);
             }
             
+            \Log::info('Guardando host...');
             $host->save();
+            \Log::info('Host guardado con ID: ' . $host->id);
+            
+            $mensaje = "Host '{$host->hostname}' añadido correctamente. " . 
+                      ($macObtenida ? "MAC detectada automáticamente." : "Usando MAC proporcionada.");
+            \Log::info('Redirigiendo con mensaje: ' . $mensaje);
             
             return redirect()->route('monitor.index')
-                ->with('success', "Host '{$host->hostname}' añadido correctamente. " . $detectionMessage);
+                ->with('success', $mensaje);
                 
         } catch (\Exception $e) {
             \Log::error('Error al crear host: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Error al crear el host: ' . $e->getMessage());
