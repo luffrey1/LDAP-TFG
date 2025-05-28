@@ -258,136 +258,46 @@ class MonitorController extends Controller
             $hostnameCompleto = !str_contains($host->hostname, '.') ? $host->hostname . '.tierno.es' : $host->hostname;
             Log::info("PING: Hostname completo: {$hostnameCompleto}");
 
-            // 1. Hacer ping
-            $pingCommand = "ping -c 2 -W 1 " . escapeshellarg($hostnameCompleto);
-            exec($pingCommand, $pingOutput, $pingReturnVal);
-            Log::info("PING: Resultado: " . implode(" | ", $pingOutput) . " (código: {$pingReturnVal})");
-            $pingSuccess = ($pingReturnVal === 0);
-
-            if ($pingSuccess) {
-                $status = 'online';
-                Log::info("PING: Host responde a ping");
-
-                // 2. Intentar obtener la IP con gethostbyname (más fiable que host)
-                $ipByPhp = gethostbyname($hostnameCompleto);
-                if (filter_var($ipByPhp, FILTER_VALIDATE_IP) && $ipByPhp !== $hostnameCompleto) {
-                    $ipDetectada = $ipByPhp;
-                    Log::info("PING: IP detectada con gethostbyname: {$ipDetectada}");
-                }
-
-                // 3. Si no, intentar con host
-                if (!$ipDetectada) {
-                    $hostCommand = "host " . escapeshellarg($hostnameCompleto);
-                    exec($hostCommand, $hostOutput, $hostReturnVal);
-                    Log::info("PING: Resultado host: " . implode(" | ", $hostOutput));
-                    foreach ($hostOutput as $line) {
-                        if (preg_match('/has address (\d+\.\d+\.\d+\.\d+)/', $line, $matches)) {
-                            $ipDetectada = $matches[1];
-                            Log::info("PING: IP detectada con host: {$ipDetectada}");
-                            break;
-                        }
-                    }
-                }
-
-                // 4. Si no, intentar con nslookup
-                if (!$ipDetectada) {
-                    $nslookupCommand = "nslookup " . escapeshellarg($hostnameCompleto);
-                    exec($nslookupCommand, $nslookupOutput, $nslookupReturnVal);
-                    Log::info("PING: Resultado nslookup: " . implode(" | ", $nslookupOutput));
-                    foreach ($nslookupOutput as $line) {
-                        if (preg_match('/Address: (\d+\.\d+\.\d+\.\d+)/', $line, $matches)) {
-                            $ipDetectada = $matches[1];
-                            Log::info("PING: IP detectada con nslookup: {$ipDetectada}");
-                            break;
-                        }
-                    }
-                }
-
-                // 5. Si tenemos IP, intentar obtener la MAC
-                if ($ipDetectada && $ipDetectada !== '127.0.0.1' && $ipDetectada !== '::1') {
-                    // a) arp-scan
-                    $arpScanCommand = "arp-scan --interface=eth0 " . escapeshellarg($ipDetectada);
-                    exec($arpScanCommand, $arpScanOutput, $arpScanReturnVal);
-                    Log::info("PING: Resultado arp-scan: " . implode(" | ", $arpScanOutput));
-                    foreach ($arpScanOutput as $line) {
-                        if (preg_match('/([0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5})/', $line, $matches)) {
-                            $mac = strtolower($matches[1]);
-                            Log::info("PING: MAC detectada con arp-scan: {$mac}");
-                            break;
-                        }
-                    }
-                    // b) arp -n
-                    if (!$mac) {
-                        $arpCommand = "arp -n " . escapeshellarg($ipDetectada);
-                        exec($arpCommand, $arpOutput, $arpReturnVal);
-                        Log::info("PING: Resultado arp -n: " . implode(" | ", $arpOutput));
-                        foreach ($arpOutput as $line) {
-                            if (preg_match('/([0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5})/', $line, $matches)) {
-                                $mac = strtolower($matches[1]);
-                                Log::info("PING: MAC detectada con arp -n: {$mac}");
+            // 1. Intentar SIEMPRE primero con el microservicio Python /scan-hostnames
+            if (preg_match('/^(B[0-9]{2})-([A-Z][0-9])$/i', $host->hostname, $matches)) {
+                $aula = $matches[1];
+                $columna = $matches[2];
+                $macscannerUrl = rtrim($baseUrl, '/') . '/scan-hostnames';
+                $payload = [
+                    'aula' => $aula,
+                    'columnas' => [$columna],
+                    'filas' => [1],
+                    'dominio' => 'tierno.es'
+                ];
+                $options = [
+                    'http' => [
+                        'header'  => "Content-type: application/json\r\n",
+                        'method'  => 'POST',
+                        'content' => json_encode($payload),
+                        'timeout' => 20
+                    ]
+                ];
+                $context = stream_context_create($options);
+                $response = @file_get_contents($macscannerUrl, false, $context);
+                if ($response !== false) {
+                    $data = json_decode($response, true);
+                    if (isset($data['success']) && $data['success']) {
+                        foreach ($data['hosts'] as $hostData) {
+                            $foundHostname = preg_replace('/\.tierno\.es$/i', '', $hostData['hostname']);
+                            if (strcasecmp($foundHostname, $host->hostname) === 0) {
+                                $ipDetectada = $hostData['ip'] ?? $ipDetectada;
+                                $mac = $hostData['mac'] ?? $mac;
+                                $status = 'online';
+                                Log::info("PING: IP/MAC detectadas por /scan-hostnames: IP={$ipDetectada}, MAC={$mac}");
                                 break;
                             }
                         }
                     }
-                    // c) ip neigh
-                    if (!$mac) {
-                        $ipNeighCommand = "ip neigh show " . escapeshellarg($ipDetectada);
-                        exec($ipNeighCommand, $ipNeighOutput, $ipNeighReturnVal);
-                        Log::info("PING: Resultado ip neigh: " . implode(" | ", $ipNeighOutput));
-                        foreach ($ipNeighOutput as $line) {
-                            if (preg_match('/([0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5})/', $line, $matches)) {
-                                $mac = strtolower($matches[1]);
-                                Log::info("PING: MAC detectada con ip neigh: {$mac}");
-                                break;
-                            }
-                        }
-                    }
-                } else {
-                    // Si la IP es localhost o no se detecta, intentar con /scan-hostnames del microservicio Python
-                    Log::warning("PING: IP no válida o no detectada, intentando con /scan-hostnames del microservicio Python");
-                    // Detectar si el hostname es de aula tipo B##-X#
-                    if (preg_match('/^(B[0-9]{2})-([A-Z][0-9])$/i', $host->hostname, $matches)) {
-                        $aula = $matches[1];
-                        $columna = $matches[2];
-                        $macscannerUrl = rtrim($baseUrl, '/') . '/scan-hostnames';
-                        $payload = [
-                            'aula' => $aula,
-                            'columnas' => [$columna],
-                            'filas' => [1],
-                            'dominio' => 'tierno.es'
-                        ];
-                        $options = [
-                            'http' => [
-                                'header'  => "Content-type: application/json\r\n",
-                                'method'  => 'POST',
-                                'content' => json_encode($payload),
-                                'timeout' => 20
-                            ]
-                        ];
-                        $context = stream_context_create($options);
-                        $response = @file_get_contents($macscannerUrl, false, $context);
-                        if ($response !== false) {
-                            $data = json_decode($response, true);
-                            if (isset($data['success']) && $data['success']) {
-                                foreach ($data['hosts'] as $hostData) {
-                                    $foundHostname = preg_replace('/\.tierno\.es$/i', '', $hostData['hostname']);
-                                    if (strcasecmp($foundHostname, $host->hostname) === 0) {
-                                        $ipDetectada = $hostData['ip'] ?? $ipDetectada;
-                                        $mac = $hostData['mac'] ?? $mac;
-                                        Log::info("PING: IP/MAC detectadas por /scan-hostnames: IP={$ipDetectada}, MAC={$mac}");
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
                 }
-            } else {
-                Log::warning("PING: El host no responde a ping");
             }
 
-            // Fallback: si no se detectó nada, intentar con microservicio Python como antes
-            if ((!$ipDetectada || $ipDetectada === '127.0.0.1' || $ipDetectada === '::1') && empty($mac)) {
+            // 2. Si no se detecta, intentar con /scan?hostname
+            if ($status !== 'online') {
                 Log::info("PING: Intentando con microservicio Python /scan?hostname");
                 $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostnameCompleto);
                 $response = @file_get_contents($pythonServiceUrl);
@@ -397,13 +307,42 @@ class MonitorController extends Controller
                         $ipDetectada = $data['ip'] ?? $ipDetectada;
                         $mac = $data['mac'] ?? $mac;
                         $status = 'online';
-                        Log::info("PING: IP/MAC detectadas por microservicio: IP={$ipDetectada}, MAC={$mac}");
+                        Log::info("PING: IP/MAC detectadas por /scan?hostname: IP={$ipDetectada}, MAC={$mac}");
+                    }
+                }
+            }
+
+            // 3. Si aún así no se detecta, intentar métodos locales (ping, host, nslookup)
+            if ($status !== 'online') {
+                Log::info("PING: Intentando métodos locales como último recurso");
+                $pingCommand = "ping -c 2 -W 1 " . escapeshellarg($hostnameCompleto);
+                exec($pingCommand, $pingOutput, $pingReturnVal);
+                Log::info("PING: Resultado: " . implode(" | ", $pingOutput) . " (código: {$pingReturnVal})");
+                $pingSuccess = ($pingReturnVal === 0);
+                if ($pingSuccess) {
+                    // Intentar obtener la IP
+                    $ipByPhp = gethostbyname($hostnameCompleto);
+                    if (filter_var($ipByPhp, FILTER_VALIDATE_IP) && $ipByPhp !== $hostnameCompleto && $ipByPhp !== '127.0.0.1' && $ipByPhp !== '::1') {
+                        $ipDetectada = $ipByPhp;
+                        Log::info("PING: IP detectada con gethostbyname: {$ipDetectada}");
+                        // Intentar obtener la MAC
+                        $arpScanCommand = "arp-scan --interface=eth0 " . escapeshellarg($ipDetectada);
+                        exec($arpScanCommand, $arpScanOutput, $arpScanReturnVal);
+                        Log::info("PING: Resultado arp-scan: " . implode(" | ", $arpScanOutput));
+                        foreach ($arpScanOutput as $line) {
+                            if (preg_match('/([0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5})/', $line, $matches)) {
+                                $mac = strtolower($matches[1]);
+                                Log::info("PING: MAC detectada con arp-scan: {$mac}");
+                                break;
+                            }
+                        }
+                        $status = 'online';
                     }
                 }
             }
 
             // Actualizar el host si se detectó información
-            if ($ipDetectada && $ipDetectada !== '127.0.0.1' && $ipDetectada !== '::1') {
+            if ($status === 'online' && $ipDetectada && $ipDetectada !== '127.0.0.1' && $ipDetectada !== '::1') {
                 $host->status = 'online';
                 $host->last_seen = now();
                 if (!empty($ipDetectada) && $ipDetectada !== $host->ip_address) {
