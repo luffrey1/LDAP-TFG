@@ -123,17 +123,14 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
         Route::post('/{dn}/reset-password', [App\Http\Controllers\Admin\LdapUserController::class, 'resetPassword'])->name('reset-password');
     });
 
-    // Gestión de grupos LDAP - Accesible para todos los usuarios
-    Route::prefix('gestion/grupos')->name('admin.groups.')->group(function () {
+    Route::prefix('admin/groups')->name('admin.groups.')->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\LdapGroupController::class, 'index'])->name('index');
-        Route::get('/crear', [App\Http\Controllers\Admin\LdapGroupController::class, 'create'])->name('create');
+        Route::get('/create', [App\Http\Controllers\Admin\LdapGroupController::class, 'create'])->name('create');
         Route::post('/', [App\Http\Controllers\Admin\LdapGroupController::class, 'store'])->name('store');
-        Route::get('/{dn}', [App\Http\Controllers\Admin\LdapGroupController::class, 'show'])->name('show');
-        Route::get('/{dn}/editar', [App\Http\Controllers\Admin\LdapGroupController::class, 'edit'])->name('edit');
-        Route::put('/{dn}', [App\Http\Controllers\Admin\LdapGroupController::class, 'update'])->name('update');
-        Route::delete('/{dn}', [App\Http\Controllers\Admin\LdapGroupController::class, 'destroy'])->name('destroy');
+        Route::get('/{cn}/edit', [App\Http\Controllers\Admin\LdapGroupController::class, 'edit'])->name('edit');
+        Route::put('/{cn}', [App\Http\Controllers\Admin\LdapGroupController::class, 'update'])->name('update');
+        Route::delete('/{cn}', [App\Http\Controllers\Admin\LdapGroupController::class, 'destroy'])->name('destroy');
     });
-});
 
 // Rutas que requieren permisos de administrador
 Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware', 'App\Http\Middleware\AdminMiddleware'])->prefix('admin')->name('admin.')->group(function () {
