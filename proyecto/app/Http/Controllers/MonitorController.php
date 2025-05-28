@@ -78,62 +78,50 @@ class MonitorController extends Controller
 
             \Log::info('Validación pasada', ['validated' => $validated]);
 
-            // Si es DHCP, intentar detectar IP y MAC
-            if ($request->tipo_host === 'dhcp') {
-                \Log::info('Modo DHCP detectado, intentando obtener información del host');
-                
-                // Intentar obtener información del host usando el microservicio
-                $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
-                $hostname = $request->hostname;
-                $macObtenida = false;
-                $mac = null;
-                $ipDetectada = null;
-                $hostnameDetectado = $hostname;
-                $status = 'offline';
+            // Intentar detectar IP y MAC usando el hostname
+            $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
+            $hostname = $request->hostname;
+            $macObtenida = false;
+            $mac = null;
+            $ipDetectada = null;
+            $hostnameDetectado = $hostname;
+            $status = 'offline';
 
-                // Intentar con el hostname completo (incluyendo .tierno.es)
-                $hostnameCompleto = !str_contains($hostname, '.') ? $hostname . '.tierno.es' : $hostname;
-                $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostnameCompleto);
-                $response = @file_get_contents($pythonServiceUrl);
-                
-                if ($response !== false) {
-                    $data = json_decode($response, true);
-                    if (isset($data['success']) && $data['success']) {
-                        $mac = $data['mac'] ?? null;
-                        $ipDetectada = $data['ip'] ?? null;
-                        $hostnameDetectado = $hostnameCompleto;
-                        $status = 'online';
-                        if (!empty($mac)) {
-                            $macObtenida = true;
-                            \Log::info("MAC detectada para hostname {$hostnameCompleto}: {$mac}");
-                        }
+            // Intentar con el hostname completo (incluyendo .tierno.es)
+            $hostnameCompleto = !str_contains($hostname, '.') ? $hostname . '.tierno.es' : $hostname;
+            $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostnameCompleto);
+            $response = @file_get_contents($pythonServiceUrl);
+            
+            if ($response !== false) {
+                $data = json_decode($response, true);
+                if (isset($data['success']) && $data['success']) {
+                    $mac = $data['mac'] ?? null;
+                    $ipDetectada = $data['ip'] ?? null;
+                    $hostnameDetectado = $hostnameCompleto;
+                    $status = 'online';
+                    if (!empty($mac)) {
+                        $macObtenida = true;
+                        \Log::info("MAC detectada para hostname {$hostnameCompleto}: {$mac}");
                     }
                 }
+            }
 
-                if (!$macObtenida) {
-                    \Log::warning('No se pudo detectar la información del host', ['hostname' => $hostnameCompleto]);
-                    return redirect()->back()
-                        ->withInput()
-                        ->with('error', 'No se pudo detectar la información del host. Asegúrese de que el equipo esté encendido y conectado a la red.');
-                }
-
-                $validated['ip_address'] = $ipDetectada;
-                $validated['mac_address'] = $mac;
-                \Log::info('Información del host detectada', ['data' => [
-                    'ip_address' => $ipDetectada,
-                    'mac_address' => $mac,
-                    'status' => $status
-                ]]);
+            // Si no se pudo detectar y es DHCP, mostrar error
+            if ($request->tipo_host === 'dhcp' && !$macObtenida) {
+                \Log::warning('No se pudo detectar la información del host', ['hostname' => $hostnameCompleto]);
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', 'No se pudo detectar la información del host. Asegúrese de que el equipo esté encendido y conectado a la red.');
             }
 
             // Crear el host
             $host = new MonitorHost();
             $host->hostname = $validated['hostname'];
-            $host->ip_address = $validated['ip_address'] ?? null;
-            $host->mac_address = $validated['mac_address'] ?? null;
+            $host->ip_address = $ipDetectada ?? $validated['ip_address'] ?? null;
+            $host->mac_address = $mac ?? null;
             $host->description = $validated['description'] ?? null;
             $host->created_by = auth()->id();
-            $host->status = 'unknown';
+            $host->status = $status;
 
             // Asignar grupo automáticamente si no se especificó
             if (empty($validated['group_id'])) {
@@ -181,25 +169,33 @@ class MonitorController extends Controller
     {
         try {
             $host = MonitorHost::findOrFail($id);
-            $ip = $host->ip_address;
-            // Usar /scan?ip=... porque /ping?ip=... no existe en el microservicio
             $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
-            $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($ip);
+            
+            // Intentar primero con el hostname
+            $hostnameCompleto = !str_contains($host->hostname, '.') ? $host->hostname . '.tierno.es' : $host->hostname;
+            $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostnameCompleto);
             $response = @file_get_contents($pythonServiceUrl);
+            
             if ($response === false) {
                 Log::error('No se pudo conectar al microservicio Python para ping: ' . $pythonServiceUrl);
                 return response()->json(['status' => 'error', 'message' => 'No se pudo conectar al microservicio de red.']);
             }
+            
             $data = json_decode($response, true);
             if (!$data || !isset($data['success'])) {
                 Log::error('Respuesta inválida del microservicio Python (scan): ' . $response);
                 return response()->json(['status' => 'error', 'message' => 'Respuesta inválida del microservicio de red.']);
             }
+            
             $host->status = $data['success'] ? 'online' : 'offline';
             $host->last_seen = $data['success'] ? now() : $host->last_seen;
+            
+            // Actualizar IP y MAC si se detectaron
+            if (!empty($data['ip'])) $host->ip_address = $data['ip'];
             if (!empty($data['mac'])) $host->mac_address = $data['mac'];
-            if (!empty($data['hostname'])) $host->hostname = $data['hostname'];
+            
             $host->save();
+            
             return response()->json([
                 'status' => $host->status,
                 'message' => $host->status === 'online' ? 'Host está en línea' : 'Host está fuera de línea',
