@@ -59,7 +59,7 @@ class MonitorController extends Controller
         
         try {
             $host = new MonitorHost();
-            $host->hostname = $request->hostname;
+            $host->hostname = preg_replace('/\.tierno\.es$/i', '', $request->hostname);
             $host->ip_address = $request->ip_address;
             $host->description = $request->description;
             $host->mac_address = $request->mac_address;
@@ -222,7 +222,7 @@ class MonitorController extends Controller
                         $isNew = false;
                         if (!$host) {
                             $host = new MonitorHost();
-                            $host->hostname = $hostData['hostname'];
+                            $host->hostname = preg_replace('/\.tierno\.es$/i', '', $hostData['hostname']);
                             $host->created_by = \Auth::id() ?: 1;
                             $isNew = true;
                         }
@@ -345,7 +345,7 @@ class MonitorController extends Controller
                             $host->created_by = \Auth::id() ?: 1;
                             $isNew = true;
                         }
-                        if (!empty($data['hostname'])) $host->hostname = $data['hostname'];
+                        if (!empty($data['hostname'])) $host->hostname = preg_replace('/\.tierno\.es$/i', '', $data['hostname']);
                         if (!empty($data['mac'])) $host->mac_address = $data['mac'];
                         $host->status = $data['success'] ? 'online' : 'offline';
                         $host->last_seen = $data['success'] ? now() : $host->last_seen;
@@ -431,7 +431,7 @@ class MonitorController extends Controller
                 // Crear nuevo host si no existe
                 Log::info('Creando nuevo host desde telemetría: ' . $request->hostname . ' (' . $request->ip_address . ')');
                 $host = new MonitorHost();
-                $host->hostname = $request->hostname;
+                $host->hostname = preg_replace('/\.tierno\.es$/i', '', $request->hostname);
                 $host->ip_address = $request->ip_address;
                 $host->status = $request->status;
                 
@@ -1007,7 +1007,7 @@ class MonitorController extends Controller
         }
         try {
             $host = \App\Models\MonitorHost::findOrFail($id);
-            $host->hostname = $request->hostname;
+            $host->hostname = preg_replace('/\.tierno\.es$/i', '', $request->hostname);
             $host->ip_address = $request->ip_address;
             $host->description = $request->description;
             $host->mac_address = $request->mac_address;

@@ -757,8 +757,9 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->is('admin/groups*') ? 'active' : '' }}" href="{{ route('admin.groups.index') }}">
-                                <i class="fas fa-users-cog"></i> Gestión de Grupos LDAP
+                            <a class="nav-link {{ request()->is('admin/gestion/grupos*') ? 'active' : '' }}" href="{{ route('admin.groups.index') }}">
+                                <i class="fas fa-users-cog"></i>
+                                <span>Gestión de Grupos LDAP</span>
                             </a>
                         </li>
                         @endif
@@ -894,7 +895,15 @@
         }
     </script>
     
-    @yield('scripts')
+    @section('js')
+    <script>
+        $.ajaxSetup({
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            }
+        });
+    </script>
+    @show
     @stack('scripts')
 </body>
 </html> 
