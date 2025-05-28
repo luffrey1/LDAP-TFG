@@ -142,9 +142,10 @@ class MonitorController extends Controller
             $hosts = \App\Models\MonitorHost::all();
             $updated = 0;
             $errors = 0;
+            $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
             foreach ($hosts as $host) {
                 $ip = $host->ip_address;
-                $pythonServiceUrl = 'http://172.20.0.6:5000/scan?ip=' . urlencode($ip);
+                $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($ip);
                 $response = @file_get_contents($pythonServiceUrl);
                 if ($response === false) {
                     \Log::error('No se pudo conectar al microservicio Python para pingAll (host ' . $ip . '): ' . $pythonServiceUrl);
@@ -320,8 +321,9 @@ class MonitorController extends Controller
             $created = 0;
             $updated = 0;
             $errors = 0;
+            $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
             foreach ($ipsToScan as $ip) {
-                $pythonServiceUrl = 'http://172.20.0.6:5000/scan?ip=' . urlencode($ip);
+                $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($ip);
                 $response = @file_get_contents($pythonServiceUrl);
                 if ($response === false) {
                     \Log::error('No se pudo conectar al microservicio Python para escaneo (host ' . $ip . '): ' . $pythonServiceUrl);
