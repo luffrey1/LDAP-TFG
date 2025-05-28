@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use LdapRecord\Connection;
 use Illuminate\Support\Facades\Log;
+use Exception;
 
 class LdapGroupController extends Controller
 {
@@ -49,12 +50,20 @@ class LdapGroupController extends Controller
 
             $groupData = [];
             foreach ($groups as $group) {
-                Log::debug('Procesando grupo: ' . json_encode($group));
+                // Verificar si el objeto es un grupo y tiene los atributos básicos necesarios
+                if (!isset($group['cn']) || !isset($group['objectclass'])) {
+                    Log::debug('Objeto omitido por falta de atributos básicos: ' . json_encode($group));
+                    continue; // Saltar objetos que no parecen grupos (como la OU)
+                }
+                
+                Log::debug('Procesando posible grupo: ' . json_encode($group));
                 
                 try {
                     $groupData[] = [
                         'cn' => is_array($group['cn']) ? $group['cn'][0] : $group['cn'],
-                        'gidNumber' => is_array($group['gidnumber']) ? $group['gidnumber'][0] : $group['gidnumber'],
+                        // Verificar si gidNumber existe antes de acceder a él
+                        'gidNumber' => isset($group['gidnumber']) ? (is_array($group['gidnumber']) ? $group['gidnumber'][0] : $group['gidnumber']) : null,
+                        // Verificar si description existe antes de acceder a él
                         'description' => isset($group['description']) ? (is_array($group['description']) ? $group['description'][0] : $group['description']) : '',
                         'member' => $group['member'] ?? [],
                     ];
@@ -94,10 +103,10 @@ class LdapGroupController extends Controller
         try {
             Log::debug('Iniciando creación de grupo LDAP');
             Log::debug('Datos del grupo: ' . json_encode($request->all()));
-            
+
             $config = config('ldap.connections.default');
             Log::debug('Configuración LDAP: ' . json_encode($config));
-            
+
             $connection = new Connection([
                 'hosts' => $config['hosts'],
                 'port' => $config['port'],
@@ -130,42 +139,103 @@ class LdapGroupController extends Controller
                     ->with('error', 'Ya existe un grupo con ese nombre');
             }
 
-            // Verificar si el GID ya está en uso
-            $existingGid = $connection->query()
-                ->in('ou=groups,dc=tierno,dc=es')
-                ->where('gidnumber', '=', $request->gidNumber)
-                ->first();
+            // Verificar si el GID ya está en uso (solo relevante para posixGroup)
+            // No verificamos GID si vamos a intentar groupOfUniqueNames
+            $existingGid = null;
+            if (true) { // Siempre intentamos posixGroup primero, así que verificamos GID
+                $existingGid = $connection->query()
+                    ->in('ou=groups,dc=tierno,dc=es')
+                    ->where('gidnumber', '=', $request->gidNumber)
+                    ->first();
 
-            if ($existingGid) {
-                Log::warning('El GID ya está en uso: ' . $request->gidNumber);
-                return redirect()->back()
-                    ->withInput()
-                    ->with('error', 'El GID especificado ya está en uso');
+                if ($existingGid) {
+                    Log::warning('El GID ya está en uso: ' . $request->gidNumber);
+                    return redirect()->back()
+                        ->withInput()
+                        ->with('error', 'El GID especificado ya está en uso');
+                }
             }
 
             $dn = "cn={$request->cn},ou=groups,dc=tierno,dc=es";
             Log::debug('DN del nuevo grupo: ' . $dn);
-            
-            // Crear el grupo usando el modelo de LdapRecord
-            $group = new \LdapRecord\Models\OpenLDAP\Group();
-            $group->setDn($dn);
-            $group->setAttribute('objectClass', ['top', 'posixGroup']);
-            $group->setAttribute('cn', $request->cn);
-            $group->setAttribute('gidNumber', (string)$request->gidNumber);
-            
-            if ($request->description) {
-                $group->setAttribute('description', $request->description);
+
+            $groupCreated = false;
+            $errorMessage = '';
+
+            // Intento 1: Crear como posixGroup (mínimos atributos)
+            try {
+                Log::debug('Intentando crear grupo como posixGroup');
+                $group = new \LdapRecord\Models\OpenLDAP\Group();
+                $group->setDn($dn);
+                $group->setAttribute('objectClass', ['top', 'posixGroup']);
+                $group->setAttribute('cn', $request->cn);
+                $group->setAttribute('gidNumber', (string)$request->gidNumber);
+
+                // No incluimos description ni memberUid en el intento inicial de posixGroup
+
+                $group->save();
+                $groupCreated = true;
+                Log::info('Grupo creado exitosamente como posixGroup: ' . $request->cn);
+
+            } catch (\Exception $e) {
+                $errorMessage = $e->getMessage();
+                Log::debug('Fallo la creacion como posixGroup: ' . $errorMessage);
+
+                // Si falla por Object class violation, intentamos con groupOfUniqueNames
+                if (strpos($errorMessage, 'Object class violation') !== false) {
+                    Log::debug('Intentando crear grupo como groupOfUniqueNames');
+                    // Intento 2: Crear como groupOfUniqueNames (requiere uniqueMember)
+                    try {
+                        $group = new \LdapRecord\Models\OpenLDAP\Group();
+                        $group->setDn($dn);
+                        $group->setAttribute('objectClass', ['top', 'groupOfUniqueNames']);
+                        $group->setAttribute('cn', $request->cn);
+                        // groupOfUniqueNames requiere al menos un uniqueMember
+                        // Usamos un DN de dummy si no hay usuarios en el sistema, o el admin DN
+                        $dummyMemberDn = 'cn=nobody,dc=tierno,dc=es'; // O ajusta si tu dummy es diferente
+                        // Podríamos intentar añadir el admin DN si existe y es válido como uniqueMember
+                        // $adminDn = config('ldap.connections.default.username'); // cn=admin,dc=tierno,dc=es
+                        // $group->setAttribute('uniqueMember', [$adminDn]); // Intentar con admin si es un DN válido
+                        $group->setAttribute('uniqueMember', [$dummyMemberDn]); // Intentar con dummy
+
+                        // Opcionalmente añadir description si está permitido para groupOfUniqueNames
+                        if ($request->description) {
+                             // Verificar si el esquema permite 'description' para groupOfUniqueNames
+                             // Esto requeriría consultar el esquema, lo cual no podemos hacer fácilmente
+                             // Por ahora, lo omitimos o lo dejamos comentado
+                            // $group->setAttribute('description', $request->description);
+                        }
+
+                        $group->save();
+                        $groupCreated = true;
+                        Log::info('Grupo creado exitosamente como groupOfUniqueNames: ' . $request->cn);
+
+                    } catch (\Exception $e2) {
+                        $errorMessage = "Fallo la creacion como posixGroup ('{$errorMessage}') y como groupOfUniqueNames ('{$e2->getMessage()}')";
+                        Log::error($errorMessage);
+                    }
+                } else {
+                    // Otro tipo de error, no es Object class violation con posixGroup
+                    Log::error('Error al crear grupo LDAP (posixGroup falló por otra razón): ' . $errorMessage);
+                }
             }
 
-            Log::debug('Intentando guardar el grupo');
-            $group->save();
-            Log::info('Grupo creado exitosamente: ' . $request->cn);
+            if ($groupCreated) {
+                 // Si se creó el grupo como groupOfUniqueNames, y se proporcionó descripción,
+                 // podríamos intentar añadirla en una operación de modificación posterior si es necesario y permitido.
+                 // Por ahora, solo continuamos.
 
-            return redirect()->route('admin.groups.index')
-                ->with('success', 'Grupo creado correctamente');
+                $connection->disconnect(); // Cerrar conexión después de operar
+
+                return redirect()->route('admin.groups.index')
+                    ->with('success', 'Grupo creado correctamente');
+            } else {
+                 $connection->disconnect(); // Cerrar conexión
+                 throw new Exception($errorMessage); // Lanzar el error si ninguno tuvo éxito
+            }
 
         } catch (\Exception $e) {
-            Log::error('Error al crear grupo LDAP: ' . $e->getMessage());
+            Log::error('Error final al crear grupo LDAP: ' . $e->getMessage());
             Log::error('Stack trace: ' . $e->getTraceAsString());
             return redirect()->back()
                 ->withInput()
