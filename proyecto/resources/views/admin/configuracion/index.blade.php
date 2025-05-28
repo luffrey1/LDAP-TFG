@@ -38,7 +38,7 @@
         transition: all 0.2s;
     }
     .seguridad-item:hover {
-        background-color: #f8f9fa;
+        background-color:rgb(172, 204, 236);
     }
     .modulo-card {
         padding: 15px;
