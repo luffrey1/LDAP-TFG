@@ -24,7 +24,22 @@ class MonitorController extends Controller
         $user = Auth::user();
         $hosts = MonitorHost::getHostsForUser($user);
         $groups = MonitorGroup::getGroupsForUser($user);
-        
+        // Asignar grupo automáticamente a hosts sin grupo
+        foreach ($hosts as $host) {
+            if (empty($host->group_id) && preg_match('/^(B[0-9]{2})-/', $host->hostname, $matches)) {
+                $nombreGrupo = $matches[1];
+                $grupoDetectado = \App\Models\MonitorGroup::firstOrCreate(
+                    ['name' => $nombreGrupo],
+                    [
+                        'description' => 'Aula ' . $nombreGrupo,
+                        'type' => 'classroom',
+                        'created_by' => \Auth::id() ?: 1
+                    ]
+                );
+                $host->group_id = $grupoDetectado->id;
+                $host->save();
+            }
+        }
         // Compactar las variables a pasar a la vista
         return view('monitor.index', compact('hosts', 'groups'));
     }
@@ -59,17 +74,34 @@ class MonitorController extends Controller
         
         try {
             $host = new MonitorHost();
-            $host->hostname = $request->hostname;
+            $host->hostname = preg_replace('/\.tierno\.es$/i', '', $request->hostname);
             $host->ip_address = $request->ip_address;
             $host->description = $request->description;
             $host->mac_address = $request->mac_address;
             $host->created_by = Auth::id();
-            $host->group_id = $request->group_id ?? 0;
             $host->status = 'unknown';
+
+            // En store, después de asignar el grupo:
+            if (preg_match('/^(B[0-9]{2})-/', $host->hostname, $matches)) {
+                $nombreGrupo = $matches[1];
+                $grupoDetectado = \App\Models\MonitorGroup::firstOrCreate(
+                    ['name' => $nombreGrupo],
+                    [
+                        'description' => 'Aula ' . $nombreGrupo,
+                        'type' => 'classroom',
+                        'created_by' => \Auth::id()
+                    ]
+                );
+                $host->group_id = $grupoDetectado->id;
+                \Log::info("Host {$host->hostname} asignado/creado al grupo {$nombreGrupo} (ID: {$grupoDetectado->id})");
+            } else {
+                $host->group_id = $request->group_id ?? 0;
+            }
+
             $host->save();
             
             return redirect()->route('monitor.index')
-                ->with('success', "Host '{$host->hostname}' añadido correctamente.");
+                ->with('success', "Host '{$host->hostname}' añadido/actualizado correctamente." . (isset($grupoDetectado) ? " Asignado al grupo {$nombreGrupo}." : ""));
         } catch (\Exception $e) {
             Log::error('Error al guardar host: ' . $e->getMessage());
             return redirect()->back()
@@ -125,9 +157,24 @@ class MonitorController extends Controller
             $hosts = \App\Models\MonitorHost::all();
             $updated = 0;
             $errors = 0;
+            $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
             foreach ($hosts as $host) {
+                // Asignar grupo automáticamente si no tiene
+                if (empty($host->group_id) && preg_match('/^(B[0-9]{2})-/', $host->hostname, $matches)) {
+                    $nombreGrupo = $matches[1];
+                    $grupoDetectado = \App\Models\MonitorGroup::firstOrCreate(
+                        ['name' => $nombreGrupo],
+                        [
+                            'description' => 'Aula ' . $nombreGrupo,
+                            'type' => 'classroom',
+                            'created_by' => \Auth::id() ?: 1
+                        ]
+                    );
+                    $host->group_id = $grupoDetectado->id;
+                    $host->save();
+                }
                 $ip = $host->ip_address;
-                $pythonServiceUrl = 'http://172.20.0.6:5000/scan?ip=' . urlencode($ip);
+                $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($ip);
                 $response = @file_get_contents($pythonServiceUrl);
                 if ($response === false) {
                     \Log::error('No se pudo conectar al microservicio Python para pingAll (host ' . $ip . '): ' . $pythonServiceUrl);
@@ -175,7 +222,8 @@ class MonitorController extends Controller
                 $groupId = $request->input('group_id');
                 $forceRegister = $request->has('force_register');
 
-                $macscannerUrl = env('MACSCANNER_URL', 'http://macscanner:5000/scan-hostnames');
+                $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
+                $macscannerUrl = rtrim($baseUrl, '/') . '/scan-hostnames';
                 $payload = [
                     'aula' => $aula,
                     'columnas' => $columnas,
@@ -205,12 +253,53 @@ class MonitorController extends Controller
                         $isNew = false;
                         if (!$host) {
                             $host = new MonitorHost();
-                            $host->hostname = $hostData['hostname'];
+                            $host->hostname = preg_replace('/\.tierno\.es$/i', '', $hostData['hostname']);
                             $host->created_by = \Auth::id() ?: 1;
                             $isNew = true;
                         }
+                        
+                        // Guardar IP del host
                         $host->ip_address = $hostData['ip'] ?? null;
-                        $host->mac_address = $hostData['mac'] ?? null;
+                        
+                        // Intentar obtener la MAC usando el hostname primero (más fiable con DHCP)
+                        $macObtenida = false;
+                        
+                        // Primero intentar con el hostname completo (más fiable)
+                        if (!empty($hostData['hostname'])) {
+                            $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostData['hostname']);
+                            $scanResponse = @file_get_contents($pythonServiceUrl);
+                            if ($scanResponse !== false) {
+                                $scanData = json_decode($scanResponse, true);
+                                if (!empty($scanData['mac'])) {
+                                    $host->mac_address = $scanData['mac'];
+                                    $macObtenida = true;
+                                    \Log::info("MAC detectada para hostname {$hostData['hostname']}: {$scanData['mac']}");
+                                }
+                            }
+                        }
+                        
+                        // Si no se pudo obtener por hostname, intentar con IP
+                        if (!$macObtenida && !empty($host->ip_address)) {
+                            $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($host->ip_address);
+                            $scanResponse = @file_get_contents($pythonServiceUrl);
+                            if ($scanResponse !== false) {
+                                $scanData = json_decode($scanResponse, true);
+                                if (!empty($scanData['mac'])) {
+                                    $host->mac_address = $scanData['mac'];
+                                    $macObtenida = true;
+                                    \Log::info("MAC detectada para IP {$host->ip_address}: {$scanData['mac']}");
+                                }
+                            }
+                        }
+                        
+                        // Si no se pudo obtener de ninguna manera, usar la MAC proporcionada por el escaneo original
+                        if (!$macObtenida) {
+                            $host->mac_address = $hostData['mac'] ?? null;
+                            if (!empty($host->mac_address)) {
+                                \Log::info("Usando MAC del escaneo original para {$hostData['hostname']}: {$host->mac_address}");
+                            }
+                        }
+                        
                         $host->status = 'online';
                         $host->last_seen = now();
                         if ($groupId) $host->group_id = $groupId;
@@ -261,8 +350,9 @@ class MonitorController extends Controller
             $created = 0;
             $updated = 0;
             $errors = 0;
+            $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
             foreach ($ipsToScan as $ip) {
-                $pythonServiceUrl = 'http://172.20.0.6:5000/scan?ip=' . urlencode($ip);
+                $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($ip);
                 $response = @file_get_contents($pythonServiceUrl);
                 if ($response === false) {
                     \Log::error('No se pudo conectar al microservicio Python para escaneo (host ' . $ip . '): ' . $pythonServiceUrl);
@@ -286,7 +376,7 @@ class MonitorController extends Controller
                             $host->created_by = \Auth::id() ?: 1;
                             $isNew = true;
                         }
-                        if (!empty($data['hostname'])) $host->hostname = $data['hostname'];
+                        if (!empty($data['hostname'])) $host->hostname = preg_replace('/\.tierno\.es$/i', '', $data['hostname']);
                         if (!empty($data['mac'])) $host->mac_address = $data['mac'];
                         $host->status = $data['success'] ? 'online' : 'offline';
                         $host->last_seen = $data['success'] ? now() : $host->last_seen;
@@ -372,7 +462,7 @@ class MonitorController extends Controller
                 // Crear nuevo host si no existe
                 Log::info('Creando nuevo host desde telemetría: ' . $request->hostname . ' (' . $request->ip_address . ')');
                 $host = new MonitorHost();
-                $host->hostname = $request->hostname;
+                $host->hostname = preg_replace('/\.tierno\.es$/i', '', $request->hostname);
                 $host->ip_address = $request->ip_address;
                 $host->status = $request->status;
                 
@@ -948,14 +1038,31 @@ class MonitorController extends Controller
         }
         try {
             $host = \App\Models\MonitorHost::findOrFail($id);
-            $host->hostname = $request->hostname;
+            $host->hostname = preg_replace('/\.tierno\.es$/i', '', $request->hostname);
             $host->ip_address = $request->ip_address;
             $host->description = $request->description;
             $host->mac_address = $request->mac_address;
-            $host->group_id = $request->group_id ?? $host->group_id;
+
+            // En update, después de asignar el grupo:
+            if (preg_match('/^(B[0-9]{2})-/', $host->hostname, $matches)) {
+                $nombreGrupo = $matches[1];
+                $grupoDetectado = \App\Models\MonitorGroup::firstOrCreate(
+                    ['name' => $nombreGrupo],
+                    [
+                        'description' => 'Aula ' . $nombreGrupo,
+                        'type' => 'classroom',
+                        'created_by' => \Auth::id()
+                    ]
+                );
+                $host->group_id = $grupoDetectado->id;
+                \Log::info("Host {$host->hostname} asignado/creado al grupo {$nombreGrupo} (ID: {$grupoDetectado->id})");
+            } else {
+                $host->group_id = $request->group_id ?? 0;
+            }
+
             $host->save();
             return redirect()->route('monitor.show', $host->id)
-                ->with('success', "Host actualizado correctamente.");
+                ->with('success', "Host actualizado correctamente." . (isset($grupoDetectado) ? " Asignado al grupo {$nombreGrupo}." : ""));
         } catch (\Exception $e) {
             \Log::error('Error al actualizar host: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Error al actualizar el host: ' . $e->getMessage())->withInput();
@@ -1021,5 +1128,109 @@ class MonitorController extends Controller
             ];
         }
         return view('monitor.health_status', compact('summary', 'equipos'));
+    }
+    
+    /**
+     * Detecta información de un host (IP, MAC) basado en hostname o IP
+     * Usado para la creación de nuevos equipos
+     */
+    public function detectHost(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'hostname' => 'required_without:ip_address|nullable|string|max:255',
+                'ip_address' => 'required_without:hostname|nullable|ip',
+                'tipo' => 'required|in:fija,dhcp',
+            ]);
+            
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Datos inválidos',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+            
+            $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
+            $hostname = $request->hostname;
+            $ip = $request->ip_address;
+            $macObtenida = false;
+            $mac = null;
+            $ipDetectada = null;
+            $hostnameDetectado = $hostname;
+            $status = 'offline';
+            $mensaje = '';
+            // Si el hostname no tiene dominio, añadirlo
+            if (!empty($hostname) && !str_contains($hostname, '.')) {
+                $hostnameCompleto = $hostname . '.tierno.es';
+            } else {
+                $hostnameCompleto = $hostname;
+            }
+            // 1. Intentar con hostname
+            if (!empty($hostnameCompleto)) {
+                $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostnameCompleto);
+                $response = @file_get_contents($pythonServiceUrl);
+                if ($response !== false) {
+                    $data = json_decode($response, true);
+                    if (isset($data['success']) && $data['success']) {
+                        $mac = $data['mac'] ?? null;
+                        $ipDetectada = $data['ip'] ?? $ip;
+                        $hostnameDetectado = $hostnameCompleto;
+                        $status = 'online';
+                        if (!empty($mac)) {
+                            $macObtenida = true;
+                        }
+                    }
+                }
+            }
+            // 2. Si no se obtuvo la MAC, intentar con IP
+            if (!$macObtenida && !empty($ip)) {
+                $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($ip);
+                $response = @file_get_contents($pythonServiceUrl);
+                if ($response !== false) {
+                    $data = json_decode($response, true);
+                    if (isset($data['success']) && $data['success']) {
+                        $mac = $data['mac'] ?? $mac;
+                        $ipDetectada = $ip;
+                        $hostnameDetectado = $data['hostname'] ?? $hostnameDetectado;
+                        $status = 'online';
+                        if (!empty($mac)) {
+                            $macObtenida = true;
+                        }
+                    }
+                }
+            }
+            // 3. Si no se obtuvo la MAC, usar la MAC de la respuesta original si existe
+            if (!$macObtenida && isset($data) && !empty($data['mac'])) {
+                $mac = $data['mac'];
+                $macObtenida = true;
+            }
+            // 4. Devolver resultado
+            if ($macObtenida) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Host detectado correctamente',
+                    'data' => [
+                        'hostname' => $hostnameDetectado,
+                        'ip_address' => $ipDetectada,
+                        'mac_address' => $mac,
+                        'status' => $status
+                    ]
+                ]);
+            }
+            // Si llegamos aquí, no pudimos detectar el host
+            $sugerencia = '¿Está encendido y conectado a la red? Prueba a escribir el hostname completo (ej: B27-A9.tierno.es) o revisa la IP.';
+            return response()->json([
+                'success' => false,
+                'message' => 'No se detectó el host. ' . $sugerencia,
+                'data' => null
+            ], 404);
+        } catch (\Exception $e) {
+            Log::error('Error en detectHost: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al detectar host: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

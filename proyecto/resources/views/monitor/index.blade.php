@@ -198,7 +198,7 @@
                                 </div>
                                 <div class="card-body">
                                     <div class="row">
-                                        @foreach($groups->take(3) as $group)
+                                        @foreach($groups as $group)
                                             <div class="col-md-4 mb-3">
                                                 <div class="card h-100 border-{{ $group->is_active ? 'success' : 'secondary' }}">
                                                     <div class="card-header bg-{{ $group->is_active ? 'success' : 'secondary' }} text-white">
@@ -241,6 +241,11 @@
                                             </div>
                                         @endforeach
                                     </div>
+                                    @if($groups->isEmpty())
+                                        <div class="alert alert-info mt-3">
+                                            <i class="fas fa-info-circle me-2"></i> No hay grupos creados aún. Los grupos se crean automáticamente al añadir hosts con nombres tipo <b>B25-...</b>, <b>B27-...</b>, etc.
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -293,10 +298,16 @@
             });
         });
     });
-    
+
+    // Definir eliminarHost en el scope global
     function eliminarHost(id, nombre) {
+        var form = document.getElementById('form-eliminar-' + id);
+        if (!form) {
+            alert('No se encontró el formulario para eliminar el host.');
+            return;
+        }
         if (confirm('¿Está seguro que desea eliminar el equipo "' + nombre + '"? Esta acción no se puede deshacer.')) {
-            document.getElementById('form-eliminar-' + id).submit();
+            form.submit();
         }
     }
 </script>

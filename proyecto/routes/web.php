@@ -12,11 +12,17 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Middleware\CheckModuleAccess;
 use App\Http\Controllers\MonitorController;
-use App\Http\Controllers\SshTerminalController;
-use App\Http\Controllers\WebSocketController;
 use App\Events\TestBroadcast;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\LdapGroupController;
+
+// Ruta para detectar host por hostname o IP (debe estar accesible para la vista de creación)
+Route::post('/monitor/detect-host', [App\Http\Controllers\MonitorController::class, 'detectHost'])->name('monitor.detect-host');
+
+// Ruta de protección para GET en /monitor/detect-host
+Route::get('/monitor/detect-host', function() {
+    abort(404, 'Este endpoint solo acepta peticiones POST AJAX.');
+});
 
 // Ruta principal redirige al login
 Route::get('/', function () {
@@ -192,30 +198,6 @@ Route::middleware(['App\Http\Middleware\LdapAuthMiddleware'])->prefix('profesor'
 Route::get('/monitor/scripts/available', [MonitorController::class, 'getAvailableScripts'])->name('monitor.scripts.available');
 Route::post('/monitor/scripts/transfer', [MonitorController::class, 'transferScript'])->name('monitor.scripts.transfer');
 
-// Rutas para terminal SSH - definidas directamente sin usar prefix para evitar problemas de ruta
-Route::post('/api/terminal/connect', [SshTerminalController::class, 'connect'])
-    ->middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])
-    ->name('ssh.connect');
-Route::post('/api/terminal/disconnect', [SshTerminalController::class, 'disconnect'])
-    ->middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])
-    ->name('ssh.disconnect');
-Route::post('/api/terminal/send', [SshTerminalController::class, 'execute'])
-    ->middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])
-    ->name('ssh.send');
-
-// Rutas para WebSocket
-Route::prefix('api/websocket')->middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(function () {
-    Route::get('/status', [WebSocketController::class, 'checkStatus'])->name('websocket.status');
-    Route::post('/start', [WebSocketController::class, 'startServer'])->name('websocket.start');
-    Route::post('/command', [WebSocketController::class, 'receiveCommand'])->name('websocket.command');
-});
-
-// Ruta WebSocket para SSH (usada por el proxy WebSocket)
-Route::get('/ssh-terminal/{sessionId}', function() {
-    return response()->json([
-        'error' => 'Esta ruta debe ser accedida a través de una conexión WebSocket, no HTTP'
-    ], 400);
-})->middleware(['App\Http\Middleware\WebSocketAuthentication']);
 
 // Ruta para debug desde el frontend
 Route::post('/api/debug/log', function(\Illuminate\Http\Request $request) {
