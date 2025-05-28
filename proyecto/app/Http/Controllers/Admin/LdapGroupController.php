@@ -170,9 +170,10 @@ class LdapGroupController extends Controller
                 $group->setAttribute('objectClass', ['top', 'posixGroup']);
                 $group->setAttribute('cn', $request->cn);
                 $group->setAttribute('gidNumber', (string)$request->gidNumber);
-
-                // No incluimos description ni memberUid en el intento inicial de posixGroup
-
+                // Añadir descripción en la misma operación de creación
+                if ($request->description) {
+                    $group->setAttribute('description', $request->description);
+                }
                 $group->save();
                 $groupCreated = true;
                 Log::info('Grupo creado exitosamente como posixGroup: ' . $request->cn);
