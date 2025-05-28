@@ -67,13 +67,15 @@ class MonitorController extends Controller
         try {
             \Log::info('Iniciando creación de host', ['request' => $request->all()]);
 
-            // Validar datos básicos
+            // Validar datos básicos (hostname único)
             $validated = $request->validate([
-                'hostname' => 'required|string|max:255',
+                'hostname' => 'required|string|max:255|unique:monitor_hosts,hostname',
                 'tipo_host' => 'required|in:fija,dhcp',
                 'ip_address' => 'nullable|ip',
                 'description' => 'nullable|string',
                 'group_id' => 'nullable|exists:monitor_groups,id'
+            ], [
+                'hostname.unique' => 'Ya existe un equipo con ese hostname. Edítalo o elimínalo antes de crear uno nuevo.'
             ]);
 
             \Log::info('Validación pasada', ['validated' => $validated]);
@@ -453,24 +455,23 @@ class MonitorController extends Controller
                 $created = 0;
                 $updated = 0;
                 $errors = 0;
+                $duplicados = [];
                 foreach ($data['hosts'] as $hostData) {
+                    $hostnameLimpio = preg_replace('/\.tierno\.es$/i', '', $hostData['hostname']);
+                    // Comprobar si ya existe un host con ese hostname
+                    $hostExistente = \App\Models\MonitorHost::where('hostname', $hostnameLimpio)->first();
+                    if ($hostExistente) {
+                        $duplicados[] = $hostnameLimpio;
+                        continue; // Saltar duplicados
+                    }
                     try {
-                        $host = MonitorHost::where('hostname', $hostData['hostname'])->first();
-                        $isNew = false;
-                        if (!$host) {
-                            $host = new MonitorHost();
-                            $host->hostname = preg_replace('/\.tierno\.es$/i', '', $hostData['hostname']);
-                            $host->created_by = \Auth::id() ?: 1;
-                            $isNew = true;
-                        }
-                        
+                        $host = new \App\Models\MonitorHost();
+                        $host->hostname = $hostnameLimpio;
+                        $host->created_by = \Auth::id() ?: 1;
                         // Guardar IP del host
                         $host->ip_address = $hostData['ip'] ?? null;
-                        
                         // Intentar obtener la MAC usando el hostname primero (más fiable con DHCP)
                         $macObtenida = false;
-                        
-                        // Primero intentar con el hostname completo (más fiable)
                         if (!empty($hostData['hostname'])) {
                             $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostData['hostname']);
                             $scanResponse = @file_get_contents($pythonServiceUrl);
@@ -483,8 +484,6 @@ class MonitorController extends Controller
                                 }
                             }
                         }
-                        
-                        // Si no se pudo obtener por hostname, intentar con IP
                         if (!$macObtenida && !empty($host->ip_address)) {
                             $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($host->ip_address);
                             $scanResponse = @file_get_contents($pythonServiceUrl);
@@ -497,30 +496,27 @@ class MonitorController extends Controller
                                 }
                             }
                         }
-                        
-                        // Si no se pudo obtener de ninguna manera, usar la MAC proporcionada por el escaneo original
                         if (!$macObtenida) {
                             $host->mac_address = $hostData['mac'] ?? null;
                             if (!empty($host->mac_address)) {
                                 \Log::info("Usando MAC del escaneo original para {$hostData['hostname']}: {$host->mac_address}");
                             }
                         }
-                        
                         $host->status = 'online';
                         $host->last_seen = now();
                         if ($groupId) $host->group_id = $groupId;
                         $host->save();
-                        if ($isNew) {
-                            $created++;
-                        } else {
-                            $updated++;
-                        }
+                        $created++;
                     } catch (\Exception $e) {
                         \Log::error('Error guardando host en scanNetwork (hostname): ' . $e->getMessage());
                         $errors++;
                     }
                 }
                 $msg = "Escaneo por hostname completado. {$created} equipos nuevos, {$updated} actualizados, {$errors} errores.";
+                if (count($duplicados) > 0) {
+                    $msg .= " Los siguientes hostnames ya existían y no se crearon: " . implode(', ', $duplicados);
+                    return redirect()->route('monitor.index')->with('warning', $msg);
+                }
                 return redirect()->route('monitor.index')->with('success', $msg);
             }
 
