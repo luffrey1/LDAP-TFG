@@ -41,6 +41,15 @@
                         </div>
                     @endif
 
+                    @if(isset($group))
+                    <form action="{{ route('monitor.group.clean', $group->id) }}" method="POST" onsubmit="return confirm('¿Seguro que quieres borrar todos los equipos de esta clase?');">
+                        @csrf
+                        <button type="submit" class="btn btn-danger mb-3">
+                            <i class="fas fa-trash"></i> Limpiar clase (borrar todos los equipos)
+                        </button>
+                    </form>
+                    @endif
+
                     <div class="row">
                         <div class="col-md-6">
                             <div class="card mb-3">

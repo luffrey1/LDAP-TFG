@@ -1605,4 +1605,16 @@ class MonitorController extends Controller
             ], 500);
         }
     }
+
+    public function deleteAllHostsInGroup($groupId)
+    {
+        try {
+            $group = \App\Models\MonitorGroup::findOrFail($groupId);
+            $deleted = $group->hosts()->delete();
+            return redirect()->back()->with('success', "Se han eliminado $deleted equipos de la clase '{$group->name}'.");
+        } catch (\Exception $e) {
+            \Log::error('Error al limpiar clase: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Error al limpiar la clase: ' . $e->getMessage());
+        }
+    }
 }

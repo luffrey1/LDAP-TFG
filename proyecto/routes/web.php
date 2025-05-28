@@ -116,6 +116,8 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
         Route::put('/groups/{id}', [MonitorController::class, 'updateGroup'])->name('groups.update');
         Route::delete('/groups/{id}', [MonitorController::class, 'destroyGroup'])->name('groups.destroy');
         Route::get('/groups/{id}/wol', [MonitorController::class, 'wakeOnLanGroup'])->name('groups.wol');
+        Route::post('/monitor/group/{id}/clean', [\App\Http\Controllers\MonitorController::class, 'deleteAllHostsInGroup'])
+            ->name('monitor.group.clean');
     });
     
     // Gestión de usuarios LDAP - Accesible para todos los usuarios
