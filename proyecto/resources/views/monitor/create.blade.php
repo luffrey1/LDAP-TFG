@@ -206,6 +206,13 @@
 @section('scripts')
 <script>
 $(document).ready(function() {
+    // Configuración global de AJAX para incluir token CSRF
+    $.ajaxSetup({
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        }
+    });
+
     // Función para actualizar el estado del campo IP
     function updateIpField() {
         var tipo = $('input[name="tipo_host"]:checked').val();
@@ -269,6 +276,7 @@ $(document).ready(function() {
             },
             dataType: 'json',
             success: function(response) {
+                console.log("Respuesta de detección por hostname:", response);
                 if (response.success) {
                     // Actualizar campos con la información detectada
                     if (response.data.ip_address) {
@@ -285,7 +293,8 @@ $(document).ready(function() {
                     showDetectionError(response.message || 'No se pudo detectar el host');
                 }
             },
-            error: function(xhr) {
+            error: function(xhr, status, error) {
+                console.error("Error en detección por hostname:", error, xhr.responseText);
                 var errorMsg = 'Error al detectar el host';
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
@@ -316,6 +325,7 @@ $(document).ready(function() {
             },
             dataType: 'json',
             success: function(response) {
+                console.log("Respuesta de detección por IP:", response);
                 if (response.success) {
                     // Actualizar campos con la información detectada
                     if (response.data.hostname) {
@@ -332,7 +342,8 @@ $(document).ready(function() {
                     showDetectionError(response.message || 'No se pudo detectar el host');
                 }
             },
-            error: function(xhr) {
+            error: function(xhr, status, error) {
+                console.error("Error en detección por IP:", error, xhr.responseText);
                 var errorMsg = 'Error al detectar el host';
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
@@ -343,8 +354,15 @@ $(document).ready(function() {
     }
 
     // Asignar eventos a los botones de detección
-    $('#btn-detect-host').on('click', detectHostByHostname);
-    $('#btn-detect-ip').on('click', detectHostByIp);
+    $('#btn-detect-host').on('click', function(e) {
+        e.preventDefault(); // Evitar que el botón envíe el formulario
+        detectHostByHostname();
+    });
+    
+    $('#btn-detect-ip').on('click', function(e) {
+        e.preventDefault(); // Evitar que el botón envíe el formulario
+        detectHostByIp();
+    });
 
     // También intentar detectar al perder el foco en los campos
     $('#hostname').on('blur', function() {

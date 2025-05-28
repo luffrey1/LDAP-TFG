@@ -261,39 +261,87 @@
 @section('scripts')
 <script>
     $(document).ready(function() {
+        // Configuración global de AJAX para incluir token CSRF
+        $.ajaxSetup({
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            }
+        });
+
         // Cerrar alertas automáticamente después de 5 segundos
         setTimeout(function() {
             $('.alert').alert('close');
         }, 5000);
 
         // Función para hacer ping a un host individual
-        $('.btn-ping').on('click', function() {
+        $('.btn-ping').on('click', function(e) {
+            e.preventDefault(); // Prevenir la navegación
+            
             const hostId = $(this).data('host-id');
             const row = $(this).closest('tr');
-            const statusBadge = row.find('.status-badge');
+            const statusCell = row.find('td:first-child');
+            const ipCell = row.find('td:nth-child(3)');
+            const macCell = row.find('td:nth-child(4)');
+            const lastSeenCell = row.find('td:nth-child(5)');
+            
+            // Guardar botón original para restaurarlo si hay error
+            const originalButton = $(this).html();
+            
             // Cambiar ícono a animación de carga
             $(this).html('<i class="fas fa-spinner fa-spin"></i>');
+            
+            // Mostrar indicador de carga en status
+            statusCell.html('<span class="badge bg-warning"><i class="fas fa-spinner fa-spin me-1"></i> Verificando...</span>');
+            
+            // Realizar la petición AJAX
             $.ajax({
                 url: "{{ route('monitor.ping', ['id' => '__id__']) }}".replace('__id__', hostId),
                 type: 'GET',
                 dataType: 'json',
-                beforeSend: function() {
-                    statusBadge.removeClass('badge-success badge-danger badge-warning');
-                    statusBadge.addClass('badge-warning');
-                    statusBadge.text('Verificando...');
-                },
                 success: function(response) {
-                    // Recargar la página para mostrar el estado actualizado
-                    location.reload();
-                },
-                error: function(xhr) {
-                    console.error('Error al hacer ping:', xhr.responseText);
-                    statusBadge.removeClass('badge-success badge-danger badge-warning');
-                    statusBadge.addClass('badge-danger');
-                    statusBadge.text('Error');
+                    console.log('Respuesta ping:', response);
+                    
+                    // Actualizar estado del host
+                    if (response.status === 'online') {
+                        statusCell.html('<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> En línea</span>');
+                        
+                        // Actualizar IP si está en la respuesta
+                        if (response.ip) {
+                            ipCell.text(response.ip);
+                        }
+                        
+                        // Actualizar MAC si está en la respuesta
+                        if (response.mac) {
+                            macCell.html('<span class="text-success"><i class="fas fa-check-circle"></i> ' + response.mac + '</span>');
+                        }
+                        
+                        // Actualizar último visto
+                        if (response.last_seen) {
+                            lastSeenCell.text(response.last_seen);
+                        }
+                        
+                        // Mostrar notificación de éxito
+                        toastr.success('Host ' + row.find('td:nth-child(2)').text() + ' está en línea');
+                    } else {
+                        statusCell.html('<span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i> Desconectado</span>');
+                        // Mostrar notificación
+                        toastr.warning('Host ' + row.find('td:nth-child(2)').text() + ' está desconectado');
+                    }
+                    
                     // Restaurar ícono original
-                    row.find('.btn-ping').html('<i class="fas fa-sync"></i>');
-                    toastr.error('Error al hacer ping al host');
+                    $('.btn-ping[data-host-id="'+hostId+'"]').html('<i class="fas fa-exchange-alt"></i>');
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error al hacer ping:', error, xhr.responseText);
+                    
+                    // Restaurar estado original
+                    statusCell.html('<span class="badge bg-warning"><i class="fas fa-exclamation-circle me-1"></i> Error</span>');
+                    
+                    // Restaurar ícono original
+                    $('.btn-ping[data-host-id="'+hostId+'"]').html(originalButton);
+                    
+                    // Mostrar notificación de error
+                    toastr.error('Error al verificar el host: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Error de conexión'));
                 }
             });
         });
