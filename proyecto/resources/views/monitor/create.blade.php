@@ -81,7 +81,7 @@
                                             <i class="fas fa-network-wired"></i>
                                         </div>
                                     </div>
-                                    <input type="text" class="form-control @error('ip_address') is-invalid @enderror" id="ip_address" name="ip_address" value="{{ old('ip_address') }}" placeholder="192.168.1.10" required>
+                                    <input type="text" class="form-control @error('ip_address') is-invalid @enderror" id="ip_address" name="ip_address" value="{{ old('ip_address') }}" placeholder="192.168.1.10">
                                 </div>
                                 @error('ip_address')
                                     <div class="invalid-feedback">
@@ -175,7 +175,7 @@
 </section>
 @endsection
 
-
+@section('scripts')
 <script>
 $(document).ready(function() {
     // Función para actualizar el estado del campo IP
@@ -200,3 +200,4 @@ $(document).ready(function() {
     });
 });
 </script>
+@endsection
