@@ -153,17 +153,13 @@ def scan_hostnames():
     filas_raw = data.get('filas', list(range(1, 7)))
     dominio = data.get('dominio', 'tierno.es')
 
-    # Convertir a listas si son strings o arrays con strings
-    if isinstance(columnas_raw, list) and len(columnas_raw) == 1 and isinstance(columnas_raw[0], str):
-        columnas = [c.strip() for c in columnas_raw[0].split(',')]
-    elif isinstance(columnas_raw, str):
+    # Convertir a listas si son strings
+    if isinstance(columnas_raw, str):
         columnas = [c.strip() for c in columnas_raw.split(',')]
     else:
         columnas = columnas_raw
 
-    if isinstance(filas_raw, list) and len(filas_raw) == 1 and isinstance(filas_raw[0], str):
-        filas = [int(f.strip()) for f in filas_raw[0].split(',')]
-    elif isinstance(filas_raw, str):
+    if isinstance(filas_raw, str):
         filas = [int(f.strip()) for f in filas_raw.split(',')]
     else:
         filas = filas_raw
@@ -180,44 +176,44 @@ def scan_hostnames():
         try:
             logger.info(f"\nProbando hostname: {fqdn}")
             
-            # 1. Primero intentar resolver el hostname con IPv4
+            # 1. Hacer ping directamente al hostname
+            ping_ok = False
             try:
-                nslookup_cmd = ['nslookup', '-type=A', fqdn]
-                logger.debug(f"Ejecutando comando: {' '.join(nslookup_cmd)}")
-                nslookup_result = subprocess.run(nslookup_cmd,
-                                              stdout=subprocess.PIPE,
-                                              stderr=subprocess.PIPE,
-                                              text=True,
-                                              timeout=2)
-                logger.debug(f"Resultado de nslookup: {nslookup_result.stdout}")
-                
-                # Extraer la IP del resultado de nslookup
-                ip_match = re.search(r'Address: (\d+\.\d+\.\d+\.\d+)', nslookup_result.stdout)
-                if not ip_match:
-                    logger.warning(f"No se pudo resolver {fqdn} a IPv4")
-                    return
-                
-                ip = ip_match.group(1)
-                logger.info(f"IP resuelta: {ip}")
-                
-                # 2. Hacer ping a la IP resuelta
-                ping_ok = False
-                try:
-                    ping_cmd = ['ping', '-c', '2', '-W', '1', ip]
-                    logger.debug(f"Ejecutando comando: {' '.join(ping_cmd)}")
-                    result = subprocess.run(ping_cmd, 
-                                         stdout=subprocess.PIPE, 
-                                         stderr=subprocess.PIPE, 
-                                         text=True, 
-                                         timeout=3)
-                    ping_ok = (result.returncode == 0)
-                    logger.info(f"Ping a {ip}: {'exitoso' if ping_ok else 'fallido'}")
-                    logger.debug(f"Salida del ping: {result.stdout}")
-                except Exception as e:
-                    logger.error(f"Error en ping: {str(e)}")
-                    return
+                ping_cmd = ['ping', '-c', '2', '-W', '1', fqdn]
+                logger.debug(f"Ejecutando comando: {' '.join(ping_cmd)}")
+                result = subprocess.run(ping_cmd, 
+                                     stdout=subprocess.PIPE, 
+                                     stderr=subprocess.PIPE, 
+                                     text=True, 
+                                     timeout=3)
+                ping_ok = (result.returncode == 0)
+                logger.info(f"Ping a {fqdn}: {'exitoso' if ping_ok else 'fallido'}")
+                logger.debug(f"Salida del ping: {result.stdout}")
+            except Exception as e:
+                logger.error(f"Error en ping: {str(e)}")
+                return
 
-                if ping_ok:
+            if ping_ok:
+                # 2. Si el ping fue exitoso, obtener la IP usando host
+                try:
+                    host_cmd = ['host', fqdn]
+                    logger.debug(f"Ejecutando comando: {' '.join(host_cmd)}")
+                    host_result = subprocess.run(host_cmd, 
+                                              stdout=subprocess.PIPE, 
+                                              stderr=subprocess.PIPE, 
+                                              text=True, 
+                                              timeout=2)
+                    logger.debug(f"Resultado de host: {host_result.stdout}")
+                    
+                    # Extraer la IP del resultado de host
+                    ip_match = re.search(r'has address (\d+\.\d+\.\d+\.\d+)', host_result.stdout)
+                    if not ip_match:
+                        logger.warning(f"No se pudo extraer la IP del resultado de host")
+                        return
+                    
+                    ip = ip_match.group(1)
+                    logger.info(f"IP obtenida: {ip}")
+
                     # 3. Obtener la MAC usando arp-scan
                     mac = None
                     try:
@@ -255,14 +251,12 @@ def scan_hostnames():
 
                     logger.info(f"Host {fqdn} encontrado - IP: {ip}, MAC: {mac}")
                     resultados.append({'hostname': fqdn, 'ip': ip, 'mac': mac})
-                else:
-                    logger.warning(f"Host {fqdn} no responde al ping")
-            except Exception as e:
-                logger.error(f"Error en resolución DNS: {str(e)}")
-                return
+                except Exception as e:
+                    logger.error(f"Error obteniendo IP o MAC: {str(e)}")
+            else:
+                logger.warning(f"Host {fqdn} no responde al ping")
         except Exception as e:
             logger.error(f"Error checking host {fqdn}: {str(e)}")
-            pass
 
     threads = []
     for col in columnas:
