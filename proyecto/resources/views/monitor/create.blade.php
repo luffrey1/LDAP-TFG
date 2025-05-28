@@ -35,6 +35,17 @@
                             </div>
                         @endif
 
+                        @if(session('success'))
+                            <div class="alert alert-success alert-dismissible show fade">
+                                <div class="alert-body">
+                                    <button class="close" data-dismiss="alert">
+                                        <span>&times;</span>
+                                    </button>
+                                    {{ session('success') }}
+                                </div>
+                            </div>
+                        @endif
+
                         <div class="form-group">
                             <label>Tipo de Configuración</label>
                             <div class="selectgroup w-100">
@@ -51,7 +62,6 @@
 
                         <form id="host-form" action="{{ route('monitor.store') }}" method="POST">
                             @csrf
-                            <input type="hidden" name="detected" id="detected" value="0">
                             
                             <div class="form-group">
                                 <label for="hostname">Nombre del Host <span class="text-danger">*</span></label>
@@ -121,10 +131,6 @@
                                     </select>
                                 </div>
                                 <div class="form-text text-muted">Seleccione el grupo/aula al que pertenece este equipo</div>
-                            </div>
-
-                            <div class="alert alert-info detection-status d-none">
-                                <div class="detection-message"></div>
                             </div>
 
                             <div class="card-footer text-right">
