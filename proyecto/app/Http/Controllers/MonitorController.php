@@ -68,20 +68,13 @@ class MonitorController extends Controller
             'tipo_host' => 'required|in:dhcp,fija',
             'ip_address' => 'required_if:tipo_host,fija|nullable|ip',
             'mac_address' => 'nullable|string|max:17',
-            'descripcion' => 'nullable|string|max:255',
-            'estado' => 'required|in:activo,inactivo',
-            'grupo' => 'nullable|exists:grupos,id'
+            'description' => 'nullable|string|max:255',
+            'group_id' => 'nullable|exists:monitor_groups,id'
         ]);
 
         try {
             // Obtener la URL del microservicio desde la configuración
             $scannerUrl = config('services.macscanner.url', 'http://172.20.0.6:5000');
-            
-            // Preparar datos para el escaneo
-            $scanData = [
-                'hostname' => $request->hostname,
-                'ip_address' => $request->ip_address
-            ];
             
             // Intentar obtener la MAC
             $macAddress = null;
@@ -122,26 +115,34 @@ class MonitorController extends Controller
             }
             
             // Crear el host
-            $host = Host::create([
-                'hostname' => $request->hostname,
-                'ip_address' => $request->ip_address,
-                'mac_address' => $macAddress,
-                'tipo_host' => $request->tipo_host,
-                'descripcion' => $request->descripcion,
-                'estado' => $request->estado,
-                'grupo_id' => $request->grupo,
-                'ultima_deteccion' => now(),
-                'estado_deteccion' => $detectionStatus,
-                'mensaje_deteccion' => $detectionMessage
-            ]);
+            $host = new MonitorHost();
+            $host->hostname = preg_replace('/\.tierno\.es$/i', '', $request->hostname);
+            $host->ip_address = $request->ip_address;
+            $host->mac_address = $macAddress;
+            $host->description = $request->description;
+            $host->status = 'unknown';
+            $host->created_by = Auth::id();
             
             // Asignar grupo automáticamente si no se especificó uno
-            if (!$request->grupo) {
-                $this->asignarGrupoAutomatico($host);
+            if (preg_match('/^(B[0-9]{2})-/', $host->hostname, $matches)) {
+                $nombreGrupo = $matches[1];
+                $grupoDetectado = MonitorGroup::firstOrCreate(
+                    ['name' => $nombreGrupo],
+                    [
+                        'description' => 'Aula ' . $nombreGrupo,
+                        'type' => 'classroom',
+                        'created_by' => Auth::id()
+                    ]
+                );
+                $host->group_id = $grupoDetectado->id;
+            } else {
+                $host->group_id = $request->group_id;
             }
             
+            $host->save();
+            
             return redirect()->route('monitor.index')
-                ->with('success', 'Host creado correctamente. ' . $detectionMessage);
+                ->with('success', "Host '{$host->hostname}' añadido correctamente. " . $detectionMessage);
                 
         } catch (\Exception $e) {
             \Log::error('Error al crear host: ' . $e->getMessage());
