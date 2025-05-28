@@ -2,6 +2,8 @@
 
 ## Tareas Inmediatas
 - **Revisar colores en toda la aplicación..**
+**quitar seccion de gestion academica y adaptar los csv con contraseña en gestion de usuarios**
+**que los logs de usuarios se guarden bien en la database**
 ### General
 -**✅ Al importar de archivo(para alumnos), generar contraseñas aleatorias en JS y mostrarlas en tabla**
 --esto habia que eliminar lo de alumnos y ponerlo directamente en gestion de usuarios y tambien importar profesores por csv a poder ser si se puede 
