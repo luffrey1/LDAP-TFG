@@ -89,8 +89,16 @@ class MonitorController extends Controller
 
             // Intentar con el hostname completo (incluyendo .tierno.es)
             $hostnameCompleto = !str_contains($hostname, '.') ? $hostname . '.tierno.es' : $hostname;
+            
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 5,  // 5 segundos de timeout
+                    'ignore_errors' => true
+                ]
+            ]);
+            
             $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostnameCompleto);
-            $response = @file_get_contents($pythonServiceUrl);
+            $response = @file_get_contents($pythonServiceUrl, false, $context);
             
             if ($response !== false) {
                 $data = json_decode($response, true);
@@ -171,10 +179,23 @@ class MonitorController extends Controller
             $host = MonitorHost::findOrFail($id);
             $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
             
-            // Intentar primero con el hostname
-            $hostnameCompleto = !str_contains($host->hostname, '.') ? $host->hostname . '.tierno.es' : $host->hostname;
-            $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostnameCompleto);
-            $response = @file_get_contents($pythonServiceUrl);
+            // Si el host pertenece al grupo de infraestructura, usar IP
+            if ($host->group && $host->group->type === 'infrastructure') {
+                $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($host->ip_address);
+            } else {
+                // Para el resto, usar hostname
+                $hostnameCompleto = !str_contains($host->hostname, '.') ? $host->hostname . '.tierno.es' : $host->hostname;
+                $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostnameCompleto);
+            }
+
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 5,  // 5 segundos de timeout
+                    'ignore_errors' => true
+                ]
+            ]);
+            
+            $response = @file_get_contents($pythonServiceUrl, false, $context);
             
             if ($response === false) {
                 Log::error('No se pudo conectar al microservicio Python para ping: ' . $pythonServiceUrl);
