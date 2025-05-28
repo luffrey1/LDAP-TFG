@@ -71,9 +71,9 @@ class MonitorController extends Controller
             $validated = $request->validate([
                 'hostname' => 'required|string|max:255',
                 'tipo_host' => 'required|in:fija,dhcp',
-                'ip_address' => 'nullable|ip',  // Quitamos required_if para que sea opcional
+                'ip_address' => 'nullable|ip',
                 'description' => 'nullable|string',
-                'group_id' => 'nullable|exists:groups,id'
+                'group_id' => 'nullable|exists:monitor_groups,id'
             ]);
 
             \Log::info('Validación pasada', ['validated' => $validated]);
@@ -138,11 +138,19 @@ class MonitorController extends Controller
 
             // Asignar grupo automáticamente si no se especificó
             if (empty($validated['group_id'])) {
-                // Intentar detectar el grupo por el prefijo del hostname
-                $prefix = strtoupper(substr($validated['hostname'], 0, 3));
-                $group = Group::where('prefix', $prefix)->first();
-                if ($group) {
-                    $host->group_id = $group->id;
+                // Intentar detectar el grupo por el prefijo del hostname (ej: B27)
+                if (preg_match('/^(B[0-9]{2})-/', $validated['hostname'], $matches)) {
+                    $nombreGrupo = $matches[1];
+                    $grupoDetectado = MonitorGroup::firstOrCreate(
+                        ['name' => $nombreGrupo],
+                        [
+                            'description' => 'Aula ' . $nombreGrupo,
+                            'type' => 'classroom',
+                            'created_by' => auth()->id()
+                        ]
+                    );
+                    $host->group_id = $grupoDetectado->id;
+                    \Log::info("Host {$host->hostname} asignado al grupo {$nombreGrupo} (ID: {$grupoDetectado->id})");
                 }
             } else {
                 $host->group_id = $validated['group_id'];
