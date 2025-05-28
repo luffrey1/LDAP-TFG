@@ -87,52 +87,105 @@ class MonitorController extends Controller
             $hostnameDetectado = $hostname;
             $status = 'offline';
 
-            // Usar el endpoint scan-hostnames que tiene la lógica completa
-            $macscannerUrl = rtrim($baseUrl, '/') . '/scan-hostnames';
-            $payload = [
-                'aula' => preg_replace('/-.*$/', '', $hostname), // Extraer el aula del hostname (ej: B27 de B27-A1)
-                'columnas' => [preg_replace('/^.*-/', '', $hostname)], // Extraer la columna (ej: A1 de B27-A1)
-                'filas' => [1], // No importa la fila para un solo host
-                'dominio' => 'tierno.es'
-            ];
-            
-            $options = [
-                'http' => [
-                    'header'  => "Content-type: application/json\r\n",
-                    'method'  => 'POST',
-                    'content' => json_encode($payload),
-                    'timeout' => 10
-                ]
-            ];
-            
-            $context = stream_context_create($options);
-            $response = @file_get_contents($macscannerUrl, false, $context);
-            
-            if ($response !== false) {
-                $data = json_decode($response, true);
-                if (isset($data['success']) && $data['success']) {
-                    // Buscar el host en los resultados
-                    foreach ($data['hosts'] as $hostData) {
-                        if (preg_replace('/\.tierno\.es$/i', '', $hostData['hostname']) === $hostname) {
-                            $mac = $hostData['mac'] ?? null;
-                            $ipDetectada = $hostData['ip'] ?? null;
-                            $hostnameDetectado = $hostData['hostname'];
+            // Usar método más efectivo para detección
+            if (preg_match('/^(B[0-9]{2})-([A-Z][0-9])$/i', $hostname, $matches)) {
+                $aula = $matches[1]; // B27
+                $columna = $matches[2]; // A1
+                
+                // Usar el endpoint scan-hostnames que tiene la lógica completa
+                $macscannerUrl = rtrim($baseUrl, '/') . '/scan-hostnames';
+                $payload = [
+                    'aula' => $aula,
+                    'columnas' => [$columna],
+                    'filas' => [1], // No importa la fila para un solo host
+                    'dominio' => 'tierno.es'
+                ];
+                
+                $options = [
+                    'http' => [
+                        'header'  => "Content-type: application/json\r\n",
+                        'method'  => 'POST',
+                        'content' => json_encode($payload),
+                        'timeout' => 10
+                    ]
+                ];
+                
+                $context = stream_context_create($options);
+                $response = @file_get_contents($macscannerUrl, false, $context);
+                
+                if ($response !== false) {
+                    $data = json_decode($response, true);
+                    if (isset($data['success']) && $data['success']) {
+                        // Buscar el host en los resultados
+                        foreach ($data['hosts'] as $hostData) {
+                            $foundHostname = preg_replace('/\.tierno\.es$/i', '', $hostData['hostname']);
+                            if (strcasecmp($foundHostname, $hostname) === 0) {
+                                $mac = $hostData['mac'] ?? null;
+                                $ipDetectada = $hostData['ip'] ?? null;
+                                $hostnameDetectado = $hostData['hostname'];
+                                $status = 'online';
+                                if (!empty($mac)) {
+                                    $macObtenida = true;
+                                    \Log::info("MAC detectada para hostname {$hostnameDetectado}: {$mac}");
+                                }
+                                if (!empty($ipDetectada)) {
+                                    \Log::info("IP detectada para hostname {$hostnameDetectado}: {$ipDetectada}");
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Si no se pudo detectar con el método anterior, probar con los métodos tradicionales
+            if (!$macObtenida) {
+                // Método alternativo: usar scan?hostname
+                $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostname);
+                $response = @file_get_contents($pythonServiceUrl);
+                
+                if ($response !== false) {
+                    $data = json_decode($response, true);
+                    if (isset($data['success']) && $data['success']) {
+                        $mac = $data['mac'] ?? null;
+                        $ipDetectada = $data['ip'] ?? null;
+                        $status = 'online';
+                        if (!empty($mac)) {
+                            $macObtenida = true;
+                            \Log::info("MAC detectada para hostname {$hostnameDetectado} (método 2): {$mac}");
+                        }
+                        if (!empty($ipDetectada)) {
+                            \Log::info("IP detectada para hostname {$hostnameDetectado} (método 2): {$ipDetectada}");
+                        }
+                    }
+                }
+                
+                // Si aún no se detecta y es un nombre sin dominio, intentar con .tierno.es
+                if (!$macObtenida && !str_contains($hostname, '.')) {
+                    $hostnameCompleto = $hostname . '.tierno.es';
+                    $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostnameCompleto);
+                    $response = @file_get_contents($pythonServiceUrl);
+                    
+                    if ($response !== false) {
+                        $data = json_decode($response, true);
+                        if (isset($data['success']) && $data['success']) {
+                            $mac = $data['mac'] ?? null;
+                            $ipDetectada = $data['ip'] ?? null;
                             $status = 'online';
                             if (!empty($mac)) {
                                 $macObtenida = true;
-                                \Log::info("MAC detectada para hostname {$hostnameDetectado}: {$mac}");
+                                \Log::info("MAC detectada para hostname {$hostnameCompleto} (método 3): {$mac}");
                             }
                             if (!empty($ipDetectada)) {
-                                \Log::info("IP detectada para hostname {$hostnameDetectado}: {$ipDetectada}");
+                                \Log::info("IP detectada para hostname {$hostnameCompleto} (método 3): {$ipDetectada}");
                             }
-                            break;
                         }
                     }
                 }
             }
 
             // Si no se pudo detectar y es DHCP, mostrar error
-            if ($request->tipo_host === 'dhcp' && !$macObtenida) {
+            if ($request->tipo_host === 'dhcp' && !$macObtenida && !$ipDetectada) {
                 \Log::warning('No se pudo detectar la información del host', ['hostname' => $hostnameDetectado]);
                 return redirect()->back()
                     ->withInput()
@@ -171,9 +224,10 @@ class MonitorController extends Controller
             $host->save();
             \Log::info('Host creado exitosamente', ['host' => $host->toArray()]);
 
+            // Redirigir a la página de índice con mensaje de éxito
             return redirect()->route('monitor.index')
                 ->with('success', 'Host ' . $host->hostname . ' agregado correctamente' . 
-                    ($request->tipo_host === 'dhcp' ? ' (IP y MAC detectadas automáticamente)' : ''));
+                    ($status === 'online' ? ' (IP: ' . $host->ip_address . ', MAC: ' . $host->mac_address . ')' : ''));
 
         } catch (\Exception $e) {
             \Log::error('Error al crear el host', [
@@ -1302,44 +1356,100 @@ class MonitorController extends Controller
             $hostnameDetectado = $hostname;
             $status = 'offline';
             $mensaje = '';
-            $data = null;
-            // 1. Intentar con el hostname tal cual
+            
+            // Si tenemos un hostname, usar el método de scan-hostnames (como en scanNetwork)
             if (!empty($hostname)) {
-                $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostname);
-                $response = @file_get_contents($pythonServiceUrl);
-                if ($response !== false) {
-                    $data = json_decode($response, true);
-                    if (isset($data['success']) && $data['success']) {
-                        $mac = $data['mac'] ?? null;
-                        $ipDetectada = $data['ip'] ?? $ip;
-                        $hostnameDetectado = $hostname;
-                        $status = 'online';
-                        if (!empty($mac)) {
-                            $macObtenida = true;
+                // Usar el endpoint scan-hostnames que tiene la lógica completa (como en la función store y scanNetwork)
+                $macscannerUrl = rtrim($baseUrl, '/') . '/scan-hostnames';
+                
+                // Verificar si el hostname sigue el patrón B##-X# (como B27-A1)
+                if (preg_match('/^(B[0-9]{2})-([A-Z][0-9])$/i', $hostname, $matches)) {
+                    $aula = $matches[1]; // B27
+                    $columna = $matches[2]; // A1
+                    
+                    $payload = [
+                        'aula' => $aula,
+                        'columnas' => [$columna],
+                        'filas' => [1], // No importa la fila para un solo host
+                        'dominio' => 'tierno.es'
+                    ];
+                    
+                    $options = [
+                        'http' => [
+                            'header'  => "Content-type: application/json\r\n",
+                            'method'  => 'POST',
+                            'content' => json_encode($payload),
+                            'timeout' => 10
+                        ]
+                    ];
+                    
+                    $context = stream_context_create($options);
+                    $response = @file_get_contents($macscannerUrl, false, $context);
+                    
+                    if ($response !== false) {
+                        $data = json_decode($response, true);
+                        if (isset($data['success']) && $data['success']) {
+                            // Buscar el host en los resultados
+                            foreach ($data['hosts'] as $hostData) {
+                                $foundHostname = preg_replace('/\.tierno\.es$/i', '', $hostData['hostname']);
+                                if (strcasecmp($foundHostname, $hostname) === 0) {
+                                    $mac = $hostData['mac'] ?? null;
+                                    $ipDetectada = $hostData['ip'] ?? null;
+                                    $hostnameDetectado = $hostData['hostname'];
+                                    $status = 'online';
+                                    if (!empty($mac)) {
+                                        $macObtenida = true;
+                                        \Log::info("MAC detectada para hostname {$hostnameDetectado}: {$mac}");
+                                    }
+                                    if (!empty($ipDetectada)) {
+                                        \Log::info("IP detectada para hostname {$hostnameDetectado}: {$ipDetectada}");
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Si no se obtuvo con el método anterior o no era un formato estándar, probar con los métodos tradicionales
+                if (!$macObtenida) {
+                    // 1. Intentar con el hostname tal cual
+                    $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostname);
+                    $response = @file_get_contents($pythonServiceUrl);
+                    if ($response !== false) {
+                        $data = json_decode($response, true);
+                        if (isset($data['success']) && $data['success']) {
+                            $mac = $data['mac'] ?? null;
+                            $ipDetectada = $data['ip'] ?? null;
+                            $status = 'online';
+                            if (!empty($mac)) {
+                                $macObtenida = true;
+                            }
+                        }
+                    }
+                    
+                    // 2. Si no se obtuvo la MAC y el hostname no tiene punto, intentar con .tierno.es
+                    if (!$macObtenida && !str_contains($hostname, '.')) {
+                        $hostnameCompleto = $hostname . '.tierno.es';
+                        $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostnameCompleto);
+                        $response = @file_get_contents($pythonServiceUrl);
+                        if ($response !== false) {
+                            $data = json_decode($response, true);
+                            if (isset($data['success']) && $data['success']) {
+                                $mac = $data['mac'] ?? null;
+                                $ipDetectada = $data['ip'] ?? null;
+                                $status = 'online';
+                                if (!empty($mac)) {
+                                    $macObtenida = true;
+                                }
+                            }
                         }
                     }
                 }
             }
-            // 2. Si no se obtuvo la MAC y el hostname no tiene punto, intentar con .tierno.es
-            if (!$macObtenida && !empty($hostname) && !str_contains($hostname, '.')) {
-                $hostnameCompleto = $hostname . '.tierno.es';
-                $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostnameCompleto);
-                $response = @file_get_contents($pythonServiceUrl);
-                if ($response !== false) {
-                    $data = json_decode($response, true);
-                    if (isset($data['success']) && $data['success']) {
-                        $mac = $data['mac'] ?? null;
-                        $ipDetectada = $data['ip'] ?? $ip;
-                        $hostnameDetectado = $hostnameCompleto;
-                        $status = 'online';
-                        if (!empty($mac)) {
-                            $macObtenida = true;
-                        }
-                    }
-                }
-            }
-            // 3. Si no se obtuvo la MAC, intentar con IP
-            if (!$macObtenida && !empty($ip)) {
+            
+            // 3. Si no se obtuvo la MAC o no teníamos hostname, intentar con IP
+            if ((!$macObtenida || empty($hostname)) && !empty($ip)) {
                 $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($ip);
                 $response = @file_get_contents($pythonServiceUrl);
                 if ($response !== false) {
@@ -1355,13 +1465,15 @@ class MonitorController extends Controller
                     }
                 }
             }
+            
             // 4. Si no se obtuvo la MAC, usar la MAC de la respuesta original si existe
             if (!$macObtenida && isset($data) && !empty($data['mac'])) {
                 $mac = $data['mac'];
                 $macObtenida = true;
             }
+            
             // 5. Devolver resultado
-            if ($macObtenida) {
+            if ($macObtenida || !empty($ipDetectada)) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Host detectado correctamente',
@@ -1373,6 +1485,7 @@ class MonitorController extends Controller
                     ]
                 ]);
             }
+            
             // Si llegamos aquí, no pudimos detectar el host
             $sugerencia = '¿Está encendido y conectado a la red? Prueba a escribir el hostname completo (ej: B27-A9.tierno.es) o revisa la IP.';
             return response()->json([

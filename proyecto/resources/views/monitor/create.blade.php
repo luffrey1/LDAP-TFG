@@ -46,6 +46,12 @@
                             </div>
                         @endif
 
+                        <div id="detection-alert" class="alert alert-info d-none">
+                            <div class="alert-body">
+                                <i class="fas fa-spinner fa-spin mr-2"></i> <span id="detection-message">Detectando información del host...</span>
+                            </div>
+                        </div>
+
                         <form id="host-form" action="{{ route('monitor.store') }}" method="POST">
                             @csrf
                             
@@ -65,12 +71,20 @@
 
                             <div class="form-group">
                                 <label for="hostname">Nombre del Host <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control @error('hostname') is-invalid @enderror" id="hostname" name="hostname" value="{{ old('hostname') }}" required>
+                                <div class="input-group">
+                                    <input type="text" class="form-control @error('hostname') is-invalid @enderror" id="hostname" name="hostname" value="{{ old('hostname') }}" required>
+                                    <div class="input-group-append">
+                                        <button class="btn btn-primary" type="button" id="btn-detect-host">
+                                            <i class="fas fa-search"></i> Detectar
+                                        </button>
+                                    </div>
+                                </div>
                                 @error('hostname')
                                     <div class="invalid-feedback">
                                         {{ $message }}
                                     </div>
                                 @enderror
+                                <small class="form-text text-muted">Ejemplo: B27-A1 o B27-A1.tierno.es</small>
                             </div>
 
                             <div class="form-group ip-field">
@@ -82,6 +96,11 @@
                                         </div>
                                     </div>
                                     <input type="text" class="form-control @error('ip_address') is-invalid @enderror" id="ip_address" name="ip_address" value="{{ old('ip_address') }}" placeholder="192.168.1.10">
+                                    <div class="input-group-append">
+                                        <button class="btn btn-primary" type="button" id="btn-detect-ip">
+                                            <i class="fas fa-search"></i> Detectar
+                                        </button>
+                                    </div>
                                 </div>
                                 @error('ip_address')
                                     <div class="invalid-feedback">
@@ -167,6 +186,15 @@
                                 <li>Para equipos con DHCP, asegúrese de usar el nombre de host completo (incluyendo dominio si es necesario).</li>
                             </ul>
                         </div>
+
+                        <div class="alert alert-success">
+                            <p><strong>Nuevo: Detección automática</strong></p>
+                            <ul>
+                                <li>Haz clic en el botón "Detectar" junto al hostname para obtener automáticamente la IP y MAC.</li>
+                                <li>También puedes detectar por IP haciendo clic en el botón "Detectar" junto al campo IP.</li>
+                                <li>Si el hostname sigue un patrón como B27-A1, se asignará automáticamente al grupo/aula correspondiente.</li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -197,6 +225,138 @@ $(document).ready(function() {
     // Cambiar modo según tipo de host
     $('input[name="tipo_host"]').on('change', function() {
         updateIpField();
+    });
+
+    // Mostrar alerta de detección
+    function showDetectionAlert(message) {
+        $('#detection-message').text(message || 'Detectando información del host...');
+        $('#detection-alert').removeClass('d-none alert-danger alert-success').addClass('alert-info');
+        $('#detection-alert .fa-spinner').show();
+    }
+
+    // Actualizar alerta de detección con éxito
+    function showDetectionSuccess(message) {
+        $('#detection-message').text(message || 'Host detectado correctamente');
+        $('#detection-alert').removeClass('alert-info alert-danger').addClass('alert-success');
+        $('#detection-alert .fa-spinner').hide();
+    }
+
+    // Actualizar alerta de detección con error
+    function showDetectionError(message) {
+        $('#detection-message').text(message || 'No se pudo detectar el host');
+        $('#detection-alert').removeClass('alert-info alert-success').addClass('alert-danger');
+        $('#detection-alert .fa-spinner').hide();
+    }
+
+    // Función para detectar host por hostname
+    function detectHostByHostname() {
+        var hostname = $('#hostname').val().trim();
+        if (!hostname) {
+            showDetectionError('Debe ingresar un nombre de host para detectar');
+            return;
+        }
+
+        showDetectionAlert('Detectando información para el host: ' + hostname);
+        
+        var tipo = $('input[name="tipo_host"]:checked').val();
+        
+        $.ajax({
+            url: '{{ route("monitor.detect-host") }}',
+            type: 'POST',
+            data: {
+                hostname: hostname,
+                tipo: tipo
+            },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    // Actualizar campos con la información detectada
+                    if (response.data.ip_address) {
+                        $('#ip_address').val(response.data.ip_address);
+                    }
+                    if (response.data.mac_address) {
+                        $('#mac_address').val(response.data.mac_address);
+                    }
+                    
+                    showDetectionSuccess('Host detectado correctamente. IP: ' + 
+                        (response.data.ip_address || 'No detectada') + 
+                        ', MAC: ' + (response.data.mac_address || 'No detectada'));
+                } else {
+                    showDetectionError(response.message || 'No se pudo detectar el host');
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'Error al detectar el host';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMsg = xhr.responseJSON.message;
+                }
+                showDetectionError(errorMsg);
+            }
+        });
+    }
+
+    // Función para detectar host por IP
+    function detectHostByIp() {
+        var ip = $('#ip_address').val().trim();
+        if (!ip) {
+            showDetectionError('Debe ingresar una dirección IP para detectar');
+            return;
+        }
+
+        showDetectionAlert('Detectando información para la IP: ' + ip);
+        
+        var tipo = $('input[name="tipo_host"]:checked').val();
+        
+        $.ajax({
+            url: '{{ route("monitor.detect-host") }}',
+            type: 'POST',
+            data: {
+                ip_address: ip,
+                tipo: tipo
+            },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    // Actualizar campos con la información detectada
+                    if (response.data.hostname) {
+                        $('#hostname').val(response.data.hostname.replace('.tierno.es', ''));
+                    }
+                    if (response.data.mac_address) {
+                        $('#mac_address').val(response.data.mac_address);
+                    }
+                    
+                    showDetectionSuccess('Host detectado correctamente. Hostname: ' + 
+                        (response.data.hostname || 'No detectado') + 
+                        ', MAC: ' + (response.data.mac_address || 'No detectada'));
+                } else {
+                    showDetectionError(response.message || 'No se pudo detectar el host');
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = 'Error al detectar el host';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMsg = xhr.responseJSON.message;
+                }
+                showDetectionError(errorMsg);
+            }
+        });
+    }
+
+    // Asignar eventos a los botones de detección
+    $('#btn-detect-host').on('click', detectHostByHostname);
+    $('#btn-detect-ip').on('click', detectHostByIp);
+
+    // También intentar detectar al perder el foco en los campos
+    $('#hostname').on('blur', function() {
+        if ($(this).val().trim().length > 3) {
+            detectHostByHostname();
+        }
+    });
+
+    $('#ip_address').on('blur', function() {
+        if ($(this).val().trim().length > 7) {
+            detectHostByIp();
+        }
     });
 });
 </script>
