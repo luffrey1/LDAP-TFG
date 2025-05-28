@@ -307,10 +307,13 @@ document.addEventListener('DOMContentLoaded', function() {
             right: 'dayGridMonth,timeGridWeek,timeGridDay'
         },
         locale: 'es',
-        events: {!! json_encode($eventos ?? []) !!},
+        events: {!! json_encode($eventosFormateados ?? []) !!},
         height: 800,
         contentHeight: 800,
-        aspectRatio: 1.5
+        aspectRatio: 1.5,
+        editable: false,
+        selectable: true,
+        dayMaxEvents: true,
     });
     
     calendar.render();
