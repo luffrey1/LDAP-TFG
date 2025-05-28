@@ -189,9 +189,11 @@ class MensajeController extends Controller
                         MensajeAdjunto::create([
                             'mensaje_id' => $mensaje->id,
                             'nombre' => $file->getClientOriginalName(),
-                            'ruta' => $path,
+                            'nombre_original' => $file->getClientOriginalName(),
+                            'extension' => $file->getClientOriginalExtension(),
                             'tipo' => $file->getMimeType(),
-                            'tamaño' => $file->getSize()
+                            'tamaño' => $file->getSize(),
+                            'ruta' => $path
                         ]);
                     }
                 }
@@ -262,7 +264,7 @@ class MensajeController extends Controller
                         'email' => $mensajeObj->destinatario->email,
                     ]
                 ],
-                'adjuntos' => $mensajeObj->adjuntos->map(function($adjunto) {
+                'archivos' => $mensajeObj->adjuntos->map(function($adjunto) {
                     return [
                         'id' => $adjunto->id,
                         'nombre' => $adjunto->nombre,
@@ -385,7 +387,7 @@ class MensajeController extends Controller
     /**
      * Marcar un mensaje como destacado/no destacado
      */
-    public function toggleFavorite($id)
+    public function toggleStarred($id)
     {
         try {
             // Obtener el usuario autenticado
@@ -402,19 +404,27 @@ class MensajeController extends Controller
                     ->with('error', 'No tienes permiso para modificar este mensaje.');
             }
             
-            // Cambiar estado
+            // Cambiar estado de destacado
             $mensaje->destacado = !$mensaje->destacado;
             $mensaje->save();
             
             $estado = $mensaje->destacado ? 'destacado' : 'no destacado';
             Log::info('Mensaje marcado como ' . $estado . ': ' . $id);
             
+            if (request()->ajax()) {
+                return response()->json([
+                    'success' => true, 
+                    'message' => 'Mensaje marcado como ' . $estado,
+                    'estado' => $mensaje->destacado
+                ]);
+            }
+            
             return redirect()->back()
                 ->with('success', 'Mensaje marcado como ' . $estado . '.');
                 
         } catch (\Exception $e) {
-            Log::error('Error al actualizar estado destacado: ' . $e->getMessage());
-            return back()->with('error', 'Error al actualizar el mensaje: ' . $e->getMessage());
+            Log::error('Error al marcar mensaje como destacado: ' . $e->getMessage());
+            return back()->with('error', 'Error al modificar el mensaje: ' . $e->getMessage());
         }
     }
 

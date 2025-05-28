@@ -194,7 +194,7 @@
                     </div>
                     <div class="mb-3">
                         <label for="archivos" class="form-label">Adjuntar archivos</label>
-                        <input class="form-control" type="file" id="archivos" name="archivos[]" multiple>
+                        <input class="form-control" type="file" id="archivos" name="adjuntos[]" multiple>
                     </div>
                 </div>
                 <div class="modal-footer">
