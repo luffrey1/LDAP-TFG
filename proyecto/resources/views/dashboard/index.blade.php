@@ -90,14 +90,26 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Eventos Próximos</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800 counter">{{ $stats['eventos_proximos'] }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                <span class="counter">{{ $stats['eventos_proximos'] }}</span>
+                                <small class="text-muted ml-2">en los próximos 7 días</small>
+                            </div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-calendar-alt fa-2x text-gray-300"></i>
                         </div>
                     </div>
                     <div class="progress mt-3" style="height: 5px;">
-                        <div class="progress-bar bg-warning" role="progressbar" style="width: 65%" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100"></div>
+                        <div class="progress-bar bg-warning" role="progressbar" 
+                            style="width: {{ min(($stats['eventos_proximos'] / 10) * 100, 100) }}%" 
+                            aria-valuenow="{{ $stats['eventos_proximos'] }}" 
+                            aria-valuemin="0" 
+                            aria-valuemax="10">
+                        </div>
+                    </div>
+                    <div class="mt-2 text-xs text-muted">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        {{ $stats['eventos_proximos'] > 0 ? 'Tienes eventos programados' : 'No hay eventos próximos' }}
                     </div>
                 </div>
             </div>
