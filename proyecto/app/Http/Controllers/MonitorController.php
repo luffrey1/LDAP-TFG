@@ -126,8 +126,8 @@ class MonitorController extends Controller
                 }
             }
             
-            // 3. Si no se obtuvo la MAC, intentar con IP
-            if (!$macObtenida && !empty($request->ip_address)) {
+            // 3. Si no se obtuvo la MAC y es IP fija, intentar con IP
+            if (!$macObtenida && $request->tipo_host === 'fija' && !empty($request->ip_address)) {
                 $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($request->ip_address);
                 $response = @file_get_contents($pythonServiceUrl);
                 if ($response !== false) {
