@@ -178,17 +178,25 @@
 @section('scripts')
 <script>
 $(document).ready(function() {
-    // Cambiar modo según tipo de host
-    $('input[name="tipo_host"]').on('change', function() {
-        var tipo = $(this).val();
+    // Función para actualizar el estado del campo IP
+    function updateIpField() {
+        var tipo = $('input[name="tipo_host"]:checked').val();
         if (tipo === 'dhcp') {
             $('.ip-field').hide();
-            $('#ip_address').removeAttr('required');
+            $('#ip_address').prop('required', false);
             $('#ip_address').val('');
         } else {
             $('.ip-field').show();
-            $('#ip_address').attr('required', 'required');
+            $('#ip_address').prop('required', true);
         }
+    }
+
+    // Ejecutar al cargar la página
+    updateIpField();
+
+    // Cambiar modo según tipo de host
+    $('input[name="tipo_host"]').on('change', function() {
+        updateIpField();
     });
 });
 </script>
