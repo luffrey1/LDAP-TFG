@@ -249,29 +249,65 @@ class MonitorController extends Controller
         try {
             $host = MonitorHost::findOrFail($id);
             $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
-            
             Log::info("Iniciando ping para host ID {$id}: {$host->hostname} ({$host->ip_address})");
-            
-            // Variables para almacenar la información detectada
+
             $mac = null;
             $ipDetectada = null;
             $status = 'offline';
-            
-            // Verificar primero si el host responde a ping directamente desde PHP
+
             $hostnameCompleto = !str_contains($host->hostname, '.') ? $host->hostname . '.tierno.es' : $host->hostname;
-            Log::info("Ejecutando ping directo al hostname: {$hostnameCompleto}");
-            
+            Log::info("PING: Hostname completo: {$hostnameCompleto}");
+
+            // 1. Hacer ping
             $pingCommand = "ping -c 2 -W 1 " . escapeshellarg($hostnameCompleto);
-            Log::info("Comando: {$pingCommand}");
-            
             exec($pingCommand, $pingOutput, $pingReturnVal);
-            Log::info("Resultado ping directo: " . implode("\n", $pingOutput) . " (código: {$pingReturnVal})");
-            
+            Log::info("PING: Resultado: " . implode(" | ", $pingOutput) . " (código: {$pingReturnVal})");
             $pingSuccess = ($pingReturnVal === 0);
-            
+
             if ($pingSuccess) {
-                Log::info("¡Ping exitoso directo a {$hostnameCompleto}!");
                 $status = 'online';
+                Log::info("PING: Host responde a ping");
+
+                // 2. Intentar obtener la IP con gethostbyname (más fiable que host)
+                $ipByPhp = gethostbyname($hostnameCompleto);
+                if (filter_var($ipByPhp, FILTER_VALIDATE_IP) && $ipByPhp !== $hostnameCompleto) {
+                    $ipDetectada = $ipByPhp;
+                    Log::info("PING: IP detectada con gethostbyname: {$ipDetectada}");
+                }
+
+                // 3. Si no, intentar con host
+                if (!$ipDetectada) {
+                    $hostCommand = "host " . escapeshellarg($hostnameCompleto);
+                    exec($hostCommand, $hostOutput, $hostReturnVal);
+                    Log::info("PING: Resultado host: " . implode(" | ", $hostOutput));
+                    foreach ($hostOutput as $line) {
+                        if (preg_match('/has address (\d+\.\d+\.\d+\.\d+)/', $line, $matches)) {
+                            $ipDetectada = $matches[1];
+                            Log::info("PING: IP detectada con host: {$ipDetectada}");
+                            break;
+                        }
+                    }
+                }
+
+                // 4. Si no, intentar con nslookup
+                if (!$ipDetectada) {
+                    $nslookupCommand = "nslookup " . escapeshellarg($hostnameCompleto);
+                    exec($nslookupCommand, $nslookupOutput, $nslookupReturnVal);
+                    Log::info("PING: Resultado nslookup: " . implode(" | ", $nslookupOutput));
+                    foreach ($nslookupOutput as $line) {
+                        if (preg_match('/Address: (\d+\.\d+\.\d+\.\d+)/', $line, $matches)) {
+                            $ipDetectada = $matches[1];
+                            Log::info("PING: IP detectada con nslookup: {$ipDetectada}");
+                            break;
+                        }
+                    }
+                }
+
+                // 5. Si tenemos IP, intentar obtener la MAC
+                if ($ipDetectada) {
+                    // a) arp-scan
+                    $arpScanCommand = "arp-scan --interface=eth0 " . escapeshellarg($ipDetectada);
+                    exec($arpScanCommand, $arpScanOutput, $arpScanReturnVal);
                 
                 // Obtener la IP usando el comando host
                 $hostCommand = "host " . escapeshellarg($hostnameCompleto);
