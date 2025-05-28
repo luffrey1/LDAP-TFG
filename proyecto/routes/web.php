@@ -100,6 +100,9 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
         // Nuevas rutas de Wake-on-LAN
         Route::get('/{id}/wol', [MonitorController::class, 'wakeOnLan'])->name('wol');
         
+        // Ruta para detectar host por hostname o IP
+        Route::post('/detect-host', [MonitorController::class, 'detectHost'])->name('detect-host');
+        
         // Rutas de grupos
         Route::get('/groups', [MonitorController::class, 'groupsIndex'])->name('groups.index');
         Route::get('/groups/create', [MonitorController::class, 'createGroup'])->name('groups.create');

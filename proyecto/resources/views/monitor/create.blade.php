@@ -35,8 +35,24 @@
                             </div>
                         @endif
 
-                        <form action="{{ route('monitor.store') }}" method="POST">
+                        <div class="form-group">
+                            <label>Tipo de Configuración</label>
+                            <div class="selectgroup w-100">
+                                <label class="selectgroup-item">
+                                    <input type="radio" name="tipo_host" value="fija" class="selectgroup-input" checked>
+                                    <span class="selectgroup-button">IP Fija</span>
+                                </label>
+                                <label class="selectgroup-item">
+                                    <input type="radio" name="tipo_host" value="dhcp" class="selectgroup-input">
+                                    <span class="selectgroup-button">DHCP (Automático)</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <form id="host-form" action="{{ route('monitor.store') }}" method="POST">
                             @csrf
+                            <input type="hidden" name="detected" id="detected" value="0">
+                            
                             <div class="form-group">
                                 <label for="hostname">Nombre del Host <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control @error('hostname') is-invalid @enderror" id="hostname" name="hostname" value="{{ old('hostname') }}" required>
@@ -47,7 +63,7 @@
                                 @enderror
                             </div>
 
-                            <div class="form-group">
+                            <div class="form-group ip-field">
                                 <label for="ip_address">Dirección IP <span class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <div class="input-group-prepend">
@@ -67,13 +83,18 @@
 
                             <div class="form-group">
                                 <label for="mac_address">Dirección MAC</label>
-                                <input type="text" class="form-control @error('mac_address') is-invalid @enderror" id="mac_address" name="mac_address" value="{{ old('mac_address') }}" placeholder="00:11:22:33:44:55">
+                                <div class="input-group">
+                                    <input type="text" class="form-control @error('mac_address') is-invalid @enderror" id="mac_address" name="mac_address" value="{{ old('mac_address') }}" placeholder="00:11:22:33:44:55" readonly>
+                                    <div class="input-group-append">
+                                        <span class="input-group-text"><i class="fas fa-ethernet"></i></span>
+                                    </div>
+                                </div>
                                 @error('mac_address')
                                     <div class="invalid-feedback">
                                         {{ $message }}
                                     </div>
                                 @enderror
-                                <small class="form-text text-muted">Formato: 00:11:22:33:44:55</small>
+                                <small class="form-text text-muted">La MAC se detectará automáticamente</small>
                             </div>
 
                             <div class="form-group">
@@ -102,8 +123,20 @@
                                 <div class="form-text text-muted">Seleccione el grupo/aula al que pertenece este equipo</div>
                             </div>
 
+                            <div class="alert alert-info detection-status d-none">
+                                <div class="detection-message"></div>
+                            </div>
+
                             <div class="card-footer text-right">
-                                <button type="submit" class="btn btn-primary">Guardar</button>
+                                <button type="button" id="detect-button" class="btn btn-info">
+                                    <i class="fas fa-search"></i> Detectar Host
+                                </button>
+                                <button type="submit" id="save-button" class="btn btn-primary d-none">
+                                    <i class="fas fa-save"></i> Guardar
+                                </button>
+                                <button type="submit" id="save-anyway-button" class="btn btn-warning d-none">
+                                    <i class="fas fa-exclamation-triangle"></i> Guardar Sin Comprobar
+                                </button>
                                 <a href="{{ route('monitor.index') }}" class="btn btn-secondary">Cancelar</a>
                             </div>
                         </form>
@@ -118,33 +151,21 @@
                     </div>
                     <div class="card-body">
                         <div class="alert alert-info">
-                            <p><strong>Tips para agregar hosts:</strong></p>
+                            <p><strong>Tipos de configuración:</strong></p>
                             <ul>
-                                <li>Asegúrate de que el host esté encendido y conectado a la red.</li>
-                                <li>Si no conoces la dirección IP, puedes usar la función de <a href="{{ route('monitor.scan') }}">Escaneo de Red</a>.</li>
+                                <li><strong>IP Fija:</strong> Se especifica manualmente la IP y el hostname.</li>
+                                <li><strong>DHCP:</strong> Solo se especifica el hostname y la IP se detecta automáticamente.</li>
+                                <li>En ambos casos, la dirección MAC se detectará automáticamente.</li>
                             </ul>
                         </div>
 
-                        <div class="card card-warning">
-                            <div class="card-header">
-                                <h4>Verificar Conectividad</h4>
-                            </div>
-                            <div class="card-body">
-                                <div class="form-group">
-                                    <label for="test_ip">Dirección IP a verificar</label>
-                                    <div class="input-group">
-                                        <input type="text" class="form-control" id="test_ip" name="test_ip" placeholder="192.168.1.10">
-                                        <div class="input-group-append">
-                                            <button class="btn btn-primary" type="button" id="ping_test">Verificar</button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div id="ping_result" class="mt-3 d-none">
-                                    <div class="alert" id="ping_alert">
-                                        <div id="ping_message"></div>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="alert alert-warning">
+                            <p><strong>Importante:</strong></p>
+                            <ul>
+                                <li>El equipo debe estar encendido y conectado a la red para detectar su información.</li>
+                                <li>Si no puede detectarse, puede guardar la información básica sin verificar.</li>
+                                <li>Para equipos con DHCP, asegúrese de usar el nombre de host completo (incluyendo dominio si es necesario).</li>
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -157,47 +178,127 @@
 @section('js')
 <script>
 $(document).ready(function() {
-    // Copiar IP de prueba al formulario
-    $('#test_ip').on('input', function() {
-        $('#ip_address').val($(this).val());
+    // Cambiar modo según tipo de host
+    $('input[name="tipo_host"]').on('change', function() {
+        var tipo = $(this).val();
+        if (tipo === 'dhcp') {
+            $('.ip-field').hide();
+            $('#ip_address').removeAttr('required');
+        } else {
+            $('.ip-field').show();
+            $('#ip_address').attr('required', 'required');
+        }
+        
+        // Resetear detección
+        resetDetection();
     });
     
-    // Prueba de ping
-    $('#ping_test').on('click', function() {
-        var ip = $('#test_ip').val();
-        if (!ip) {
-            alert('Por favor ingresa una dirección IP para verificar');
+    // Función para resetear estado de detección
+    function resetDetection() {
+        $('#detected').val('0');
+        $('.detection-status').addClass('d-none');
+        $('#save-button').addClass('d-none');
+        $('#save-anyway-button').addClass('d-none');
+        $('#mac_address').val('');
+    }
+    
+    // Cuando se cambian los campos clave, resetear la detección
+    $('#hostname, #ip_address').on('input', function() {
+        resetDetection();
+    });
+    
+    // Detectar host
+    $('#detect-button').on('click', function() {
+        var tipo = $('input[name="tipo_host"]:checked').val();
+        var hostname = $('#hostname').val();
+        var ip = $('#ip_address').val();
+        
+        // Validar campos según tipo
+        if (tipo === 'dhcp' && !hostname) {
+            alert('Por favor ingrese el nombre del host');
             return;
         }
         
-        $('#ping_result').removeClass('d-none');
-        $('#ping_alert').removeClass('alert-success alert-danger').addClass('alert-warning');
-        $('#ping_message').html('<i class="fas fa-spinner fa-spin"></i> Verificando conectividad...');
+        if (tipo === 'fija' && !ip) {
+            alert('Por favor ingrese la dirección IP');
+            return;
+        }
         
-        // Simulación de ping (reemplazar con AJAX real)
-        setTimeout(function() {
-            // Validación simple de IP
-            var ipRegex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-            
-            if (!ipRegex.test(ip)) {
-                $('#ping_alert').removeClass('alert-warning alert-success').addClass('alert-danger');
-                $('#ping_message').html('<i class="fas fa-times"></i> La dirección IP no es válida');
-                return;
+        // Mostrar estado de detección
+        $('.detection-status').removeClass('d-none alert-danger alert-success').addClass('alert-info');
+        $('.detection-message').html('<i class="fas fa-spinner fa-spin"></i> Detectando información del host...');
+        
+        // Llamar a la API para detectar el host
+        $.ajax({
+            url: '{{ route("monitor.detect-host") }}',
+            type: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}',
+                hostname: hostname,
+                ip_address: ip,
+                tipo: tipo
+            },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    // Actualizar campos con la información detectada
+                    if (response.data.hostname) {
+                        $('#hostname').val(response.data.hostname);
+                    }
+                    
+                    if (response.data.ip_address) {
+                        $('#ip_address').val(response.data.ip_address);
+                    }
+                    
+                    if (response.data.mac_address) {
+                        $('#mac_address').val(response.data.mac_address);
+                    }
+                    
+                    // Marcar como detectado
+                    $('#detected').val('1');
+                    $('.detection-status').removeClass('alert-info alert-danger').addClass('alert-success');
+                    $('.detection-message').html('<i class="fas fa-check"></i> ' + response.message + '. Host detectado correctamente.');
+                    
+                    // Mostrar botón de guardar
+                    $('#save-button').removeClass('d-none');
+                    $('#save-anyway-button').addClass('d-none');
+                } else {
+                    // Mostrar error
+                    $('.detection-status').removeClass('alert-info alert-success').addClass('alert-danger');
+                    $('.detection-message').html('<i class="fas fa-times"></i> ' + response.message);
+                    
+                    // Mostrar botón de guardar sin comprobar
+                    $('#save-button').addClass('d-none');
+                    $('#save-anyway-button').removeClass('d-none');
+                }
+            },
+            error: function(xhr) {
+                var message = 'Error al detectar el host';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    message = xhr.responseJSON.message;
+                }
+                
+                $('.detection-status').removeClass('alert-info alert-success').addClass('alert-danger');
+                $('.detection-message').html('<i class="fas fa-times"></i> ' + message);
+                
+                // Mostrar botón de guardar sin comprobar
+                $('#save-button').addClass('d-none');
+                $('#save-anyway-button').removeClass('d-none');
             }
-            
-            // Aquí iría una llamada AJAX real para probar la conectividad
-            // Por ahora simulamos un resultado aleatorio
-            var success = Math.random() > 0.5;
-            
-            if (success) {
-                $('#ping_alert').removeClass('alert-warning alert-danger').addClass('alert-success');
-                $('#ping_message').html('<i class="fas fa-check"></i> Host alcanzable. Conectividad correcta.');
-                $('#ip_address').val(ip);
-            } else {
-                $('#ping_alert').removeClass('alert-warning alert-success').addClass('alert-danger');
-                $('#ping_message').html('<i class="fas fa-times"></i> No se pudo conectar con el host. Verifica que esté encendido y en la misma red.');
-            }
-        }, 1500);
+        });
+    });
+    
+    // Al enviar el formulario, validar si se ha detectado
+    $('#host-form').on('submit', function(e) {
+        var detected = $('#detected').val();
+        var submitButton = $(document.activeElement);
+        
+        // Si no se ha detectado y no se está usando el botón de guardar sin comprobar
+        if (detected !== '1' && !submitButton.is('#save-anyway-button')) {
+            e.preventDefault();
+            alert('Por favor, detecte la información del host antes de guardar');
+            return false;
+        }
     });
 });
 </script>
