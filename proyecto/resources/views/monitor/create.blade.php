@@ -276,13 +276,14 @@ $(document).ready(function() {
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     message = xhr.responseJSON.message;
                 }
-                
-                $('.detection-status').removeClass('alert-info alert-success').addClass('alert-danger');
-                $('.detection-message').html('<i class="fas fa-times"></i> ' + message);
-                
-                // Mostrar botón de guardar sin comprobar
-                $('#save-button').addClass('d-none');
-                $('#save-anyway-button').removeClass('d-none');
+                // Mantener el spinner unos segundos antes de mostrar el error
+                setTimeout(function() {
+                    $('.detection-status').removeClass('alert-info alert-success').addClass('alert-danger');
+                    $('.detection-message').html('<i class="fas fa-times"></i> ' + message + '<br><small>¿Está encendido y conectado a la red? Prueba a escribir el hostname completo (ej: B27-A9.tierno.es) o revisa la IP.</small>');
+                    // Mostrar botón de guardar sin comprobar
+                    $('#save-button').addClass('d-none');
+                    $('#save-anyway-button').removeClass('d-none');
+                }, 1200);
             }
         });
     });

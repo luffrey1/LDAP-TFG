@@ -1128,10 +1128,16 @@ class MonitorController extends Controller
             ];
             
             // Si es tipo DHCP, intentamos con hostname primero
-            if ($request->tipo == 'dhcp' && !empty($request->hostname)) {
-                $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($request->hostname);
+            $hostname = $request->hostname;
+            if ($request->tipo == 'dhcp' && !empty($hostname)) {
+                // Si el hostname no tiene dominio, añadirlo
+                if (!str_contains($hostname, '.')) {
+                    $hostnameCompleto = $hostname . '.tierno.es';
+                } else {
+                    $hostnameCompleto = $hostname;
+                }
+                $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostnameCompleto);
                 $response = @file_get_contents($pythonServiceUrl);
-                
                 if ($response !== false) {
                     $data = json_decode($response, true);
                     if (isset($data['success']) && $data['success']) {
@@ -1139,7 +1145,7 @@ class MonitorController extends Controller
                             'success' => true,
                             'message' => 'Host detectado por hostname',
                             'data' => [
-                                'hostname' => $request->hostname,
+                                'hostname' => $hostnameCompleto,
                                 'ip_address' => $data['ip'] ?? null,
                                 'mac_address' => $data['mac'] ?? null,
                                 'status' => 'online'
@@ -1149,12 +1155,10 @@ class MonitorController extends Controller
                     }
                 }
             }
-            
             // Si es tipo IP fija o falló la detección por hostname, intentamos con IP
             if (!empty($request->ip_address)) {
                 $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($request->ip_address);
                 $response = @file_get_contents($pythonServiceUrl);
-                
                 if ($response !== false) {
                     $data = json_decode($response, true);
                     if (isset($data['success']) && $data['success']) {
@@ -1173,10 +1177,10 @@ class MonitorController extends Controller
                     }
                 }
             }
-            
             // Si llegamos aquí, no pudimos detectar el host
+            $sugerencia = '¿Está encendido y conectado a la red? Prueba a escribir el hostname completo (ej: B27-A9.tierno.es) o revisa la IP.';
+            $result['message'] = 'No se detectó el host. ' . $sugerencia;
             return response()->json($result, 404);
-            
         } catch (\Exception $e) {
             Log::error('Error en detectHost: ' . $e->getMessage());
             return response()->json([
