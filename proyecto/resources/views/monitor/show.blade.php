@@ -201,6 +201,166 @@
                             </div>
                         </div>
                     </div>
+                    <div class="col-md-12 col-sm-12 col-12 mb-4">
+                        <div class="card text-center">
+                            <div class="card-header bg-secondary text-white">Procesos principales</div>
+                            <div class="card-body">
+                                @if(isset($host->system_info['processes']) && is_array($host->system_info['processes']) && count($host->system_info['processes']) > 0)
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>PID</th>
+                                                <th>Nombre</th>
+                                                <th>Usuario</th>
+                                                <th>CPU (%)</th>
+                                                <th>RAM (%)</th>
+                                                <th>Estado</th>
+                                                <th>Uptime</th>
+                                                <th>Comando</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        @foreach($host->system_info['processes'] as $proc)
+                                            <tr>
+                                                <td>{{ $proc['pid'] }}</td>
+                                                <td>{{ $proc['name'] }}</td>
+                                                <td>{{ $proc['user'] }}</td>
+                                                <td>{{ $proc['cpu_percent'] }}</td>
+                                                <td>{{ $proc['memory_percent'] }}</td>
+                                                <td>{{ $proc['status'] }}</td>
+                                                <td>{{ $proc['uptime'] }}</td>
+                                                <td class="text-truncate" style="max-width:200px;">{{ $proc['cmdline'] }}</td>
+                                            </tr>
+                                        @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                                @else
+                                <div class="text-muted">No hay información de procesos disponible.</div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-12 col-sm-12 col-12 mb-4">
+                        <div class="card text-center">
+                            <div class="card-header bg-info text-white">Red</div>
+                            <div class="card-body">
+                                @if(isset($host->system_info['network_info']['interfaces']) && is_array($host->system_info['network_info']['interfaces']))
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Interfaz</th>
+                                                <th>IP</th>
+                                                <th>MAC</th>
+                                                <th>Estado</th>
+                                                <th>RX (bytes)</th>
+                                                <th>TX (bytes)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        @foreach($host->system_info['network_info']['interfaces'] as $iface)
+                                            <tr>
+                                                <td>{{ $iface['name'] }}</td>
+                                                <td>{{ $iface['ip'] }}</td>
+                                                <td>{{ $iface['mac'] }}</td>
+                                                <td>{{ $iface['status'] }}</td>
+                                                <td>{{ $iface['rx_bytes'] }}</td>
+                                                <td>{{ $iface['tx_bytes'] }}</td>
+                                            </tr>
+                                        @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="mt-2 text-start">
+                                    <strong>Gateway:</strong> {{ $host->system_info['network_info']['gateway'] ?? 'N/A' }}<br>
+                                    <strong>DNS:</strong> {{ isset($host->system_info['network_info']['dns']) ? implode(', ', $host->system_info['network_info']['dns']) : 'N/A' }}
+                                </div>
+                                @else
+                                <div class="text-muted">No hay información de red disponible.</div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-12 col-sm-12 col-12 mb-4">
+                        <div class="card text-center">
+                            <div class="card-header bg-warning text-dark">Servicios críticos</div>
+                            <div class="card-body">
+                                @if(isset($host->system_info['services']) && is_array($host->system_info['services']))
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Servicio</th>
+                                                <th>Estado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        @foreach($host->system_info['services'] as $svc)
+                                            <tr>
+                                                <td>{{ $svc['name'] }}</td>
+                                                <td>{{ $svc['status'] }}</td>
+                                            </tr>
+                                        @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                                @else
+                                <div class="text-muted">No hay información de servicios disponible.</div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-12 col-sm-12 col-12 mb-4">
+                        <div class="card text-center">
+                            <div class="card-header bg-success text-white">Temperatura y Batería</div>
+                            <div class="card-body">
+                                @if(isset($host->system_info['temperatures']) && is_array($host->system_info['temperatures']) && count($host->system_info['temperatures']) > 0)
+                                    <div class="mb-2 text-start">
+                                        @foreach($host->system_info['temperatures'] as $sensor => $temps)
+                                            <strong>{{ $sensor }}:</strong>
+                                            @foreach($temps as $t)
+                                                {{ $t['label'] }}: {{ $t['current'] }}°C
+                                            @endforeach
+                                            <br>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <div class="text-muted">No hay sensores de temperatura disponibles.</div>
+                                @endif
+                                @if(isset($host->system_info['battery']) && is_array($host->system_info['battery']))
+                                    <div class="mt-2 text-start">
+                                        <strong>Batería:</strong> {{ $host->system_info['battery']['percent'] ?? 'N/A' }}% 
+                                        ({{ $host->system_info['battery']['plugged'] ? 'Conectado' : 'No conectado' }})
+                                    </div>
+                                @else
+                                    <div class="text-muted">No hay información de batería disponible.</div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-12 col-sm-12 col-12 mb-4">
+                        <div class="card text-center">
+                            <div class="card-header bg-info text-white">Hardware</div>
+                            <div class="card-body text-start">
+                                @if(isset($host->system_info['platform']))
+                                    <strong>Plataforma:</strong> {{ $host->system_info['platform'] }}<br>
+                                    <strong>OS:</strong> {{ $host->system_info['os'] }}<br>
+                                    <strong>Versión OS:</strong> {{ $host->system_info['os_version'] }}<br>
+                                    <strong>CPU:</strong> {{ $host->system_info['cpu_model'] }}<br>
+                                    <strong>Núcleos físicos:</strong> {{ $host->system_info['cpu_cores'] }}<br>
+                                    <strong>Núcleos lógicos:</strong> {{ $host->system_info['cpu_threads'] }}<br>
+                                    <strong>RAM total:</strong> {{ $host->system_info['memory_total'] }}<br>
+                                    <strong>Disco total:</strong> {{ $host->system_info['disk_total'] }}<br>
+                                    <strong>Modelo equipo:</strong> {{ $host->system_info['model'] ?? 'N/A' }}<br>
+                                    <strong>Serial:</strong> {{ $host->system_info['serial'] ?? 'N/A' }}<br>
+                                @else
+                                    <div class="text-muted">No hay información de hardware disponible.</div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
                 {{-- TERMINAL SSH REAL (solo en la cabecera ahora) --}}

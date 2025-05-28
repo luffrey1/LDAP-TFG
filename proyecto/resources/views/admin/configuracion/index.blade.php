@@ -226,6 +226,23 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Configuración de Telemetría -->
+            <div class="col-lg-6">
+                <div class="card shadow card-configuracion">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Telemetría de Equipos</h6>
+                        <p class="panel-descripcion mt-1 mb-0">Configura cada cuánto tiempo los agentes deben enviar datos automáticamente (en minutos). Si usas modo bajo demanda, este valor es solo informativo.</p>
+                    </div>
+                    <div class="card-body">
+                        <div class="seguridad-item">
+                            <label for="telemetria_intervalo_minutos" class="form-label">Intervalo de telemetría (minutos)</label>
+                            <input type="number" class="form-control" id="telemetria_intervalo_minutos" name="telemetria_intervalo_minutos" min="1" max="1440" value="{{ isset($configuraciones['general']) && $configuraciones['general']->where('clave', 'telemetria_intervalo_minutos')->first() ? $configuraciones['general']->where('clave', 'telemetria_intervalo_minutos')->first()->valor : 60 }}">
+                            <small class="form-text text-muted">Ejemplo: 60 = cada hora, 10 = cada 10 minutos, 1440 = una vez al día.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         
         <div class="text-center mb-5">

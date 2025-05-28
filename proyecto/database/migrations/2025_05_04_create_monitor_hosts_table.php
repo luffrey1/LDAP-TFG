@@ -28,6 +28,11 @@ return new class extends Migration
             $table->string('uptime')->nullable();
             $table->json('users')->nullable();
             $table->unsignedBigInteger('group_id')->nullable();
+            $table->json('processes')->nullable();
+            $table->json('network_info')->nullable();
+            $table->json('services')->nullable();
+            $table->json('temperatures')->nullable();
+            $table->json('battery')->nullable();
             $table->timestamps();
             
             $table->index(['ip_address', 'status']);

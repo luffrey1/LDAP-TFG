@@ -47,7 +47,8 @@ class ConfiguracionController extends Controller
                 'politica_password_longitud' => 'required|integer|min:6|max:20',
                 'politica_password_mayusculas' => 'nullable|boolean',
                 'politica_password_numeros' => 'nullable|boolean',
-                'politica_password_especiales' => 'nullable|boolean'
+                'politica_password_especiales' => 'nullable|boolean',
+                'telemetria_intervalo_minutos' => 'required|integer|min:1|max:1440',
             ]);
             
             // Actualizar configuración de módulos
@@ -98,6 +99,15 @@ class ConfiguracionController extends Controller
                 $request->has('politica_password_especiales') ? 'true' : 'false',
                 'boolean',
                 'Requerir al menos un carácter especial en contraseñas',
+                Auth::id()
+            );
+            
+            // Guardar intervalo de telemetría
+            SistemaConfig::establecerConfig(
+                'telemetria_intervalo_minutos',
+                $request->telemetria_intervalo_minutos,
+                'integer',
+                'Intervalo de telemetría de los agentes (en minutos)',
                 Auth::id()
             );
             
