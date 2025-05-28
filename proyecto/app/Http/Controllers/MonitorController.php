@@ -304,7 +304,7 @@ class MonitorController extends Controller
                 }
 
                 // 5. Si tenemos IP, intentar obtener la MAC
-                if ($ipDetectada) {
+                if ($ipDetectada && $ipDetectada !== '127.0.0.1' && $ipDetectada !== '::1') {
                     // a) arp-scan
                     $arpScanCommand = "arp-scan --interface=eth0 " . escapeshellarg($ipDetectada);
                     exec($arpScanCommand, $arpScanOutput, $arpScanReturnVal);
@@ -343,15 +343,52 @@ class MonitorController extends Controller
                         }
                     }
                 } else {
-                    Log::warning("PING: No se pudo detectar la IP del host tras ping exitoso");
+                    // Si la IP es localhost o no se detecta, intentar con /scan-hostnames del microservicio Python
+                    Log::warning("PING: IP no válida o no detectada, intentando con /scan-hostnames del microservicio Python");
+                    // Detectar si el hostname es de aula tipo B##-X#
+                    if (preg_match('/^(B[0-9]{2})-([A-Z][0-9])$/i', $host->hostname, $matches)) {
+                        $aula = $matches[1];
+                        $columna = $matches[2];
+                        $macscannerUrl = rtrim($baseUrl, '/') . '/scan-hostnames';
+                        $payload = [
+                            'aula' => $aula,
+                            'columnas' => [$columna],
+                            'filas' => [1],
+                            'dominio' => 'tierno.es'
+                        ];
+                        $options = [
+                            'http' => [
+                                'header'  => "Content-type: application/json\r\n",
+                                'method'  => 'POST',
+                                'content' => json_encode($payload),
+                                'timeout' => 20
+                            ]
+                        ];
+                        $context = stream_context_create($options);
+                        $response = @file_get_contents($macscannerUrl, false, $context);
+                        if ($response !== false) {
+                            $data = json_decode($response, true);
+                            if (isset($data['success']) && $data['success']) {
+                                foreach ($data['hosts'] as $hostData) {
+                                    $foundHostname = preg_replace('/\.tierno\.es$/i', '', $hostData['hostname']);
+                                    if (strcasecmp($foundHostname, $host->hostname) === 0) {
+                                        $ipDetectada = $hostData['ip'] ?? $ipDetectada;
+                                        $mac = $hostData['mac'] ?? $mac;
+                                        Log::info("PING: IP/MAC detectadas por /scan-hostnames: IP={$ipDetectada}, MAC={$mac}");
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             } else {
                 Log::warning("PING: El host no responde a ping");
             }
 
             // Fallback: si no se detectó nada, intentar con microservicio Python como antes
-            if ($status === 'offline' || !$ipDetectada) {
-                Log::info("PING: Intentando con microservicio Python");
+            if ((!$ipDetectada || $ipDetectada === '127.0.0.1' || $ipDetectada === '::1') && empty($mac)) {
+                Log::info("PING: Intentando con microservicio Python /scan?hostname");
                 $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostnameCompleto);
                 $response = @file_get_contents($pythonServiceUrl);
                 if ($response !== false) {
@@ -366,7 +403,7 @@ class MonitorController extends Controller
             }
 
             // Actualizar el host si se detectó información
-            if ($status === 'online') {
+            if ($ipDetectada && $ipDetectada !== '127.0.0.1' && $ipDetectada !== '::1') {
                 $host->status = 'online';
                 $host->last_seen = now();
                 if (!empty($ipDetectada) && $ipDetectada !== $host->ip_address) {
