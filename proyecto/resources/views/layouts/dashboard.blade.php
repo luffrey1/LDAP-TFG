@@ -227,7 +227,7 @@
         }
         
         .card-body {
-            color: var(--text-color);
+            color: var(--dark-color);
         }
         
         /* Texto */
