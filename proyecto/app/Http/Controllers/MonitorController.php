@@ -87,16 +87,16 @@ class MonitorController extends Controller
             $hostnameDetectado = $hostname;
             $status = 'offline';
 
-            // Intentar con el hostname completo (incluyendo .tierno.es)
-            $hostnameCompleto = !str_contains($hostname, '.') ? $hostname . '.tierno.es' : $hostname;
-            
+            // Configurar el contexto para las peticiones HTTP
             $context = stream_context_create([
                 'http' => [
-                    'timeout' => 5,  // 5 segundos de timeout
+                    'timeout' => 5,
                     'ignore_errors' => true
                 ]
             ]);
-            
+
+            // Intentar con el hostname completo (incluyendo .tierno.es)
+            $hostnameCompleto = !str_contains($hostname, '.') ? $hostname . '.tierno.es' : $hostname;
             $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostnameCompleto);
             $response = @file_get_contents($pythonServiceUrl, false, $context);
             
@@ -110,6 +110,9 @@ class MonitorController extends Controller
                     if (!empty($mac)) {
                         $macObtenida = true;
                         \Log::info("MAC detectada para hostname {$hostnameCompleto}: {$mac}");
+                    }
+                    if (!empty($ipDetectada)) {
+                        \Log::info("IP detectada para hostname {$hostnameCompleto}: {$ipDetectada}");
                     }
                 }
             }
@@ -179,22 +182,17 @@ class MonitorController extends Controller
             $host = MonitorHost::findOrFail($id);
             $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
             
-            // Si el host pertenece al grupo de infraestructura, usar IP
-            if ($host->group && $host->group->type === 'infrastructure') {
-                $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($host->ip_address);
-            } else {
-                // Para el resto, usar hostname
-                $hostnameCompleto = !str_contains($host->hostname, '.') ? $host->hostname . '.tierno.es' : $host->hostname;
-                $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostnameCompleto);
-            }
-
+            // Configurar el contexto para las peticiones HTTP
             $context = stream_context_create([
                 'http' => [
-                    'timeout' => 5,  // 5 segundos de timeout
+                    'timeout' => 5,
                     'ignore_errors' => true
                 ]
             ]);
-            
+
+            // 1. Primero intentar con el hostname
+            $hostnameCompleto = !str_contains($host->hostname, '.') ? $host->hostname . '.tierno.es' : $host->hostname;
+            $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostnameCompleto);
             $response = @file_get_contents($pythonServiceUrl, false, $context);
             
             if ($response === false) {
@@ -207,21 +205,44 @@ class MonitorController extends Controller
                 Log::error('Respuesta inválida del microservicio Python (scan): ' . $response);
                 return response()->json(['status' => 'error', 'message' => 'Respuesta inválida del microservicio de red.']);
             }
-            
-            $host->status = $data['success'] ? 'online' : 'offline';
-            $host->last_seen = $data['success'] ? now() : $host->last_seen;
-            
-            // Actualizar IP y MAC si se detectaron
-            if (!empty($data['ip'])) $host->ip_address = $data['ip'];
-            if (!empty($data['mac'])) $host->mac_address = $data['mac'];
-            
-            $host->save();
-            
-            return response()->json([
-                'status' => $host->status,
-                'message' => $host->status === 'online' ? 'Host está en línea' : 'Host está fuera de línea',
-                'last_seen' => $host->last_seen ? $host->last_seen->format('d/m/Y H:i:s') : null
-            ]);
+
+            // Si el host responde, actualizar su información
+            if ($data['success']) {
+                $host->status = 'online';
+                $host->last_seen = now();
+                
+                // Actualizar IP si se detectó
+                if (!empty($data['ip'])) {
+                    $host->ip_address = $data['ip'];
+                    Log::info("IP actualizada para {$host->hostname}: {$data['ip']}");
+                }
+                
+                // Actualizar MAC si se detectó
+                if (!empty($data['mac'])) {
+                    $host->mac_address = $data['mac'];
+                    Log::info("MAC actualizada para {$host->hostname}: {$data['mac']}");
+                }
+                
+                $host->save();
+                
+                return response()->json([
+                    'status' => 'online',
+                    'message' => 'Host está en línea',
+                    'last_seen' => $host->last_seen->format('d/m/Y H:i:s'),
+                    'ip' => $host->ip_address,
+                    'mac' => $host->mac_address
+                ]);
+            } else {
+                // Si el host no responde, marcar como offline
+                $host->status = 'offline';
+                $host->save();
+                
+                return response()->json([
+                    'status' => 'offline',
+                    'message' => 'Host está fuera de línea',
+                    'last_seen' => $host->last_seen ? $host->last_seen->format('d/m/Y H:i:s') : null
+                ]);
+            }
         } catch (\Exception $e) {
             Log::error('Error en ping (Python): ' . $e->getMessage());
             return response()->json(['status' => 'error', 'message' => $e->getMessage()]);
