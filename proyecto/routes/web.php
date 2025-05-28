@@ -131,6 +131,7 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
         Route::put('/{cn}', [App\Http\Controllers\Admin\LdapGroupController::class, 'update'])->name('update');
         Route::delete('/{cn}', [App\Http\Controllers\Admin\LdapGroupController::class, 'destroy'])->name('destroy');
     });
+});
 
 // Rutas que requieren permisos de administrador
 Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware', 'App\Http\Middleware\AdminMiddleware'])->prefix('admin')->name('admin.')->group(function () {
