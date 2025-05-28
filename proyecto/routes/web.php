@@ -45,6 +45,14 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
     // Dashboard principal
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
     
+    // Ruta de detección de host (movida aquí)
+    Route::post('/monitor/detect-host', [App\Http\Controllers\MonitorController::class, 'detectHost'])
+        ->name('monitor.detect-host')
+        ->middleware('web');
+    Route::get('/monitor/detect-host', function() {
+        abort(404, 'Este endpoint solo acepta peticiones POST AJAX.');
+    })->middleware('web');
+    
     // Rutas del perfil
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');

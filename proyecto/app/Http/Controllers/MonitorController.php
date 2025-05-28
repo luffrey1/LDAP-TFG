@@ -1137,6 +1137,14 @@ class MonitorController extends Controller
     public function detectHost(Request $request)
     {
         try {
+            // Verificar autenticación
+            if (!auth()->check()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No autorizado'
+                ], 401);
+            }
+
             $validator = Validator::make($request->all(), [
                 'hostname' => 'required_without:ip_address|nullable|string|max:255',
                 'ip_address' => 'required_without:hostname|nullable|ip',
