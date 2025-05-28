@@ -190,19 +190,6 @@ Route::middleware(['App\Http\Middleware\LdapAuthMiddleware'])->prefix('profesor'
 Route::get('/monitor/scripts/available', [MonitorController::class, 'getAvailableScripts'])->name('monitor.scripts.available');
 Route::post('/monitor/scripts/transfer', [MonitorController::class, 'transferScript'])->name('monitor.scripts.transfer');
 
-// Rutas para WebSocket
-Route::prefix('api/websocket')->middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(function () {
-    Route::get('/status', [WebSocketController::class, 'checkStatus'])->name('websocket.status');
-    Route::post('/start', [WebSocketController::class, 'startServer'])->name('websocket.start');
-    Route::post('/command', [WebSocketController::class, 'receiveCommand'])->name('websocket.command');
-});
-
-// Ruta WebSocket para SSH (usada por el proxy WebSocket)
-Route::get('/ssh-terminal/{sessionId}', function() {
-    return response()->json([
-        'error' => 'Esta ruta debe ser accedida a través de una conexión WebSocket, no HTTP'
-    ], 400);
-})->middleware(['App\Http\Middleware\WebSocketAuthentication']);
 
 // Ruta para debug desde el frontend
 Route::post('/api/debug/log', function(\Illuminate\Http\Request $request) {
