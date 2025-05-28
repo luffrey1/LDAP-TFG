@@ -59,11 +59,11 @@ class LdapGroupController extends Controller
                 Log::debug('Procesando posible grupo: ' . json_encode($group));
                 
                 try {
+                    $gidNumber = null; // Inicializar la variable
+                    $gidNumber = isset($group['gidnumber']) ? (is_array($group['gidnumber']) ? $group['gidnumber'][0] : $group['gidnumber']) : null;
                     $groupData[] = [
                         'cn' => is_array($group['cn']) ? $group['cn'][0] : $group['cn'],
-                        // Verificar si gidNumber existe antes de acceder a él
-                        'gidNumber' => isset($group['gidnumber']) ? (is_array($group['gidnumber']) ? $group['gidnumber'][0] : $group['gidnumber']) : null,
-                        // Verificar si description existe antes de acceder a él
+                        'gidNumber' => $gidNumber,
                         'description' => isset($group['description']) ? (is_array($group['description']) ? $group['description'][0] : $group['description']) : '',
                         'member' => $group['member'] ?? [],
                     ];
@@ -177,7 +177,6 @@ class LdapGroupController extends Controller
                 $group->save();
                 $groupCreated = true;
                 Log::info('Grupo creado exitosamente como posixGroup: ' . $request->cn);
-
             } catch (\Exception $e) {
                 $errorMessage = $e->getMessage();
                 Log::debug('Fallo la creacion como posixGroup: ' . $errorMessage);
@@ -192,25 +191,16 @@ class LdapGroupController extends Controller
                         $group->setAttribute('objectClass', ['top', 'groupOfUniqueNames']);
                         $group->setAttribute('cn', $request->cn);
                         // groupOfUniqueNames requiere al menos un uniqueMember
-                        // Usamos un DN de dummy si no hay usuarios en el sistema, o el admin DN
-                        $dummyMemberDn = 'cn=nobody,dc=tierno,dc=es'; // O ajusta si tu dummy es diferente
-                        // Podríamos intentar añadir el admin DN si existe y es válido como uniqueMember
-                        // $adminDn = config('ldap.connections.default.username'); // cn=admin,dc=tierno,dc=es
-                        // $group->setAttribute('uniqueMember', [$adminDn]); // Intentar con admin si es un DN válido
-                        $group->setAttribute('uniqueMember', [$dummyMemberDn]); // Intentar con dummy
-
-                        // Opcionalmente añadir description si está permitido para groupOfUniqueNames
+                        $dummyMemberDn = 'cn=nobody,dc=tierno,dc=es';
+                        $group->setAttribute('uniqueMember', [$dummyMemberDn]);
+                        // Añadir description si está presente (gidNumber no se añade aquí porque no está permitido en groupOfUniqueNames)
                         if ($request->description) {
-                             // Verificar si el esquema permite 'description' para groupOfUniqueNames
-                             // Esto requeriría consultar el esquema, lo cual no podemos hacer fácilmente
-                             // Por ahora, lo omitimos o lo dejamos comentado
-                            // $group->setAttribute('description', $request->description);
+                            $group->setAttribute('description', $request->description);
                         }
 
                         $group->save();
                         $groupCreated = true;
                         Log::info('Grupo creado exitosamente como groupOfUniqueNames: ' . $request->cn);
-
                     } catch (\Exception $e2) {
                         $errorMessage = "Fallo la creacion como posixGroup ('{$errorMessage}') y como groupOfUniqueNames ('{$e2->getMessage()}')";
                         Log::error($errorMessage);
