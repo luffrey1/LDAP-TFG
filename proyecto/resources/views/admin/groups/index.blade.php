@@ -100,7 +100,7 @@
 function confirmDelete(cn) {
     const modal = $('#deleteModal');
     const form = $('#deleteForm');
-    form.attr('action', "{{ url('admin/gestion/grupos') }}/" + cn);
+    form.attr('action', "{{ route('admin.groups.destroy', ':cn') }}".replace(':cn', cn));
     modal.modal('show');
 }
 </script>
