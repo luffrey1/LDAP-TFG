@@ -902,6 +902,18 @@
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             }
         });
+
+        // Función global para eliminar host
+        function eliminarHost(id, nombre) {
+            var form = document.getElementById('form-eliminar-' + id);
+            if (!form) {
+                alert('No se encontró el formulario para eliminar el host.');
+                return;
+            }
+            if (confirm('¿Está seguro que desea eliminar el equipo "' + nombre + '"? Esta acción no se puede deshacer.')) {
+                form.submit();
+            }
+        }
     </script>
     @show
     @stack('scripts')
