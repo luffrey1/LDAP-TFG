@@ -1160,14 +1160,27 @@ class MonitorController extends Controller
             $hostnameDetectado = $hostname;
             $status = 'offline';
             $mensaje = '';
-            // Si el hostname no tiene dominio, añadirlo
-            if (!empty($hostname) && !str_contains($hostname, '.')) {
-                $hostnameCompleto = $hostname . '.tierno.es';
-            } else {
-                $hostnameCompleto = $hostname;
+            $data = null;
+            // 1. Intentar con el hostname tal cual
+            if (!empty($hostname)) {
+                $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostname);
+                $response = @file_get_contents($pythonServiceUrl);
+                if ($response !== false) {
+                    $data = json_decode($response, true);
+                    if (isset($data['success']) && $data['success']) {
+                        $mac = $data['mac'] ?? null;
+                        $ipDetectada = $data['ip'] ?? $ip;
+                        $hostnameDetectado = $hostname;
+                        $status = 'online';
+                        if (!empty($mac)) {
+                            $macObtenida = true;
+                        }
+                    }
+                }
             }
-            // 1. Intentar con hostname
-            if (!empty($hostnameCompleto)) {
+            // 2. Si no se obtuvo la MAC y el hostname no tiene punto, intentar con .tierno.es
+            if (!$macObtenida && !empty($hostname) && !str_contains($hostname, '.')) {
+                $hostnameCompleto = $hostname . '.tierno.es';
                 $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostnameCompleto);
                 $response = @file_get_contents($pythonServiceUrl);
                 if ($response !== false) {
@@ -1183,7 +1196,7 @@ class MonitorController extends Controller
                     }
                 }
             }
-            // 2. Si no se obtuvo la MAC, intentar con IP
+            // 3. Si no se obtuvo la MAC, intentar con IP
             if (!$macObtenida && !empty($ip)) {
                 $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($ip);
                 $response = @file_get_contents($pythonServiceUrl);
@@ -1200,12 +1213,12 @@ class MonitorController extends Controller
                     }
                 }
             }
-            // 3. Si no se obtuvo la MAC, usar la MAC de la respuesta original si existe
+            // 4. Si no se obtuvo la MAC, usar la MAC de la respuesta original si existe
             if (!$macObtenida && isset($data) && !empty($data['mac'])) {
                 $mac = $data['mac'];
                 $macObtenida = true;
             }
-            // 4. Devolver resultado
+            // 5. Devolver resultado
             if ($macObtenida) {
                 return response()->json([
                     'success' => true,
