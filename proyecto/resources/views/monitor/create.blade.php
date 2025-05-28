@@ -46,23 +46,23 @@
                             </div>
                         @endif
 
-                        <div class="form-group">
-                            <label>Tipo de Configuración</label>
-                            <div class="selectgroup w-100">
-                                <label class="selectgroup-item">
-                                    <input type="radio" name="tipo_host" value="fija" class="selectgroup-input" checked>
-                                    <span class="selectgroup-button">IP Fija</span>
-                                </label>
-                                <label class="selectgroup-item">
-                                    <input type="radio" name="tipo_host" value="dhcp" class="selectgroup-input">
-                                    <span class="selectgroup-button">DHCP (Automático)</span>
-                                </label>
-                            </div>
-                        </div>
-
                         <form id="host-form" action="{{ route('monitor.store') }}" method="POST">
                             @csrf
                             
+                            <div class="form-group">
+                                <label>Tipo de Configuración</label>
+                                <div class="selectgroup w-100">
+                                    <label class="selectgroup-item">
+                                        <input type="radio" name="tipo_host" value="fija" class="selectgroup-input" checked>
+                                        <span class="selectgroup-button">IP Fija</span>
+                                    </label>
+                                    <label class="selectgroup-item">
+                                        <input type="radio" name="tipo_host" value="dhcp" class="selectgroup-input">
+                                        <span class="selectgroup-button">DHCP (Automático)</span>
+                                    </label>
+                                </div>
+                            </div>
+
                             <div class="form-group">
                                 <label for="hostname">Nombre del Host <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control @error('hostname') is-invalid @enderror" id="hostname" name="hostname" value="{{ old('hostname') }}" required>
@@ -175,7 +175,7 @@
 </section>
 @endsection
 
-@section('js')
+@section('scripts')
 <script>
 $(document).ready(function() {
     // Cambiar modo según tipo de host
