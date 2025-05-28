@@ -175,7 +175,7 @@
 </section>
 @endsection
 
-@section('scripts')
+
 <script>
 $(document).ready(function() {
     // Función para actualizar el estado del campo IP
@@ -200,4 +200,3 @@ $(document).ready(function() {
     });
 });
 </script>
-@endsection 
