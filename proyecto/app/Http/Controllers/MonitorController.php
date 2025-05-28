@@ -132,7 +132,6 @@ class MonitorController extends Controller
             $host->ip_address = $validated['ip_address'] ?? null;
             $host->mac_address = $validated['mac_address'] ?? null;
             $host->description = $validated['description'] ?? null;
-            $host->tipo_host = $validated['tipo_host'];
             $host->created_by = auth()->id();
             $host->status = 'unknown';
 
@@ -161,7 +160,7 @@ class MonitorController extends Controller
 
             return redirect()->route('monitor.index')
                 ->with('success', 'Host ' . $host->hostname . ' agregado correctamente' . 
-                    ($validated['tipo_host'] === 'dhcp' ? ' (IP y MAC detectadas automáticamente)' : ''));
+                    ($request->tipo_host === 'dhcp' ? ' (IP y MAC detectadas automáticamente)' : ''));
 
         } catch (\Exception $e) {
             \Log::error('Error al crear el host', [
