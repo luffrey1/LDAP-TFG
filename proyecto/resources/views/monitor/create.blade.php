@@ -184,12 +184,11 @@ $(document).ready(function() {
         if (tipo === 'dhcp') {
             $('.ip-field').hide();
             $('#ip_address').removeAttr('required');
+            $('#ip_address').val('');
         } else {
             $('.ip-field').show();
             $('#ip_address').attr('required', 'required');
         }
-        
-        // Resetear detección
         resetDetection();
     });
     

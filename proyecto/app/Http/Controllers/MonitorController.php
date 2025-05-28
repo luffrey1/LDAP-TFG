@@ -66,19 +66,19 @@ class MonitorController extends Controller
             $host->created_by = Auth::id();
             $host->status = 'unknown';
 
-            // Asignación automática de grupo por patrón en hostname
-            $grupoDetectado = null;
+            // En store, después de asignar el grupo:
             if (preg_match('/^(B[0-9]{2})-/', $host->hostname, $matches)) {
                 $nombreGrupo = $matches[1];
-                $grupoDetectado = MonitorGroup::firstOrCreate(
+                $grupoDetectado = \App\Models\MonitorGroup::firstOrCreate(
                     ['name' => $nombreGrupo],
                     [
                         'description' => 'Aula ' . $nombreGrupo,
                         'type' => 'classroom',
-                        'created_by' => Auth::id()
+                        'created_by' => \Auth::id()
                     ]
                 );
                 $host->group_id = $grupoDetectado->id;
+                \Log::info("Host {$host->hostname} asignado/creado al grupo {$nombreGrupo} (ID: {$grupoDetectado->id})");
             } else {
                 $host->group_id = $request->group_id ?? 0;
             }
@@ -86,7 +86,7 @@ class MonitorController extends Controller
             $host->save();
             
             return redirect()->route('monitor.index')
-                ->with('success', "Host '{$host->hostname}' añadido correctamente.");
+                ->with('success', "Host '{$host->hostname}' añadido/actualizado correctamente." . (isset($grupoDetectado) ? " Asignado al grupo {$nombreGrupo}." : ""));
         } catch (\Exception $e) {
             Log::error('Error al guardar host: ' . $e->getMessage());
             return redirect()->back()
@@ -1012,8 +1012,7 @@ class MonitorController extends Controller
             $host->description = $request->description;
             $host->mac_address = $request->mac_address;
 
-            // Asignación automática de grupo por patrón en hostname
-            $grupoDetectado = null;
+            // En update, después de asignar el grupo:
             if (preg_match('/^(B[0-9]{2})-/', $host->hostname, $matches)) {
                 $nombreGrupo = $matches[1];
                 $grupoDetectado = \App\Models\MonitorGroup::firstOrCreate(
@@ -1025,13 +1024,14 @@ class MonitorController extends Controller
                     ]
                 );
                 $host->group_id = $grupoDetectado->id;
+                \Log::info("Host {$host->hostname} asignado/creado al grupo {$nombreGrupo} (ID: {$grupoDetectado->id})");
             } else {
-                $host->group_id = $request->group_id ?? $host->group_id;
+                $host->group_id = $request->group_id ?? 0;
             }
 
             $host->save();
             return redirect()->route('monitor.show', $host->id)
-                ->with('success', "Host actualizado correctamente.");
+                ->with('success', "Host actualizado correctamente." . (isset($grupoDetectado) ? " Asignado al grupo {$nombreGrupo}." : ""));
         } catch (\Exception $e) {
             \Log::error('Error al actualizar host: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Error al actualizar el host: ' . $e->getMessage())->withInput();
