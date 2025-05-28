@@ -258,11 +258,9 @@ class MonitorController extends Controller
             $status = 'offline';
             
             // Verificar primero si el host responde a ping directamente desde PHP
-            // Este método es más confiable que el microservicio en algunos casos
             $hostnameCompleto = !str_contains($host->hostname, '.') ? $host->hostname . '.tierno.es' : $host->hostname;
             Log::info("Ejecutando ping directo al hostname: {$hostnameCompleto}");
             
-            // Ejecutar ping directamente desde PHP
             $pingCommand = "ping -c 2 -W 1 " . escapeshellarg($hostnameCompleto);
             Log::info("Comando: {$pingCommand}");
             
@@ -283,7 +281,6 @@ class MonitorController extends Controller
                 Log::info("Resultado comando host: " . implode("\n", $hostOutput));
                 
                 // Extraer la IP del resultado del comando host
-                $ipMatch = null;
                 foreach ($hostOutput as $line) {
                     if (preg_match('/has address (\d+\.\d+\.\d+\.\d+)/', $line, $matches)) {
                         $ipDetectada = $matches[1];
@@ -294,14 +291,12 @@ class MonitorController extends Controller
                 
                 // Si se detectó la IP, intentar obtener la MAC
                 if ($ipDetectada) {
-                    // Intentar con arp-scan
                     $arpScanCommand = "arp-scan --interface=eth0 " . escapeshellarg($ipDetectada);
                     Log::info("Obteniendo MAC con comando: {$arpScanCommand}");
                     
                     exec($arpScanCommand, $arpOutput, $arpReturnVal);
                     Log::info("Resultado arp-scan: " . implode("\n", $arpOutput));
                     
-                    // Extraer la MAC del resultado de arp-scan
                     foreach ($arpOutput as $line) {
                         if (preg_match('/([0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5})/', $line, $matches)) {
                             $mac = strtolower($matches[1]);
@@ -310,7 +305,6 @@ class MonitorController extends Controller
                         }
                     }
                     
-                    // Si no se encontró con arp-scan, intentar con arp
                     if (!$mac) {
                         $arpCommand = "arp -n " . escapeshellarg($ipDetectada);
                         Log::info("Obteniendo MAC con comando alternativo: {$arpCommand}");
@@ -318,7 +312,6 @@ class MonitorController extends Controller
                         exec($arpCommand, $arpOutput, $arpReturnVal);
                         Log::info("Resultado arp: " . implode("\n", $arpOutput));
                         
-                        // Extraer la MAC del resultado de arp
                         foreach ($arpOutput as $line) {
                             if (preg_match('/([0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5})/', $line, $matches)) {
                                 $mac = strtolower($matches[1]);
@@ -334,19 +327,15 @@ class MonitorController extends Controller
             if ($status === 'offline') {
                 Log::info("El ping directo falló, intentando con el microservicio Python");
                 
-                // 1. Intentar con scan-hostnames (el método más efectivo)
                 if (preg_match('/^(B[0-9]{2})-([A-Z][0-9])$/i', $host->hostname, $matches)) {
-                    $aula = $matches[1]; // B27
-                    $columna = $matches[2]; // A5
+                    $aula = $matches[1];
+                    $columna = $matches[2];
                     
-                    Log::info("Detectando host {$host->hostname} con formato de aula estándar: Aula {$aula}, Columna {$columna}");
-                    
-                    // Usar el endpoint scan-hostnames que tiene la lógica completa
                     $macscannerUrl = rtrim($baseUrl, '/') . '/scan-hostnames';
                     $payload = [
                         'aula' => $aula,
                         'columnas' => [$columna],
-                        'filas' => [1], // No importa la fila para un solo host
+                        'filas' => [1],
                         'dominio' => 'tierno.es'
                     ];
                     
@@ -368,12 +357,11 @@ class MonitorController extends Controller
                         Log::debug("Respuesta completa: " . json_encode($data));
                         
                         if (isset($data['success']) && $data['success']) {
-                            // Buscar el host en los resultados
                             foreach ($data['hosts'] as $hostData) {
                                 $foundHostname = preg_replace('/\.tierno\.es$/i', '', $hostData['hostname']);
                                 if (strcasecmp($foundHostname, $host->hostname) === 0) {
-                                    $mac = $hostData['mac'] ?? null;
-                                    $ipDetectada = $hostData['ip'] ?? null;
+                                    $mac = $hostData['mac'] ?? $mac;
+                                    $ipDetectada = $hostData['ip'] ?? $ipDetectada;
                                     $status = 'online';
                                     if (!empty($mac)) {
                                         Log::info("MAC detectada para hostname {$hostData['hostname']}: {$mac}");
@@ -388,7 +376,6 @@ class MonitorController extends Controller
                     }
                 }
                 
-                // 2. Si aún no se detecta, intentar con otros métodos
                 if ($status === 'offline') {
                     Log::info("Intentando detectar host {$host->hostname} mediante scan?hostname");
                     $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($host->hostname);
@@ -396,8 +383,8 @@ class MonitorController extends Controller
                     if ($response !== false) {
                         $data = json_decode($response, true);
                         if (isset($data['success']) && $data['success']) {
-                            $mac = $data['mac'] ?? null;
-                            $ipDetectada = $data['ip'] ?? null;
+                            $mac = $data['mac'] ?? $mac;
+                            $ipDetectada = $data['ip'] ?? $ipDetectada;
                             $status = 'online';
                             if (!empty($mac)) {
                                 Log::info("MAC detectada para hostname {$host->hostname} (método 2): {$mac}");
@@ -408,7 +395,6 @@ class MonitorController extends Controller
                         }
                     }
                     
-                    // 3. Si aún no se detecta y el hostname no tiene punto, intentar con .tierno.es
                     if ($status === 'offline' && !str_contains($host->hostname, '.')) {
                         $hostnameCompleto = $host->hostname . '.tierno.es';
                         Log::info("Intentando detectar host con dominio completo: {$hostnameCompleto}");
@@ -417,8 +403,8 @@ class MonitorController extends Controller
                         if ($response !== false) {
                             $data = json_decode($response, true);
                             if (isset($data['success']) && $data['success']) {
-                                $mac = $data['mac'] ?? null;
-                                $ipDetectada = $data['ip'] ?? null;
+                                $mac = $data['mac'] ?? $mac;
+                                $ipDetectada = $data['ip'] ?? $ipDetectada;
                                 $status = 'online';
                                 if (!empty($mac)) {
                                     Log::info("MAC detectada para hostname {$hostnameCompleto} (método 3): {$mac}");
@@ -430,7 +416,6 @@ class MonitorController extends Controller
                         }
                     }
                     
-                    // 4. Si aún sigue sin detectarse y tenemos IP, intentar con IP
                     if ($status === 'offline' && !empty($host->ip_address)) {
                         Log::info("Intentando detectar host por IP: {$host->ip_address}");
                         $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($host->ip_address);
@@ -456,22 +441,18 @@ class MonitorController extends Controller
                 $host->status = 'online';
                 $host->last_seen = now();
                 
-                // Actualizar la IP si se detectó
+                // Actualizar la IP si se detectó y es diferente
                 if (!empty($ipDetectada) && $ipDetectada !== $host->ip_address) {
                     $host->ip_address = $ipDetectada;
                     Log::info("Actualizando IP de {$host->hostname} a {$ipDetectada}");
                 }
-                
-                // Actualizar la MAC si se detectó
+                // Actualizar la MAC si se detectó y es diferente
                 if (!empty($mac) && $mac !== $host->mac_address) {
                     $host->mac_address = $mac;
                     Log::info("Actualizando MAC de {$host->hostname} a {$mac}");
                 }
-                
                 $host->save();
-                
                 Log::info("Host {$host->hostname} actualizado - IP: {$host->ip_address}, MAC: {$host->mac_address}");
-                
                 return response()->json([
                     'status' => 'online',
                     'message' => 'Host está en línea',
@@ -480,16 +461,15 @@ class MonitorController extends Controller
                     'mac' => $host->mac_address
                 ]);
             } else {
-                // Host no encontrado
                 $host->status = 'offline';
                 $host->save();
-                
                 Log::info("Host {$host->hostname} no detectado - marcado como offline");
-                
                 return response()->json([
                     'status' => 'offline',
                     'message' => 'Host está fuera de línea',
-                    'last_seen' => $host->last_seen ? $host->last_seen->format('d/m/Y H:i:s') : null
+                    'last_seen' => $host->last_seen ? $host->last_seen->format('d/m/Y H:i:s') : null,
+                    'ip' => $host->ip_address,
+                    'mac' => $host->mac_address
                 ]);
             }
         } catch (\Exception $e) {
