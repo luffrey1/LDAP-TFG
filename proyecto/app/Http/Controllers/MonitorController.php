@@ -83,24 +83,67 @@ class MonitorController extends Controller
                 \Log::info('Modo DHCP detectado, intentando obtener información del host');
                 
                 // Intentar obtener información del host usando el microservicio
-                $microserviceUrl = config('app.microservice_url');
-                $response = Http::post($microserviceUrl . '/scan/hostname', [
-                    'hostname' => $request->hostname
-                ]);
+                $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
+                $hostname = $request->hostname;
+                $macObtenida = false;
+                $mac = null;
+                $ipDetectada = null;
+                $hostnameDetectado = $hostname;
+                $status = 'offline';
 
-                \Log::info('Respuesta del microservicio', ['response' => $response->json()]);
+                // 1. Intentar con el hostname tal cual
+                if (!empty($hostname)) {
+                    $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostname);
+                    $response = @file_get_contents($pythonServiceUrl);
+                    if ($response !== false) {
+                        $data = json_decode($response, true);
+                        if (isset($data['success']) && $data['success']) {
+                            $mac = $data['mac'] ?? null;
+                            $ipDetectada = $data['ip'] ?? null;
+                            $hostnameDetectado = $hostname;
+                            $status = 'online';
+                            if (!empty($mac)) {
+                                $macObtenida = true;
+                                \Log::info("MAC detectada para hostname {$hostname}: {$mac}");
+                            }
+                        }
+                    }
+                }
 
-                if ($response->successful() && $response->json('success')) {
-                    $data = $response->json('data');
-                    $validated['ip_address'] = $data['ip_address'];
-                    $validated['mac_address'] = $data['mac_address'];
-                    \Log::info('Información del host detectada', ['data' => $data]);
-                } else {
-                    \Log::warning('No se pudo detectar la información del host', ['response' => $response->json()]);
+                // 2. Si no se obtuvo la MAC y el hostname no tiene punto, intentar con .tierno.es
+                if (!$macObtenida && !empty($hostname) && !str_contains($hostname, '.')) {
+                    $hostnameCompleto = $hostname . '.tierno.es';
+                    $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostnameCompleto);
+                    $response = @file_get_contents($pythonServiceUrl);
+                    if ($response !== false) {
+                        $data = json_decode($response, true);
+                        if (isset($data['success']) && $data['success']) {
+                            $mac = $data['mac'] ?? null;
+                            $ipDetectada = $data['ip'] ?? null;
+                            $hostnameDetectado = $hostnameCompleto;
+                            $status = 'online';
+                            if (!empty($mac)) {
+                                $macObtenida = true;
+                                \Log::info("MAC detectada para hostname {$hostnameCompleto}: {$mac}");
+                            }
+                        }
+                    }
+                }
+
+                if (!$macObtenida) {
+                    \Log::warning('No se pudo detectar la información del host', ['hostname' => $hostname]);
                     return redirect()->back()
                         ->withInput()
                         ->with('error', 'No se pudo detectar la información del host. Asegúrese de que el equipo esté encendido y conectado a la red.');
                 }
+
+                $validated['ip_address'] = $ipDetectada;
+                $validated['mac_address'] = $mac;
+                \Log::info('Información del host detectada', ['data' => [
+                    'ip_address' => $ipDetectada,
+                    'mac_address' => $mac,
+                    'status' => $status
+                ]]);
             }
 
             // Crear el host
