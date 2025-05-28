@@ -3,6 +3,8 @@
 ## Tareas Inmediatas
 - **Revisar colores en toda la aplicación..**
 ### General
+-**✅ Al importar de archivo(para alumnos), generar contraseñas aleatorias en JS y mostrarlas en tabla**
+--esto habia que eliminar lo de alumnos y ponerlo directamente en gestion de usuarios y tambien importar profesores por csv a poder ser si se puede 
 (Ambos)
 - **Mensajería no deja subir archivos (posible problema SQL)**
 - **Al crear un usuario comprobar que permite números en el nombre**
