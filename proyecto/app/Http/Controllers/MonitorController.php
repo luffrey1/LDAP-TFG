@@ -24,7 +24,22 @@ class MonitorController extends Controller
         $user = Auth::user();
         $hosts = MonitorHost::getHostsForUser($user);
         $groups = MonitorGroup::getGroupsForUser($user);
-        
+        // Asignar grupo automáticamente a hosts sin grupo
+        foreach ($hosts as $host) {
+            if (empty($host->group_id) && preg_match('/^(B[0-9]{2})-/', $host->hostname, $matches)) {
+                $nombreGrupo = $matches[1];
+                $grupoDetectado = \App\Models\MonitorGroup::firstOrCreate(
+                    ['name' => $nombreGrupo],
+                    [
+                        'description' => 'Aula ' . $nombreGrupo,
+                        'type' => 'classroom',
+                        'created_by' => \Auth::id() ?: 1
+                    ]
+                );
+                $host->group_id = $grupoDetectado->id;
+                $host->save();
+            }
+        }
         // Compactar las variables a pasar a la vista
         return view('monitor.index', compact('hosts', 'groups'));
     }
@@ -144,6 +159,20 @@ class MonitorController extends Controller
             $errors = 0;
             $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
             foreach ($hosts as $host) {
+                // Asignar grupo automáticamente si no tiene
+                if (empty($host->group_id) && preg_match('/^(B[0-9]{2})-/', $host->hostname, $matches)) {
+                    $nombreGrupo = $matches[1];
+                    $grupoDetectado = \App\Models\MonitorGroup::firstOrCreate(
+                        ['name' => $nombreGrupo],
+                        [
+                            'description' => 'Aula ' . $nombreGrupo,
+                            'type' => 'classroom',
+                            'created_by' => \Auth::id() ?: 1
+                        ]
+                    );
+                    $host->group_id = $grupoDetectado->id;
+                    $host->save();
+                }
                 $ip = $host->ip_address;
                 $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($ip);
                 $response = @file_get_contents($pythonServiceUrl);

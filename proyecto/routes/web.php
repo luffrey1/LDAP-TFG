@@ -19,6 +19,11 @@ use App\Http\Controllers\LdapGroupController;
 // Ruta para detectar host por hostname o IP (debe estar accesible para la vista de creación)
 Route::post('/monitor/detect-host', [App\Http\Controllers\MonitorController::class, 'detectHost'])->name('monitor.detect-host');
 
+// Ruta de protección para GET en /monitor/detect-host
+Route::get('/monitor/detect-host', function() {
+    abort(404, 'Este endpoint solo acepta peticiones POST AJAX.');
+});
+
 // Ruta principal redirige al login
 Route::get('/', function () {
     return redirect()->route('login');
