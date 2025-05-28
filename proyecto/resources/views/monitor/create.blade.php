@@ -128,14 +128,8 @@
                             </div>
 
                             <div class="card-footer text-right">
-                                <button type="button" id="detect-button" class="btn btn-info">
-                                    <i class="fas fa-search"></i> Detectar Host
-                                </button>
-                                <button type="submit" id="save-button" class="btn btn-primary d-none">
+                                <button type="submit" class="btn btn-primary">
                                     <i class="fas fa-save"></i> Guardar
-                                </button>
-                                <button type="submit" id="save-anyway-button" class="btn btn-warning d-none">
-                                    <i class="fas fa-exclamation-triangle"></i> Guardar Sin Comprobar
                                 </button>
                                 <a href="{{ route('monitor.index') }}" class="btn btn-secondary">Cancelar</a>
                             </div>
@@ -188,116 +182,6 @@ $(document).ready(function() {
         } else {
             $('.ip-field').show();
             $('#ip_address').attr('required', 'required');
-        }
-        resetDetection();
-    });
-    
-    // Función para resetear estado de detección
-    function resetDetection() {
-        $('#detected').val('0');
-        $('.detection-status').addClass('d-none');
-        $('#save-button').addClass('d-none');
-        $('#save-anyway-button').addClass('d-none');
-        $('#mac_address').val('');
-    }
-    
-    // Cuando se cambian los campos clave, resetear la detección
-    $('#hostname, #ip_address').on('input', function() {
-        resetDetection();
-    });
-    
-    // Detectar host
-    $('#detect-button').on('click', function() {
-        var tipo = $('input[name="tipo_host"]:checked').val();
-        var hostname = $('#hostname').val();
-        var ip = $('#ip_address').val();
-        
-        // Validar campos según tipo
-        if (tipo === 'dhcp' && !hostname) {
-            alert('Por favor ingrese el nombre del host');
-            return;
-        }
-        
-        if (tipo === 'fija' && !ip) {
-            alert('Por favor ingrese la dirección IP');
-            return;
-        }
-        
-        // Mostrar estado de detección
-        $('.detection-status').removeClass('d-none alert-danger alert-success').addClass('alert-info');
-        $('.detection-message').html('<i class="fas fa-spinner fa-spin"></i> Detectando información del host...');
-        
-        // Llamar a la API para detectar el host
-        $.ajax({
-            url: '{{ route("monitor.detect-host") }}',
-            type: 'POST',
-            data: {
-                _token: '{{ csrf_token() }}',
-                hostname: hostname,
-                ip_address: ip,
-                tipo: tipo
-            },
-            dataType: 'json',
-            success: function(response) {
-                if (response.success) {
-                    // Actualizar campos con la información detectada
-                    if (response.data.hostname) {
-                        $('#hostname').val(response.data.hostname);
-                    }
-                    
-                    if (response.data.ip_address) {
-                        $('#ip_address').val(response.data.ip_address);
-                    }
-                    
-                    if (response.data.mac_address) {
-                        $('#mac_address').val(response.data.mac_address);
-                    }
-                    
-                    // Marcar como detectado
-                    $('#detected').val('1');
-                    $('.detection-status').removeClass('alert-info alert-danger').addClass('alert-success');
-                    $('.detection-message').html('<i class="fas fa-check"></i> ' + response.message + '. Host detectado correctamente.');
-                    
-                    // Mostrar botón de guardar
-                    $('#save-button').removeClass('d-none');
-                    $('#save-anyway-button').addClass('d-none');
-                } else {
-                    // Mostrar error
-                    $('.detection-status').removeClass('alert-info alert-success').addClass('alert-danger');
-                    $('.detection-message').html('<i class="fas fa-times"></i> ' + response.message);
-                    
-                    // Mostrar botón de guardar sin comprobar
-                    $('#save-button').addClass('d-none');
-                    $('#save-anyway-button').removeClass('d-none');
-                }
-            },
-            error: function(xhr) {
-                var message = 'Error al detectar el host';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    message = xhr.responseJSON.message;
-                }
-                // Mantener el spinner unos segundos antes de mostrar el error
-                setTimeout(function() {
-                    $('.detection-status').removeClass('alert-info alert-success').addClass('alert-danger');
-                    $('.detection-message').html('<i class="fas fa-times"></i> ' + message + '<br><small>¿Está encendido y conectado a la red? Prueba a escribir el hostname completo (ej: B27-A9.tierno.es) o revisa la IP.</small>');
-                    // Mostrar botón de guardar sin comprobar
-                    $('#save-button').addClass('d-none');
-                    $('#save-anyway-button').removeClass('d-none');
-                }, 1200);
-            }
-        });
-    });
-    
-    // Al enviar el formulario, validar si se ha detectado
-    $('#host-form').on('submit', function(e) {
-        var detected = $('#detected').val();
-        var submitButton = $(document.activeElement);
-        
-        // Si no se ha detectado y no se está usando el botón de guardar sin comprobar
-        if (detected !== '1' && !submitButton.is('#save-anyway-button')) {
-            e.preventDefault();
-            alert('Por favor, detecte la información del host antes de guardar');
-            return false;
         }
     });
 });

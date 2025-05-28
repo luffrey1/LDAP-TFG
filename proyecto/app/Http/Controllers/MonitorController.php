@@ -13,6 +13,7 @@ use App\Models\MonitorGroup;
 use App\Services\RemoteExecutionService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Http;
 
 class MonitorController extends Controller
 {
@@ -62,51 +63,91 @@ class MonitorController extends Controller
      */
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        $request->validate([
             'hostname' => 'required|string|max:255',
-            'ip_address' => 'required|ip',
-            'description' => 'nullable|string|max:1000',
+            'tipo_host' => 'required|in:dhcp,fija',
+            'ip_address' => 'required_if:tipo_host,fija|nullable|ip',
+            'mac_address' => 'nullable|string|max:17',
+            'descripcion' => 'nullable|string|max:255',
+            'estado' => 'required|in:activo,inactivo',
+            'grupo' => 'nullable|exists:grupos,id'
         ]);
-        
-        if ($validator->fails()) {
-            return redirect()->back()->withErrors($validator)->withInput();
-        }
-        
+
         try {
-            $host = new MonitorHost();
-            $host->hostname = preg_replace('/\.tierno\.es$/i', '', $request->hostname);
-            $host->ip_address = $request->ip_address;
-            $host->description = $request->description;
-            $host->mac_address = $request->mac_address;
-            $host->created_by = Auth::id();
-            $host->status = 'unknown';
-
-            // En store, después de asignar el grupo:
-            if (preg_match('/^(B[0-9]{2})-/', $host->hostname, $matches)) {
-                $nombreGrupo = $matches[1];
-                $grupoDetectado = \App\Models\MonitorGroup::firstOrCreate(
-                    ['name' => $nombreGrupo],
-                    [
-                        'description' => 'Aula ' . $nombreGrupo,
-                        'type' => 'classroom',
-                        'created_by' => \Auth::id()
-                    ]
-                );
-                $host->group_id = $grupoDetectado->id;
-                \Log::info("Host {$host->hostname} asignado/creado al grupo {$nombreGrupo} (ID: {$grupoDetectado->id})");
-            } else {
-                $host->group_id = $request->group_id ?? 0;
+            // Obtener la URL del microservicio desde la configuración
+            $scannerUrl = config('services.macscanner.url', 'http://172.20.0.6:5000');
+            
+            // Preparar datos para el escaneo
+            $scanData = [
+                'hostname' => $request->hostname,
+                'ip_address' => $request->ip_address
+            ];
+            
+            // Intentar obtener la MAC
+            $macAddress = null;
+            $detectionStatus = 'error';
+            $detectionMessage = 'No se pudo detectar la MAC del equipo';
+            
+            try {
+                // Primero intentar por hostname
+                $response = Http::timeout(5)->post("{$scannerUrl}/get-mac", [
+                    'hostname' => $request->hostname
+                ]);
+                
+                if ($response->successful() && $response->json('success')) {
+                    $macAddress = $response->json('data.mac_address');
+                    $detectionStatus = 'success';
+                    $detectionMessage = 'MAC detectada por hostname';
+                } else {
+                    // Si falla por hostname y tenemos IP, intentar por IP
+                    if ($request->ip_address) {
+                        $response = Http::timeout(5)->post("{$scannerUrl}/get-mac", [
+                            'ip_address' => $request->ip_address
+                        ]);
+                        
+                        if ($response->successful() && $response->json('success')) {
+                            $macAddress = $response->json('data.mac_address');
+                            $detectionStatus = 'success';
+                            $detectionMessage = 'MAC detectada por IP';
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                \Log::error('Error al detectar MAC: ' . $e->getMessage());
             }
-
-            $host->save();
+            
+            // Si no se pudo detectar la MAC, usar la proporcionada en el formulario
+            if (!$macAddress) {
+                $macAddress = $request->mac_address;
+            }
+            
+            // Crear el host
+            $host = Host::create([
+                'hostname' => $request->hostname,
+                'ip_address' => $request->ip_address,
+                'mac_address' => $macAddress,
+                'tipo_host' => $request->tipo_host,
+                'descripcion' => $request->descripcion,
+                'estado' => $request->estado,
+                'grupo_id' => $request->grupo,
+                'ultima_deteccion' => now(),
+                'estado_deteccion' => $detectionStatus,
+                'mensaje_deteccion' => $detectionMessage
+            ]);
+            
+            // Asignar grupo automáticamente si no se especificó uno
+            if (!$request->grupo) {
+                $this->asignarGrupoAutomatico($host);
+            }
             
             return redirect()->route('monitor.index')
-                ->with('success', "Host '{$host->hostname}' añadido/actualizado correctamente." . (isset($grupoDetectado) ? " Asignado al grupo {$nombreGrupo}." : ""));
+                ->with('success', 'Host creado correctamente. ' . $detectionMessage);
+                
         } catch (\Exception $e) {
-            Log::error('Error al guardar host: ' . $e->getMessage());
+            \Log::error('Error al crear host: ' . $e->getMessage());
             return redirect()->back()
-                ->with('error', 'Error al guardar el host: ' . $e->getMessage())
-                ->withInput();
+                ->withInput()
+                ->with('error', 'Error al crear el host: ' . $e->getMessage());
         }
     }
     
