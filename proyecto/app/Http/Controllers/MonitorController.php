@@ -71,7 +71,7 @@ class MonitorController extends Controller
             $validated = $request->validate([
                 'hostname' => 'required|string|max:255',
                 'tipo_host' => 'required|in:fija,dhcp',
-                'ip_address' => 'required_if:tipo_host,fija|nullable|ip',
+                'ip_address' => 'nullable|ip',  // Quitamos required_if para que sea opcional
                 'description' => 'nullable|string',
                 'group_id' => 'nullable|exists:groups,id'
             ]);
@@ -91,47 +91,27 @@ class MonitorController extends Controller
                 $hostnameDetectado = $hostname;
                 $status = 'offline';
 
-                // 1. Intentar con el hostname tal cual
-                if (!empty($hostname)) {
-                    $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostname);
-                    $response = @file_get_contents($pythonServiceUrl);
-                    if ($response !== false) {
-                        $data = json_decode($response, true);
-                        if (isset($data['success']) && $data['success']) {
-                            $mac = $data['mac'] ?? null;
-                            $ipDetectada = $data['ip'] ?? null;
-                            $hostnameDetectado = $hostname;
-                            $status = 'online';
-                            if (!empty($mac)) {
-                                $macObtenida = true;
-                                \Log::info("MAC detectada para hostname {$hostname}: {$mac}");
-                            }
-                        }
-                    }
-                }
-
-                // 2. Si no se obtuvo la MAC y el hostname no tiene punto, intentar con .tierno.es
-                if (!$macObtenida && !empty($hostname) && !str_contains($hostname, '.')) {
-                    $hostnameCompleto = $hostname . '.tierno.es';
-                    $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostnameCompleto);
-                    $response = @file_get_contents($pythonServiceUrl);
-                    if ($response !== false) {
-                        $data = json_decode($response, true);
-                        if (isset($data['success']) && $data['success']) {
-                            $mac = $data['mac'] ?? null;
-                            $ipDetectada = $data['ip'] ?? null;
-                            $hostnameDetectado = $hostnameCompleto;
-                            $status = 'online';
-                            if (!empty($mac)) {
-                                $macObtenida = true;
-                                \Log::info("MAC detectada para hostname {$hostnameCompleto}: {$mac}");
-                            }
+                // Intentar con el hostname completo (incluyendo .tierno.es)
+                $hostnameCompleto = !str_contains($hostname, '.') ? $hostname . '.tierno.es' : $hostname;
+                $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostnameCompleto);
+                $response = @file_get_contents($pythonServiceUrl);
+                
+                if ($response !== false) {
+                    $data = json_decode($response, true);
+                    if (isset($data['success']) && $data['success']) {
+                        $mac = $data['mac'] ?? null;
+                        $ipDetectada = $data['ip'] ?? null;
+                        $hostnameDetectado = $hostnameCompleto;
+                        $status = 'online';
+                        if (!empty($mac)) {
+                            $macObtenida = true;
+                            \Log::info("MAC detectada para hostname {$hostnameCompleto}: {$mac}");
                         }
                     }
                 }
 
                 if (!$macObtenida) {
-                    \Log::warning('No se pudo detectar la información del host', ['hostname' => $hostname]);
+                    \Log::warning('No se pudo detectar la información del host', ['hostname' => $hostnameCompleto]);
                     return redirect()->back()
                         ->withInput()
                         ->with('error', 'No se pudo detectar la información del host. Asegúrese de que el equipo esté encendido y conectado a la red.');
