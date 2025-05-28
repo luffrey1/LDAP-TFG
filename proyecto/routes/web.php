@@ -12,8 +12,6 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Middleware\CheckModuleAccess;
 use App\Http\Controllers\MonitorController;
-use App\Http\Controllers\SshTerminalController;
-use App\Http\Controllers\WebSocketController;
 use App\Events\TestBroadcast;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\LdapGroupController;
