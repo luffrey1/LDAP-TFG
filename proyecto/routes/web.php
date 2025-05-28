@@ -192,17 +192,6 @@ Route::middleware(['App\Http\Middleware\LdapAuthMiddleware'])->prefix('profesor'
 Route::get('/monitor/scripts/available', [MonitorController::class, 'getAvailableScripts'])->name('monitor.scripts.available');
 Route::post('/monitor/scripts/transfer', [MonitorController::class, 'transferScript'])->name('monitor.scripts.transfer');
 
-// Rutas para terminal SSH - definidas directamente sin usar prefix para evitar problemas de ruta
-Route::post('/api/terminal/connect', [SshTerminalController::class, 'connect'])
-    ->middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])
-    ->name('ssh.connect');
-Route::post('/api/terminal/disconnect', [SshTerminalController::class, 'disconnect'])
-    ->middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])
-    ->name('ssh.disconnect');
-Route::post('/api/terminal/send', [SshTerminalController::class, 'execute'])
-    ->middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])
-    ->name('ssh.send');
-
 // Rutas para WebSocket
 Route::prefix('api/websocket')->middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(function () {
     Route::get('/status', [WebSocketController::class, 'checkStatus'])->name('websocket.status');
