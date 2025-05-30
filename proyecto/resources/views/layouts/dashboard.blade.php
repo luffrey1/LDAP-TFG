@@ -699,6 +699,14 @@
                                 <i class="fas fa-users-cog"></i> Usuarios LDAP
                             </a>
                         </li>
+                        @if(session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->is('admin/gestion/grupos*') ? 'active' : '' }}" href="{{ route('admin.groups.index') }}">
+                                <i class="fas fa-users-cog"></i>
+                                <span>Grupos LDAP</span>
+                            </a>
+                        </li>
+                        @endif
                         
                         @if(\App\Models\SistemaConfig::obtenerConfig('modulo_documentos_activo', true))
                         <div class="sidebar-divider"></div>
@@ -754,12 +762,6 @@
                         <li class="nav-item">
                             <a class="nav-link {{ request()->is('admin/configuracion') ? 'active' : '' }}" href="{{ route('admin.configuracion.index') }}">
                                 <i class="fas fa-cogs"></i> Configuración
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->is('admin/gestion/grupos*') ? 'active' : '' }}" href="{{ route('admin.groups.index') }}">
-                                <i class="fas fa-users-cog"></i>
-                                <span>Gestión de Grupos LDAP</span>
                             </a>
                         </li>
                         @endif
