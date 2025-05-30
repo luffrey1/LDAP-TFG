@@ -1,5 +1,53 @@
 # Pendiente
 
+- **✅ El usuario ldap-admin no debe poderse quitar del grupo ldapadmins**
+
+- **✅Cambiar "Gestión de Grupos LDAP" por "Grupos LDAP" y subir debajo de Usuarios LDAP.**
+
+- Monitor de equipos: sección de Discos con porcentaje individual de llenado en barra horizontal. El chart junto a CPU y Memoria que muestre el llenado total de entre todos los discos.
+
+- Rectificar explicaicón Configuración telemetría: es Laravel quien pide los datos a los agentes, no al revés.
+
+SANTI: os pasa la clave privada/pública para el usuario administrator.
+
+Crear usuario LDAP:
+
+- Nombre de usuario debajo de Apellido.
+
+- Username y email que se autocompleten pero tambi'en se puedan modificar a mano.
+
+Selecci'on de tipo de usuario 😛rofesor o alumno arriba del todo. Que se modifique tambi'en el GID por defecto buscando ese GID del que tenga el grupo "profesores" o "alumnos" haciendo una consulta ldap.
+
+Que se marque usuario tipo alumno por defecto.
+
+Poner el texto "Automático" al UID como placeholder cuando el formulario está vacío.
+
+el DN que no sea en formulario. Que aparezca debajo del username como texto sincronizado con el username.
+
+Filtrar usuarios LDAP por grupo no actualiza los grupos actuales. Hacer consulta al ldap.
+
+Poder modificar passwords a un grupo de usuarios.
+
+EQUIPOS:
+
+Al añadir equipos, que funcione con otros edificios estilo A3-B5.
+
+Criterio: si hay qun guion en el nombre, la primera parte es el grupo. Si no hay guion, va a Sin grupo.
+
+Quitar dos botones de "Actualizar Estado" y "Actualizar Routers". Poner un solo boton de "Actualizar grupo" en la sección de cada grupo.
+
+Cuando se pulsa "Actualizar grupo" se cambia por un texto sin botón que ponga "Escaneando hosntames..." o "Escaneando IPs...".
+
+En Escanear po IP quitar las tres opciones en escaneo de la red. Quitar también lo de DHCP 1y DHCP2.
+
+LDAP:
+
+al mostrar lista usuarios que se pueda pinchar en la etiqueta de un grupo para filtrar.
+
+Actualizar lastUID y lastGID al añadir usuario o grupo de usuarios. Igual para añadir grupo. IMPORTANTE!!!!!!
+
+LdapUserController.php:2175 poner $maxUID = 1000;
+
 ## Tareas Inmediatas
 - **Revisar colores en toda la aplicación..**
 **quitar seccion de gestion academica y adaptar los csv con contraseña en gestion de usuarios**
