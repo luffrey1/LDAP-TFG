@@ -20,6 +20,11 @@ class LdapAuthMiddleware
     {
         Log::debug('LdapAuthMiddleware: Iniciando verificación de autenticación LDAP');
         
+        // Si la ruta actual es login, permitir el acceso
+        if ($request->routeIs('login') || $request->routeIs('auth.login')) {
+            return $next($request);
+        }
+        
         if (!session()->has('auth_user')) {
             Log::warning('LdapAuthMiddleware: No hay sesión de usuario');
             return redirect()->route('login');

@@ -20,10 +20,13 @@ class AuthController extends Controller
      */
     public function showLoginForm()
     {
+        // Si ya hay una sesión activa, redirigir al dashboard
         if (session()->has('auth_user')) {
+            Log::debug('AuthController: Usuario ya autenticado, redirigiendo a dashboard');
             return redirect()->route('dashboard.index');
         }
         
+        Log::debug('AuthController: Mostrando formulario de login');
         return view('auth.login');
     }
     
@@ -40,9 +43,15 @@ class AuthController extends Controller
         try {
             Log::info('Intento de login para usuario: ' . $credentials['username']);
             
+            // Si ya hay una sesión activa, redirigir al dashboard
+            if (session()->has('auth_user')) {
+                Log::debug('AuthController: Usuario ya autenticado, redirigiendo a dashboard');
+                return redirect()->route('dashboard.index');
+            }
+            
             // Intentar autenticación exclusivamente con LDAP usando LdapRecord
             if ($this->attemptLdapAuth($credentials)) {
-               // Log::info('Usuario autenticado via LDAP: ' . $credentials['username']);
+                Log::info('Usuario autenticado via LDAP: ' . $credentials['username']);
                 return redirect()->route('dashboard.index');
             }
             

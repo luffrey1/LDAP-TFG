@@ -863,41 +863,41 @@ class LdapUserController extends Controller
         try {
             $this->connection->connect();
             
-            // Añadir logs para depuración
-            Log::debug("Intentando eliminar usuario con DN codificado: " . $dn);
-            
             // Decodificar el DN y validar
             $userDn = base64_decode($dn);
             if (!$userDn) {
                 Log::error("Error al decodificar DN: " . $dn);
-                return back()->with('error', 'Error: DN inválido');
+                return redirect()->route('admin.users.index')
+                    ->with('error', 'Error: DN inválido');
             }
             
-            Log::debug("DN decodificado: " . $userDn);
+            Log::debug("DN decodificado para eliminar: " . $userDn);
             
-            // Extraer uid del userDn para búsquedas adicionales
+            // Extraer UID del DN para búsquedas alternativas
             $uid = '';
             if (preg_match('/uid=([^,]+)/', $userDn, $matches)) {
                 $uid = $matches[1];
-                Log::debug("UID extraído para eliminación: " . $uid);
             }
             
-            // Buscar el usuario de manera más específica
-            $user = null;
-            
-            // Primero intentar por UID en toda la base
-            if (!empty($uid)) {
-                $user = $this->connection->query()
-                    ->in($this->baseDn)
-                    ->where('uid', '=', $uid)
-                    ->first();
-                    
-                if ($user) {
-                    Log::debug("Usuario encontrado por UID para eliminar: " . $uid);
-                }
+            // Verificar si es el usuario ldap-admin
+            if ($uid === 'ldap-admin') {
+                Log::warning("Intento de eliminar usuario ldap-admin");
+                return redirect()->route('admin.users.index')
+                    ->with('error', 'No se puede eliminar el usuario ldap-admin');
             }
             
-            // Si no se encontró por UID, intentar por DN exacto
+            // Si no tenemos UID, no podemos continuar
+            if (empty($uid)) {
+                return redirect()->route('admin.users.index')
+                    ->with('error', 'Error: No se pudo obtener el UID del usuario');
+            }
+            
+            // Buscar el usuario por su UID para confirmar que existe
+            $user = $this->connection->query()
+                ->in($this->peopleOu)
+                ->where('uid', '=', $uid)
+                ->first();
+                
             if (!$user) {
                 Log::debug("Usuario no encontrado por UID, buscando por DN en toda la base");
                 $user = $this->connection->query()
@@ -912,7 +912,8 @@ class LdapUserController extends Controller
                 
             if (!$user) {
                 Log::error("Usuario no encontrado para eliminar con DN: " . $userDn);
-                return back()->with('error', 'Usuario no encontrado');
+                return redirect()->route('admin.users.index')
+                    ->with('error', 'Usuario no encontrado');
             }
             
             // Obtener el DN actual del usuario
@@ -939,44 +940,27 @@ class LdapUserController extends Controller
             // Si el usuario es administrador y el usuario actual no es administrador, no permitir eliminarlo
             $isCurrentUserAdmin = session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin';
             if ($isAdminUser && !$isCurrentUserAdmin) {
-                return back()->with('error', 'No tienes permisos para eliminar a un administrador');
+                Log::warning("Intento de eliminar usuario administrador por usuario no administrador");
+                return redirect()->route('admin.users.index')
+                    ->with('error', 'No tienes permisos para eliminar a un administrador');
             }
             
-            // Obtener el uid del usuario para los logs
-            $uid = '';
-            if (is_array($user)) {
-                $uid = $user['uid'][0] ?? '';
-            } else {
-                $uid = $user->getFirstAttribute('uid');
+            // Eliminar el usuario
+            try {
+                $this->connection->query()->delete($actualUserDn);
+                Log::info("Usuario eliminado correctamente: " . $actualUserDn);
+                return redirect()->route('admin.users.index')
+                    ->with('success', 'Usuario eliminado correctamente');
+            } catch (\Exception $e) {
+                Log::error("Error al eliminar usuario: " . $e->getMessage());
+                return redirect()->route('admin.users.index')
+                    ->with('error', 'Error al eliminar el usuario: ' . $e->getMessage());
             }
             
-            // Primero eliminar el usuario de todos los grupos
-            $groups = $this->connection->query()
-                ->in($this->baseDn)
-                ->rawFilter('(|(objectclass=groupOfUniqueNames)(objectclass=posixGroup))')
-                ->get();
-            
-            foreach ($groups as $group) {
-                $this->removeUserFromGroup($actualUserDn, $group['dn']);
-            }
-            
-            // Luego eliminar el usuario
-            $this->connection->run(function ($ldap) use ($actualUserDn) {
-                $ldap->delete($actualUserDn);
-            });
-            
-            // Registrar la acción en logs
-            $adminUser = $this->getCurrentUsername();
-            Log::info("Usuario LDAP eliminado: {$uid} por {$adminUser}");
-            
-            // Cambiamos la redirección para usar nombre de ruta
+        } catch (\Exception $e) {
+            Log::error("Error en destroy: " . $e->getMessage());
             return redirect()->route('admin.users.index')
-                ->with('success', 'Usuario eliminado correctamente');
-                
-        } catch (Exception $e) {
-            Log::error('Error al eliminar usuario LDAP: ' . $e->getMessage());
-            Log::error('Traza: ' . $e->getTraceAsString());
-            return back()->with('error', 'Error al eliminar el usuario: ' . $e->getMessage());
+                ->with('error', 'Error al procesar la solicitud: ' . $e->getMessage());
         }
     }
 
@@ -2009,7 +1993,7 @@ class LdapUserController extends Controller
                  // En un escenario completo, necesitaríamos una operación de modificación
                  // ldap_mod_add($ldapConn, $groupDn, ['memberUid' => $userUid]) para posixGroup
                  // o ldap_mod_add($ldapConn, $groupDn, ['member' => $userDn]) para groupOfNames
-                 // pero para la creación inicial solo necesitamos resolver la violation.
+                 // pero para la creación inicial solo necesitamos resolver la violación.
             }
 
 
@@ -2643,38 +2627,41 @@ class LdapUserController extends Controller
                 }
                 
                 // Verificar uniqueMember para groupOfUniqueNames
-                if ($isUniqueGroup) {
-                    // Leer miembros actuales
-                    $memberInfo = ldap_read($ldapConn, $groupDn, "(objectclass=*)", ["uniqueMember"]);
-                    if ($memberInfo) {
-                        $memberEntry = ldap_get_entries($ldapConn, $memberInfo);
-                        
-                        // Verificar si el usuario ya es miembro
-                        $isCurrentMember = false;
-                        if (isset($memberEntry[0]['uniquemember'])) {
-                            for ($j = 0; $j < $memberEntry[0]['uniquemember']['count']; $j++) {
-                                if ($memberEntry[0]['uniquemember'][$j] === $userDn) {
-                                    $isCurrentMember = true;
-                                    break;
-                                }
+                $uniqueMemberInfo = ldap_read($ldapConn, $groupDn, "(objectclass=*)", ["uniqueMember"]);
+                if ($uniqueMemberInfo) {
+                    $uniqueMemberEntry = ldap_get_entries($ldapConn, $uniqueMemberInfo);
+                    
+                    // Verificar si el usuario ya es miembro
+                    $isCurrentMember = false;
+                    if (isset($uniqueMemberEntry[0]['uniquemember'])) {
+                        for ($j = 0; $j < $uniqueMemberEntry[0]['uniquemember']['count']; $j++) {
+                            if ($uniqueMemberEntry[0]['uniquemember'][$j] === $userDn) {
+                                $isCurrentMember = true;
+                                break;
                             }
                         }
+                    }
+                    
+                    // Añadir o eliminar según corresponda
+                    if ($shouldBeInGroup && !$isCurrentMember) {
+                        // Añadir al grupo
+                        $mod = ["uniqueMember" => $userDn];
+                        ldap_mod_add($ldapConn, $groupDn, $mod);
+                        Log::debug("Usuario $userDn añadido como uniqueMember al grupo $groupName");
+                    } else if (!$shouldBeInGroup && $isCurrentMember) {
+                        // Prevenir la eliminación del ldap-admin del grupo ldapadmins
+                        if ($groupName === 'ldapadmins' && $userUid === 'ldap-admin') {
+                            Log::warning("No se puede eliminar el usuario ldap-admin del grupo ldapadmins");
+                            continue;
+                        }
                         
-                        // Añadir o eliminar según corresponda
-                        if ($shouldBeInGroup && !$isCurrentMember) {
-                            // Añadir al grupo
+                        // Eliminar del grupo pero verificar que no sea el último miembro
+                        if ($uniqueMemberEntry[0]['uniquemember']['count'] > 1) {
                             $mod = ["uniqueMember" => $userDn];
-                            ldap_mod_add($ldapConn, $groupDn, $mod);
-                            Log::debug("Usuario $userDn añadido como uniqueMember al grupo $groupName");
-                        } else if (!$shouldBeInGroup && $isCurrentMember) {
-                            // Eliminar del grupo pero verificar que no sea el último miembro
-                            if ($memberEntry[0]['uniquemember']['count'] > 1) {
-                                $mod = ["uniqueMember" => $userDn];
-                                ldap_mod_del($ldapConn, $groupDn, $mod);
-                                Log::debug("Usuario $userDn eliminado como uniqueMember del grupo $groupName");
-                            } else {
-                                Log::warning("No se elimina el usuario del grupo $groupName porque es el último miembro");
-                            }
+                            ldap_mod_del($ldapConn, $groupDn, $mod);
+                            Log::debug("Usuario $userDn eliminado como uniqueMember del grupo $groupName");
+                        } else {
+                            Log::warning("No se elimina el usuario del grupo $groupName porque es el último miembro");
                         }
                     }
                 }

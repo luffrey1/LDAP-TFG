@@ -60,7 +60,7 @@ class LoginController extends Controller
      */
     public function showLoginForm()
     {
-        return redirect()->route('login');
+        return view('auth.login');
     }
 
     /**
