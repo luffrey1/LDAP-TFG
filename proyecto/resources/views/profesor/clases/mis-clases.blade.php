@@ -41,7 +41,7 @@
                         <h5 class="mb-0">{{ $clase->nombre }}</h5>
                         <span class="badge bg-primary">{{ $clase->codigo }}</span>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body text-white">
                         <div class="mb-3">
                             <i class="fas fa-users me-2"></i> <span class="fw-bold">{{ $clase->cantidad_alumnos }}</span> alumnos
                         </div>
