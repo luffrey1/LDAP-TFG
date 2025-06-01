@@ -53,15 +53,15 @@
                                             </span>
                                         </div>
                                         <div class="card-body">
-                                            <p class="card-text">{{ $group->description ?? 'Sin descripción' }}</p>
+                                            <p class="card-text text-white">{{ $group->description ?? 'Sin descripción' }}</p>
                                             
-                                            <div class="d-flex justify-content-between align-items-center">
+                                            <div class="d-flex justify-content-between align-items-center text-white">
                                                 <div>
                                                     <span class="badge bg-success me-1">
                                                         <i class="fas fa-check-circle me-1"></i> {{ $group->online_hosts_count }} en línea
                                                     </span>
                                                 </div>
-                                                <small class="text-muted">{{ $group->location ?? 'Ubicación no especificada' }}</small>
+                                                <small class="text-white">{{ $group->location ?? 'Ubicación no especificada' }}</small>
                                             </div>
                                         </div>
                                         <div class="card-footer bg-light d-flex justify-content-between">
