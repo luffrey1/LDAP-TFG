@@ -25,7 +25,7 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Usuarios</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800 counter">{{ $stats['usuarios'] }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-white counter">{{ $stats['usuarios'] }}</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-users fa-2x text-gray-300"></i>
@@ -46,7 +46,7 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Documentos</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800 counter">{{ $stats['documentos'] }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-white counter">{{ $stats['documentos'] }}</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-file-alt fa-2x text-gray-300"></i>
@@ -68,7 +68,7 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Mensajes Nuevos</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800 counter">{{ $stats['mensajes_nuevos'] }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-white counter">{{ $stats['mensajes_nuevos'] }}</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-envelope fa-2x text-gray-300"></i>
@@ -90,7 +90,7 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Eventos Próximos</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            <div class="h5 mb-0 font-weight-bold text-white">
                                 <span class="counter">{{ $stats['eventos_proximos'] }}</span>
                                 <small class="text-muted ml-2">en los próximos 7 días</small>
                             </div>
