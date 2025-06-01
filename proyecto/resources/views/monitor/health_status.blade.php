@@ -17,7 +17,7 @@
             <div class="card text-center border-danger mb-2">
                 <div class="card-body">
                     <h5 class="card-title text-danger"><i class="fas fa-skull-crossbones"></i> Graves</h5>
-                    <span class="display-6 fw-bold">{{ $summary['grave'] }}</span>
+                    <span class="display-6 fw-bold text-white">{{ $summary['grave'] }}</span>
                 </div>
             </div>
         </div>
@@ -25,7 +25,7 @@
             <div class="card text-center border-warning mb-2">
                 <div class="card-body">
                     <h5 class="card-title text-warning"><i class="fas fa-exclamation-triangle"></i> Críticos</h5>
-                    <span class="display-6 fw-bold">{{ $summary['critico'] }}</span>
+                    <span class="display-6 fw-bold text-white">{{ $summary['critico'] }}</span>
                 </div>
             </div>
         </div>
@@ -33,7 +33,7 @@
             <div class="card text-center border-success mb-2">
                 <div class="card-body">
                     <h5 class="card-title text-success"><i class="fas fa-check-circle"></i> Saludables</h5>
-                    <span class="display-6 fw-bold">{{ $summary['saludable'] }}</span>
+                    <span class="display-6 fw-bold text-white">{{ $summary['saludable'] }}</span>
                 </div>
             </div>
         </div>
@@ -41,7 +41,7 @@
             <div class="card text-center border-info mb-2">
                 <div class="card-body">
                     <h5 class="card-title text-info"><i class="fas fa-clock"></i> Encendidos &gt; 8h</h5>
-                    <span class="display-6 fw-bold">{{ $summary['encendidos_8h'] }}</span>
+                    <span class="display-6 fw-bold text-white">{{ $summary['encendidos_8h'] }}</span>
                 </div>
             </div>
         </div>
