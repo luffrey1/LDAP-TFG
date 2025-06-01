@@ -47,7 +47,7 @@
                                 <div class="col-md-4 mb-4">
                                     <div class="card h-100 border-{{ $group->is_active ? 'success' : 'secondary' }}">
                                         <div class="card-header bg-{{ $group->is_active ? 'success' : 'secondary' }} text-white d-flex justify-content-between align-items-center">
-                                            <h5 class="mb-0"><i class="fas fa-{{ $group->type == 'classroom' ? 'chalkboard-teacher' : 'building' }} me-2"></i> {{ $group->name }}</h5>
+                                            <h5 class="mb-0 text-white"><i class="fas fa-{{ $group->type == 'classroom' ? 'chalkboard-teacher' : 'building' }} me-2"></i> {{ $group->name }}</h5>
                                             <span class="badge bg-light text-dark">
                                                 <i class="fas fa-desktop me-1"></i> {{ $group->total_hosts_count }}
                                             </span>
