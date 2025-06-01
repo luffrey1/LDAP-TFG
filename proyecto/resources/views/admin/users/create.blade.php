@@ -32,7 +32,7 @@
                     <form method="POST" action="{{ route('admin.users.store') }}">
                         @csrf
 
-                        <div class="mb-3">
+                        <div class="mb-3 text-white">
                             <label for="uid" class="form-label">{{ __('Nombre de Usuario') }} <span class="text-danger">*</span></label>
                             <input id="uid" type="text" class="form-control @error('uid') is-invalid @enderror" name="uid" value="{{ old('uid') }}" required autocomplete="uid" readonly>
                             <div class="form-text">{{ __('Se genera automáticamente a partir del nombre y apellido.') }}</div>
@@ -43,7 +43,7 @@
                             @enderror
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-3 text-white">
                             <label for="nombre" class="form-label">{{ __('Nombre') }} <span class="text-danger">*</span></label>
                             <input id="nombre" type="text" class="form-control @error('nombre') is-invalid @enderror" name="nombre" value="{{ old('nombre') }}" required>
                             @error('nombre')
@@ -53,7 +53,7 @@
                             @enderror
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-3 text-white">
                             <label for="apellidos" class="form-label">{{ __('Apellidos') }} <span class="text-danger">*</span></label>
                             <input id="apellidos" type="text" class="form-control @error('apellidos') is-invalid @enderror" name="apellidos" value="{{ old('apellidos') }}" required>
                             @error('apellidos')
@@ -63,7 +63,7 @@
                             @enderror
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-3 text-white">
                             <label for="email" class="form-label">{{ __('Correo Electrónico') }} <span class="text-danger">*</span></label>
                             <input id="email" type="email" class="form-control @error('email') is-invalid @enderror" name="email" value="{{ old('email') }}" required readonly>
                             <div class="form-text">{{ __('Se genera automáticamente a partir del nombre y apellidos.') }}</div>
@@ -74,39 +74,39 @@
                             @enderror
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-3 text-white">
                             <label for="dn_preview" class="form-label">{{ __('DN (Canonical Name)') }}</label>
                             <input id="dn_preview" type="text" class="form-control" readonly>
                             <div class="form-text">{{ __('Este será el identificador único del usuario en LDAP.') }}</div>
                         </div>
 
                         <div class="row">
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-6 mb-3 text-white">
                                 <label for="uidNumber" class="form-label">{{ __('UID Number') }}</label>
                                 <input id="uidNumber" type="number" class="form-control" name="uidNumber" value="{{ old('uidNumber') }}">
                                 <div class="form-text">{{ __('Se asignará automáticamente si se deja vacío.') }}</div>
                             </div>
 
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-6 mb-3 text-white">
                                 <label for="gidNumber" class="form-label">{{ __('GID Number') }}</label>
                                 <input id="gidNumber" type="number" class="form-control" name="gidNumber" value="{{ old('gidNumber', '9000') }}">
                                 <div class="form-text">{{ __('Grupo principal del usuario (9000 para everybody).') }}</div>
                             </div>
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-3 text-white">
                             <label for="homeDirectory" class="form-label">{{ __('Home Directory') }}</label>
                             <input id="homeDirectory" type="text" class="form-control" name="homeDirectory" value="{{ old('homeDirectory', '/home/') }}" readonly>
                             <div class="form-text">{{ __('Se genera automáticamente a partir del nombre de usuario.') }}</div>
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-3 text-white">
                             <label for="loginShell" class="form-label">{{ __('Shell') }}</label>
                             <input id="loginShell" type="text" class="form-control" name="loginShell" value="{{ old('loginShell', '/bin/bash') }}">
                             <div class="form-text">{{ __('Shell por defecto del usuario.') }}</div>
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-3 text-white">
                             <label for="password" class="form-label">{{ __('Contraseña') }} <span class="text-danger">*</span></label>
                             <input id="password" type="password" class="form-control @error('password') is-invalid @enderror" name="password" required>
                             <div class="form-text">{{ __('Mínimo 8 caracteres.') }}</div>
@@ -117,12 +117,12 @@
                             @enderror
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-3 text-white">
                             <label for="password_confirmation" class="form-label">{{ __('Confirmar Contraseña') }} <span class="text-danger">*</span></label>
                             <input id="password_confirmation" type="password" class="form-control" name="password_confirmation" required>
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-3 text-white">
                             <label class="form-label">{{ __('Rol Predefinido') }}</label>
                             <div class="btn-group w-100" role="group">
                                 @if(session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
@@ -134,7 +134,7 @@
                             <div class="form-text">{{ __('Seleccione un rol para preconfigurar los grupos.') }}</div>
                         </div>
 
-                        <div class="mb-4">
+                        <div class="mb-4 text-white">
                             <label class="form-label">{{ __('Grupos') }} <span class="text-danger">*</span></label>
                             
                             <!-- Debug información de grupos disponibles -->
