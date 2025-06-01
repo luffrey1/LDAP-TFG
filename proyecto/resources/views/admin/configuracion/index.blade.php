@@ -114,10 +114,10 @@
                 <div class="card shadow card-configuracion">
                     <div class="card-header py-3">
                         <h6 class="m-0 font-weight-bold text-primary">Módulos del Sistema</h6>
-                        <p class="panel-descripcion mt-1 mb-0">Activa o desactiva los módulos del sistema</p>
+                        <p class="panel-descripcion mt-1 mb-0 text-white">Activa o desactiva los módulos del sistema</p>
                     </div>
                     <div class="card-body">
-                        <div class="modulo-card">
+                        <div class="modulo-card text-white">
                             <div class="modulo-titulo">Calendario</div>
                             <div class="modulo-descripcion">Permite gestionar eventos y reuniones del centro</div>
                             <div class="form-check form-switch modulo-switch">
@@ -127,7 +127,7 @@
                             </div>
                         </div>
                         
-                        <div class="modulo-card">
+                        <div class="modulo-card text-white">
                             <div class="modulo-titulo">Mensajería</div>
                             <div class="modulo-descripcion">Sistema de mensajería interna entre usuarios</div>
                             <div class="form-check form-switch modulo-switch">
@@ -137,7 +137,7 @@
                             </div>
                         </div>
                         
-                        <div class="modulo-card">
+                        <div class="modulo-card text-white">
                             <div class="modulo-titulo">Documentos</div>
                             <div class="modulo-descripcion">Gestión de documentos compartidos</div>
                             <div class="form-check form-switch modulo-switch">
@@ -147,7 +147,7 @@
                             </div>
                         </div>
                         
-                        <div class="modulo-card">
+                        <div class="modulo-card text-white">
                             <div class="modulo-titulo">Monitor de Equipos</div>
                             <div class="modulo-descripcion">Monitoreo y gestión de equipos por aulas</div>
                             <div class="form-check form-switch modulo-switch">
@@ -157,7 +157,7 @@
                             </div>
                         </div>
 
-                        <div class="modulo-card">
+                        <div class="modulo-card text-white">
                             <div class="modulo-titulo">Acceso SSH</div>
                             <div class="modulo-descripcion">Gestión de acceso SSH a equipos</div>
                             <div class="form-check form-switch modulo-switch">
