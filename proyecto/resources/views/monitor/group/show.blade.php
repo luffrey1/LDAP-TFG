@@ -54,10 +54,10 @@
                         <div class="col-md-6">
                             <div class="card mb-3">
                                 <div class="card-header bg-light">
-                                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i> Información del Grupo</h5>
+                                    <h5 class="mb-0 text-black"><i class="fas fa-info-circle me-2 text-black"></i> Información del Grupo</h5>
                                 </div>
                                 <div class="card-body">
-                                    <dl class="row mb-0">
+                                    <dl class="row mb-0 text-white">
                                         <dt class="col-sm-4">Nombre:</dt>
                                         <dd class="col-sm-8">{{ $group->name }}</dd>
                                         
