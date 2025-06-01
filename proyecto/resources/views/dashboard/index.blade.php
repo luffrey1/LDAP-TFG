@@ -293,7 +293,7 @@
                             @foreach($userActivity as $activity)
                             <div class="timeline-item">
                                 <div class="timeline-marker"></div>
-                                <div class="timeline-content">
+                                <div class="timeline-content text-white">
                                     <h5 class="timeline-title">{{ $activity['nombre'] }} {{ $activity['accion'] }}</h5>
                                     <p class="mb-1">{{ $activity['detalles'] }}</p>
                                     <small class="text-muted">{{ date('d/m/Y H:i', strtotime($activity['fecha'])) }}</small>
