@@ -36,7 +36,7 @@
                                 <input type="text" class="form-control" id="name" name="name" 
                                        value="{{ old('name', $group->name) }}" required>
                             </div>
-                            <small class="text-muted">Para aulas, use el formato B27, B21, etc. según el esquema del instituto.</small>
+                            <small class="text-white">Para aulas, use el formato B27, B21, etc.</small>
                         </div>
                         
                         <div class="mb-3">
