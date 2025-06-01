@@ -75,16 +75,16 @@
                         
                         <div class="mb-3">
                             <div class="card bg-light">
-                                <div class="card-body text-white">
-                                    <h6 class="card-title"><i class="fas fa-info-circle me-2"></i> Información del Grupo</h6>
-                                    <div class="row">
+                                <div class="card-body">
+                                    <h6 class="card-title text-black"><i class="fas fa-info-circle me-2"></i> Información del Grupo</h6>
+                                    <div class="row ">
                                         <div class="col-md-6">
-                                            <p class="mb-1"><strong>Total de equipos:</strong> {{ $group->total_hosts_count }}</p>
-                                            <p class="mb-1"><strong>Equipos en línea:</strong> {{ $group->online_hosts_count }}</p>
+                                            <p class="mb-1 text-white"><strong>Total de equipos:</strong> {{ $group->total_hosts_count }}</p>
+                                            <p class="mb-1 text-white"><strong>Equipos en línea:</strong> {{ $group->online_hosts_count }}</p>
                                         </div>
                                         <div class="col-md-6">
-                                            <p class="mb-1"><strong>Creado:</strong> {{ $group->created_at->format('d/m/Y H:i') }}</p>
-                                            <p class="mb-1"><strong>Última actualización:</strong> {{ $group->updated_at->format('d/m/Y H:i') }}</p>
+                                            <p class="mb-1 text-white"><strong>Creado:</strong> {{ $group->created_at->format('d/m/Y H:i') }}</p>
+                                            <p class="mb-1 text-white"><strong>Última actualización:</strong> {{ $group->updated_at->format('d/m/Y H:i') }}</p>
                                         </div>
                                     </div>
                                 </div>
