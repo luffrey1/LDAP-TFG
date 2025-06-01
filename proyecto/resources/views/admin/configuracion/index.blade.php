@@ -236,9 +236,9 @@
                     </div>
                     <div class="card-body">
                         <div class="seguridad-item">
-                            <label for="telemetria_intervalo_minutos" class="form-label">Intervalo de telemetría (minutos)</label>
+                            <label for="telemetria_intervalo_minutos" class="form-label text-white">Intervalo de telemetría (minutos)</label>
                             <input type="number" class="form-control" id="telemetria_intervalo_minutos" name="telemetria_intervalo_minutos" min="1" max="1440" value="{{ isset($configuraciones['general']) && $configuraciones['general']->where('clave', 'telemetria_intervalo_minutos')->first() ? $configuraciones['general']->where('clave', 'telemetria_intervalo_minutos')->first()->valor : 60 }}">
-                            <small class="form-text text-muted">Ejemplo: 60 = cada hora, 10 = cada 10 minutos, 1440 = una vez al día.</small>
+                            <small class="form-text text-white">Ejemplo: 60 = cada hora, 10 = cada 10 minutos, 1440 = una vez al día.</small>
                         </div>
                     </div>
                 </div>
