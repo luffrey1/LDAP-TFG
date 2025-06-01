@@ -230,14 +230,6 @@
             color: var(--dark-color);
         }
         
-        /* Texto */
-        h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
-            color: var(--dark-color);
-        }
-        
-        .text-muted {
-            color: var(--text-muted) !important;
-        }
         
         /* Form text */
         .form-text {
