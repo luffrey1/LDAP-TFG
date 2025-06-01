@@ -8,9 +8,6 @@
         margin-bottom: 30px;
         transition: all 0.3s;
     }
-    .card-configuracion:hover {
-        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
-    }
     .form-check-input {
         height: 1.2rem;
         width: 2.4rem;
