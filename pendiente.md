@@ -2,7 +2,7 @@
 **No funciona boton de CREAR EVENTO EN /calendario , arreglar la creacion de eventos en calendario**
 
 
-
+ARREGLADO COLORES ✅
 - **✅ El usuario ldap-admin no debe poderse quitar del grupo ldapadmins**
 
 
@@ -20,7 +20,7 @@ Crear usuario LDAP:
 
 - Username y email que se autocompleten pero tambi'en se puedan modificar a mano.
 
-Selecci'on de tipo de usuario 😛rofesor o alumno arriba del todo. Que se modifique tambi'en el GID por defecto buscando ese GID del que tenga el grupo "profesores" o "alumnos" haciendo una consulta ldap.
+Selecci'on de tipo de usuario profesor o alumno arriba del todo. Que se modifique tambi'en el GID por defecto buscando ese GID del que tenga el grupo "profesores" o "alumnos" haciendo una consulta ldap.
 
 Que se marque usuario tipo alumno por defecto.
 
