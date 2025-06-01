@@ -88,13 +88,13 @@
                         <div class="col-md-6">
                             <div class="card mb-3">
                                 <div class="card-header bg-light">
-                                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i> Estadísticas</h5>
+                                    <h5 class="mb-0 text-black"><i class="fas fa-chart-pie me-2"></i> Estadísticas</h5>
                                 </div>
                                 <div class="card-body">
                                     <div class="row">
                                         <div class="col-md-6 mb-3">
                                             <div class="card bg-primary text-white">
-                                                <div class="card-body py-3 text-center">
+                                                <div class="card-body py-3 text-center text-white">
                                                     <h3 class="mb-0">{{ $group->total_hosts_count }}</h3>
                                                     <p class="mb-0">Total de Equipos</p>
                                                 </div>
@@ -102,7 +102,7 @@
                                         </div>
                                         <div class="col-md-6 mb-3">
                                             <div class="card bg-success text-white">
-                                                <div class="card-body py-3 text-center">
+                                                <div class="card-body py-3 text-center text-white">
                                                     <h3 class="mb-0">{{ $group->online_hosts_count }}</h3>
                                                     <p class="mb-0">Equipos En Línea</p>
                                                 </div>
