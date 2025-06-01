@@ -35,9 +35,9 @@
         <div class="col-md-4 mb-4">
             <div class="card h-100">
                 <div class="card-header">
-                    <h5 class="mb-0">Información de la Clase</h5>
+                    <h5 class="mb-0 text-white">Información de la Clase</h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body text-white">
                     <div class="mb-3">
                         <label class="fw-bold">Código:</label>
                         <p>{{ $clase->codigo }}</p>
