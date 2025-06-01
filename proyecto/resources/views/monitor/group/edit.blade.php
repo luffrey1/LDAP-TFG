@@ -75,7 +75,7 @@
                         
                         <div class="mb-3">
                             <div class="card bg-light">
-                                <div class="card-body">
+                                <div class="card-body text-white">
                                     <h6 class="card-title"><i class="fas fa-info-circle me-2"></i> Información del Grupo</h6>
                                     <div class="row">
                                         <div class="col-md-6">
