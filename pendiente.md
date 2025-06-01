@@ -1,6 +1,10 @@
 # Pendiente
+**No funciona boton de CREAR EVENTO EN /calendario , arreglar la creacion de eventos en calendario**
+
+
 
 - **✅ El usuario ldap-admin no debe poderse quitar del grupo ldapadmins**
+
 
 - **✅Cambiar "Gestión de Grupos LDAP" por "Grupos LDAP" y subir debajo de Usuarios LDAP.**
 

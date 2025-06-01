@@ -75,7 +75,7 @@
                             <div class="card">
                                 <div class="card-header bg-light">
                                     <div class="d-flex justify-content-between align-items-center">
-                                        <h5 class="mb-0"><i class="fas fa-list me-2"></i> Listado de Equipos</h5>
+                                        <h5 class="mb-0"><i class="fas fa-list me-2 text-black"></i> Listado de Equipos</h5>
                                         <div>
                                             <a href="{{ route('monitor.create') }}" class="btn btn-success btn-sm me-2">
                                                 <i class="fas fa-plus me-1"></i> Añadir Equipo
@@ -190,7 +190,7 @@
                             <div class="card">
                                 <div class="card-header bg-light">
                                     <div class="d-flex justify-content-between align-items-center">
-                                        <h5 class="mb-0"><i class="fas fa-layer-group me-2"></i> Grupos de Equipos</h5>
+                                        <h5 class="mb-0"><i class="fas fa-layer-group me-2 text-black"></i> Grupos de Equipos</h5>
                                         <a href="{{ route('monitor.groups.index') }}" class="btn btn-primary btn-sm">
                                             <i class="fas fa-external-link-alt me-1"></i> Ver Todos
                                         </a>

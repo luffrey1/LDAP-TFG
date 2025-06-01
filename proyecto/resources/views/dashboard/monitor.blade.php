@@ -29,9 +29,9 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Equipos</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800 counter" id="total-hosts">{{ count($hosts) }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-white counter" id="total-hosts">{{ count($hosts) }}</div>
                         </div>
-                        <div class="col-auto">
+                        <div class="col-auto">  
                             <i class="fas fa-desktop fa-2x text-gray-300"></i>
                         </div>
                     </div>
@@ -46,7 +46,7 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Equipos Online</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800 counter" id="online-hosts">
+                            <div class="h5 mb-0 font-weight-bold text-white counter" id="online-hosts">
                                 {{ $hosts->where('status', 'online')->count() }}
                             </div>
                         </div>
@@ -65,7 +65,7 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Equipos Offline</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800 counter" id="offline-hosts">
+                            <div class="h5 mb-0 font-weight-bold text-white counter" id="offline-hosts">
                                 {{ $hosts->where('status', 'offline')->count() }}
                             </div>
                         </div>
@@ -84,7 +84,7 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Estado Desconocido</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800 counter" id="unknown-hosts">
+                            <div class="h5 mb-0 font-weight-bold text-white counter" id="unknown-hosts">
                                 {{ $hosts->where('status', 'unknown')->count() }}
                             </div>
                         </div>
