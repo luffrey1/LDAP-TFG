@@ -30,7 +30,7 @@
                         @method('PUT')
                         
                         <div class="mb-3">
-                            <label for="name" class="form-label">Nombre del Grupo *</label>
+                            <label for="name" class="form-label text-white">Nombre del Grupo *</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-tag"></i></span>
                                 <input type="text" class="form-control" id="name" name="name" 
@@ -40,7 +40,7 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label for="description" class="form-label">Descripción</label>
+                            <label for="description" class="form-label text-white">Descripción</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-align-left"></i></span>
                                 <textarea class="form-control" id="description" name="description" 
@@ -50,7 +50,7 @@
                         
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label for="type" class="form-label">Tipo de Grupo</label>
+                                <label for="type" class="form-label text-white">Tipo de Grupo</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-sitemap"></i></span>
                                     <select class="form-select" id="type" name="type">
@@ -64,7 +64,7 @@
                             </div>
                             
                             <div class="col-md-6">
-                                <label for="location" class="form-label">Ubicación</label>
+                                <label for="location" class="form-label text-white">Ubicación</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
                                     <input type="text" class="form-control" id="location" name="location" 
@@ -79,12 +79,12 @@
                                     <h6 class="card-title text-black"><i class="fas fa-info-circle me-2"></i> Información del Grupo</h6>
                                     <div class="row ">
                                         <div class="col-md-6">
-                                            <p class="mb-1 text-white"><strong>Total de equipos:</strong> {{ $group->total_hosts_count }}</p>
-                                            <p class="mb-1 text-white"><strong>Equipos en línea:</strong> {{ $group->online_hosts_count }}</p>
+                                            <p class="mb-1 text-black"><strong>Total de equipos:</strong> {{ $group->total_hosts_count }}</p>
+                                            <p class="mb-1 text-black"><strong>Equipos en línea:</strong> {{ $group->online_hosts_count }}</p>
                                         </div>
                                         <div class="col-md-6">
-                                            <p class="mb-1 text-white"><strong>Creado:</strong> {{ $group->created_at->format('d/m/Y H:i') }}</p>
-                                            <p class="mb-1 text-white"><strong>Última actualización:</strong> {{ $group->updated_at->format('d/m/Y H:i') }}</p>
+                                            <p class="mb-1 text-black"><strong>Creado:</strong> {{ $group->created_at->format('d/m/Y H:i') }}</p>
+                                            <p class="mb-1 text-black"><strong>Última actualización:</strong> {{ $group->updated_at->format('d/m/Y H:i') }}</p>
                                         </div>
                                     </div>
                                 </div>
