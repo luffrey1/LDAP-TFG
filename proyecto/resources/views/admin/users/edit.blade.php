@@ -33,19 +33,19 @@
                         @csrf
                         @method('PUT')
 
-                        <div class="mb-3">
+                        <div class="mb-3 text-white">
                             <label for="uid" class="form-label">{{ __('Nombre de Usuario') }}</label>
                             <input id="uid" type="text" class="form-control" name="uid" value="{{ is_array($user) ? ($user['uid'][0] ?? '') : $user->getFirstAttribute('uid') }}" readonly>
                             <div class="form-text">{{ __('El nombre de usuario no puede cambiarse.') }}</div>
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-3 text-white">
                             <label for="dn_preview" class="form-label">{{ __('DN (Canonical Name)') }}</label>
                             <input id="dn_preview" type="text" class="form-control" value="{{ base64_decode($encoded_dn) }}" readonly>
                             <div class="form-text">{{ __('Identificador único del usuario en LDAP.') }}</div>
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-3 text-white">
                             <label for="nombre" class="form-label">{{ __('Nombre') }} <span class="text-danger">*</span></label>
                             <input id="nombre" type="text" class="form-control @error('nombre') is-invalid @enderror" name="nombre" value="{{ old('nombre', is_array($user) ? ($user['givenname'][0] ?? '') : $user->getFirstAttribute('givenname')) }}" required>
                             @error('nombre')
@@ -55,7 +55,7 @@
                             @enderror
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-3 text-white">
                             <label for="apellidos" class="form-label">{{ __('Apellidos') }} <span class="text-danger">*</span></label>
                             <input id="apellidos" type="text" class="form-control @error('apellidos') is-invalid @enderror" name="apellidos" value="{{ old('apellidos', is_array($user) ? ($user['sn'][0] ?? '') : $user->getFirstAttribute('sn')) }}" required>
                             @error('apellidos')
@@ -65,7 +65,7 @@
                             @enderror
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-3 text-white">
                             <label for="email" class="form-label">{{ __('Correo Electrónico') }} <span class="text-danger">*</span></label>
                             <input id="email" type="email" class="form-control @error('email') is-invalid @enderror" name="email" value="{{ old('email', is_array($user) ? ($user['mail'][0] ?? '') : $user->getFirstAttribute('mail')) }}" required readonly>
                             <div class="form-text">{{ __('Se genera automáticamente a partir del nombre y apellidos.') }}</div>
@@ -76,33 +76,33 @@
                             @enderror
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
+                            <div class="row">
+                            <div class="col-md-6 mb-3 text-white">
                                 <label for="uidNumber" class="form-label">{{ __('UID Number') }}</label>
                                 <input id="uidNumber" type="number" class="form-control" name="uidNumber" value="{{ old('uidNumber', is_array($user) ? ($user['uidnumber'][0] ?? '') : $user->getFirstAttribute('uidnumber')) }}">
                                 <div class="form-text">{{ __('Identificador numérico del usuario.') }}</div>
                             </div>
 
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-6 mb-3 text-white">
                                 <label for="gidNumber" class="form-label">{{ __('GID Number') }}</label>
                                 <input id="gidNumber" type="number" class="form-control" name="gidNumber" value="{{ old('gidNumber', is_array($user) ? ($user['gidnumber'][0] ?? '') : $user->getFirstAttribute('gidnumber')) }}">
                                 <div class="form-text">{{ __('Grupo principal del usuario.') }}</div>
                             </div>
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-3 text-white">
                             <label for="homeDirectory" class="form-label">{{ __('Home Directory') }}</label>
                             <input id="homeDirectory" type="text" class="form-control" name="homeDirectory" value="{{ old('homeDirectory', is_array($user) ? ($user['homedirectory'][0] ?? '') : $user->getFirstAttribute('homedirectory')) }}" readonly>
                             <div class="form-text">{{ __('Directorio home del usuario.') }}</div>
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-3 text-white">
                             <label for="loginShell" class="form-label">{{ __('Shell') }}</label>
                             <input id="loginShell" type="text" class="form-control" name="loginShell" value="{{ old('loginShell', is_array($user) ? ($user['loginshell'][0] ?? '/bin/bash') : ($user->getFirstAttribute('loginshell') ?? '/bin/bash')) }}">
                             <div class="form-text">{{ __('Shell por defecto del usuario.') }}</div>
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-3 text-white">
                             <label for="password" class="form-label">{{ __('Contraseña') }}</label>
                             <input id="password" type="password" class="form-control @error('password') is-invalid @enderror" name="password">
                             <div class="form-text">{{ __('Dejar en blanco para mantener la contraseña actual. Mínimo 8 caracteres.') }}</div>
@@ -113,12 +113,12 @@
                             @enderror
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-3 text-white">
                             <label for="password_confirmation" class="form-label">{{ __('Confirmar Contraseña') }}</label>
                             <input id="password_confirmation" type="password" class="form-control" name="password_confirmation">
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-3 text-white">
                             <label class="form-label">{{ __('Rol Predefinido') }}</label>
                             <div class="btn-group w-100" role="group">
                                 @if(session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
@@ -130,7 +130,7 @@
                             <div class="form-text">{{ __('Seleccione un rol para actualizar los grupos.') }}</div>
                         </div>
 
-                        <div class="mb-4">
+                        <div class="mb-4 text-white">
                             <label class="form-label">{{ __('Grupos Activos') }}</label>
                             <div class="bg-light p-2 mb-2 border rounded">
                                 @php
@@ -158,7 +158,7 @@
                             </div>
                         </div>
 
-                        <div class="mb-4">
+                        <div class="mb-4 text-white">
                             <label class="form-label">{{ __('Grupos') }} <span class="text-danger">*</span></label>
                             
                             <!-- Debug información de grupos disponibles -->
