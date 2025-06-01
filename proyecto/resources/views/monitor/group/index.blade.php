@@ -23,7 +23,7 @@
                             </a>
                         </div>
                         <div class="text-end">
-                            <small class="text-muted">Total: {{ count($groups) }} grupos</small>
+                            <small class="text-white">Total: {{ count($groups) }} grupos</small>
                         </div>
                     </div>
 
