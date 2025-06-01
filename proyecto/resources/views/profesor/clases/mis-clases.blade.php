@@ -36,7 +36,7 @@
         @else
             @foreach($misClases as $clase)
             <div class="col-md-6 col-xl-4 mb-4">
-                <div class="card h-100">
+                <div class="card h-100 text-white">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">{{ $clase->nombre }}</h5>
                         <span class="badge bg-primary">{{ $clase->codigo }}</span>
