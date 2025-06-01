@@ -181,7 +181,7 @@
                             @endforeach
                         </div>
                     @else
-                        <div class="text-center py-5">
+                        <div class="text-center py-5 text-white">
                             <img src="{{ asset('img/undraw_empty.svg') }}" alt="No hay mensajes" class="img-fluid mb-3" style="max-width: 200px;">
                             <h4 class="text-gray-500">No hay mensajes</h4>
                             <p class="text-gray-500">

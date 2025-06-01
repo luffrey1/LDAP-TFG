@@ -5,12 +5,12 @@
 @section('content')
 <div class="container-fluid">
     <div class="card shadow mb-4">
-        <div class="card-header py-3">
+        <div class="card-header py-3 text-white">
             <h6 class="m-0 font-weight-bold text-primary">
                 <i class="fas fa-pen mr-1"></i> Redactar nuevo mensaje
             </h6>
         </div>
-        <div class="card-body">
+        <div class="card-body text-white">
             <!-- Alertas -->
             @if(session('success'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
