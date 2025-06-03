@@ -210,7 +210,7 @@
                                             </div>
                                             <div class="progress" style="height: 20px;">
                                                 @php
-                                                    $percentage = ($disk['used'] / $disk['total']) * 100;
+                                                    $percentage = $disk['total'] > 0 ? ($disk['used'] / $disk['total']) * 100 : 0;
                                                     $colorClass = $percentage >= 90 ? 'bg-danger' : ($percentage >= 70 ? 'bg-warning' : 'bg-success');
                                                 @endphp
                                                 <div class="progress-bar {{ $colorClass }}" role="progressbar" 

@@ -5,12 +5,16 @@ import socket
 import time
 import subprocess
 import requests
+import urllib3
 from flask import Flask, jsonify, request
+
+# Deshabilitar advertencias de SSL
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 app = Flask(__name__)
 
-# URL base de Laravel
-LARAVEL_URL = "https://ldap.tierno.es"
+# URL base de Laravel - Usar IP directa en lugar de DNS
+LARAVEL_URL = "https://172.20.0.6"  # Cambiado a HTTPS
 
 # --- Utilidades ---
 def get_ip():
@@ -24,16 +28,28 @@ def get_ip():
         return "127.0.0.1"
 
 def get_mac():
-    for iface, addrs in psutil.net_if_addrs().items():
-        for addr in addrs:
-            if hasattr(psutil, 'AF_LINK') and addr.family == psutil.AF_LINK:
-                mac = addr.address
-                if mac and mac != "00:00:00:00:00:00":
-                    return mac
-            elif addr.family == psutil.AF_PACKET:  # Linux
-                mac = addr.address
-                if mac and mac != "00:00:00:00:00:00":
-                    return mac
+    try:
+        # En Linux, podemos usar /sys/class/net
+        if os.name != 'nt':
+            for iface in os.listdir('/sys/class/net'):
+                if iface != 'lo':  # Ignorar loopback
+                    try:
+                        with open(f'/sys/class/net/{iface}/address') as f:
+                            mac = f.read().strip()
+                            if mac and mac != "00:00:00:00:00:00":
+                                return mac
+                    except:
+                        continue
+        else:
+            # En Windows, usar psutil
+            for iface, addrs in psutil.net_if_addrs().items():
+                for addr in addrs:
+                    if hasattr(psutil, 'AF_LINK') and addr.family == psutil.AF_LINK:
+                        mac = addr.address
+                        if mac and mac != "00:00:00:00:00:00":
+                            return mac
+    except Exception as e:
+        print(f"Error obteniendo MAC: {str(e)}")
     return None
 
 def get_uptime():
@@ -88,8 +104,6 @@ def get_network_info():
                 if addr.family == socket.AF_INET:
                     iface['ip'] = addr.address
                 elif hasattr(psutil, 'AF_LINK') and addr.family == psutil.AF_LINK:
-                    iface['mac'] = addr.address
-                elif addr.family == psutil.AF_PACKET:
                     iface['mac'] = addr.address
             # Estado y tráfico
             stats = psutil.net_if_stats().get(name)
@@ -177,17 +191,27 @@ def get_hardware_info():
         info['memory_total'] = f"{psutil.virtual_memory().total // (1024**2)} MB"
         info['disk_total'] = f"{psutil.disk_usage('/').total // (1024**3)} GB"
         info['hostname'] = socket.gethostname()
-        # Serial/modelo (Linux)
+        
+        # Serial/modelo (Linux) - con manejo de permisos
         if os.name != 'nt':
             try:
-                with os.popen('cat /sys/class/dmi/id/product_name') as f:
-                    info['model'] = f.read().strip()
-                with os.popen('cat /sys/class/dmi/id/product_serial') as f:
-                    info['serial'] = f.read().strip()
-            except Exception:
-                pass
-    except Exception:
-        pass
+                # Intentar leer el modelo
+                try:
+                    with open('/sys/class/dmi/id/product_name') as f:
+                        info['model'] = f.read().strip()
+                except:
+                    info['model'] = "Desconocido"
+                
+                # Intentar leer el serial
+                try:
+                    with open('/sys/class/dmi/id/product_serial') as f:
+                        info['serial'] = f.read().strip()
+                except:
+                    info['serial'] = "Desconocido"
+            except Exception as e:
+                print(f"Error obteniendo información de hardware: {str(e)}")
+    except Exception as e:
+        print(f"Error en get_hardware_info: {str(e)}")
     return info
 
 def get_disk_info():
@@ -197,25 +221,32 @@ def get_disk_info():
             if partition.fstype:  # Solo particiones con sistema de archivos
                 try:
                     usage = psutil.disk_usage(partition.mountpoint)
+                    # Asegurarse de que los valores sean válidos
+                    total = max(usage.total // (1024**3), 1)  # Mínimo 1 GB para evitar división por cero
+                    used = min(usage.used // (1024**3), total)  # No puede ser mayor que el total
+                    free = total - used
+                    percentage = min(100, max(0, usage.percent))  # Entre 0 y 100
+                    
                     disks.append({
                         'mount': partition.mountpoint,
                         'device': partition.device,
                         'fstype': partition.fstype,
-                        'total': usage.total // (1024**3),  # Convertir a GB
-                        'used': usage.used // (1024**3),
-                        'free': usage.free // (1024**3),
-                        'percentage': usage.percent
+                        'total': total,
+                        'used': used,
+                        'free': free,
+                        'percentage': percentage
                     })
-                except Exception:
+                except Exception as e:
+                    print(f"Error obteniendo información del disco {partition.mountpoint}: {str(e)}")
                     continue
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Error en get_disk_info: {str(e)}")
     return disks
 
 def get_telemetry_interval():
     try:
         # Obtener el intervalo configurado en Laravel
-        response = requests.get(f"{LARAVEL_URL}/api/config/telemetry-interval")
+        response = requests.get(f"{LARAVEL_URL}/api/config/telemetry-interval", verify=False, timeout=5)
         if response.status_code == 200:
             data = response.json()
             return int(data.get('interval', 60)) * 60  # Convertir minutos a segundos
@@ -223,15 +254,44 @@ def get_telemetry_interval():
         print(f"Error obteniendo intervalo de telemetría: {str(e)}")
     return 3600  # Valor por defecto: 1 hora
 
+def get_battery():
+    """Obtener información de la batería si está disponible"""
+    battery_info = {
+        'has_battery': False,
+        'percentage': None,
+        'power_plugged': None,
+        'time_left': None
+    }
+    
+    try:
+        if hasattr(psutil, 'sensors_battery'):
+            battery = psutil.sensors_battery()
+            if battery:
+                battery_info.update({
+                    'has_battery': True,
+                    'percentage': battery.percent,
+                    'power_plugged': battery.power_plugged,
+                    'time_left': battery.secsleft if battery.secsleft != -2 else None
+                })
+    except Exception as e:
+        print(f"Error obteniendo información de batería: {str(e)}")
+    
+    return battery_info
+
 def send_telemetry_data():
     try:
-        data = {
+        # Recolectar datos básicos primero
+        basic_data = {
             'hostname': socket.gethostname(),
             'ip_address': get_ip(),
             'mac_address': get_mac(),
             'status': 'online',
             'uptime': f"{get_uptime() // 3600}h {(get_uptime() % 3600) // 60}m",
             'last_boot': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(psutil.boot_time())),
+        }
+        
+        # Recolectar datos de rendimiento
+        performance_data = {
             'cpu_usage': {'percentage': psutil.cpu_percent(interval=1)},
             'memory_usage': {
                 'percentage': psutil.virtual_memory().percent,
@@ -242,7 +302,11 @@ def send_telemetry_data():
                 'percentage': psutil.disk_usage('/').percent,
                 'used': psutil.disk_usage('/').used // (1024**3),
                 'total': psutil.disk_usage('/').total // (1024**3)
-            },
+            }
+        }
+        
+        # Recolectar datos del sistema
+        system_data = {
             'users': get_users(),
             'processes': get_processes(),
             'network_info': get_network_info(),
@@ -255,8 +319,23 @@ def send_telemetry_data():
             }
         }
         
+        # Combinar todos los datos
+        data = {**basic_data, **performance_data, **system_data}
+        
         # Enviar datos al servidor Laravel
-        response = requests.post(f"{LARAVEL_URL}/api/telemetry/update", json=data)
+        headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+        
+        response = requests.post(
+            f"{LARAVEL_URL}/api/telemetry/update",
+            json=data,
+            headers=headers,
+            verify=False,
+            timeout=5
+        )
+        
         if response.status_code == 200:
             print(f"Datos enviados correctamente: {time.strftime('%Y-%m-%d %H:%M:%S')}")
             return True, data
