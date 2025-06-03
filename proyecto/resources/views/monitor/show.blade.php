@@ -561,29 +561,21 @@ document.addEventListener('DOMContentLoaded', function() {
                                 return context.raw + '%';
                             }
                         }
-                    },
-                    title: {
-                        display: true,
-                        text: label,
-                        font: { size: 14 }
                     }
                 },
                 scales: {
                     x: {
                         beginAtZero: true,
                         max: 100,
-                        grid: {
-                            display: false
-                        }
+                        display: false
                     },
                     y: {
-                        grid: {
-                            display: false
-                        }
+                        display: false
                     }
                 },
                 maintainAspectRatio: false,
-                responsive: true
+                responsive: true,
+                animation: false
             }
         });
     }
