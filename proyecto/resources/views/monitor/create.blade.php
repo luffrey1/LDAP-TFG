@@ -1,379 +1,248 @@
 @extends('layouts.dashboard')
 
-@section('title', 'Agregar Nuevo Host')
+@section('title', 'Añadir Equipo')
 
 @section('content')
-<section class="section">
-    <div class="section-header">
-        <h1>Agregar Nuevo Host</h1>
-        <div class="section-header-breadcrumb">
-            <div class="breadcrumb-item active"><a href="{{ route('dashboard.index') }}">Dashboard</a></div>
-            <div class="breadcrumb-item"><a href="{{ route('monitor.index') }}">Monitoreo</a></div>
-            <div class="breadcrumb-item">Agregar Host</div>
-        </div>
-    </div>
-
-    <div class="section-body">
-        <h2 class="section-title">Información del Host</h2>
-        <p class="section-lead">Completa los detalles para agregar un nuevo equipo al sistema de monitoreo.</p>
-
-        <div class="row">
-            <div class="col-12 col-md-6 col-lg-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h4>Datos del Host</h4>
-                    </div>
-                    <div class="card-body">
-                        @if(session('error'))
-                            <div class="alert alert-danger alert-dismissible show fade">
-                                <div class="alert-body">
-                                    <button class="close" data-dismiss="alert">
-                                        <span>&times;</span>
-                                    </button>
-                                    {{ session('error') }}
-                                </div>
-                            </div>
-                        @endif
-
-                        @if(session('success'))
-                            <div class="alert alert-success alert-dismissible show fade">
-                                <div class="alert-body">
-                                    <button class="close" data-dismiss="alert">
-                                        <span>&times;</span>
-                                    </button>
-                                    {{ session('success') }}
-                                </div>
-                            </div>
-                        @endif
-
-                        <div id="detection-alert" class="alert alert-info d-none">
-                            <div class="alert-body">
-                                <i class="fas fa-spinner fa-spin mr-2"></i> <span id="detection-message">Detectando información del host...</span>
-                            </div>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-plus-circle me-2"></i> Añadir Nuevo Equipo</h4>
+                </div>
+                <div class="card-body">
+                    @if(session('error'))
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            {{ session('error') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
                         </div>
+                    @endif
 
-                        <form id="host-form" action="{{ route('monitor.store') }}" method="POST">
-                            @csrf
-                            
-                            <div class="form-group">
-                                <label>Tipo de Configuración</label>
-                                <div class="selectgroup w-100">
-                                    <label class="selectgroup-item">
-                                        <input type="radio" name="tipo_host" value="fija" class="selectgroup-input" checked>
-                                        <span class="selectgroup-button">IP Fija</span>
-                                    </label>
-                                    <label class="selectgroup-item">
-                                        <input type="radio" name="tipo_host" value="dhcp" class="selectgroup-input">
-                                        <span class="selectgroup-button">DHCP (Automático)</span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="hostname">Nombre del Host <span class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control @error('hostname') is-invalid @enderror" id="hostname" name="hostname" value="{{ old('hostname') }}" required>
-                                    <div class="input-group-append">
-                                        <button class="btn btn-primary" type="button" id="btn-detect-host">
-                                            <i class="fas fa-search"></i> Detectar
-                                        </button>
+                    <form id="createHostForm" action="{{ route('monitor.store') }}" method="POST">
+                        @csrf
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-header bg-light">
+                                        <h5 class="mb-0 text-black"><i class="fas fa-search me-2 text-black"></i> Detección del Equipo</h5>
                                     </div>
-                                </div>
-                                @error('hostname')
-                                    <div class="invalid-feedback">
-                                        {{ $message }}
-                                    </div>
-                                @enderror
-                                <small class="form-text text-muted">Ejemplo: B27-A1 o B27-A1.tierno.es</small>
-                            </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label for="tipo_host" class="form-label text-black">Tipo de Equipo</label>
+                                            <select class="form-select" id="tipo_host" name="tipo_host" required>
+                                                <option value="dhcp">DHCP (Automático)</option>
+                                                <option value="fija">IP Fija</option>
+                                            </select>
+                                        </div>
 
-                            <div class="form-group ip-field">
-                                <label for="ip_address">Dirección IP <span class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <div class="input-group-prepend">
-                                        <div class="input-group-text">
-                                            <i class="fas fa-network-wired"></i>
+                                        <div id="dhcpFields">
+                                            <div class="mb-3">
+                                                <label for="hostname" class="form-label text-black">Hostname</label>
+                                                <div class="input-group">
+                                                    <input type="text" class="form-control" id="hostname" name="hostname" 
+                                                           placeholder="Ej: B27-A1, B27-B2, etc." required>
+                                                    <button type="button" class="btn btn-primary" id="detectHostBtn">
+                                                        <i class="fas fa-search me-1"></i> Comprobar Host
+                                                    </button>
+                                                </div>
+                                                <div class="form-text text-black">Escribe el hostname del equipo (ej: B27-A1) y haz clic en "Comprobar Host"</div>
+                                            </div>
+                                        </div>
+
+                                        <div id="fijaFields" style="display: none;">
+                                            <div class="mb-3">
+                                                <label for="ip_address" class="form-label text-black">Dirección IP</label>
+                                                <div class="input-group">
+                                                    <input type="text" class="form-control" id="ip_address" name="ip_address" 
+                                                           placeholder="Ej: 172.20.200.100">
+                                                    <button type="button" class="btn btn-primary" id="detectIpBtn">
+                                                        <i class="fas fa-search me-1"></i> Comprobar IP
+                                                    </button>
+                                                </div>
+                                                <div class="form-text text-black">Escribe la IP del equipo y haz clic en "Comprobar IP"</div>
+                                            </div>
+                                        </div>
+
+                                        <div id="detectionResult" class="alert" style="display: none;">
+                                            <div class="d-flex align-items-center">
+                                                <div class="spinner-border spinner-border-sm me-2" role="status">
+                                                    <span class="visually-hidden">Cargando...</span>
+                                                </div>
+                                                <span id="detectionMessage">Detectando equipo...</span>
+                                            </div>
                                         </div>
                                     </div>
-                                    <input type="text" class="form-control @error('ip_address') is-invalid @enderror" id="ip_address" name="ip_address" value="{{ old('ip_address') }}" placeholder="192.168.1.10">
-                                    <div class="input-group-append">
-                                        <button class="btn btn-primary" type="button" id="btn-detect-ip">
-                                            <i class="fas fa-search"></i> Detectar
-                                        </button>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-header bg-light">
+                                        <h5 class="mb-0 text-black"><i class="fas fa-info-circle me-2 text-black"></i> Información del Equipo</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label for="mac_address" class="form-label text-black">Dirección MAC</label>
+                                            <input type="text" class="form-control" id="mac_address" name="mac_address" readonly>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="description" class="form-label text-black">Descripción</label>
+                                            <textarea class="form-control" id="description" name="description" rows="3" 
+                                                      placeholder="Descripción opcional del equipo"></textarea>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="group_id" class="form-label text-black">Grupo</label>
+                                            <select class="form-select" id="group_id" name="group_id">
+                                                <option value="">Sin grupo</option>
+                                                @foreach($groups as $group)
+                                                    <option value="{{ $group->id }}" {{ $groupId == $group->id ? 'selected' : '' }}>
+                                                        {{ $group->name }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+
+                                        <div class="d-grid gap-2">
+                                            <button type="submit" class="btn btn-success" id="submitBtn" style="display: none;">
+                                                <i class="fas fa-save me-1"></i> Guardar Equipo
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                                @error('ip_address')
-                                    <div class="invalid-feedback">
-                                        {{ $message }}
-                                    </div>
-                                @enderror
-                                <small class="form-text text-muted">Ejemplo: 192.168.1.10</small>
                             </div>
-
-                            <div class="form-group">
-                                <label for="mac_address">Dirección MAC</label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control @error('mac_address') is-invalid @enderror" id="mac_address" name="mac_address" value="{{ old('mac_address') }}" placeholder="00:11:22:33:44:55" readonly>
-                                    <div class="input-group-append">
-                                        <span class="input-group-text"><i class="fas fa-ethernet"></i></span>
-                                    </div>
-                                </div>
-                                @error('mac_address')
-                                    <div class="invalid-feedback">
-                                        {{ $message }}
-                                    </div>
-                                @enderror
-                                <small class="form-text text-muted">La MAC se detectará automáticamente</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="description">Descripción</label>
-                                <textarea class="form-control @error('description') is-invalid @enderror" id="description" name="description" rows="3">{{ old('description') }}</textarea>
-                                @error('description')
-                                    <div class="invalid-feedback">
-                                        {{ $message }}
-                                    </div>
-                                @enderror
-                            </div>
-
-                            <div class="form-group">
-                                <label for="group_id">Grupo</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="fas fa-layer-group"></i></span>
-                                    <select class="form-select" id="group_id" name="group_id">
-                                        <option value="">-- Sin grupo --</option>
-                                        @foreach($groups as $group)
-                                            <option value="{{ $group->id }}" {{ old('group_id', $groupId ?? '') == $group->id ? 'selected' : '' }}>
-                                                {{ $group->name }} - {{ $group->description ?? 'Sin descripción' }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="form-text text-muted">Seleccione el grupo/aula al que pertenece este equipo</div>
-                            </div>
-
-                            <div class="card-footer text-right">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save"></i> Guardar
-                                </button>
-                                <a href="{{ route('monitor.index') }}" class="btn btn-secondary">Cancelar</a>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-12 col-md-6 col-lg-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h4>Información Adicional</h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="alert alert-info">
-                            <p><strong>Tipos de configuración:</strong></p>
-                            <ul>
-                                <li><strong>IP Fija:</strong> Se especifica manualmente la IP y el hostname.</li>
-                                <li><strong>DHCP:</strong> Solo se especifica el hostname y la IP se detecta automáticamente.</li>
-                                <li>En ambos casos, la dirección MAC se detectará automáticamente.</li>
-                            </ul>
                         </div>
-
-                        <div class="alert alert-warning">
-                            <p><strong>Importante:</strong></p>
-                            <ul>
-                                <li>El equipo debe estar encendido y conectado a la red para detectar su información.</li>
-                                <li>Si no puede detectarse, puede guardar la información básica sin verificar.</li>
-                                <li>Para equipos con DHCP, asegúrese de usar el nombre de host completo (incluyendo dominio si es necesario).</li>
-                            </ul>
-                        </div>
-
-                        <div class="alert alert-success">
-                            <p><strong>Nuevo: Detección automática</strong></p>
-                            <ul>
-                                <li>Haz clic en el botón "Detectar" junto al hostname para obtener automáticamente la IP y MAC.</li>
-                                <li>También puedes detectar por IP haciendo clic en el botón "Detectar" junto al campo IP.</li>
-                                <li>Si el hostname sigue un patrón como B27-A1, se asignará automáticamente al grupo/aula correspondiente.</li>
-                            </ul>
-                        </div>
-                    </div>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
-</section>
+</div>
 @endsection
 
 @section('scripts')
 <script>
 $(document).ready(function() {
-    // Configuración global de AJAX para incluir token CSRF
+    // Configuración global de AJAX
     $.ajaxSetup({
         headers: {
             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
         }
     });
 
-    // Función para actualizar el estado del campo IP
-    function updateIpField() {
-        var tipo = $('input[name="tipo_host"]:checked').val();
-        if (tipo === 'dhcp') {
-            $('.ip-field').hide();
+    // Cambiar campos según tipo de host
+    $('#tipo_host').change(function() {
+        if ($(this).val() === 'dhcp') {
+            $('#dhcpFields').show();
+            $('#fijaFields').hide();
             $('#ip_address').prop('required', false);
-            $('#ip_address').val('');
+            $('#hostname').prop('required', true);
         } else {
-            $('.ip-field').show();
+            $('#dhcpFields').hide();
+            $('#fijaFields').show();
             $('#ip_address').prop('required', true);
+            $('#hostname').prop('required', false);
         }
-    }
-
-    // Ejecutar al cargar la página
-    updateIpField();
-
-    // Cambiar modo según tipo de host
-    $('input[name="tipo_host"]').on('change', function() {
-        updateIpField();
+        resetForm();
     });
 
-    // Mostrar alerta de detección
-    function showDetectionAlert(message) {
-        $('#detection-message').text(message || 'Detectando información del host...');
-        $('#detection-alert').removeClass('d-none alert-danger alert-success').addClass('alert-info');
-        $('#detection-alert .fa-spinner').show();
+    // Función para resetear el formulario
+    function resetForm() {
+        $('#mac_address').val('');
+        $('#detectionResult').hide();
+        $('#submitBtn').hide();
+        $('#hostname').val('');
+        $('#ip_address').val('');
     }
 
-    // Actualizar alerta de detección con éxito
-    function showDetectionSuccess(message) {
-        $('#detection-message').text(message || 'Host detectado correctamente');
-        $('#detection-alert').removeClass('alert-info alert-danger').addClass('alert-success');
-        $('#detection-alert .fa-spinner').hide();
-    }
-
-    // Actualizar alerta de detección con error
-    function showDetectionError(message) {
-        $('#detection-message').text(message || 'No se pudo detectar el host');
-        $('#detection-alert').removeClass('alert-info alert-success').addClass('alert-danger');
-        $('#detection-alert .fa-spinner').hide();
+    // Función para mostrar mensaje de detección
+    function showDetectionMessage(message, type = 'info') {
+        $('#detectionResult')
+            .removeClass('alert-info alert-success alert-danger')
+            .addClass('alert-' + type)
+            .show();
+        $('#detectionMessage').html(message);
     }
 
     // Función para detectar host por hostname
-    function detectHostByHostname() {
-        var hostname = $('#hostname').val().trim();
+    $('#detectHostBtn').click(function() {
+        const hostname = $('#hostname').val();
         if (!hostname) {
-            showDetectionError('Debe ingresar un nombre de host para detectar');
+            showDetectionMessage('Por favor, introduce un hostname', 'danger');
             return;
         }
 
-        showDetectionAlert('Detectando información para el host: ' + hostname);
-        
-        var tipo = $('input[name="tipo_host"]:checked').val();
-        
+        showDetectionMessage('Detectando equipo...', 'info');
+        $('#detectionResult').show();
+        $('#submitBtn').hide();
+
         $.ajax({
-            url: '{{ route("monitor.detect-host") }}',
+            url: "{{ route('monitor.detect-host') }}",
             type: 'POST',
             data: {
                 hostname: hostname,
-                tipo: tipo
+                tipo: 'dhcp'
             },
-            dataType: 'json',
             success: function(response) {
-                console.log("Respuesta de detección por hostname:", response);
                 if (response.success) {
-                    // Actualizar campos con la información detectada
-                    if (response.data.ip_address) {
-                        $('#ip_address').val(response.data.ip_address);
-                    }
-                    if (response.data.mac_address) {
-                        $('#mac_address').val(response.data.mac_address);
-                    }
-                    
-                    showDetectionSuccess('Host detectado correctamente. IP: ' + 
-                        (response.data.ip_address || 'No detectada') + 
-                        ', MAC: ' + (response.data.mac_address || 'No detectada'));
+                    $('#mac_address').val(response.data.mac_address);
+                    $('#ip_address').val(response.data.ip_address);
+                    showDetectionMessage('Equipo detectado correctamente', 'success');
+                    $('#submitBtn').show();
                 } else {
-                    showDetectionError(response.message || 'No se pudo detectar el host');
+                    showDetectionMessage(response.message, 'danger');
                 }
             },
-            error: function(xhr, status, error) {
-                console.error("Error en detección por hostname:", error, xhr.responseText);
-                var errorMsg = 'Error al detectar el host';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMsg = xhr.responseJSON.message;
-                }
-                showDetectionError(errorMsg);
+            error: function(xhr) {
+                const response = xhr.responseJSON;
+                showDetectionMessage(response?.message || 'Error al detectar el equipo', 'danger');
             }
         });
-    }
+    });
 
     // Función para detectar host por IP
-    function detectHostByIp() {
-        var ip = $('#ip_address').val().trim();
+    $('#detectIpBtn').click(function() {
+        const ip = $('#ip_address').val();
         if (!ip) {
-            showDetectionError('Debe ingresar una dirección IP para detectar');
+            showDetectionMessage('Por favor, introduce una dirección IP', 'danger');
             return;
         }
 
-        showDetectionAlert('Detectando información para la IP: ' + ip);
-        
-        var tipo = $('input[name="tipo_host"]:checked').val();
-        
+        showDetectionMessage('Detectando equipo...', 'info');
+        $('#detectionResult').show();
+        $('#submitBtn').hide();
+
         $.ajax({
-            url: '{{ route("monitor.detect-host") }}',
+            url: "{{ route('monitor.detect-host') }}",
             type: 'POST',
             data: {
                 ip_address: ip,
-                tipo: tipo
+                tipo: 'fija'
             },
-            dataType: 'json',
             success: function(response) {
-                console.log("Respuesta de detección por IP:", response);
                 if (response.success) {
-                    // Actualizar campos con la información detectada
-                    if (response.data.hostname) {
-                        $('#hostname').val(response.data.hostname.replace('.tierno.es', ''));
-                    }
-                    if (response.data.mac_address) {
-                        $('#mac_address').val(response.data.mac_address);
-                    }
-                    
-                    showDetectionSuccess('Host detectado correctamente. Hostname: ' + 
-                        (response.data.hostname || 'No detectado') + 
-                        ', MAC: ' + (response.data.mac_address || 'No detectada'));
+                    $('#mac_address').val(response.data.mac_address);
+                    $('#hostname').val(response.data.hostname);
+                    showDetectionMessage('Equipo detectado correctamente', 'success');
+                    $('#submitBtn').show();
                 } else {
-                    showDetectionError(response.message || 'No se pudo detectar el host');
+                    showDetectionMessage(response.message, 'danger');
                 }
             },
-            error: function(xhr, status, error) {
-                console.error("Error en detección por IP:", error, xhr.responseText);
-                var errorMsg = 'Error al detectar el host';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMsg = xhr.responseJSON.message;
-                }
-                showDetectionError(errorMsg);
+            error: function(xhr) {
+                const response = xhr.responseJSON;
+                showDetectionMessage(response?.message || 'Error al detectar el equipo', 'danger');
             }
         });
-    }
-
-    // Asignar eventos a los botones de detección
-    $('#btn-detect-host').on('click', function(e) {
-        e.preventDefault(); // Evitar que el botón envíe el formulario
-        detectHostByHostname();
-    });
-    
-    $('#btn-detect-ip').on('click', function(e) {
-        e.preventDefault(); // Evitar que el botón envíe el formulario
-        detectHostByIp();
     });
 
-    // También intentar detectar al perder el foco en los campos
-    $('#hostname').on('blur', function() {
-        if ($(this).val().trim().length > 3) {
-            detectHostByHostname();
-        }
-    });
-
-    $('#ip_address').on('blur', function() {
-        if ($(this).val().trim().length > 7) {
-            detectHostByIp();
+    // Validar formulario antes de enviar
+    $('#createHostForm').submit(function(e) {
+        if (!$('#mac_address').val()) {
+            e.preventDefault();
+            showDetectionMessage('Por favor, detecta el equipo antes de guardar', 'danger');
+            return false;
         }
     });
 });
