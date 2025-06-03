@@ -261,19 +261,19 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="updateStatusModalLabel">Actualizar Estado</h5>
+                <h5 class="modal-title text-black" id="updateStatusModalLabel">Actualizar Estado</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label">Seleccione el tipo de escaneo:</label>
-                    <div class="form-check">
+                    <label class="form-label text-black">Seleccione el tipo de escaneo:</label>
+                    <div class="form-check text-black">
                         <input class="form-check-input" type="radio" name="scanType" id="scanByHostname" value="hostname" checked>
                         <label class="form-check-label" for="scanByHostname">
                             Escanear por Hostname (para equipos de aula)
                         </label>
                     </div>
-                    <div class="form-check">
+                    <div class="form-check text-black">
                         <input class="form-check-input" type="radio" name="scanType" id="scanByIP" value="ip">
                         <label class="form-check-label" for="scanByIP">
                             Escanear por IP (para equipos de infraestructura)
