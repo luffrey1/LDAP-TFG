@@ -522,7 +522,7 @@
 
         .sidebar-profile .user-role {
             font-size: 0.8rem;
-            color: var(--text-muted);
+            color: white;
             text-transform: capitalize;
         }
 
