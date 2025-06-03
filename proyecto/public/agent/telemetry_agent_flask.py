@@ -8,6 +8,7 @@ import requests
 import urllib3
 import shutil
 import sqlite3
+import glob
 from flask import Flask, jsonify, request
 from datetime import datetime
 from threading import Thread
@@ -171,23 +172,177 @@ def get_services():
     try:
         # Servicios críticos para Ubuntu
         critical_services = [
-            'ssh', 'apache2', 'nginx', 'mysql', 'postgresql', 'docker',
-            'cron', 'systemd', 'network-manager', 'ufw', 'snapd',
-            'cups', 'bluetooth', 'avahi-daemon', 'cups-browsed'
+            # Servicios del sistema
+            'ssh', 'systemd', 'network-manager', 'ufw', 'snapd', 'cron',
+            # Servicios web
+            'apache2', 'nginx', 'lighttpd', 'tomcat', 'node',
+            # Bases de datos
+            'mysql', 'postgresql', 'mongodb', 'redis-server',
+            # Servicios de red
+            'dnsmasq', 'bind9', 'dhcpd', 'openvpn',
+            # Servicios de impresión
+            'cups', 'cups-browsed',
+            # Servicios de virtualización
+            'docker', 'libvirt', 'kvm', 'qemu',
+            # Servicios de seguridad
+            'fail2ban', 'clamav-daemon', 'snort',
+            # Servicios de monitoreo
+            'prometheus', 'grafana-server', 'zabbix-agent',
+            # Servicios de backup
+            'rsync', 'backup-manager',
+            # Otros servicios comunes
+            'bluetooth', 'avahi-daemon', 'samba', 'nfs-server'
+        ]
+
+        # Obtener estado de servicios
+        services = []
+        for service in critical_services:
+            try:
+                result = subprocess.run(['systemctl', 'is-active', service], 
+                                     capture_output=True, text=True)
+                if result.returncode == 0:
+                    services.append({
+                        'name': service,
+                        'status': result.stdout.strip()
+                    })
+            except:
+                continue
+
+        # Obtener temperatura del sistema
+        temperatures = {}
+        try:
+            # Intentar con sensors
+            sensors_output = subprocess.check_output(['sensors'], text=True)
+            for line in sensors_output.split('\n'):
+                if 'Core' in line or 'Package' in line or 'CPU' in line:
+                    parts = line.split(':')
+                    if len(parts) == 2:
+                        sensor = parts[0].strip()
+                        temp = parts[1].strip().split()[0]
+                        if sensor not in temperatures:
+                            temperatures[sensor] = []
+                        temperatures[sensor].append({
+                            'label': sensor,
+                            'current': float(temp.replace('+', '').replace('°C', '')),
+                            'high': 80.0,
+                            'critical': 90.0
+                        })
+        except:
+            # Si no hay sensors, intentar con thermal_zone
+            try:
+                for i in range(10):  # Revisar hasta 10 zonas térmicas
+                    try:
+                        with open(f'/sys/class/thermal/thermal_zone{i}/temp', 'r') as f:
+                            temp = float(f.read().strip()) / 1000.0
+                            temperatures[f'thermal_zone{i}'] = [{
+                                'label': f'Zona Térmica {i}',
+                                'current': temp,
+                                'high': 80.0,
+                                'critical': 90.0
+                            }]
+                    except:
+                        continue
+            except:
+                pass
+
+        # Obtener historial de navegación
+        browser_history = {
+            'recent': [],
+            'suspicious': []
+        }
+
+        # Función para obtener historial de Chrome
+        def get_chrome_history():
+            try:
+                chrome_path = os.path.expanduser('~/.config/google-chrome/Default/History')
+                if os.path.exists(chrome_path):
+                    # Crear una copia temporal ya que Chrome bloquea el archivo
+                    temp_path = '/tmp/chrome_history'
+                    subprocess.run(['cp', chrome_path, temp_path])
+                    
+                    conn = sqlite3.connect(temp_path)
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT url, title, last_visit_time 
+                        FROM urls 
+                        ORDER BY last_visit_time DESC 
+                        LIMIT 10
+                    """)
+                    
+                    for row in cursor.fetchall():
+                        url = row[0]
+                        title = row[1]
+                        visit_time = datetime.fromtimestamp((row[2] - 11644473600000000) / 1000000)
+                        
+                        browser_history['recent'].append({
+                            'title': title,
+                            'url': url,
+                            'browser': 'Chrome',
+                            'time': visit_time.strftime('%Y-%m-%d %H:%M:%S')
+                        })
+                    
+                    conn.close()
+                    os.remove(temp_path)
+            except Exception as e:
+                print(f"Error getting Chrome history: {e}")
+
+        # Función para obtener historial de Firefox
+        def get_firefox_history():
+            try:
+                firefox_path = os.path.expanduser('~/.mozilla/firefox/*.default/places.sqlite')
+                for profile in glob.glob(firefox_path):
+                    if os.path.exists(profile):
+                        # Crear una copia temporal
+                        temp_path = '/tmp/firefox_history'
+                        subprocess.run(['cp', profile, temp_path])
+                        
+                        conn = sqlite3.connect(temp_path)
+                        cursor = conn.cursor()
+                        cursor.execute("""
+                            SELECT url, title, last_visit_date 
+                            FROM moz_places 
+                            ORDER BY last_visit_date DESC 
+                            LIMIT 10
+                        """)
+                        
+                        for row in cursor.fetchall():
+                            url = row[0]
+                            title = row[1]
+                            visit_time = datetime.fromtimestamp(row[2] / 1000000)
+                            
+                            browser_history['recent'].append({
+                                'title': title,
+                                'url': url,
+                                'browser': 'Firefox',
+                                'time': visit_time.strftime('%Y-%m-%d %H:%M:%S')
+                            })
+                        
+                        conn.close()
+                        os.remove(temp_path)
+            except Exception as e:
+                print(f"Error getting Firefox history: {e}")
+
+        # Obtener historiales
+        get_chrome_history()
+        get_firefox_history()
+
+        # Ordenar por tiempo y limitar a 10 entradas
+        browser_history['recent'] = sorted(
+            browser_history['recent'],
+            key=lambda x: x['time'],
+            reverse=True
+        )[:10]
+
+        # Detectar URLs sospechosas
+        suspicious_patterns = [
+            'torrent', 'crack', 'hack', 'warez', 'cracked',
+            'keygen', 'serial', 'pirate', 'illegal', 'free-download'
         ]
         
-        for svc in critical_services:
-            try:
-                res = subprocess.run(['systemctl', 'is-active', svc], capture_output=True, text=True, timeout=2)
-                status = res.stdout.strip()
-                if status == 'active':
-                    services.append({'name': svc, 'status': 'running', 'color': 'success'})
-                elif status == 'inactive':
-                    services.append({'name': svc, 'status': 'stopped', 'color': 'danger'})
-                else:
-                    services.append({'name': svc, 'status': status, 'color': 'warning'})
-            except Exception:
-                services.append({'name': svc, 'status': 'unknown', 'color': 'secondary'})
+        for entry in browser_history['recent']:
+            if any(pattern in entry['url'].lower() for pattern in suspicious_patterns):
+                browser_history['suspicious'].append(entry)
+
     except Exception as e:
         print(f"Error obteniendo servicios: {str(e)}")
     return services
