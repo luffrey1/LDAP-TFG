@@ -4,9 +4,9 @@
 dn: cn=docker,ou=groups,dc=tierno,dc=es
 objectClass: top
 objectClass: posixGroup
-# objectClass: groupOfUniqueNames
+objectClass: groupOfUniqueNames
 cn: docker
-#uniqueMember: uid=diurno,ou=people,dc=tierno,dc=es
-#uniqueMember: uid=vespertino,ou=people,dc=tierno,dc=es
-#uniqueMember: uid=profesor,ou=people,dc=tierno,dc=es
+uniqueMember: uid=diurno,ou=people,dc=tierno,dc=es
+uniqueMember: uid=vespertino,ou=people,dc=tierno,dc=es
+uniqueMember: uid=profesor,ou=people,dc=tierno,dc=es
 gidNumber: 999

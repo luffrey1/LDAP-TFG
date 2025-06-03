@@ -4,6 +4,7 @@ services:
       context: ../ldap
       dockerfile: Dockerfile
     container_name: openldap-osixia
+    user: root
     environment:
       - LDAP_ORGANISATION=IES TIERNO GALVAN
       - LDAP_DOMAIN=tierno.es
@@ -37,7 +38,7 @@ services:
     stop_grace_period: 30s
     command: ["--loglevel", "debug"]
     healthcheck:
-      test: ["CMD", "ldapsearch", "-x", "-H", "ldap://localhost:389", "-b", "dc=tierno,dc=es", "-D", "cn=admin,dc=tierno,dc=es", "-w", "admin"]
+      test: ["CMD", "ldapsearch", "-x", "-H", "ldaps://localhost:636", "-b", "dc=tierno,dc=es", "-D", "cn=admin,dc=tierno,dc=es", "-w", "admin"]
       interval: 10s
       timeout: 5s
       retries: 3
