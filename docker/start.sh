@@ -16,7 +16,7 @@ done
 echo "MySQL está disponible."
 
 # Esperar a que OpenLDAP esté disponible usando el nombre de servicio
-LDAP_HOST="ldap"
+LDAP_HOST="openldap-osixia"
 LDAP_PORT="636"  # Puerto para LDAPS
 echo "Esperando a que OpenLDAP esté disponible..."
 until nc -z -v -w30 $LDAP_HOST $LDAP_PORT; do
@@ -86,6 +86,8 @@ sed -i "s/LDAP_PORT=.*/LDAP_PORT=$LDAP_PORT/" /var/www/html/.env
 sed -i "s/LDAP_BASE_DN=.*/LDAP_BASE_DN=dc=tierno,dc=es/" /var/www/html/.env
 sed -i "s/LDAP_USERNAME=.*/LDAP_USERNAME=cn=admin,dc=tierno,dc=es/" /var/www/html/.env
 sed -i "s/LDAP_PASSWORD=.*/LDAP_PASSWORD=admin/" /var/www/html/.env
+sed -i "s/LDAP_SSL=.*/LDAP_SSL=true/" /var/www/html/.env
+sed -i "s/LDAP_TLS=.*/LDAP_TLS=false/" /var/www/html/.env
 sed -i "s/LDAP_AUTH_LOGIN_FALLBACK=.*/LDAP_AUTH_LOGIN_FALLBACK=false/" /var/www/html/.env
 
 # Variables LdapRecord específicas
