@@ -23,6 +23,9 @@ RUN chown -R 911:911 /container/service/slapd/assets/certs && \
     chmod 644 /container/service/slapd/assets/certs/cert.pem && \
     chmod 644 /container/service/slapd/assets/certs/fullchain.pem
 
+# Eliminar el script init-ldif.sh que no necesitamos
+RUN rm -f /container/service/slapd/assets/init-ldif.sh
+
 # Exponer puertos LDAP y LDAPS
 EXPOSE 389 636
 
