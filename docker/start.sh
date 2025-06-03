@@ -29,11 +29,6 @@ echo "OpenLDAP está disponible."
 echo "Verificando red..."
 ping -c 2 $LDAP_HOST || echo "No se puede hacer ping a LDAP, pero seguimos con la configuración"
 
-# Habilitar módulos de Apache necesarios para SSL
-echo "Habilitando módulos de Apache para SSL..."
-a2enmod ssl
-a2enmod rewrite
-
 # Verificar que existen los certificados SSL
 echo "Verificando certificados SSL..."
 if [ -f "/etc/ssl/certs/site/certificate.crt" ] && [ -f "/etc/ssl/certs/site/private.key" ]; then
@@ -42,9 +37,21 @@ if [ -f "/etc/ssl/certs/site/certificate.crt" ] && [ -f "/etc/ssl/certs/site/pri
   # Verificar certificado intermedio
   if [ -f "/etc/ssl/certs/site/ca_bundle.crt" ]; then
     echo "Certificado intermedio encontrado."
+    
+    # Configurar certificado CA para LDAP
+    echo "Configurando certificado CA para LDAP..."
+    mkdir -p /etc/ssl/certs/ldap
+    cp /etc/ssl/certs/site/ca_bundle.crt /etc/ssl/certs/ldap/ca.crt
+    echo "TLS_CACERT /etc/ssl/certs/ldap/ca.crt" >> /etc/ldap/ldap.conf
+    chmod 644 /etc/ssl/certs/ldap/ca.crt
   else
     echo "ADVERTENCIA: No se encontró certificado intermedio."
   fi
+  
+  # Habilitar módulos de Apache necesarios para SSL
+  echo "Habilitando módulos de Apache para SSL..."
+  a2enmod ssl
+  a2enmod rewrite
   
   # Copiar la configuración de Apache con SSL
   echo "Copiando configuración de Apache con SSL..."
@@ -63,6 +70,10 @@ if [ -f "/etc/ssl/certs/site/certificate.crt" ] && [ -f "/etc/ssl/certs/site/pri
   echo "Configuración SSL completada para ldap.tierno.es"
 else
   echo "ADVERTENCIA: No se encontraron certificados SSL. Usando configuración sin SSL."
+  
+  # Habilitar módulos de Apache necesarios
+  echo "Habilitando módulos de Apache..."
+  a2enmod rewrite
   
   # Crear una configuración simple sin SSL
   cat > /etc/apache2/sites-available/000-default.conf << 'EOF'
@@ -99,7 +110,7 @@ sed -i "s/LDAP_DEFAULT_PORT=.*/LDAP_DEFAULT_PORT=$LDAP_PORT/" /var/www/html/.env
 sed -i "s/LDAP_DEFAULT_BASE_DN=.*/LDAP_DEFAULT_BASE_DN=dc=tierno,dc=es/" /var/www/html/.env
 sed -i "s/LDAP_DEFAULT_USERNAME=.*/LDAP_DEFAULT_USERNAME=cn=admin,dc=tierno,dc=es/" /var/www/html/.env
 sed -i "s/LDAP_DEFAULT_SSL=.*/LDAP_DEFAULT_SSL=false/" /var/www/html/.env
-sed -i "s/LDAP_DEFAULT_TLS=.*/LDAP_DEFAULT_TLS=false/" /var/www/html/.env
+sed -i "s/LDAP_DEFAULT_TLS=.*/LDAP_DEFAULT_TLS=true/" /var/www/html/.env
 
 sed -i "s/DB_HOST=.*/DB_HOST=$DB_HOST/" /var/www/html/.env
 sed -i "s/DB_PORT=.*/DB_PORT=$DB_PORT/" /var/www/html/.env
@@ -156,6 +167,8 @@ try {
         'base_dn' => 'dc=tierno,dc=es',
         'username' => 'cn=admin,dc=tierno,dc=es',
         'password' => 'admin',
+        'use_ssl' => false,
+        'use_tls' => true
     ]);
     \$connection->connect();
     echo 'Conexión LDAP exitosa!' . PHP_EOL;
