@@ -32,28 +32,17 @@ RUN chown -R 911:911 /container/service/slapd/assets/certs && \
     chmod 644 /container/service/slapd/assets/certs/fullchain.pem && \
     chmod 644 /container/service/slapd/assets/certs/chain.pem
 
+# Crear directorio para archivos LDIF
+RUN mkdir -p /container/service/slapd/assets/config/bootstrap/ldif/custom
+
 # Copiar archivos LDIF personalizados
 COPY ldif/ /container/service/slapd/assets/config/bootstrap/ldif/custom/
 
 # Establecer permisos para los archivos LDIF
 RUN chown -R 911:911 /container/service/slapd/assets/config/bootstrap/ldif/custom
 
-# Crear script de inicialización
-RUN echo '#!/bin/bash\n\
-# Esperar a que el servicio LDAP esté en funcionamiento\n\
-sleep 5\n\
-# Procesar archivos LDIF en orden\n\
-for file in $(ls -v /tmp/*.ldif); do\n\
-  echo "Procesando $file..."\n\
-  ldapadd -x -D "cn=admin,dc=tierno,dc=es" -w admin -f $file || echo "Error procesando $file"\n\
-done\n\
-# Mantener el contenedor en ejecución\n\
-exec "$@"' > /container/service/ldap-init.sh && \
-chmod +x /container/service/ldap-init.sh
-
 # Exponer puertos LDAP
 EXPOSE 389 636
 
-# Comando para iniciar el contenedor con el script de inicialización
-ENTRYPOINT ["/container/service/ldap-init.sh"]
+# Usar el comando por defecto de la imagen
 CMD ["/container/tool/run"] 
