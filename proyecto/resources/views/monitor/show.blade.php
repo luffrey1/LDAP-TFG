@@ -55,9 +55,9 @@
                         <div>
                             @if($host->last_seen)
                                 <p class="mb-0 text-white"><strong>Último contacto:</strong></p>
-                                <p id="text-white">{{ $host->last_seen->format('d/m/Y H:i:s') }} ({{ $host->last_seen->diffForHumans() }})</p>
+                                <p id="last-seen-text text-white">{{ $host->last_seen->format('d/m/Y H:i:s') }} ({{ $host->last_seen->diffForHumans() }})</p>
                             @else
-                                <p id="text-white" class="text-muted">Sin contacto previo</p>
+                                <p id="last-seen-text text-white" class="text-white">Sin contacto previo</p>
                             @endif
                         </div>
                         <div class="mt-4">
