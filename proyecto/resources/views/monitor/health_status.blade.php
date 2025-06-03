@@ -92,7 +92,7 @@
         </div>
     </div>
     <div class="card mb-4 border-danger">
-        <div class="card-header bg-danger text-white"><i class="fas fa-skull-crossbones"></i> Equipos en estado grave</div>
+        <div class="card-header bg-danger text-white"><i class="fas fa-skull-crossbones"></i> Equipos en estado grave <span class="ms-2 small">(Uso > 70%)</span></div>
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
@@ -129,7 +129,7 @@
         </div>
     </div>
     <div class="card mb-4 border-warning">
-        <div class="card-header bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> Equipos en estado crítico</div>
+        <div class="card-header bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> Equipos en estado crítico <span class="ms-2 small">(Uso entre 50-70%)</span></div>
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
@@ -166,7 +166,7 @@
         </div>
     </div>
     <div class="card mb-4 border-success">
-        <div class="card-header bg-success text-white"><i class="fas fa-check-circle"></i> Equipos saludables</div>
+        <div class="card-header bg-success text-white"><i class="fas fa-check-circle"></i> Equipos saludables <span class="ms-2 small">(Uso < 50%)</span></div>
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
