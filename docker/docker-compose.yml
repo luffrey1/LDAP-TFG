@@ -19,7 +19,9 @@ services:
       LDAP_TLS_CA_CRT_FILENAME: "fullchain.pem"
     volumes:
       - ../ldap/certs/cert-tierno.es:/container/service/slapd/assets/certs
-      - ../ldap/ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom
+      - ../ldap/ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom:ro
+      - ldap_data:/var/lib/ldap
+      - ldap_config:/etc/ldap/slapd.d
     ports:
       - "389:389"
       - "636:636"
@@ -135,3 +137,5 @@ volumes:
   mysql_data:
   document_data:
     driver: local
+  ldap_data:
+  ldap_config:
