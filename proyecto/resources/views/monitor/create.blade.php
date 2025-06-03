@@ -60,6 +60,15 @@
                                                     </button>
                                                 </div>
                                                 <div class="form-text text-black">Escribe la IP del equipo y haz clic en "Comprobar IP"</div>
+                                                <div class="alert alert-info mt-2" id="retryMessage" style="display: none;">
+                                                    <i class="fas fa-info-circle me-2"></i>Si quiere volver a intentarlo, le dé de nuevo a: Comprobar
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="hostname_fija" class="form-label text-black">Hostname (opcional)</label>
+                                                <input type="text" class="form-control" id="hostname_fija" name="hostname_fija" 
+                                                       placeholder="Ej: B27-A1, B27-B2, etc.">
+                                                <div class="form-text text-black">Si conoce el hostname, puede escribirlo para una detección más precisa</div>
                                             </div>
                                         </div>
 
@@ -112,6 +121,9 @@
                                         <div class="d-grid gap-2">
                                             <button type="submit" class="btn btn-success" id="submitBtn" style="display: none;">
                                                 <i class="fas fa-save me-1"></i> Guardar Equipo
+                                            </button>
+                                            <button type="submit" class="btn btn-warning" id="submitWithoutCheckBtn" style="display: none;">
+                                                <i class="fas fa-save me-1"></i> Guardar Sin Comprobar
                                             </button>
                                         </div>
                                     </div>
@@ -166,8 +178,11 @@ document.addEventListener('DOMContentLoaded', function() {
         $('#ip_address_display').val('');
         $('#detectionResult').hide();
         $('#submitBtn').hide();
+        $('#submitWithoutCheckBtn').hide();
+        $('#retryMessage').hide();
         $('#hostname').val('');
         $('#ip_address').val('');
+        $('#hostname_fija').val('');
     }
 
     // Función para mostrar mensaje de detección
@@ -176,7 +191,12 @@ document.addEventListener('DOMContentLoaded', function() {
             .removeClass('alert-info alert-success alert-danger')
             .addClass('alert-' + type)
             .show();
-        $('#detectionMessage').html(message);
+        
+        if (type === 'success') {
+            $('#detectionMessage').html('<i class="fas fa-check-circle me-2"></i>' + message);
+        } else {
+            $('#detectionMessage').html('<div class="d-flex align-items-center"><div class="spinner-border spinner-border-sm me-2" role="status"><span class="visually-hidden">Cargando...</span></div>' + message + '</div>');
+        }
     }
 
     // Función para detectar host por hostname
@@ -191,6 +211,8 @@ document.addEventListener('DOMContentLoaded', function() {
         showDetectionMessage('Detectando equipo...', 'info');
         $('#detectionResult').show();
         $('#submitBtn').hide();
+        $('#submitWithoutCheckBtn').hide();
+        $('#retryMessage').hide();
 
         $.ajax({
             url: "{{ route('monitor.detect-host') }}",
@@ -207,14 +229,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     $('#ip_address_display').val(response.data.ip_address || 'No detectada');
                     showDetectionMessage('Equipo detectado correctamente', 'success');
                     $('#submitBtn').show();
+                    $('#submitWithoutCheckBtn').show();
+                    $('#retryMessage').show();
                 } else {
                     showDetectionMessage(response.message, 'danger');
+                    $('#submitWithoutCheckBtn').show();
+                    $('#retryMessage').show();
                 }
             },
             error: function(xhr, status, error) {
                 console.error('Error en la petición AJAX:', {xhr, status, error});
                 const response = xhr.responseJSON;
                 showDetectionMessage(response?.message || 'Error al detectar el equipo', 'danger');
+                $('#submitWithoutCheckBtn').show();
+                $('#retryMessage').show();
             }
         });
     });
@@ -223,6 +251,8 @@ document.addEventListener('DOMContentLoaded', function() {
     $('#detectIpBtn').on('click', function() {
         console.log('Botón detectIpBtn clickeado');
         const ip = $('#ip_address').val();
+        const hostname = $('#hostname_fija').val();
+        
         if (!ip) {
             showDetectionMessage('Por favor, introduce una dirección IP', 'danger');
             return;
@@ -231,12 +261,15 @@ document.addEventListener('DOMContentLoaded', function() {
         showDetectionMessage('Detectando equipo...', 'info');
         $('#detectionResult').show();
         $('#submitBtn').hide();
+        $('#submitWithoutCheckBtn').hide();
+        $('#retryMessage').hide();
 
         $.ajax({
             url: "{{ route('monitor.detect-host') }}",
             type: 'POST',
             data: {
                 ip_address: ip,
+                hostname: hostname,
                 tipo: 'fija',
                 _token: $('meta[name="csrf-token"]').attr('content')
             },
@@ -245,24 +278,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (response.success) {
                     $('#mac_address').val(response.data.mac_address || 'No detectada');
                     $('#ip_address_display').val(response.data.ip_address || 'No detectada');
-                    $('#hostname').val(response.data.hostname || '');
+                    if (response.data.hostname) {
+                        $('#hostname_fija').val(response.data.hostname);
+                    }
                     showDetectionMessage('Equipo detectado correctamente', 'success');
                     $('#submitBtn').show();
+                    $('#submitWithoutCheckBtn').show();
+                    $('#retryMessage').show();
                 } else {
                     showDetectionMessage(response.message, 'danger');
+                    $('#submitWithoutCheckBtn').show();
+                    $('#retryMessage').show();
                 }
             },
             error: function(xhr, status, error) {
                 console.error('Error en la petición AJAX:', {xhr, status, error});
                 const response = xhr.responseJSON;
                 showDetectionMessage(response?.message || 'Error al detectar el equipo', 'danger');
+                $('#submitWithoutCheckBtn').show();
+                $('#retryMessage').show();
             }
         });
     });
 
     // Validar formulario antes de enviar
     $('#createHostForm').on('submit', function(e) {
-        if (!$('#mac_address').val()) {
+        const isWithoutCheck = $(e.target.activeElement).attr('id') === 'submitWithoutCheckBtn';
+        if (!isWithoutCheck && !$('#mac_address').val()) {
             e.preventDefault();
             showDetectionMessage('Por favor, detecta el equipo antes de guardar', 'danger');
             return false;
