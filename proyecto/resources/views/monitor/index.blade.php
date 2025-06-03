@@ -44,7 +44,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3 mb-3">
+                        <div class="col-md-3 mb-3 text-white">
                             <div class="card bg-success text-white h-100">
                                 <div class="card-body text-center">
                                     <h1 class="display-4">{{ $hosts->where('status', 'online')->count() }}</h1>
@@ -52,7 +52,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3 mb-3">
+                        <div class="col-md-3 mb-3 text-white">
                             <div class="card bg-danger text-white h-100">
                                 <div class="card-body text-center">
                                     <h1 class="display-4">{{ $hosts->where('status', 'offline')->count() }}</h1>
@@ -60,7 +60,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3 mb-3">
+                        <div class="col-md-3 mb-3 text-white">
                             <div class="card bg-info text-white h-100">
                                 <div class="card-body text-center">
                                     <h1 class="display-4">{{ $groups->count() }}</h1>
