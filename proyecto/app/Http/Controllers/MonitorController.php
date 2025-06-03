@@ -257,27 +257,26 @@ class MonitorController extends Controller
         try {
             $groupId = $request->query('group');
             $scanType = $request->input('scan_type', 'hostname');
-            $hosts = $groupId ? MonitorHost::where('group_id', $groupId)->get() : MonitorHost::all();
+            
+            // Solo obtener hosts del grupo seleccionado
+            $hosts = MonitorHost::where('group_id', $groupId)->get();
+            
+            if ($hosts->isEmpty()) {
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No se encontraron hosts en este grupo.'
+                    ], 404);
+                }
+                return redirect()->route('monitor.index')
+                    ->with('error', 'No se encontraron hosts en este grupo.');
+            }
+
             $updated = 0;
             $errors = 0;
             $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
 
             foreach ($hosts as $host) {
-                // Asignar grupo automáticamente si no tiene
-                if (empty($host->group_id) && preg_match('/^([A-Z][0-9]{2})-/', $host->hostname, $matches)) {
-                    $nombreGrupo = $matches[1];
-                    $grupoDetectado = \App\Models\MonitorGroup::firstOrCreate(
-                        ['name' => $nombreGrupo],
-                        [
-                            'description' => 'Aula ' . $nombreGrupo,
-                            'type' => 'classroom',
-                            'created_by' => \Auth::id() ?: 1
-                        ]
-                    );
-                    $host->group_id = $grupoDetectado->id;
-                    $host->save();
-                }
-
                 $mac = null;
                 $ipDetectada = null;
                 $status = 'offline';
@@ -292,7 +291,7 @@ class MonitorController extends Controller
                         curl_setopt($ch, CURLOPT_POST, 1);
                         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['hostname' => $hostname]));
                         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                        curl_setopt($ch, CURLOPT_TIMEOUT, 5); // 5 segundos de timeout
+                        curl_setopt($ch, CURLOPT_TIMEOUT, 3); // Reducido a 3 segundos
                         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
                         
                         $response = curl_exec($ch);
@@ -316,7 +315,7 @@ class MonitorController extends Controller
                         $ch = curl_init();
                         curl_setopt($ch, CURLOPT_URL, $pythonServiceUrl);
                         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                        curl_setopt($ch, CURLOPT_TIMEOUT, 5); // 5 segundos de timeout
+                        curl_setopt($ch, CURLOPT_TIMEOUT, 3); // Reducido a 3 segundos
                         
                         $response = curl_exec($ch);
                         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
