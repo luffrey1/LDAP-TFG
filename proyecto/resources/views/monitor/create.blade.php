@@ -298,22 +298,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Validar formulario antes de enviar
     $('#createHostForm').on('submit', function(e) {
-        const isWithoutCheck = $(e.target.activeElement).attr('id') === 'submitWithoutCheckBtn';
-        const tipoHost = $('#tipo_host').val();
-        
-        // Solo validar MAC para DHCP
-        if (tipoHost === 'dhcp' && !isWithoutCheck && !$('#mac_address').val()) {
-            e.preventDefault();
-            showDetectionMessage('Por favor, detecta el equipo antes de guardar', 'danger');
-            return false;
+        // Si el botón "Guardar Equipo" está visible, permitir guardar
+        if ($('#submitBtn').is(':visible')) {
+            return true;
         }
         
-        // Para IP fija, asegurarse de que al menos hay IP
-        if (tipoHost === 'fija' && !$('#ip_address').val()) {
-            e.preventDefault();
-            showDetectionMessage('Por favor, introduce una dirección IP', 'danger');
-            return false;
+        // Si estamos usando "Guardar Sin Comprobar", permitir guardar
+        if ($(e.target.activeElement).attr('id') === 'submitWithoutCheckBtn') {
+            return true;
         }
+        
+        // En cualquier otro caso, mostrar error
+        e.preventDefault();
+        showDetectionMessage('Por favor, detecta el equipo antes de guardar', 'danger');
+        return false;
     });
 
     // Verificar que los botones existen
