@@ -1431,7 +1431,7 @@ class MonitorController extends Controller
             }
             
             // 4. Si aún no tenemos MAC, intentar con ping y arp
-            if ($status === 'online' && empty($mac) && !empty($ipDetectada)) {
+            if (($status === 'offline' || empty($mac)) && !empty($ipDetectada)) {
                 Log::info("detectHost: Intentando obtener MAC con ping y arp para IP: {$ipDetectada}");
                 
                 // Forzar actualización ARP con ping
@@ -1439,6 +1439,8 @@ class MonitorController extends Controller
                 exec($pingCommand, $pingOutput, $pingReturnVal);
                 
                 if ($pingReturnVal === 0) {
+                    $status = 'online'; // Si el ping es exitoso, el host está online
+                    
                     // Intentar con arp-scan
                     $arpScanCommand = "arp-scan --interface=eth0 " . escapeshellarg($ipDetectada);
                     exec($arpScanCommand, $arpOutput, $arpReturnVal);
