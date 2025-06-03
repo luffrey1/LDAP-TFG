@@ -43,12 +43,31 @@ if [ -f "/etc/ssl/certs/site/certificate.crt" ] && [ -f "/etc/ssl/certs/site/pri
   
   # Configurar SSL en Apache
   echo "Configurando SSL en Apache..."
-  sed -i 's|/etc/ssl/certs/ssl-cert-snakeoil.pem|/etc/ssl/certs/site/certificate.crt|g' /etc/apache2/sites-available/default-ssl.conf
-  sed -i 's|/etc/ssl/private/ssl-cert-snakeoil.key|/etc/ssl/certs/site/private.key|g' /etc/apache2/sites-available/default-ssl.conf
-  sed -i 's|#SSLCertificateChainFile.*|SSLCertificateChainFile /etc/ssl/certs/site/ca_bundle.crt|' /etc/apache2/sites-available/default-ssl.conf
   
+  # Crear configuración SSL personalizada
+  cat > /etc/apache2/sites-available/ssl.conf << 'EOF'
+<VirtualHost *:443>
+    ServerName ldap.tierno.es
+    DocumentRoot /var/www/html/public
+
+    SSLEngine on
+    SSLCertificateFile /etc/ssl/certs/site/certificate.crt
+    SSLCertificateKeyFile /etc/ssl/certs/site/private.key
+    SSLCertificateChainFile /etc/ssl/certs/site/ca_bundle.crt
+
+    <Directory /var/www/html/public>
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
+EOF
+
   # Habilitar el sitio SSL
-  a2ensite default-ssl
+  a2ensite ssl
   
   # Configurar permisos de los certificados
   chmod 644 /etc/ssl/certs/site/certificate.crt
