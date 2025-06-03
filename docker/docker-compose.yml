@@ -30,7 +30,9 @@ services:
       - ldap_config:/etc/ldap/slapd.d
     networks:
       - app-network
-    restart: unless-stopped
+    restart: on-failure:3
+    stop_grace_period: 30s
+    command: ["--loglevel", "debug"]
     healthcheck:
       test: ["CMD", "ldapsearch", "-x", "-H", "ldap://localhost:389", "-b", "dc=tierno,dc=es", "-D", "cn=admin,dc=tierno,dc=es", "-w", "admin"]
       interval: 10s
