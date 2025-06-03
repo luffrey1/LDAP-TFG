@@ -71,6 +71,7 @@ services:
       dockerfile: docker/Dockerfile
     container_name: laravel-app
     restart: unless-stopped
+    hostname: ldap.tierno.es
     ports:
       - "80:80"
       - "443:443"
