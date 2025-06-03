@@ -483,6 +483,14 @@ if __name__ == '__main__':
     print("Iniciando agente de telemetría...")
     print(f"URL del servidor: {LARAVEL_URL}")
     
+    # Configurar SSL
+    ssl_context = None
+    try:
+        ssl_context = ('cert.pem', 'key.pem')
+    except Exception as e:
+        print(f"Error cargando certificados SSL: {str(e)}")
+        print("Ejecutando sin SSL (no recomendado para producción)")
+    
     while True:
         try:
             # Obtener el intervalo actualizado
@@ -500,4 +508,7 @@ if __name__ == '__main__':
             print(f"Error en el ciclo de telemetría: {str(e)}")
             
         # Esperar el intervalo configurado
-        time.sleep(interval) 
+        time.sleep(interval)
+
+    # Iniciar el servidor Flask con SSL
+    app.run(host='0.0.0.0', port=5001, ssl_context=ssl_context) 

@@ -655,9 +655,12 @@ $(document).ready(function() {
         
         // Intentar obtener datos del agente Flask
         $.ajax({
-            url: `http://${hostIp}:5001/telemetry`,
+            url: `https://${hostIp}:5001/telemetry`,
             method: 'GET',
             timeout: 5000,
+            xhrFields: {
+                withCredentials: true
+            },
             success: function(response) {
                 console.log('Respuesta del agente:', response);
                 if (response.success) {
@@ -691,7 +694,12 @@ $(document).ready(function() {
                 // Si falla el agente, intentar ping
                 $.ajax({
                     url: '{{ route("monitor.ping", ["id" => $host->id]) }}',
-                    method: 'GET',
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
                     success: function(pingResponse) {
                         console.log('Respuesta ping:', pingResponse);
                         if (pingResponse.status === 'online') {
