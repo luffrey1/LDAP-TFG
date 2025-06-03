@@ -649,50 +649,59 @@ $(document).ready(function() {
         btnText.text('Comprobando...');
         icon.addClass('fa-spin');
         
+        // Obtener la IP del host
+        const hostIp = '{{ $host->ip_address }}';
+        console.log('Intentando conectar con el agente en:', hostIp);
+        
         // Intentar obtener datos del agente Flask
         $.ajax({
-            url: `http://${window.location.hostname}:5001/telemetry`,
+            url: `http://${hostIp}:5001/telemetry`,
             method: 'GET',
             timeout: 5000,
             success: function(response) {
+                console.log('Respuesta del agente:', response);
                 if (response.success) {
                     // Enviar datos a Laravel
                     $.ajax({
                         url: '{{ route("monitor.update-telemetry") }}',
                         method: 'POST',
-                        data: response.data,
+                        data: JSON.stringify(response.data),
                         headers: {
                             'X-CSRF-TOKEN': '{{ csrf_token() }}',
                             'Accept': 'application/json',
                             'Content-Type': 'application/json'
                         },
                         success: function() {
+                            console.log('Datos actualizados en Laravel');
                             updateStatus('success', 'Datos actualizados correctamente');
                             setTimeout(() => location.reload(), 1000);
                         },
-                        error: function(xhr) {
+                        error: function(xhr, status, error) {
                             console.error('Error Laravel:', xhr.responseText);
-                            updateStatus('error', 'Error al actualizar datos en el servidor');
+                            updateStatus('error', 'Error al actualizar datos en el servidor: ' + error);
                         }
                     });
                 } else {
+                    console.error('Error en respuesta del agente:', response);
                     updateStatus('error', 'Error en la respuesta del agente');
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error agente:', error);
+                console.error('Error al conectar con el agente:', error);
                 // Si falla el agente, intentar ping
                 $.ajax({
                     url: '{{ route("monitor.ping", ["id" => $host->id]) }}',
                     method: 'GET',
                     success: function(pingResponse) {
+                        console.log('Respuesta ping:', pingResponse);
                         if (pingResponse.status === 'online') {
                             updateStatus('success', 'Host activo pero agente no disponible');
                         } else {
                             updateStatus('error', 'Host inactivo');
                         }
                     },
-                    error: function() {
+                    error: function(xhr, status, error) {
+                        console.error('Error en ping:', error);
                         updateStatus('error', 'No se pudo contactar con el host');
                     }
                 });
@@ -707,7 +716,11 @@ $(document).ready(function() {
     }
     
     // Asignar evento al botón
-    $('#refreshBtn').click(refreshData);
+    $('#refreshBtn').click(function(e) {
+        e.preventDefault();
+        console.log('Botón de comprobación clickeado');
+        refreshData();
+    });
     
     // Actualizar automáticamente cada 5 minutos
     setInterval(refreshData, 300000);
