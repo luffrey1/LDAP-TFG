@@ -38,7 +38,7 @@
                         <form action="{{ route('monitor.update', $host->id) }}" method="POST">
                             @csrf
                             @method('PUT')
-                            <div class="form-group">
+                            <div class="form-group text-white">
                                 <label for="hostname">Nombre del Host <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control @error('hostname') is-invalid @enderror" id="hostname" name="hostname" value="{{ old('hostname', $host->hostname) }}" required>
                                 @error('hostname')
@@ -48,7 +48,7 @@
                                 @enderror
                             </div>
 
-                            <div class="form-group">
+                            <div class="form-group text-white">
                                 <label for="ip_address">Dirección IP <span class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <div class="input-group-prepend">
@@ -65,7 +65,7 @@
                                 @enderror
                             </div>
 
-                            <div class="form-group">
+                            <div class="form-group text-white">
                                 <label for="mac_address">Dirección MAC</label>
                                 <input type="text" class="form-control @error('mac_address') is-invalid @enderror" id="mac_address" name="mac_address" value="{{ old('mac_address', $host->mac_address) }}" placeholder="00:11:22:33:44:55">
                                 @error('mac_address')
@@ -76,7 +76,7 @@
                                 <small class="form-text text-muted">Formato: 00:11:22:33:44:55</small>
                             </div>
 
-                            <div class="form-group">
+                            <div class="form-group text-white ">
                                 <label for="description">Descripción</label>
                                 <textarea class="form-control @error('description') is-invalid @enderror" id="description" name="description" rows="3">{{ old('description', $host->description) }}</textarea>
                                 @error('description')
@@ -86,7 +86,7 @@
                                 @enderror
                             </div>
 
-                            <div class="form-group">
+                            <div class="form-group text-white">
                                 <label for="group_id">Grupo</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-layer-group"></i></span>
@@ -101,7 +101,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-group">
+                            <div class="form-group text-white">
                                 <label>Estado Actual</label>
                                 <div class="mt-2">
                                     <span class="badge badge-{{ $host->status_color }} badge-pill" style="font-size: 1rem; padding: 8px 15px;">
