@@ -328,10 +328,9 @@
         const progressBar = $('.progress-bar');
         const startScanBtn = $('#startScanBtn');
 
-        // Función para hacer ping a un host individual
+        // Manejador del botón de ping individual
         $('.btn-ping').on('click', function(e) {
-            e.preventDefault(); // Prevenir la navegación
-            
+            e.preventDefault();
             const hostId = $(this).data('host-id');
             const row = $(this).closest('tr');
             const statusCell = row.find('td:first-child');
@@ -339,116 +338,98 @@
             const macCell = row.find('td:nth-child(4)');
             const lastSeenCell = row.find('td:nth-child(5)');
             
-            // Guardar botón original para restaurarlo si hay error
-            const originalButton = $(this).html();
+            // Mostrar el modal
+            $('#updateStatusModal').modal('show');
             
-            // Cambiar ícono a animación de carga
-            $(this).html('<i class="fas fa-spinner fa-spin"></i>');
+            // Configurar el modal para un solo host
+            $('#updateStatusModal .modal-title').text('Escanear Host Individual');
+            $('#updateStatusModal .modal-body').html(`
+                <div class="mb-3">
+                    <label class="form-label">Seleccione el tipo de escaneo:</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="scanType" id="scanTypeHostname" value="hostname" checked>
+                        <label class="form-check-label" for="scanTypeHostname">
+                            Escanear por hostname
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="scanType" id="scanTypeIP" value="ip">
+                        <label class="form-check-label" for="scanTypeIP">
+                            Escanear por IP
+                        </label>
+                    </div>
+                </div>
+                <div id="scanProgress" class="d-none">
+                    <div class="progress mb-3">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <p id="scanStatus" class="text-center mb-0">Detectando host...</p>
+                </div>
+            `);
             
-            // Mostrar indicador de carga en status
-            statusCell.html('<span class="badge bg-warning"><i class="fas fa-spinner fa-spin me-1"></i> Verificando...</span>');
+            // Configurar el botón de inicio
+            const startScanBtn = $('#updateStatusModal .modal-footer .btn-primary');
+            startScanBtn.text('Iniciar Escaneo');
             
-            // Realizar la petición AJAX
-            $.ajax({
-                url: "{{ route('monitor.ping', ['id' => '__id__']) }}".replace('__id__', hostId),
-                type: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    console.log('Respuesta ping:', response);
-                    
-                    // Actualizar estado del host
-                    if (response.status === 'online') {
-                        statusCell.html('<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> En línea</span>');
+            // Manejador del botón de inicio
+            startScanBtn.off('click').on('click', function() {
+                const scanType = $('input[name="scanType"]:checked').val();
+                const scanProgress = $('#scanProgress');
+                const progressBar = scanProgress.find('.progress-bar');
+                const scanStatus = $('#scanStatus');
+                
+                // Mostrar progreso
+                scanProgress.removeClass('d-none');
+                startScanBtn.prop('disabled', true);
+                progressBar.css('width', '0%');
+                scanStatus.html('<i class="fas fa-spinner fa-spin me-2"></i>Detectando host...');
+                
+                // Realizar el escaneo
+                $.ajax({
+                    url: "{{ route('monitor.ping', ['id' => '__id__']) }}".replace('__id__', hostId),
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        scan_type: scanType
+                    },
+                    success: function(response) {
+                        progressBar.css('width', '100%');
                         
-                        // Actualizar IP si está en la respuesta
-                        if (response.ip) {
-                            ipCell.text(response.ip);
+                        if (response.success) {
+                            scanStatus.html('<i class="fas fa-check-circle me-2 text-success"></i>Host detectado');
+                            
+                            // Actualizar la fila
+                            if (response.status === 'online') {
+                                statusCell.html('<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> En línea</span>');
+                                if (response.ip) ipCell.text(response.ip);
+                                if (response.mac) macCell.html('<span class="text-success"><i class="fas fa-check-circle"></i> ' + response.mac + '</span>');
+                                if (response.last_seen) lastSeenCell.text(response.last_seen);
+                            } else {
+                                statusCell.html('<span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i> Desconectado</span>');
+                            }
+                        } else {
+                            scanStatus.html('<i class="fas fa-times-circle me-2 text-danger"></i>No se pudo detectar el host');
                         }
                         
-                        // Actualizar MAC si está en la respuesta
-                        if (response.mac) {
-                            macCell.html('<span class="text-success"><i class="fas fa-check-circle"></i> ' + response.mac + '</span>');
-                        }
-                        
-                        // Actualizar último visto
-                        if (response.last_seen) {
-                            lastSeenCell.text(response.last_seen);
-                        }
-                        
-                        // Mostrar notificación de éxito
-                        toastr.success('Host ' + row.find('td:nth-child(2)').text() + ' está en línea');
-                    } else {
-                        statusCell.html('<span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i> Desconectado</span>');
-                        // Mostrar notificación
-                        toastr.warning('Host ' + row.find('td:nth-child(2)').text() + ' está desconectado');
+                        // Cerrar el modal después de 1 segundo
+                        setTimeout(() => {
+                            $('#updateStatusModal').modal('hide');
+                        }, 1000);
+                    },
+                    error: function(xhr) {
+                        scanStatus.html('<i class="fas fa-exclamation-circle me-2 text-danger"></i>Error en el escaneo');
+                        startScanBtn.prop('disabled', false);
                     }
-                    
-                    // Restaurar ícono original
-                    $('.btn-ping[data-host-id="'+hostId+'"]').html('<i class="fas fa-exchange-alt"></i>');
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error al hacer ping:', error, xhr.responseText);
-                    
-                    // Restaurar estado original
-                    statusCell.html('<span class="badge bg-warning"><i class="fas fa-exclamation-circle me-1"></i> Error</span>');
-                    
-                    // Restaurar ícono original
-                    $('.btn-ping[data-host-id="'+hostId+'"]').html(originalButton);
-                    
-                    // Mostrar notificación de error
-                    toastr.error('Error al verificar el host: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Error de conexión'));
-                }
-            });
-        });
-
-        // Manejador del botón de escaneo
-        startScanBtn.on('click', function() {
-            if (scanInProgress) return;
-            
-            const scanType = $('input[name="scanType"]:checked').val();
-            const groupId = '{{ request()->query("group") }}';
-            
-            // Mostrar progreso
-            scanProgress.show();
-            startScanBtn.prop('disabled', true);
-            scanInProgress = true;
-            progressBar.css('width', '0%');
-            scanStatus.html('<i class="fas fa-spinner fa-spin me-2"></i>Detectando equipos...');
-
-            // Realizar el escaneo
-            $.ajax({
-                url: '{{ route("monitor.ping-all") }}',
-                type: 'POST',
-                data: {
-                    _token: '{{ csrf_token() }}',
-                    scan_type: scanType,
-                    group: groupId
-                },
-                success: function(response) {
-                    progressBar.css('width', '100%');
-                    scanStatus.html('<i class="fas fa-check-circle me-2 text-success"></i>Escaneo completado');
-                    setTimeout(() => {
-                        updateStatusModal.hide();
-                        location.reload();
-                    }, 1000);
-                },
-                error: function(xhr) {
-                    scanStatus.html('<i class="fas fa-exclamation-circle me-2 text-danger"></i>Error en el escaneo');
-                    startScanBtn.prop('disabled', false);
-                },
-                complete: function() {
-                    scanInProgress = false;
-                    startScanBtn.prop('disabled', false);
-                }
+                });
             });
         });
 
         // Resetear el modal cuando se cierra
         $('#updateStatusModal').on('hidden.bs.modal', function() {
-            scanProgress.hide();
-            scanStatus.text('Detectando equipos...');
-            progressBar.css('width', '0%');
-            startScanBtn.prop('disabled', false);
+            $('#scanProgress').addClass('d-none');
+            $('#scanStatus').text('Detectando host...');
+            $('.progress-bar').css('width', '0%');
+            $('.modal-footer .btn-primary').prop('disabled', false);
         });
     });
 

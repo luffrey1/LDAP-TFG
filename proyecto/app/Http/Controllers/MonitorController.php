@@ -147,105 +147,79 @@ class MonitorController extends Controller
             $mac = null;
             $ipDetectada = null;
             $status = 'offline';
+            $scanType = request()->input('scan_type', 'hostname');
 
-            $hostnameCompleto = !str_contains($host->hostname, '.') ? $host->hostname . '.tierno.es' : $host->hostname;
+            if ($scanType === 'hostname') {
+                // Escaneo por hostname
+                $hostname = $host->hostname;
+                if (!empty($hostname)) {
+                    $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan-hostnames';
+                    $ch = curl_init();
+                    curl_setopt($ch, CURLOPT_URL, $pythonServiceUrl);
+                    curl_setopt($ch, CURLOPT_POST, 1);
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['hostname' => $hostname]));
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+                    
+                    $response = curl_exec($ch);
+                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    curl_close($ch);
 
-            // 1. Si es hostname de aula, usar /scan-hostnames
-            if (preg_match('/^(B[0-9]{2})-([A-Z][0-9])$/i', $host->hostname, $matches)) {
-                $aula = $matches[1];
-                $columna = $matches[2];
-                $macscannerUrl = rtrim($baseUrl, '/') . '/scan-hostnames';
-                $payload = [
-                    'aula' => $aula,
-                    'columnas' => [$columna],
-                    'filas' => [1],
-                    'dominio' => 'tierno.es'
-                ];
-                $options = [
-                    'http' => [
-                        'header'  => "Content-type: application/json\r\n",
-                        'method'  => 'POST',
-                        'content' => json_encode($payload),
-                        'timeout' => 20
-                    ]
-                ];
-                $context = stream_context_create($options);
-                $response = @file_get_contents($macscannerUrl, false, $context);
-                if ($response !== false) {
-                    $data = json_decode($response, true);
-                    if (isset($data['success']) && $data['success']) {
-                        foreach ($data['hosts'] as $hostData) {
-                            $foundHostname = preg_replace('/\.tierno\.es$/i', '', $hostData['hostname']);
-                            if (strcasecmp($foundHostname, $host->hostname) === 0) {
-                                $ipDetectada = $hostData['ip'] ?? null;
-                                $mac = $hostData['mac'] ?? null;
-                                $status = 'online';
-                                break;
-                            }
+                    if ($response !== false && $httpCode === 200) {
+                        $data = json_decode($response, true);
+                        if (isset($data['success']) && $data['success']) {
+                            $mac = $data['mac'] ?? null;
+                            $ipDetectada = $data['ip'] ?? null;
+                            $status = 'online';
+                        }
+                    }
+                }
+            } else {
+                // Escaneo por IP
+                $ip = $host->ip_address;
+                if (!empty($ip)) {
+                    $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($ip);
+                    $ch = curl_init();
+                    curl_setopt($ch, CURLOPT_URL, $pythonServiceUrl);
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+                    
+                    $response = curl_exec($ch);
+                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    curl_close($ch);
+
+                    if ($response !== false && $httpCode === 200) {
+                        $data = json_decode($response, true);
+                        if (isset($data['success']) && $data['success']) {
+                            $mac = $data['mac'] ?? null;
+                            $ipDetectada = $ip;
+                            $status = 'online';
                         }
                     }
                 }
             }
 
-            // 2. Si no, usar /scan?hostname
-            if ($status !== 'online') {
-                $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostnameCompleto);
-                $response = @file_get_contents($pythonServiceUrl);
-                if ($response !== false) {
-                    $data = json_decode($response, true);
-                    if (isset($data['success']) && $data['success']) {
-                        $ipDetectada = $data['ip'] ?? null;
-                        $mac = $data['mac'] ?? null;
-                        $status = 'online';
-                    }
-                }
-            }
+            // Actualizar el host
+            $host->status = $status;
+            $host->last_seen = $status === 'online' ? now() : $host->last_seen;
+            if (!empty($mac)) $host->mac_address = $mac;
+            if (!empty($ipDetectada)) $host->ip_address = $ipDetectada;
+            $host->save();
 
-            // 3. Si no, usar /scan?ip
-            if ($status !== 'online' && !empty($host->ip_address)) {
-                $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($host->ip_address);
-                $response = @file_get_contents($pythonServiceUrl);
-                if ($response !== false) {
-                    $data = json_decode($response, true);
-                    if (isset($data['success']) && $data['success']) {
-                        $ipDetectada = $host->ip_address;
-                        $mac = $data['mac'] ?? null;
-                        $status = 'online';
-                    }
-                }
-            }
-
-            // Actualizar y devolver
-            if ($status === 'online' && $ipDetectada) {
-                $host->status = 'online';
-                $host->last_seen = now();
-                if (!empty($ipDetectada) && $ipDetectada !== $host->ip_address) {
-                    $host->ip_address = $ipDetectada;
-                }
-                if (!empty($mac) && $mac !== $host->mac_address) {
-                    $host->mac_address = $mac;
-                }
-                $host->save();
-                return response()->json([
-                    'status' => 'online',
-                    'message' => 'Host está en línea',
-                    'last_seen' => $host->last_seen->format('d/m/Y H:i:s'),
-                    'ip' => $host->ip_address,
-                    'mac' => $host->mac_address
-                ]);
-            } else {
-                $host->status = 'offline';
-                $host->save();
-                return response()->json([
-                    'status' => 'offline',
-                    'message' => 'Host está fuera de línea',
-                    'last_seen' => $host->last_seen ? $host->last_seen->format('d/m/Y H:i:s') : null,
-                    'ip' => $host->ip_address,
-                    'mac' => $host->mac_address
-                ]);
-            }
+            return response()->json([
+                'success' => true,
+                'status' => $status,
+                'message' => $status === 'online' ? 'Host está en línea' : 'Host está fuera de línea',
+                'last_seen' => $host->last_seen ? $host->last_seen->format('d/m/Y H:i:s') : null,
+                'ip' => $host->ip_address,
+                'mac' => $host->mac_address
+            ]);
         } catch (\Exception $e) {
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al escanear el host: ' . $e->getMessage()
+            ], 500);
         }
     }
     
