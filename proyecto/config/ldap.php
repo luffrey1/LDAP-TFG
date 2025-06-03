@@ -33,7 +33,7 @@ return [
             'port' => env('LDAP_DEFAULT_PORT', env('LDAP_PORT', 636)),
             'base_dn' => env('LDAP_DEFAULT_BASE_DN', env('LDAP_BASE_DN', 'dc=tierno,dc=es')),
             'timeout' => env('LDAP_DEFAULT_TIMEOUT', env('LDAP_TIMEOUT', 5)),
-            'use_ssl' => env('LDAP_DEFAULT_SSL', env('LDAP_SSL', true)),
+            'use_ssl' => env('LDAP_DEFAULT_SSL', env('LDAP_SSL', false)),
             'use_tls' => env('LDAP_DEFAULT_TLS', env('LDAP_TLS', true)),
             'use_sasl' => env('LDAP_SASL', false),
             'version' => env('LDAP_VERSION', 3),
