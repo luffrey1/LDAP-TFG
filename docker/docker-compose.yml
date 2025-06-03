@@ -20,7 +20,6 @@ services:
     volumes:
       - ../ldap/certs/cert-tierno.es:/container/service/slapd/assets/certs
       - ../ldap/ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom
-      - ../ldap/tls:/container/service/slapd/assets/config/tls
       - ldap_data:/var/lib/ldap
       - ldap_config:/etc/ldap/slapd.d
     ports:
