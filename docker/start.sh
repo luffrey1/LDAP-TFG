@@ -17,7 +17,7 @@ echo "MySQL está disponible."
 
 # Esperar a que OpenLDAP esté disponible usando el nombre de servicio
 LDAP_HOST="ldap"
-LDAP_PORT="389"
+LDAP_PORT="636"  # Cambiado a 636 para LDAPS
 echo "Esperando a que OpenLDAP esté disponible..."
 until nc -z -v -w30 $LDAP_HOST $LDAP_PORT; do
   echo "Esperando conexión a OpenLDAP..."
@@ -93,8 +93,8 @@ sed -i "s/LDAP_DEFAULT_HOSTS=.*/LDAP_DEFAULT_HOSTS=$LDAP_HOST/" /var/www/html/.e
 sed -i "s/LDAP_DEFAULT_PORT=.*/LDAP_DEFAULT_PORT=$LDAP_PORT/" /var/www/html/.env
 sed -i "s/LDAP_DEFAULT_BASE_DN=.*/LDAP_DEFAULT_BASE_DN=dc=tierno,dc=es/" /var/www/html/.env
 sed -i "s/LDAP_DEFAULT_USERNAME=.*/LDAP_DEFAULT_USERNAME=cn=admin,dc=tierno,dc=es/" /var/www/html/.env
-sed -i "s/LDAP_DEFAULT_SSL=.*/LDAP_DEFAULT_SSL=false/" /var/www/html/.env
-sed -i "s/LDAP_DEFAULT_TLS=.*/LDAP_DEFAULT_TLS=false/" /var/www/html/.env
+sed -i "s/LDAP_DEFAULT_SSL=.*/LDAP_DEFAULT_SSL=true/" /var/www/html/.env
+sed -i "s/LDAP_DEFAULT_TLS=.*/LDAP_DEFAULT_TLS=true/" /var/www/html/.env
 
 sed -i "s/DB_HOST=.*/DB_HOST=$DB_HOST/" /var/www/html/.env
 sed -i "s/DB_PORT=.*/DB_PORT=$DB_PORT/" /var/www/html/.env
@@ -151,6 +151,8 @@ try {
         'base_dn' => 'dc=tierno,dc=es',
         'username' => 'cn=admin,dc=tierno,dc=es',
         'password' => 'admin',
+        'use_ssl' => true,
+        'use_tls' => true,
     ]);
     \$connection->connect();
     echo 'Conexión LDAP exitosa!' . PHP_EOL;
