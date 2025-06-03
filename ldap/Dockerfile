@@ -33,9 +33,10 @@ RUN chown -R 911:911 /container/service/slapd/assets/certs && \
 # Crear script de inicialización personalizado
 RUN echo '#!/bin/bash\n\
 echo "Esperando a que el servidor LDAP esté listo..."\n\
-sleep 20\n\
+sleep 30\n\
 echo "Procesando archivos LDIF..."\n\
-for file in /container/service/slapd/assets/config/bootstrap/ldif/custom/*.ldif; do\n\
+LDIF_DIR="/container/service/slapd/assets/config/bootstrap/ldif/custom"\n\
+for file in $(ls -v $LDIF_DIR/*.ldif); do\n\
     if [ -f "$file" ]; then\n\
         echo "Procesando $file..."\n\
         ldapadd -x -H ldaps://localhost:636 -D "cn=admin,dc=tierno,dc=es" -w admin -f "$file" -ZZ\n\
@@ -43,6 +44,7 @@ for file in /container/service/slapd/assets/config/bootstrap/ldif/custom/*.ldif;
             echo "Archivo $file procesado correctamente"\n\
         else\n\
             echo "Error procesando $file"\n\
+            exit 1\n\
         fi\n\
     fi\n\
 done\n\
