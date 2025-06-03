@@ -20,6 +20,9 @@ RUN mkdir -p /container/service/slapd/assets/config/tls
 # Copiar archivos LDIF al contenedor
 COPY ldif/*.ldif /tmp/
 
+# Copiar archivo de configuración TLS
+COPY ldif/tls-enable.ldif /container/service/slapd/assets/config/tls/tls-enable.ldif
+
 # Crear script de inicialización
 RUN echo '#!/bin/bash\n\
 # Esperar a que el servicio LDAP esté en funcionamiento\n\
