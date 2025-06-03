@@ -24,9 +24,7 @@ services:
       LDAP_NOFILE: "1024"
       LDAP_BASE_DN: "dc=tierno,dc=es"
       LDAP_ADMIN_DN: "cn=admin,dc=tierno,dc=es"
-      LDAP_BOOTSTRAP: "true"
-      LDAP_BOOTSTRAP_DEBUG: "true"
-      LDAP_BOOTSTRAP_DELAY: "10"
+      LDAP_BOOTSTRAP: "false"
       LDAP_TLS_INIT: "true"
     volumes:
       - ../ldap/certs/cert-tierno.es:/container/service/slapd/assets/certs
