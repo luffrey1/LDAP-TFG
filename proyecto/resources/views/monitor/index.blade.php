@@ -99,9 +99,9 @@
                                                         {{ $groupName }}
                                                         <span class="badge bg-secondary ms-2">{{ $groupHosts->count() }} equipos</span>
                                                     </div>
-                                                    <a href="{{ route('monitor.ping-all') }}?group={{ $groupHosts->first()->group ? $groupHosts->first()->group->id : '' }}" class="btn btn-primary btn-sm">
+                                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#updateStatusModal">
                                                         <i class="fas fa-sync-alt me-1"></i> Actualizar Estado
-                                                    </a>
+                                                    </button>
                                                 </h5>
                                                 <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
                                                     <table class="table table-hover mb-0">
@@ -255,6 +255,52 @@
         </div>
     </div>
 </div>
+
+<!-- Modal de selección de tipo de escaneo -->
+<div class="modal fade" id="updateStatusModal" tabindex="-1" aria-labelledby="updateStatusModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="updateStatusModalLabel">Actualizar Estado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Seleccione el tipo de escaneo:</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="scanType" id="scanByHostname" value="hostname" checked>
+                        <label class="form-check-label" for="scanByHostname">
+                            Escanear por Hostname (para equipos de aula)
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="scanType" id="scanByIP" value="ip">
+                        <label class="form-check-label" for="scanByIP">
+                            Escanear por IP (para equipos de infraestructura)
+                        </label>
+                    </div>
+                </div>
+                <div id="scanProgress" style="display: none;">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="spinner-border spinner-border-sm me-2" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <span id="scanStatus">Detectando equipos...</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="startScanBtn">
+                    <i class="fas fa-sync-alt me-1"></i> Iniciar Escaneo
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
@@ -343,6 +389,62 @@
                     toastr.error('Error al verificar el host: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Error de conexión'));
                 }
             });
+        });
+
+        let scanInProgress = false;
+        const modal = $('#updateStatusModal');
+        const scanProgress = $('#scanProgress');
+        const scanStatus = $('#scanStatus');
+        const progressBar = $('.progress-bar');
+        const startScanBtn = $('#startScanBtn');
+
+        startScanBtn.on('click', function() {
+            if (scanInProgress) return;
+            
+            const scanType = $('input[name="scanType"]:checked').val();
+            const groupId = '{{ request()->query("group") }}';
+            
+            // Mostrar progreso
+            scanProgress.show();
+            startScanBtn.prop('disabled', true);
+            scanInProgress = true;
+            progressBar.css('width', '0%');
+            scanStatus.html('<i class="fas fa-spinner fa-spin me-2"></i>Detectando equipos...');
+
+            // Realizar el escaneo
+            $.ajax({
+                url: '{{ route("monitor.ping-all") }}',
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    scan_type: scanType,
+                    group: groupId
+                },
+                success: function(response) {
+                    progressBar.css('width', '100%');
+                    scanStatus.html('<i class="fas fa-check-circle me-2 text-success"></i>Escaneo completado');
+                    setTimeout(() => {
+                        modal.modal('hide');
+                        location.reload();
+                    }, 1000);
+                },
+                error: function(xhr) {
+                    scanStatus.html('<i class="fas fa-exclamation-circle me-2 text-danger"></i>Error en el escaneo');
+                    startScanBtn.prop('disabled', false);
+                },
+                complete: function() {
+                    scanInProgress = false;
+                    startScanBtn.prop('disabled', false);
+                }
+            });
+        });
+
+        // Resetear el modal cuando se cierra
+        modal.on('hidden.bs.modal', function() {
+            scanProgress.hide();
+            scanStatus.text('Detectando equipos...');
+            progressBar.css('width', '0%');
+            startScanBtn.prop('disabled', false);
         });
     });
 

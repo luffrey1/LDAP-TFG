@@ -256,10 +256,12 @@ class MonitorController extends Controller
     {
         try {
             $groupId = $request->query('group');
+            $scanType = $request->input('scan_type', 'hostname');
             $hosts = $groupId ? MonitorHost::where('group_id', $groupId)->get() : MonitorHost::all();
             $updated = 0;
             $errors = 0;
             $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
+
             foreach ($hosts as $host) {
                 // Asignar grupo automáticamente si no tiene
                 if (empty($host->group_id) && preg_match('/^([A-Z][0-9]{2})-/', $host->hostname, $matches)) {
@@ -275,25 +277,68 @@ class MonitorController extends Controller
                     $host->group_id = $grupoDetectado->id;
                     $host->save();
                 }
-                $ip = $host->ip_address;
-                $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($ip);
-                $response = @file_get_contents($pythonServiceUrl);
-                if ($response === false) {
-                    \Log::error('No se pudo conectar al microservicio Python para pingAll (host ' . $ip . '): ' . $pythonServiceUrl);
-                    $errors++;
-                    continue;
+
+                $mac = null;
+                $ipDetectada = null;
+                $status = 'offline';
+
+                if ($scanType === 'hostname' && preg_match('/^([A-Z][0-9]{2})-([A-Z][0-9])$/i', $host->hostname, $matches)) {
+                    // Escaneo por hostname para equipos de aula
+                    $aula = $matches[1];
+                    $columna = $matches[2];
+                    $macscannerUrl = rtrim($baseUrl, '/') . '/scan-hostnames';
+                    $payload = [
+                        'aula' => $aula,
+                        'columnas' => [$columna],
+                        'filas' => [1],
+                        'dominio' => 'tierno.es'
+                    ];
+                    $options = [
+                        'http' => [
+                            'header'  => "Content-type: application/json\r\n",
+                            'method'  => 'POST',
+                            'content' => json_encode($payload),
+                            'timeout' => 20
+                        ]
+                    ];
+                    $context = stream_context_create($options);
+                    $response = @file_get_contents($macscannerUrl, false, $context);
+                    if ($response !== false) {
+                        $data = json_decode($response, true);
+                        if (isset($data['success']) && $data['success']) {
+                            foreach ($data['hosts'] as $hostData) {
+                                $foundHostname = preg_replace('/\.tierno\.es$/i', '', $hostData['hostname']);
+                                if (strcasecmp($foundHostname, $host->hostname) === 0) {
+                                    $ipDetectada = $hostData['ip'] ?? null;
+                                    $mac = $hostData['mac'] ?? null;
+                                    $status = 'online';
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Escaneo por IP para equipos de infraestructura
+                    $ip = $host->ip_address;
+                    if (!empty($ip)) {
+                        $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($ip);
+                        $response = @file_get_contents($pythonServiceUrl);
+                        if ($response !== false) {
+                            $data = json_decode($response, true);
+                            if (isset($data['success']) && $data['success']) {
+                                $mac = $data['mac'] ?? null;
+                                $ipDetectada = $ip;
+                                $status = 'online';
+                            }
+                        }
+                    }
                 }
-                $data = json_decode($response, true);
-                if (!$data || !isset($data['success'])) {
-                    \Log::error('Respuesta inválida del microservicio Python (pingAll, host ' . $ip . '): ' . $response);
-                    $errors++;
-                    continue;
-                }
+
                 try {
-                    $host->status = $data['success'] ? 'online' : 'offline';
-                    $host->last_seen = $data['success'] ? now() : $host->last_seen;
-                    if (!empty($data['mac'])) $host->mac_address = $data['mac'];
-                    if (!empty($data['hostname'])) $host->hostname = $data['hostname'];
+                    $host->status = $status;
+                    $host->last_seen = $status === 'online' ? now() : $host->last_seen;
+                    if (!empty($mac)) $host->mac_address = $mac;
+                    if (!empty($ipDetectada)) $host->ip_address = $ipDetectada;
                     $host->save();
                     $updated++;
                 } catch (\Exception $e) {
@@ -301,11 +346,28 @@ class MonitorController extends Controller
                     $errors++;
                 }
             }
-            $msg = "Estado actualizado. {$updated} hosts actualizados, {$errors} errores.";
-            return redirect()->route('monitor.index')->with('success', $msg);
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => "Estado actualizado. {$updated} hosts actualizados, {$errors} errores.",
+                    'updated' => $updated,
+                    'errors' => $errors
+                ]);
+            }
+
+            return redirect()->route('monitor.index')
+                ->with('success', "Estado actualizado. {$updated} hosts actualizados, {$errors} errores.");
         } catch (\Exception $e) {
-            \Log::error('Error en pingAll (Python): ' . $e->getMessage());
-            return redirect()->route('monitor.index')->with('error', 'Error al actualizar estado: ' . $e->getMessage());
+            \Log::error('Error en pingAll: ' . $e->getMessage());
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al actualizar estado: ' . $e->getMessage()
+                ], 500);
+            }
+            return redirect()->route('monitor.index')
+                ->with('error', 'Error al actualizar estado: ' . $e->getMessage());
         }
     }
     
