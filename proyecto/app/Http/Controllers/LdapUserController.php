@@ -259,10 +259,20 @@ class LdapUserController extends Controller
                 Log::info('Usuario local creado: ' . $user->username);
             }
             
+            // Registrar la acción en logs
+            Log::channel('activity')->info('Usuario LDAP creado', [
+                'action' => 'Crear Usuario',
+                'username' => $request->username
+            ]);
+            
             return redirect()->route('ldap.users.index')
                 ->with('success', 'Usuario creado correctamente.');
         } catch (\Exception $e) {
             Log::error('Error al crear usuario: ' . $e->getMessage());
+            Log::channel('activity')->error('Error al crear usuario LDAP: ' . $e->getMessage(), [
+                'action' => 'Error',
+                'username' => $request->username
+            ]);
             return redirect()->back()
                 ->with('error', 'Error al crear el usuario: ' . $e->getMessage())
                 ->withInput();
@@ -546,10 +556,20 @@ class LdapUserController extends Controller
                 Log::info('Usuario local actualizado: ' . $localUser->username);
             }
             
+            // Registrar la acción en logs
+            Log::channel('activity')->info('Usuario LDAP actualizado', [
+                'action' => 'Actualizar Usuario',
+                'username' => $request->username
+            ]);
+            
             return redirect()->route('ldap.users.index')
                 ->with('success', 'Usuario actualizado correctamente.');
         } catch (\Exception $e) {
             Log::error('Error al actualizar usuario: ' . $e->getMessage());
+            Log::channel('activity')->error('Error al actualizar usuario LDAP: ' . $e->getMessage(), [
+                'action' => 'Error',
+                'username' => $request->username
+            ]);
             return redirect()->back()
                 ->with('error', 'Error al actualizar el usuario: ' . $e->getMessage())
                 ->withInput();
@@ -585,6 +605,12 @@ class LdapUserController extends Controller
                     
                     Log::info('Usuario LDAP eliminado: ' . $dn);
                     
+                    // Registrar la acción en logs
+                    Log::channel('activity')->info('Usuario LDAP eliminado', [
+                        'action' => 'Eliminar Usuario',
+                        'username' => $username
+                    ]);
+                    
                     return redirect()->route('ldap.users.index')
                         ->with('success', 'Usuario eliminado correctamente.');
                 }
@@ -599,6 +625,12 @@ class LdapUserController extends Controller
                 
                 Log::info('Usuario local eliminado: ' . $username);
                 
+                // Registrar la acción en logs
+                Log::channel('activity')->info('Usuario local eliminado', [
+                    'action' => 'Eliminar Usuario',
+                    'username' => $username
+                ]);
+                
                 return redirect()->route('ldap.users.index')
                     ->with('success', 'Usuario eliminado correctamente de la base de datos local.');
             }
@@ -608,6 +640,10 @@ class LdapUserController extends Controller
                 
         } catch (\Exception $e) {
             Log::error('Error al eliminar usuario: ' . $e->getMessage());
+            Log::channel('activity')->error('Error al eliminar usuario LDAP: ' . $e->getMessage(), [
+                'action' => 'Error',
+                'username' => $username
+            ]);
             return redirect()->back()
                 ->with('error', 'Error al eliminar el usuario: ' . $e->getMessage());
         }
