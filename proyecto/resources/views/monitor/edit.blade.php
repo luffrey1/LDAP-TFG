@@ -108,7 +108,7 @@
                                         {{ $host->status_text }}
                                     </span>
                                     @if($host->last_seen)
-                                        <small class="ml-2 text-muted">
+                                        <small class="ml-2 text-white">
                                             Último contacto: {{ $host->last_seen->format('d/m/Y H:i:s') }}
                                         </small>
                                     @endif
