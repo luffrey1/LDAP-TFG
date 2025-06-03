@@ -172,11 +172,15 @@
                             <div class="card-header bg-warning text-white">Memoria</div>
                             <div class="card-body text-white">
                                 @if(isset($host->memory_usage['used']) && isset($host->memory_usage['total']))
-                                    <div class="fw-bold mb-1 text-warning">Usado: {{ $host->memory_usage['used'] }} MB / {{ $host->memory_usage['total'] }} MB</div>
+                                    <div class="fw-bold mb-1 text-warning">Usado: {{ number_format($host->memory_usage['used'], 2) }} MB / {{ number_format($host->memory_usage['total'], 2) }} MB</div>
                                 @endif
                                 <canvas id="gauge-mem" width="120" height="120"></canvas>
                                 <div class="mt-2 h5">
-                                    {{ is_array($host->memory_usage) && isset($host->memory_usage['percentage']) ? $host->memory_usage['percentage'] . '%' : ($host->memory_usage ?? 'N/A') }}
+                                    @if(is_array($host->memory_usage) && isset($host->memory_usage['percentage']))
+                                        {{ number_format($host->memory_usage['percentage'], 1) }}%
+                                    @else
+                                        {{ is_string($host->memory_usage) ? $host->memory_usage : 'N/A' }}
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -186,11 +190,15 @@
                             <div class="card-header bg-success text-white">Disco</div>
                             <div class="card-body text-white">
                                 @if(isset($host->disk_usage['used']) && isset($host->disk_usage['total']))
-                                    <div class="fw-bold mb-1 text-white">Total: {{ $host->disk_usage['used'] }} GB / {{ $host->disk_usage['total'] }} GB</div>
+                                    <div class="fw-bold mb-1 text-white">Total: {{ number_format($host->disk_usage['used'], 2) }} GB / {{ number_format($host->disk_usage['total'], 2) }} GB</div>
                                 @endif
                                 <canvas id="gauge-disk" width="120" height="120"></canvas>
                                 <div class="mt-2 h5 text-white">
-                                    {{ is_array($host->disk_usage) && isset($host->disk_usage['percentage']) ? $host->disk_usage['percentage'] . '%' : ($host->disk_usage ?? 'N/A') }}
+                                    @if(is_array($host->disk_usage) && isset($host->disk_usage['percentage']))
+                                        {{ number_format($host->disk_usage['percentage'], 1) }}%
+                                    @else
+                                        {{ is_string($host->disk_usage) ? $host->disk_usage : 'N/A' }}
+                                    @endif
                                 </div>
                             </div>
                         </div>
