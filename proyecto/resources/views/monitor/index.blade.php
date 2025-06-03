@@ -35,7 +35,7 @@
                         </div>
                     @endif
 
-                    <div class="row mb-4">
+                    <div class="row mb-4 text-white">
                         <div class="col-md-3 mb-3 text-white">
                             <div class="card bg-primary text-white h-100">
                                 <div class="card-body text-white text-center">
@@ -46,7 +46,7 @@
                         </div>
                         <div class="col-md-3 mb-3 text-white">
                             <div class="card bg-success text-white h-100">
-                                <div class="card-body text-center">
+                                <div class="card-body text-center text-white">
                                     <h1 class="display-4">{{ $hosts->where('status', 'online')->count() }}</h1>
                                     <p class="lead">En Línea</p>
                                 </div>
@@ -54,7 +54,7 @@
                         </div>
                         <div class="col-md-3 mb-3 text-white">
                             <div class="card bg-danger text-white h-100">
-                                <div class="card-body text-center">
+                                <div class="card-body text-center text-white">
                                     <h1 class="display-4">{{ $hosts->where('status', 'offline')->count() }}</h1>
                                     <p class="lead">Desconectados</p>
                                 </div>
@@ -62,7 +62,7 @@
                         </div>
                         <div class="col-md-3 mb-3 text-white">
                             <div class="card bg-info text-white h-100">
-                                <div class="card-body text-center">
+                                <div class="card-body text-center text-white">
                                     <h1 class="display-4">{{ $groups->count() }}</h1>
                                     <p class="lead">Grupos de Aulas</p>
                                 </div>
