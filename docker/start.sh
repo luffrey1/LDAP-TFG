@@ -41,19 +41,25 @@ if [ -f "/etc/ssl/certs/site/certificate.crt" ] && [ -f "/etc/ssl/certs/site/pri
     echo "ADVERTENCIA: No se encontró certificado intermedio."
   fi
   
-  # Configurar SSL en Apache
-  echo "Configurando SSL en Apache..."
+  # Copiar la configuración de Apache con SSL
+  echo "Copiando configuración de Apache con SSL..."
+  cp /var/www/html/apache-config.conf /etc/apache2/sites-available/000-default.conf
   
-  # Crear configuración SSL personalizada
-  cat > /etc/apache2/sites-available/ssl.conf << 'EOF'
-<VirtualHost *:443>
+  # Configurar permisos de los certificados
+  chmod 644 /etc/ssl/certs/site/certificate.crt
+  chmod 644 /etc/ssl/certs/site/ca_bundle.crt
+  chmod 600 /etc/ssl/certs/site/private.key
+  
+  echo "Configuración SSL completada para ldap.tierno.es"
+else
+  echo "ADVERTENCIA: No se encontraron certificados SSL. Usando configuración sin SSL."
+  
+  # Crear una configuración simple sin SSL
+  cat > /etc/apache2/sites-available/000-default.conf << 'EOF'
+<VirtualHost *:80>
+    ServerAdmin webmaster@localhost
     ServerName ldap.tierno.es
     DocumentRoot /var/www/html/public
-
-    SSLEngine on
-    SSLCertificateFile /etc/ssl/certs/site/certificate.crt
-    SSLCertificateKeyFile /etc/ssl/certs/site/private.key
-    SSLCertificateChainFile /etc/ssl/certs/site/ca_bundle.crt
 
     <Directory /var/www/html/public>
         Options Indexes FollowSymLinks
@@ -65,18 +71,6 @@ if [ -f "/etc/ssl/certs/site/certificate.crt" ] && [ -f "/etc/ssl/certs/site/pri
     CustomLog ${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
 EOF
-
-  # Habilitar el sitio SSL
-  a2ensite ssl
-  
-  # Configurar permisos de los certificados
-  chmod 644 /etc/ssl/certs/site/certificate.crt
-  chmod 644 /etc/ssl/certs/site/ca_bundle.crt
-  chmod 600 /etc/ssl/certs/site/private.key
-  
-  echo "Configuración SSL completada para ldap.tierno.es"
-else
-  echo "ADVERTENCIA: No se encontraron certificados SSL. Usando configuración sin SSL."
 fi
 
 # Habilitar módulos de Apache necesarios para SSL
