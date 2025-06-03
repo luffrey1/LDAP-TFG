@@ -161,7 +161,8 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware', 'App\Http\Mi
     Route::post('/usuarios/reparar/{uid}', [App\Http\Controllers\Admin\LdapUserController::class, 'repairUser'])->name('users.repair');
     
     // Logs de actividad LDAP
-    Route::get('/logs', [App\Http\Controllers\Admin\LdapUserController::class, 'logs'])->name('logs');
+    Route::get('/logs', [App\Http\Controllers\Admin\LogController::class, 'index'])->name('logs');
+    Route::get('/logs/delete/{count}', [App\Http\Controllers\Admin\LogController::class, 'delete'])->name('logs.delete');
 
     // Nuevas rutas de configuración del sistema
     Route::get('/configuracion', [App\Http\Controllers\Admin\ConfiguracionController::class, 'index'])
