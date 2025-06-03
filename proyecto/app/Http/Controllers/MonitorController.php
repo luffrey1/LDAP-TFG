@@ -272,7 +272,7 @@ class MonitorController extends Controller
                         curl_setopt($ch, CURLOPT_POST, 1);
                         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['hostname' => $hostname]));
                         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                        curl_setopt($ch, CURLOPT_TIMEOUT, 3); // Reducido a 3 segundos
+                        curl_setopt($ch, CURLOPT_TIMEOUT, 3);
                         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
                         
                         $response = curl_exec($ch);
@@ -281,9 +281,10 @@ class MonitorController extends Controller
 
                         if ($response !== false && $httpCode === 200) {
                             $data = json_decode($response, true);
-                            if (isset($data['success']) && $data['success']) {
-                                $mac = $data['mac'] ?? null;
-                                $ipDetectada = $data['ip'] ?? null;
+                            if (isset($data['success']) && $data['success'] && isset($data['hosts'][0])) {
+                                $hostData = $data['hosts'][0];
+                                $mac = $hostData['mac'] ?? null;
+                                $ipDetectada = $hostData['ip'] ?? null;
                                 $status = 'online';
                             }
                         }
@@ -296,7 +297,7 @@ class MonitorController extends Controller
                         $ch = curl_init();
                         curl_setopt($ch, CURLOPT_URL, $pythonServiceUrl);
                         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                        curl_setopt($ch, CURLOPT_TIMEOUT, 3); // Reducido a 3 segundos
+                        curl_setopt($ch, CURLOPT_TIMEOUT, 3);
                         
                         $response = curl_exec($ch);
                         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -314,18 +315,25 @@ class MonitorController extends Controller
                 }
 
                 try {
-                    $host->status = $status;
-                    $host->last_seen = $status === 'online' ? now() : $host->last_seen;
-                    if (!empty($mac)) $host->mac_address = $mac;
-                    if (!empty($ipDetectada)) $host->ip_address = $ipDetectada;
-                    $host->save();
-                    $updated++;
+                    // Solo actualizar si realmente se detectó el host
+                    if ($status === 'online') {
+                        $host->status = $status;
+                        $host->last_seen = now();
+                        if (!empty($mac)) $host->mac_address = $mac;
+                        if (!empty($ipDetectada)) $host->ip_address = $ipDetectada;
+                        $host->save();
+                        $updated++;
+                    } else {
+                        // Si no se detectó, marcar como offline
+                        $host->status = 'offline';
+                        $host->save();
+                    }
                 } catch (\Exception $e) {
                     \Log::error('Error actualizando host en pingAll: ' . $e->getMessage());
                     $errors++;
                 }
             }
-
+            
             if ($request->ajax()) {
                 return response()->json([
                     'success' => true,
