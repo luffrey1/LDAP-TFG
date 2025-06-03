@@ -45,6 +45,10 @@ if [ -f "/etc/ssl/certs/site/certificate.crt" ] && [ -f "/etc/ssl/certs/site/pri
   echo "Copiando configuración de Apache con SSL..."
   cp /var/www/html/apache-config.conf /etc/apache2/sites-available/000-default.conf
   
+  # Habilitar el sitio SSL
+  echo "Habilitando sitio SSL..."
+  a2ensite 000-default
+  
   # Configurar permisos de los certificados
   chmod 644 /etc/ssl/certs/site/certificate.crt
   chmod 644 /etc/ssl/certs/site/ca_bundle.crt
