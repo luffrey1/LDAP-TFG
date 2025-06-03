@@ -29,6 +29,11 @@ echo "OpenLDAP está disponible."
 echo "Verificando red..."
 ping -c 2 $LDAP_HOST || echo "No se puede hacer ping a LDAP, pero seguimos con la configuración"
 
+# Habilitar módulos de Apache necesarios para SSL
+echo "Habilitando módulos de Apache para SSL..."
+a2enmod ssl
+a2enmod rewrite
+
 # Verificar que existen los certificados SSL
 echo "Verificando certificados SSL..."
 if [ -f "/etc/ssl/certs/site/certificate.crt" ] && [ -f "/etc/ssl/certs/site/private.key" ]; then
@@ -78,11 +83,6 @@ else
 </VirtualHost>
 EOF
 fi
-
-# Habilitar módulos de Apache necesarios para SSL
-echo "Habilitando módulos de Apache para SSL..."
-a2enmod ssl
-a2enmod rewrite
 
 # Asegurar que las variables de entorno en .env son correctas
 echo "Actualizando variables de entorno en .env..."
@@ -163,6 +163,10 @@ try {
     echo 'Error de conexión LDAP: ' . \$e->getMessage() . PHP_EOL;
 }
 "
+
+# Verificar la configuración de Apache antes de iniciar
+echo "Verificando configuración de Apache..."
+apache2ctl -t
 
 # Iniciar Apache en primer plano
 echo "Iniciando servidor Apache..."

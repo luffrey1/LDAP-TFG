@@ -77,18 +77,18 @@ services:
       - "8080:8080"
     environment:
       - LDAP_HOST=ldap
-      - LDAP_PORT=389
+      - LDAP_PORT=636
       - LDAP_BASE_DN=dc=tierno,dc=es
       - LDAP_USERNAME=cn=admin,dc=tierno,dc=es
       - LDAP_PASSWORD=admin
       - LDAP_AUTH_LOGIN_FALLBACK=false
       # Variables LdapRecord específicas
       - LDAP_DEFAULT_HOSTS=ldap
-      - LDAP_DEFAULT_PORT=389
+      - LDAP_DEFAULT_PORT=636
       - LDAP_DEFAULT_BASE_DN=dc=tierno,dc=es
       - LDAP_DEFAULT_USERNAME=cn=admin,dc=tierno,dc=es
       - LDAP_DEFAULT_SSL=false
-      - LDAP_DEFAULT_TLS=false
+      - LDAP_DEFAULT_TLS=true
       - DB_CONNECTION=mysql
       - DB_HOST=mysql
       - DB_PORT=3306
@@ -101,6 +101,9 @@ services:
       - ../ldap/certs/cert-tierno.es/fullchain.pem:/etc/ssl/certs/site/certificate.crt
       - ../ldap/certs/cert-tierno.es/privkey.pem:/etc/ssl/certs/site/private.key
       - ../ldap/certs/cert-tierno.es/chain.pem:/etc/ssl/certs/site/ca_bundle.crt
+      - ../ldap/certs/cert-tierno.es/fullchain.pem:/etc/ssl/certs/ldap/cert.pem
+      - ../ldap/certs/cert-tierno.es/privkey.pem:/etc/ssl/certs/ldap/privkey.pem
+      - ../ldap/certs/cert-tierno.es/chain.pem:/etc/ssl/certs/ldap/fullchain.pem
     depends_on:
       - ldap
       - mysql
