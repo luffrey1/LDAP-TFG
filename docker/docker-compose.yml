@@ -89,6 +89,7 @@ services:
       - LDAP_DEFAULT_USERNAME=cn=admin,dc=tierno,dc=es
       - LDAP_DEFAULT_SSL=true
       - LDAP_DEFAULT_TLS=false
+      - LDAPTLS_CACERT=/etc/ssl/ldap/chain.pem
       - DB_CONNECTION=mysql
       - DB_HOST=mysql
       - DB_PORT=3306
