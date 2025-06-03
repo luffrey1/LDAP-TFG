@@ -133,9 +133,6 @@
                                 @endif
                             </div>
                         </div>
-                        <button id="refreshBtn" class="btn btn-outline-primary btn-sm ms-3">
-                            <i class="fas fa-sync-alt"></i> <span class="btn-text">Comprobar ahora</span>
-                        </button>
                     </div>
                 </div>
 
