@@ -121,7 +121,7 @@
 </div>
 @endsection
 
-@section('scripts')
+
 <script>
 $(document).ready(function() {
     // Configuración global de AJAX
@@ -247,4 +247,4 @@ $(document).ready(function() {
     });
 });
 </script>
-@endsection
+
