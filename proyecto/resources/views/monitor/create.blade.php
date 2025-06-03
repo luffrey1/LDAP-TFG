@@ -28,7 +28,7 @@
                                     </div>
                                     <div class="card-body">
                                         <div class="mb-3">
-                                            <label for="tipo_host" class="form-label text-black">Tipo de Equipo</label>
+                                            <label for="tipo_host" class="form-label text-white">Tipo de Equipo</label>
                                             <select class="form-select" id="tipo_host" name="tipo_host" required>
                                                 <option value="dhcp">DHCP (Automático)</option>
                                                 <option value="fija">IP Fija</option>
@@ -37,7 +37,7 @@
 
                                         <div id="dhcpFields">
                                             <div class="mb-3">
-                                                <label for="hostname" class="form-label text-black">Hostname</label>
+                                                <label for="hostname" class="form-label text-white">Hostname</label>
                                                 <div class="input-group">
                                                     <input type="text" class="form-control" id="hostname" name="hostname" 
                                                            placeholder="Ej: B27-A1, B27-B2, etc." required>
@@ -45,13 +45,13 @@
                                                         <i class="fas fa-search me-1"></i> Comprobar Host
                                                     </button>
                                                 </div>
-                                                <div class="form-text text-black">Escribe el hostname del equipo (ej: B27-A1) y haz clic en "Comprobar Host"</div>
+                                                <div class="form-text text-white">Escribe el hostname del equipo (ej: B27-A1) y haz clic en "Comprobar Host"</div>
                                             </div>
                                         </div>
 
                                         <div id="fijaFields" style="display: none;">
                                             <div class="mb-3">
-                                                <label for="ip_address" class="form-label text-black">Dirección IP</label>
+                                                <label for="ip_address" class="form-label text-white">Dirección IP</label>
                                                 <div class="input-group">
                                                     <input type="text" class="form-control" id="ip_address" name="ip_address" 
                                                            placeholder="Ej: 172.20.200.100">
@@ -59,16 +59,16 @@
                                                         <i class="fas fa-search me-1"></i> Comprobar IP
                                                     </button>
                                                 </div>
-                                                <div class="form-text text-black">Escribe la IP del equipo y haz clic en "Comprobar IP"</div>
+                                                <div class="form-text text-white">Escribe la IP del equipo y haz clic en "Comprobar IP"</div>
                                                 <div class="alert alert-info mt-2" id="retryMessage" style="display: none;">
                                                     <i class="fas fa-info-circle me-2"></i>Si quiere volver a intentarlo, le dé de nuevo a: Comprobar
                                                 </div>
                                             </div>
                                             <div class="mb-3">
-                                                <label for="hostname_fija" class="form-label text-black">Hostname (opcional)</label>
+                                                <label for="hostname_fija" class="form-label text-white">Hostname (opcional)</label>
                                                 <input type="text" class="form-control" id="hostname_fija" name="hostname_fija" 
                                                        placeholder="Ej: B27-A1, B27-B2, etc.">
-                                                <div class="form-text text-black">Si conoce el hostname, puede escribirlo para una detección más precisa</div>
+                                                <div class="form-text text-white">Si conoce el hostname, puede escribirlo para una detección más precisa</div>
                                             </div>
                                         </div>
 
@@ -82,27 +82,27 @@
                             <div class="col-md-6">
                                 <div class="card h-100">
                                     <div class="card-header bg-light">
-                                        <h5 class="mb-0 text-black"><i class="fas fa-info-circle me-2 text-black"></i> Información del Equipo</h5>
+                                        <h5 class="mb-0 text-white"><i class="fas fa-info-circle me-2 text-black"></i> Información del Equipo</h5>
                                     </div>
                                     <div class="card-body">
                                         <div class="mb-3">
-                                            <label for="mac_address" class="form-label text-black">Dirección MAC</label>
+                                            <label for="mac_address" class="form-label text-white">Dirección MAC</label>
                                             <input type="text" class="form-control" id="mac_address" name="mac_address" readonly>
                                         </div>
 
                                         <div class="mb-3">
-                                            <label for="ip_address_display" class="form-label text-black">Dirección IP</label>
+                                            <label for="ip_address_display" class="form-label text-white">Dirección IP</label>
                                             <input type="text" class="form-control" id="ip_address_display" readonly>
                                         </div>
 
                                         <div class="mb-3">
-                                            <label for="description" class="form-label text-black">Descripción</label>
+                                            <label for="description" class="form-label text-white">Descripción</label>
                                             <textarea class="form-control" id="description" name="description" rows="3" 
                                                       placeholder="Descripción opcional del equipo"></textarea>
                                         </div>
 
                                         <div id="groupSelector" class="mb-3" style="display: none;">
-                                            <label for="group_id" class="form-label text-black">Grupo</label>
+                                                <label for="group_id" class="form-label text-white">Grupo</label>
                                             <select class="form-select" id="group_id" name="group_id">
                                                 <option value="">Sin grupo</option>
                                                 @foreach($groups as $group)

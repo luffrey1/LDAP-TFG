@@ -318,6 +318,15 @@
             $('.alert').alert('close');
         }, 5000);
 
+        // Inicializar el modal de Bootstrap
+        const updateStatusModal = new bootstrap.Modal(document.getElementById('updateStatusModal'));
+
+        let scanInProgress = false;
+        const scanProgress = $('#scanProgress');
+        const scanStatus = $('#scanStatus');
+        const progressBar = $('.progress-bar');
+        const startScanBtn = $('#startScanBtn');
+
         // Función para hacer ping a un host individual
         $('.btn-ping').on('click', function(e) {
             e.preventDefault(); // Prevenir la navegación
@@ -391,13 +400,7 @@
             });
         });
 
-        let scanInProgress = false;
-        const modal = $('#updateStatusModal');
-        const scanProgress = $('#scanProgress');
-        const scanStatus = $('#scanStatus');
-        const progressBar = $('.progress-bar');
-        const startScanBtn = $('#startScanBtn');
-
+        // Manejador del botón de escaneo
         startScanBtn.on('click', function() {
             if (scanInProgress) return;
             
@@ -424,7 +427,7 @@
                     progressBar.css('width', '100%');
                     scanStatus.html('<i class="fas fa-check-circle me-2 text-success"></i>Escaneo completado');
                     setTimeout(() => {
-                        modal.modal('hide');
+                        updateStatusModal.hide();
                         location.reload();
                     }, 1000);
                 },
@@ -440,7 +443,7 @@
         });
 
         // Resetear el modal cuando se cierra
-        modal.on('hidden.bs.modal', function() {
+        $('#updateStatusModal').on('hidden.bs.modal', function() {
             scanProgress.hide();
             scanStatus.text('Detectando equipos...');
             progressBar.css('width', '0%');
