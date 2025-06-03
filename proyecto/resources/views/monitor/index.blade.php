@@ -304,8 +304,9 @@
 @endsection
 
 @section('scripts')
+@push('scripts')
 <script>
-    $(document).ready(function() {
+    document.addEventListener('DOMContentLoaded', function() {
         // Configuración global de AJAX para incluir token CSRF
         $.ajaxSetup({
             headers: {
@@ -463,4 +464,5 @@
         }
     }
 </script>
+@endpush
 @endsection 

@@ -82,7 +82,7 @@
                             <div class="col-md-6">
                                 <div class="card h-100">
                                     <div class="card-header bg-light">
-                                        <h5 class="mb-0 text-white"><i class="fas fa-info-circle me-2 text-black"></i> Información del Equipo</h5>
+                                        <h5 class="mb-0 text-black"><i class="fas fa-info-circle me-2 text-black"></i> Información del Equipo</h5>
                                     </div>
                                     <div class="card-body">
                                         <div class="mb-3">
