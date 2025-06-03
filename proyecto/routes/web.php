@@ -15,6 +15,7 @@ use App\Http\Controllers\MonitorController;
 use App\Events\TestBroadcast;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\LdapGroupController;
+use Illuminate\Support\Facades\Http;
 
 // Ruta principal redirige al login
 Route::get('/', function () {
@@ -210,5 +211,17 @@ Route::post('/api/debug/log', function(\Illuminate\Http\Request $request) {
 // Route::post('/terminal/send', [App\Http\Controllers\MonitorController::class, 'terminalSend'])->name('terminal.send');
 
 Route::get('/monitor/estado-global', [App\Http\Controllers\MonitorController::class, 'healthStatus'])->name('monitor.health');
+
+Route::get('/api/telemetry-proxy/{host}', function ($host) {
+    try {
+        $response = Http::timeout(5)->get("http://{$host}:5001/telemetry");
+        return $response->json();
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => 'Error al conectar con el agente: ' . $e->getMessage()
+        ], 500);
+    }
+})->name('monitor.telemetry-proxy');
 
 

@@ -653,11 +653,15 @@ $(document).ready(function() {
         const hostIp = '{{ $host->ip_address }}';
         console.log('Intentando conectar con el agente en:', hostIp);
         
-        // Intentar obtener datos del agente Flask
+        // Usar el proxy de Laravel para obtener datos del agente
         $.ajax({
-            url: `http://${hostIp}:5001/telemetry`,
+            url: `{{ route('monitor.telemetry-proxy', ['host' => '']) }}${hostIp}`,
             method: 'GET',
             timeout: 5000,
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
             success: function(response) {
                 console.log('Respuesta del agente:', response);
                 if (response.success) {
@@ -683,7 +687,7 @@ $(document).ready(function() {
                     });
                 } else {
                     console.error('Error en respuesta del agente:', response);
-                    updateStatus('error', 'Error en la respuesta del agente');
+                    updateStatus('error', response.error || 'Error en la respuesta del agente');
                 }
             },
             error: function(xhr, status, error) {
