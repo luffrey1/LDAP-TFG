@@ -346,7 +346,11 @@ class LdapUserController extends Controller
             ];
             
             // Crear el usuario directamente con LDAP nativo para mayor control
-            $ldapConn = ldap_connect(config('ldap.connections.default.hosts')[0], config('ldap.connections.default.port'));
+            $ldapConn = ldap_connect('ldaps://' . config('ldap.connections.default.hosts')[0], config('ldap.connections.default.port'));
+            if (!$ldapConn) {
+                throw new Exception("No se pudo establecer la conexión LDAP");
+            }
+            
             ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
             ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
             ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
