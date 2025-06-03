@@ -83,7 +83,8 @@ class MonitorController extends Controller
             // Crear el host directamente con los datos proporcionados
             $host = new MonitorHost();
             $host->hostname = $validated['hostname'];
-            $host->ip_address = $request->ip_address;
+            // Usar la IP detectada si existe, sino la IP fija introducida
+            $host->ip_address = $request->ip_address_display ?: $request->ip_address;
             $host->mac_address = $request->mac_address;
             $host->description = $validated['description'] ?? null;
             $host->created_by = auth()->id();
@@ -108,7 +109,7 @@ class MonitorController extends Controller
             } else {
                 $host->group_id = $validated['group_id'];
             }
-
+                
             $host->save();
             \Log::info('Host creado exitosamente', ['host' => $host->toArray()]);
 
