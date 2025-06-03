@@ -14,15 +14,6 @@ ENV LDAP_TLS_CRT_FILENAME="cert.pem"
 ENV LDAP_TLS_KEY_FILENAME="privkey.pem"
 ENV LDAP_TLS_CA_CRT_FILENAME="fullchain.pem"
 
-# Copiar certificados
-COPY certs/cert-tierno.es/ /container/service/slapd/assets/certs/
-
-# Establecer permisos correctos
-RUN chown -R 911:911 /container/service/slapd/assets/certs && \
-    chmod 600 /container/service/slapd/assets/certs/privkey.pem && \
-    chmod 644 /container/service/slapd/assets/certs/cert.pem && \
-    chmod 644 /container/service/slapd/assets/certs/fullchain.pem
-
 # Crear script de inicialización personalizado
 RUN echo '#!/bin/bash\n\
 echo "Esperando a que el servidor LDAP esté listo..."\n\
