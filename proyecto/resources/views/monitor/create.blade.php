@@ -73,12 +73,7 @@
                                         </div>
 
                                         <div id="detectionResult" class="alert" style="display: none;">
-                                            <div class="d-flex align-items-center">
-                                                <div class="spinner-border spinner-border-sm me-2" role="status">
-                                                    <span class="visually-hidden">Cargando...</span>
-                                                </div>
-                                                <span id="detectionMessage">Detectando equipo...</span>
-                                            </div>
+                                            <div id="detectionMessage"></div>
                                         </div>
                                     </div>
                                 </div>
