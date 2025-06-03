@@ -384,6 +384,89 @@
                         </div>
                     </div>
                 </div>
+
+                {{-- Añadir después de la sección de Hardware --}}
+                <div class="col-md-12 col-sm-12 col-12 mb-4">
+                    <div class="card text-center">
+                        <div class="card-header bg-info text-white">Historial de Navegación</div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-white mb-3">Últimas 10 páginas visitadas</h6>
+                                    @if(isset($host->system_info['browser_history']['recent']) && count($host->system_info['browser_history']['recent']) > 0)
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Título</th>
+                                                        <th>URL</th>
+                                                        <th>Navegador</th>
+                                                        <th>Hora</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($host->system_info['browser_history']['recent'] as $page)
+                                                        <tr>
+                                                            <td class="text-truncate" style="max-width:150px;">{{ $page['title'] }}</td>
+                                                            <td class="text-truncate" style="max-width:150px;">{{ $page['url'] }}</td>
+                                                            <td>
+                                                                @if($page['browser'] == 'Firefox')
+                                                                    <i class="fab fa-firefox text-orange"></i>
+                                                                @else
+                                                                    <i class="fab fa-chrome text-blue"></i>
+                                                                @endif
+                                                                {{ $page['browser'] }}
+                                                            </td>
+                                                            <td>{{ $page['time'] }}</td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    @else
+                                        <div class="text-white">No hay historial de navegación disponible.</div>
+                                    @endif
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-white mb-3">Páginas sospechosas</h6>
+                                    @if(isset($host->system_info['browser_history']['suspicious']) && count($host->system_info['browser_history']['suspicious']) > 0)
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Título</th>
+                                                        <th>URL</th>
+                                                        <th>Navegador</th>
+                                                        <th>Hora</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($host->system_info['browser_history']['suspicious'] as $page)
+                                                        <tr class="table-warning">
+                                                            <td class="text-truncate" style="max-width:150px;">{{ $page['title'] }}</td>
+                                                            <td class="text-truncate" style="max-width:150px;">{{ $page['url'] }}</td>
+                                                            <td>
+                                                                @if($page['browser'] == 'Firefox')
+                                                                    <i class="fab fa-firefox text-orange"></i>
+                                                                @else
+                                                                    <i class="fab fa-chrome text-blue"></i>
+                                                                @endif
+                                                                {{ $page['browser'] }}
+                                                            </td>
+                                                            <td>{{ $page['time'] }}</td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    @else
+                                        <div class="text-white">No se detectaron páginas sospechosas.</div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -459,27 +542,27 @@ $(function() {
 document.addEventListener('DOMContentLoaded', function() {
     function renderGauge(ctx, value, label, color, tooltipText) {
         return new Chart(ctx, {
-            type: 'doughnut',
+            type: 'bar',
             data: {
+                labels: [label],
                 datasets: [{
-                    data: [value ?? 0, 100 - (value ?? 0)],
-                    backgroundColor: [color, '#e9ecef'],
+                    data: [value ?? 0],
+                    backgroundColor: color,
                     borderWidth: 0
-                }],
-                labels: [label, 'Libre']
+                }]
             },
             options: {
-                cutout: '75%',
+                indexAxis: 'y',
                 plugins: {
                     legend: { display: false },
                     tooltip: {
                         enabled: true,
                         callbacks: {
                             label: function(context) {
-                                if (context.dataIndex === 0 && tooltipText) {
+                                if (tooltipText) {
                                     return tooltipText;
                                 }
-                                return null;
+                                return context.raw + '%';
                             }
                         }
                     },
@@ -487,11 +570,22 @@ document.addEventListener('DOMContentLoaded', function() {
                         display: true,
                         text: label,
                         font: { size: 16 }
-                    },
-                    datalabels: { display: false }
+                    }
                 },
-                circumference: 180,
-                rotation: 270
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
             }
         });
     }
