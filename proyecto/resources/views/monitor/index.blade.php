@@ -93,18 +93,15 @@
 
                                         @foreach($hostsByGroup as $groupName => $groupHosts)
                                             <div class="mb-4">
-                                                <h5 class="bg-light p-2 border-start border-4 border-primary mb-0">
-                                                    <i class="fas fa-{{ $groupHosts->first()->group && $groupHosts->first()->group->type == 'classroom' ? 'chalkboard-teacher' : ($groupName == 'Infraestructura' ? 'network-wired' : 'server') }} me-2"></i>
-                                                    {{ $groupName }}
-                                                    <span class="badge bg-secondary ms-2">{{ $groupHosts->count() }} equipos</span>
-                                                    <div class="float-end">
-                                                        <a href="{{ route('monitor.ping-all') }}" class="btn btn-primary btn-sm">
-                                                            <i class="fas fa-sync-alt me-1"></i> Actualizar Estado
-                                                        </a>
-                                                        <a href="{{ route('monitor.refresh-network') }}" class="btn btn-info btn-sm">
-                                                            <i class="fas fa-network-wired me-1"></i> Actualizar Routers
-                                                        </a>
+                                                <h5 class="bg-light p-2 border-start border-4 border-primary mb-0 d-flex align-items-center justify-content-between">
+                                                    <div>
+                                                        <i class="fas fa-{{ $groupHosts->first()->group && $groupHosts->first()->group->type == 'classroom' ? 'chalkboard-teacher' : ($groupName == 'Infraestructura' ? 'network-wired' : 'server') }} me-2"></i>
+                                                        {{ $groupName }}
+                                                        <span class="badge bg-secondary ms-2">{{ $groupHosts->count() }} equipos</span>
                                                     </div>
+                                                    <a href="{{ route('monitor.ping-all') }}?group={{ $groupHosts->first()->group ? $groupHosts->first()->group->id : '' }}" class="btn btn-primary btn-sm">
+                                                        <i class="fas fa-sync-alt me-1"></i> Actualizar Estado
+                                                    </a>
                                                 </h5>
                                                 <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
                                                     <table class="table table-hover mb-0">

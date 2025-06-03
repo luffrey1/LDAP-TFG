@@ -359,10 +359,11 @@ class MonitorController extends Controller
     /**
      * Verifica el estado de todos los hosts usando el microservicio Python y redirige con mensaje
      */
-    public function pingAll()
+    public function pingAll(Request $request)
     {
         try {
-            $hosts = \App\Models\MonitorHost::all();
+            $groupId = $request->query('group');
+            $hosts = $groupId ? MonitorHost::where('group_id', $groupId)->get() : MonitorHost::all();
             $updated = 0;
             $errors = 0;
             $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');

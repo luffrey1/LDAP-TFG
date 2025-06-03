@@ -88,14 +88,14 @@
                                     <div class="row mb-3">
                                         <div class="col-md-4">
                                             <div class="form-group">
-                                                <label for="aula" class="form-label">Aula</label>
+                                                <label for="aula" class="form-label text-white">Aula</label>
                                                 <input type="text" class="form-control" id="aula_input" name="aula" placeholder="Ej: B22, A27, C21" required>
-                                                <div class="form-text">Escriba el nombre del aula (ej: B22, A27, C21) o seleccione uno de la lista</div>
+                                                <div class="form-text text-white">Escriba el nombre del aula (ej: B22, A27, C21) o seleccione uno de la lista</div>
                                             </div>
                                         </div>
                                         <div class="col-md-4">
                                             <div class="form-group">
-                                                <label for="aula_select" class="form-label">O seleccione un aula</label>
+                                                <label for="aula_select" class="form-label text-white">O seleccione un aula</label>
                                                 <select name="aula_select" id="aula_select" class="form-select">
                                                     <option value="">Seleccione un aula...</option>
                                                     <option value="A21">A21</option>
@@ -121,16 +121,16 @@
                                         </div>
                                         <div class="col-md-4">
                                             <div class="form-group">
-                                                <label for="columnas" class="form-label">Columnas</label>
+                                                <label for="columnas" class="form-label text-white">Columnas</label>
                                                 <input type="text" class="form-control" name="columnas[]" value="A,B,C,D,E,F" placeholder="Ej: A,B,C,D,E,F" required>
-                                                <div class="form-text">Separadas por coma</div>
+                                                <div class="form-text text-white">Separadas por coma</div>
                                             </div>
                                         </div>
                                         <div class="col-md-4">
                                             <div class="form-group">
-                                                <label for="filas" class="form-label">Filas</label>
+                                                <label for="filas" class="form-label text-white">Filas</label>
                                                 <input type="text" class="form-control" name="filas[]" value="1,2,3,4,5,6" placeholder="Ej: 1,2,3,4,5,6" required>
-                                                <div class="form-text">Separadas por coma</div>
+                                                <div class="form-text text-white">Separadas por coma</div>
                                             </div>
                                         </div>
                                     </div>
