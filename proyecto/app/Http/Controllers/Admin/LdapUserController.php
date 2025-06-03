@@ -54,7 +54,6 @@ class LdapUserController extends Controller
             } catch (\Exception $connectException) {
                 Log::error("Error al conectar con el servidor LDAP: " . $connectException->getMessage());
                 
-                // Devolver vista con mensaje de error pero sin datos
                 return view('admin.users.index', [
                     'users' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10),
                     'userGroups' => [],
@@ -75,112 +74,73 @@ class LdapUserController extends Controller
             
             $search = $request->input('search', '');
             $filter = $request->input('group', '');
-            $query = $this->connection->query();
+            $page = $request->input('page', 1);
+            $perPage = $request->input('perPage', 10);
             
-            // Verificar si la OU de personas existe
-            $peopleOuExists = $this->connection->query()
-                ->in($this->baseDn)
-                ->where('dn', '=', $this->peopleOu)
-                ->exists();
-                
-            if (!$peopleOuExists) {
-                Log::warning("La OU de personas no existe, buscando en toda la base");
-                $query->in($this->baseDn);
-            } else {
-                $query->in($this->peopleOu);
-            }
-            
-            // Buscar inetOrgPerson
-            $query->where('objectclass', '=', 'inetOrgPerson');
-            
-            // Aplicar búsqueda si existe
-            if (!empty($search)) {
-                $query->whereContains('cn', $search)
-                    ->orWhereContains('uid', $search)
-                    ->orWhereContains('mail', $search);
-            }
-            
-            // Ejecutar la consulta
-            $users = $query->get();
-            
-            // Obtener usuarios admin para marcarlos
-            $adminUsers = $this->getAdminUsers();
-            
-            // Obtener todos los grupos disponibles para verificación
+            // Obtener todos los grupos disponibles
             $allGroups = $this->connection->query()
                 ->in($this->baseDn)
                 ->rawFilter('(|(objectclass=groupOfUniqueNames)(objectclass=posixGroup))')
                 ->get();
-                
-            // Obtener grupos para cada usuario
-            $userGroups = [];
-            $filteredUsers = collect();
             
-            foreach ($users as $user) {
-                // Verificar si $user es un objeto o un array
-                if (is_array($user)) {
-                    // Si es un array, extraer uid directamente
-                    $uid = $user['uid'][0] ?? '';
-                    $userDn = $user['dn'] ?? '';
-                } else {
-                    // Si es un objeto, usar los métodos
-                    $uid = $user->getFirstAttribute('uid');
-                    $userDn = $user->getDn();
-                }
-                
-                if (empty($uid) || empty($userDn)) continue;
-                
-                $userGroups[$uid] = [];
-                $groups = $this->getUserGroups($userDn);
-                $groupNames = [];
-                
-                foreach ($groups as $group) {
-                    // Verificar si $group es un objeto o un array
-                    if (is_array($group)) {
-                        $cn = $group['cn'][0] ?? '';
-                    } else {
-                        $cn = $group->getFirstAttribute('cn');
-                    }
-                    
-                    if ($cn) {
-                        $userGroups[$uid][] = $cn;
-                        $groupNames[] = $cn;
-                    }
-                }
-                
-                // Aplicar filtro por grupo si existe
-                if (!empty($filter) && !in_array($filter, $groupNames)) {
-                    continue;
-                }
-                
-                // Codificar el DN para usar en las URLs
-                if (is_array($user)) {
-                    $user['encoded_dn'] = base64_encode($userDn);
-                } else {
-                    $user->encoded_dn = base64_encode($userDn);
-                }
-                
-                $filteredUsers->push($user);
+            // Crear lista de grupos para el dropdown
+            $groupList = collect($allGroups)->map(function($group) {
+                return is_array($group) ? ($group['cn'][0] ?? '') : $group->getFirstAttribute('cn');
+            })->filter()->unique()->values()->all();
+            
+            // Construir el filtro de búsqueda
+            $searchFilter = '';
+            if (!empty($search)) {
+                $searchFilter = "(|(cn=*{$search}*)(sn=*{$search}*)(mail=*{$search}*)(uid=*{$search}*))";
             }
             
-            // Paginar los resultados manualmente
-            $perPage = 10;
-            $page = $request->input('page', 1);
-            $total = $filteredUsers->count();
+            // Construir el filtro de grupo
+            $groupFilter = '';
+            if (!empty($filter)) {
+                $groupFilter = "(memberOf=cn={$filter},ou=groups,{$this->baseDn})";
+            }
             
-            // Crear paginador personalizado
+            // Combinar filtros
+            $finalFilter = '(&(objectclass=inetOrgPerson)';
+            if (!empty($searchFilter)) {
+                $finalFilter .= $searchFilter;
+            }
+            if (!empty($groupFilter)) {
+                $finalFilter .= $groupFilter;
+            }
+            $finalFilter .= ')';
+            
+            // Buscar usuarios
+            $query = $this->connection->query();
+            $query->in($this->peopleOu);
+            $query->rawFilter($finalFilter);
+            
+            $users = $query->get();
+            
+            // Obtener grupos para cada usuario
+            $userGroups = [];
+            foreach ($users as $user) {
+                $uid = is_array($user) ? ($user['uid'][0] ?? '') : $user->getFirstAttribute('uid');
+                if (!empty($uid)) {
+                    $userGroups[$uid] = $this->getUserGroups($uid);
+                }
+            }
+            
+            // Obtener usuarios administradores
+            $adminUsers = $this->getAdminUsers();
+            
+            // Paginar resultados
+            $total = count($users);
+            $offset = ($page - 1) * $perPage;
+            $paginatedUsers = array_slice($users->toArray(), $offset, $perPage);
+            
             $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
-                $filteredUsers->forPage($page, $perPage),
+                $paginatedUsers,
                 $total,
                 $perPage,
                 $page,
                 ['path' => $request->url(), 'query' => $request->query()]
             );
-            
-            // También enviar la lista de grupos para el selector
-            $groupList = collect($allGroups)->map(function($group) {
-                return is_array($group) ? ($group['cn'][0] ?? '') : $group->getFirstAttribute('cn');
-            })->filter()->unique()->values()->all();
             
             return view('admin.users.index', [
                 'users' => $paginator,
@@ -2039,16 +1999,23 @@ class LdapUserController extends Controller
     /**
      * Obtener los grupos a los que pertenece un usuario
      */
-    protected function getUserGroups($userDn)
+    protected function getUserGroups($uid)
     {
         $userGroups = [];
         
         try {
-            // Extraer uid del userDn para búsquedas adicionales
-            $userUid = '';
-            if (preg_match('/uid=([^,]+)/', $userDn, $matches)) {
-                $userUid = $matches[1];
+            // Buscar el usuario por UID
+            $user = $this->connection->query()
+                ->in($this->peopleOu)
+                ->where('uid', '=', $uid)
+                ->first();
+                
+            if (!$user) {
+                return $userGroups;
             }
+            
+            // Obtener el DN del usuario
+            $userDn = is_array($user) ? $user['dn'] : $user->getDn();
             
             // Obtener todos los grupos disponibles
             $allGroups = $this->connection->query()
@@ -2072,19 +2039,22 @@ class LdapUserController extends Controller
                 }
                 
                 // También verificar memberUid para posixGroup
-                if (isset($group['memberuid']) && !empty($userUid)) {
+                if (isset($group['memberuid'])) {
                     $memberUids = is_array($group['memberuid']) 
                         ? $group['memberuid'] 
                         : [$group['memberuid']];
                     
-                    if (in_array($userUid, $memberUids)) {
+                    if (in_array($uid, $memberUids)) {
                         $isMember = true;
                     }
                 }
                 
                 // Si el usuario es miembro por cualquier método, añadir el grupo
                 if ($isMember) {
-                    $userGroups[] = $group;
+                    $groupName = is_array($group) ? ($group['cn'][0] ?? '') : $group->getFirstAttribute('cn');
+                    if (!empty($groupName)) {
+                        $userGroups[] = $groupName;
+                    }
                 }
             }
             

@@ -34,15 +34,15 @@ Poder modificar passwords a un grupo de usuarios.
 
 EQUIPOS:
 
-Al añadir equipos, que funcione con otros edificios estilo A3-B5.
+Al añadir equipos, que funcione con otros edificios estilo A3-B5.  ✅
 
-Criterio: si hay qun guion en el nombre, la primera parte es el grupo. Si no hay guion, va a Sin grupo.
+Criterio: si hay qun guion en el nombre, la primera parte es el grupo. Si no hay guion, va a Sin grupo. ✅
 
-Quitar dos botones de "Actualizar Estado" y "Actualizar Routers". Poner un solo boton de "Actualizar grupo" en la sección de cada grupo.
+Quitar dos botones de "Actualizar Estado" y "Actualizar Routers". Poner un solo boton de "Actualizar grupo" en la sección de cada grupo.✅
 
-Cuando se pulsa "Actualizar grupo" se cambia por un texto sin botón que ponga "Escaneando hosntames..." o "Escaneando IPs...".
+Cuando se pulsa "Actualizar grupo" se cambia por un texto sin botón que ponga "Escaneando hosntames..." o "Escaneando IPs...".✅
 
-En Escanear po IP quitar las tres opciones en escaneo de la red. Quitar también lo de DHCP 1y DHCP2.
+En Escanear po IP quitar las tres opciones en escaneo de la red. Quitar también lo de DHCP 1y DHCP2.✅
 
 LDAP:
 

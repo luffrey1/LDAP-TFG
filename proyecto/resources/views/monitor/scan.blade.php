@@ -149,38 +149,38 @@
                                     <div class="row mb-3">
                                         <div class="col-md-4">
                                             <div class="form-group">
-                                                <label for="base_ip" class="form-label"><i class="fas fa-network-wired me-1"></i> IP Base</label>
+                                                <label for="base_ip" class="form-label text-white"><i class="fas fa-network-wired me-1"></i> IP Base</label>
                                                 <div class="input-group">
                                                     <input type="text" class="form-control" id="base_ip" name="base_ip" value="{{ $baseIp }}" required>
                                                     <button class="btn btn-outline-secondary" type="button" id="detectNetwork"><i class="fas fa-magic"></i> Detectar</button>
                                                 </div>
-                                                <div class="form-text">Primeros 3 octetos (ej: 172.20.200)</div>
+                                                <div class="form-text text-white">Primeros 3 octetos (ej: 172.20.200)</div>
                                             </div>
                                         </div>
                                         <div class="col-md-2">
                                             <div class="form-group">
-                                                <label for="range_start" class="form-label">Inicio</label>
+                                                <label for="range_start" class="form-label text-white">Inicio</label>
                                                 <input type="number" class="form-control" id="range_start" name="range_start" min="1" max="254" value="1" required>
-                                                <div class="form-text">Primer host</div>
+                                                <div class="form-text text-white">Primer host</div>
                                             </div>
                                         </div>
                                         <div class="col-md-2">
                                             <div class="form-group">
-                                                <label for="range_end" class="form-label">Fin</label>
+                                                <label for="range_end" class="form-label text-white">Fin</label>
                                                 <input type="number" class="form-control" id="range_end" name="range_end" min="1" max="254" value="254" required>
-                                                <div class="form-text">Último host</div>
+                                                <div class="form-text text-white">Último host</div>
                                             </div>
                                         </div>
                                         <div class="col-md-4">
                                             <div class="form-group">
-                                                <label for="group_id" class="form-label"><i class="fas fa-layer-group me-1"></i> Asignar al grupo</label>
+                                                <label for="group_id" class="form-label text-white"><i class="fas fa-layer-group me-1"></i> Asignar al grupo</label>
                                                 <select class="form-select" id="group_id" name="group_id">
                                                     <option value="">Sin grupo</option>
                                                     @foreach($groups as $group)
                                                         <option value="{{ $group->id }}">{{ $group->name }}</option>
                                                     @endforeach
                                                 </select>
-                                                <div class="form-text">Opcional - Grupo para hosts sin aula detectada</div>
+                                                <div class="form-text text-white">Opcional - Grupo para hosts sin aula detectada</div>
                                             </div>
                                         </div>
                                     </div>

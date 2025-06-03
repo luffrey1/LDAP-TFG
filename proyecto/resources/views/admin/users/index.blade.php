@@ -54,9 +54,9 @@
                             <div class="col-md-4">
                                 <select name="group" class="form-select" onchange="this.form.submit()">
                                     <option value="">{{ __('Todos los grupos') }}</option>
-                                    <option value="ldapadmins" {{ $selectedGroup == 'ldapadmins' ? 'selected' : '' }}>{{ __('Administradores') }}</option>
-                                    <option value="profesores" {{ $selectedGroup == 'profesores' ? 'selected' : '' }}>{{ __('Profesores') }}</option>
-                                    <option value="alumnos" {{ $selectedGroup == 'alumnos' ? 'selected' : '' }}>{{ __('Alumnos') }}</option>
+                                    @foreach($groupList as $group)
+                                        <option value="{{ $group }}" {{ $selectedGroup == $group ? 'selected' : '' }}>{{ $group }}</option>
+                                    @endforeach
                                 </select>
                             </div>
                             <div class="col-md-2 text-end">
@@ -118,7 +118,7 @@
                                             @endphp
                                             @if (isset($userGroups[$uid]))
                                                 @foreach ($userGroups[$uid] as $group)
-                                                    <span class="badge bg-info">{{ $group }}</span>
+                                                    <a href="{{ route('admin.users.index', ['group' => $group]) }}" class="badge bg-info text-decoration-none">{{ $group }}</a>
                                                 @endforeach
                                             @else
                                                 <span class="badge bg-secondary">{{ __('Sin grupos') }}</span>
@@ -201,25 +201,21 @@
     </div>
 </div>
 
+@push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Controlar el selector de registros por página
-    const perPageSelector = document.getElementById('perPageSelector');
-    if (perPageSelector) {
-        perPageSelector.addEventListener('change', function() {
-            // Obtener la URL actual
-            const url = new URL(window.location.href);
-            
-            // Actualizar el parámetro perPage
-            url.searchParams.set('perPage', this.value);
-            
-            // Reiniciar la página a 1 cuando se cambia el número de registros por página
-            url.searchParams.set('page', '1');
-            
-            // Navegar a la nueva URL
-            window.location.href = url.toString();
-        });
-    }
+    const searchInput = document.querySelector('input[name="search"]');
+    const searchForm = searchInput.closest('form');
+    let searchTimeout;
+
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            searchForm.submit();
+        }, 500); // Esperar 500ms después de que el usuario deje de escribir
+    });
 });
 </script>
+@endpush
+
 @endsection 
