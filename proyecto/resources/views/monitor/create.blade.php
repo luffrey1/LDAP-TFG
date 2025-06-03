@@ -121,7 +121,7 @@
 </div>
 @endsection
 
-
+@section('scripts')
 <script>
 $(document).ready(function() {
     // Configuración global de AJAX
@@ -182,7 +182,8 @@ $(document).ready(function() {
             type: 'POST',
             data: {
                 hostname: hostname,
-                tipo: 'dhcp'
+                tipo: 'dhcp',
+                _token: $('meta[name="csrf-token"]').attr('content')
             },
             success: function(response) {
                 if (response.success) {
@@ -195,6 +196,7 @@ $(document).ready(function() {
                 }
             },
             error: function(xhr) {
+                console.error('Error en la petición AJAX:', xhr);
                 const response = xhr.responseJSON;
                 showDetectionMessage(response?.message || 'Error al detectar el equipo', 'danger');
             }
@@ -218,7 +220,8 @@ $(document).ready(function() {
             type: 'POST',
             data: {
                 ip_address: ip,
-                tipo: 'fija'
+                tipo: 'fija',
+                _token: $('meta[name="csrf-token"]').attr('content')
             },
             success: function(response) {
                 if (response.success) {
@@ -231,6 +234,7 @@ $(document).ready(function() {
                 }
             },
             error: function(xhr) {
+                console.error('Error en la petición AJAX:', xhr);
                 const response = xhr.responseJSON;
                 showDetectionMessage(response?.message || 'Error al detectar el equipo', 'danger');
             }
@@ -247,4 +251,5 @@ $(document).ready(function() {
     });
 });
 </script>
+@endsection
 
