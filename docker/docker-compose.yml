@@ -11,7 +11,7 @@ services:
       LDAP_CONFIG_PASSWORD: "admin"
       LDAP_RFC2307BIS_SCHEMA: "true"
       LDAP_TLS: "true"
-      LDAP_TLS_ENFORCE: "false"
+      LDAP_TLS_ENFORCE: "true"
       LDAP_TLS_VERIFY_CLIENT: "never"
       LDAP_TLS_CIPHER_SUITE: "SECURE256:-VERS-SSL3.0"
       LDAP_TLS_PROTOCOL_MIN: "3.1"
@@ -27,6 +27,7 @@ services:
       LDAP_BOOTSTRAP: "true"
       LDAP_BOOTSTRAP_DEBUG: "true"
       LDAP_BOOTSTRAP_DELAY: "10"
+      LDAP_TLS_INIT: "true"
     volumes:
       - ../ldap/certs/cert-tierno.es:/container/service/slapd/assets/certs
       - ../ldap/ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom
@@ -39,7 +40,7 @@ services:
       - app-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "ldapsearch", "-x", "-H", "ldap://localhost:389", "-b", "dc=tierno,dc=es", "-D", "cn=admin,dc=tierno,dc=es", "-w", "admin"]
+      test: ["CMD", "ldapsearch", "-x", "-H", "ldaps://localhost:636", "-b", "dc=tierno,dc=es", "-D", "cn=admin,dc=tierno,dc=es", "-w", "admin", "-ZZ"]
       interval: 10s
       timeout: 5s
       retries: 5
