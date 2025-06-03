@@ -328,6 +328,49 @@
         const progressBar = $('.progress-bar');
         const startScanBtn = $('#startScanBtn');
 
+        // Manejador del botón de escaneo global
+        $('#startScanBtn').on('click', function() {
+            if (scanInProgress) return;
+            
+            const scanType = $('input[name="scanType"]:checked').val();
+            const groupId = '{{ request()->query("group") }}';
+            
+            // Mostrar progreso
+            scanProgress.show();
+            startScanBtn.prop('disabled', true);
+            scanInProgress = true;
+            progressBar.css('width', '0%');
+            scanStatus.html('<i class="fas fa-spinner fa-spin me-2"></i>Detectando equipos...');
+            
+            // Realizar el escaneo
+            $.ajax({
+                url: '{{ route("monitor.ping-all") }}',
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    scan_type: scanType,
+                    group: groupId
+                },
+                success: function(response) {
+                    progressBar.css('width', '100%');
+                    scanStatus.html('<i class="fas fa-check-circle me-2 text-success"></i>Escaneo completado');
+                    
+                    setTimeout(() => {
+                        updateStatusModal.hide();
+                        location.reload();
+                    }, 1000);
+                },
+                error: function(xhr) {
+                    scanStatus.html('<i class="fas fa-exclamation-circle me-2 text-danger"></i>Error en el escaneo');
+                    startScanBtn.prop('disabled', false);
+                },
+                complete: function() {
+                    scanInProgress = false;
+                    startScanBtn.prop('disabled', false);
+                }
+            });
+        });
+
         // Manejador del botón de ping individual
         $('.btn-ping').on('click', function(e) {
             e.preventDefault();

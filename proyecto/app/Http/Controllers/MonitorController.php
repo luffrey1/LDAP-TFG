@@ -168,9 +168,10 @@ class MonitorController extends Controller
 
                     if ($response !== false && $httpCode === 200) {
                         $data = json_decode($response, true);
-                        if (isset($data['success']) && $data['success']) {
-                            $mac = $data['mac'] ?? null;
-                            $ipDetectada = $data['ip'] ?? null;
+                        if (isset($data['success']) && $data['success'] && isset($data['hosts'][0])) {
+                            $hostData = $data['hosts'][0];
+                            $mac = $hostData['mac'] ?? null;
+                            $ipDetectada = $hostData['ip'] ?? null;
                             $status = 'online';
                         }
                     }
@@ -200,13 +201,19 @@ class MonitorController extends Controller
                 }
             }
 
-            // Actualizar el host
-            $host->status = $status;
-            $host->last_seen = $status === 'online' ? now() : $host->last_seen;
-            if (!empty($mac)) $host->mac_address = $mac;
-            if (!empty($ipDetectada)) $host->ip_address = $ipDetectada;
-            $host->save();
-
+            // Solo actualizar si realmente se detectó el host
+            if ($status === 'online') {
+                $host->status = $status;
+                $host->last_seen = now();
+                if (!empty($mac)) $host->mac_address = $mac;
+                if (!empty($ipDetectada)) $host->ip_address = $ipDetectada;
+                $host->save();
+            } else {
+                // Si no se detectó, marcar como offline
+                $host->status = 'offline';
+                $host->save();
+            }
+                
             return response()->json([
                 'success' => true,
                 'status' => $status,
