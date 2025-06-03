@@ -1,0 +1,9 @@
+dn: cn=config
+changetype: modify
+replace: olcPasswordHash
+olcPasswordHash: {SSHA}
+
+dn: cn=config
+changetype: modify
+replace: olcPasswordCryptSaltFormat
+olcPasswordCryptSaltFormat: $6$rounds=5000$%.16s 
