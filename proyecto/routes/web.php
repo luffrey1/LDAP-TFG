@@ -98,6 +98,19 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
         Route::post('/update-telemetry', [MonitorController::class, 'updateTelemetry'])->name('update-telemetry');
         Route::post('/{id}/command', [MonitorController::class, 'executeCommand'])->name('execute-command');
         
+        // Ruta del proxy de telemetría
+        Route::get('/api/telemetry-proxy/{host}', function ($host) {
+            try {
+                $response = Http::timeout(5)->get("http://{$host}:5001/telemetry");
+                return $response->json();
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Error al conectar con el agente: ' . $e->getMessage()
+                ], 500);
+            }
+        })->name('telemetry-proxy');
+        
         // Nuevas rutas para gestión de scripts
         Route::get('/scripts/available', [MonitorController::class, 'getAvailableScripts'])->name('scripts.available');
         Route::post('/scripts/transfer', [MonitorController::class, 'transferScript'])->name('scripts.transfer');
@@ -211,17 +224,5 @@ Route::post('/api/debug/log', function(\Illuminate\Http\Request $request) {
 // Route::post('/terminal/send', [App\Http\Controllers\MonitorController::class, 'terminalSend'])->name('terminal.send');
 
 Route::get('/monitor/estado-global', [App\Http\Controllers\MonitorController::class, 'healthStatus'])->name('monitor.health');
-
-Route::get('/api/telemetry-proxy/{host}', function ($host) {
-    try {
-        $response = Http::timeout(5)->get("http://{$host}:5001/telemetry");
-        return $response->json();
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'error' => 'Error al conectar con el agente: ' . $e->getMessage()
-        ], 500);
-    }
-})->name('monitor.telemetry-proxy');
 
 

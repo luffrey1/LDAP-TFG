@@ -655,7 +655,7 @@ $(document).ready(function() {
         
         // Usar el proxy de Laravel para obtener datos del agente
         $.ajax({
-            url: `{{ route('monitor.telemetry-proxy', ['host' => '']) }}${hostIp}`,
+            url: '/api/telemetry-proxy/' + hostIp,
             method: 'GET',
             timeout: 5000,
             headers: {
