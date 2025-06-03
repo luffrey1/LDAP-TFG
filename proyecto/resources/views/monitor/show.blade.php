@@ -145,8 +145,8 @@
                                 @endif
                             </div>
                         </div>
-                        <button id="btn-refresh-agent" class="btn btn-outline-primary btn-sm ms-3" title="Comprobar ahora">
-                            <i class="fas fa-sync-alt"></i> Comprobar ahora
+                        <button id="refreshBtn" class="btn btn-outline-primary btn-sm ms-3">
+                            <i class="fas fa-sync-alt"></i> <span class="btn-text">Comprobar ahora</span>
                         </button>
                     </div>
                 </div>
@@ -624,10 +624,39 @@ document.addEventListener('DOMContentLoaded', function() {
     );
 });
 
-$(function() {
-    $('#refreshBtn').click(function() {
-        const button = $(this);
-        button.prop('disabled', true);
+$(document).ready(function() {
+    function updateStatus(status, message) {
+        const statusBadge = $('#status-badge-container .badge');
+        const agentStatus = $('#agent-status-text');
+        const lastSeen = $('#agent-last-seen');
+        const alert = $('.alert');
+        
+        if (status === 'success') {
+            statusBadge.removeClass('badge-danger badge-warning').addClass('badge-success');
+            agentStatus.text('Activo').removeClass('text-danger').addClass('text-success');
+            lastSeen.text('(Último dato: Ahora mismo)');
+            alert.removeClass('alert-danger').addClass('alert-success');
+        } else if (status === 'error') {
+            statusBadge.removeClass('badge-success badge-warning').addClass('badge-danger');
+            agentStatus.text('Inactivo').removeClass('text-success').addClass('text-danger');
+            alert.removeClass('alert-success').addClass('alert-danger');
+        }
+        
+        // Mostrar mensaje de estado
+        const toast = $('#debug-toast');
+        toast.html(message).fadeIn();
+        setTimeout(() => toast.fadeOut(), 3000);
+    }
+    
+    function refreshData() {
+        const btn = $('#refreshBtn');
+        const btnText = btn.find('.btn-text');
+        const icon = btn.find('i');
+        
+        // Deshabilitar botón y mostrar loading
+        btn.prop('disabled', true);
+        btnText.text('Comprobando...');
+        icon.addClass('fa-spin');
         
         // Intentar obtener datos del agente Flask
         $.ajax({
@@ -642,46 +671,50 @@ $(function() {
                         method: 'POST',
                         data: response.data,
                         success: function() {
-                            // Actualizar estado del agente
-                            $('#agent-status-text').text('Activo');
-                            $('#agent-status-text').removeClass('text-danger').addClass('text-success');
-                            
-                            // Actualizar última vez visto
-                            const now = new Date();
-                            $('#agent-last-seen').text('Ahora mismo');
-                            
-                            // Recargar la página para actualizar los gráficos
-                            location.reload();
+                            updateStatus('success', 'Datos actualizados correctamente');
+                            setTimeout(() => location.reload(), 1000);
                         },
-                        error: function() {
-                            alert('Error al actualizar los datos en el servidor');
+                        error: function(xhr) {
+                            console.error('Error Laravel:', xhr.responseText);
+                            updateStatus('error', 'Error al actualizar datos en el servidor');
                         }
                     });
                 } else {
-                    alert('Error al obtener datos del agente');
+                    updateStatus('error', 'Error en la respuesta del agente');
                 }
             },
-            error: function() {
-                // Si falla la conexión con el agente, intentar ping
-                $.get('{{ route("monitor.ping", ["id" => $host->id]) }}', function(response) {
-                    if (response.status === 'online') {
-                        $('#agent-status-text').text('Activo');
-                        $('#agent-status-text').removeClass('text-danger').addClass('text-success');
-                        $('#agent-last-seen').text('Ahora mismo');
-                    } else {
-                        $('#agent-status-text').text('Inactivo');
-                        $('#agent-status-text').removeClass('text-success').addClass('text-danger');
+            error: function(xhr, status, error) {
+                console.error('Error agente:', error);
+                // Si falla el agente, intentar ping
+                $.ajax({
+                    url: '{{ route("monitor.ping", ["id" => $host->id]) }}',
+                    method: 'GET',
+                    success: function(pingResponse) {
+                        if (pingResponse.status === 'online') {
+                            updateStatus('success', 'Host activo pero agente no disponible');
+                        } else {
+                            updateStatus('error', 'Host inactivo');
+                        }
+                    },
+                    error: function() {
+                        updateStatus('error', 'No se pudo contactar con el host');
                     }
-                }).fail(function() {
-                    $('#agent-status-text').text('Inactivo');
-                    $('#agent-status-text').removeClass('text-success').addClass('text-danger');
                 });
             },
             complete: function() {
-                button.prop('disabled', false);
+                // Restaurar botón
+                btn.prop('disabled', false);
+                btnText.text('Comprobar ahora');
+                icon.removeClass('fa-spin');
             }
         });
-    });
+    }
+    
+    // Asignar evento al botón
+    $('#refreshBtn').click(refreshData);
+    
+    // Actualizar automáticamente cada 5 minutos
+    setInterval(refreshData, 300000);
 });
 </script>
 
@@ -701,4 +734,24 @@ $(function() {
     .ssh-btn-long i {
         font-size: 1.5em;
     }
+
+    #debug-toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+        max-width: 500px;
+        background: rgba(0, 0, 0, 0.8);
+        color: #fff;
+        border-radius: 8px;
+        padding: 15px;
+        font-size: 14px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        display: none;
+    }
+
+    .badge-success { background-color: #28a745; }
+    .badge-danger { background-color: #dc3545; }
+    .badge-warning { background-color: #ffc107; }
 </style>

@@ -370,6 +370,31 @@ def get_disk_info():
         print(f"Error en get_disk_info: {str(e)}")
     return disks
 
+def get_memory_info():
+    try:
+        mem = psutil.virtual_memory()
+        swap = psutil.swap_memory()
+        
+        memory_info = {
+            'total': round(mem.total / (1024**2), 2),  # MB
+            'available': round(mem.available / (1024**2), 2),  # MB
+            'used': round(mem.used / (1024**2), 2),  # MB
+            'free': round(mem.free / (1024**2), 2),  # MB
+            'percent': mem.percent,
+            'swap_total': round(swap.total / (1024**2), 2),  # MB
+            'swap_used': round(swap.used / (1024**2), 2),  # MB
+            'swap_free': round(swap.free / (1024**2), 2),  # MB
+            'swap_percent': swap.percent
+        }
+        
+        print(f"Memoria RAM: {memory_info['used']}MB / {memory_info['total']}MB ({memory_info['percent']}%)")
+        print(f"Swap: {memory_info['swap_used']}MB / {memory_info['swap_total']}MB ({memory_info['swap_percent']}%)")
+        
+        return memory_info
+    except Exception as e:
+        print(f"Error obteniendo información de memoria: {str(e)}")
+        return None
+
 def get_telemetry_interval():
     try:
         # Obtener el intervalo configurado en Laravel
@@ -396,11 +421,7 @@ def send_telemetry_data():
         # Recolectar datos de rendimiento
         performance_data = {
             'cpu_usage': {'percentage': psutil.cpu_percent(interval=1)},
-            'memory_usage': {
-                'percentage': psutil.virtual_memory().percent,
-                'used': psutil.virtual_memory().used // (1024**2),
-                'total': psutil.virtual_memory().total // (1024**2)
-            },
+            'memory_usage': get_memory_info(),
             'disk_usage': {
                 'percentage': psutil.disk_usage('/').percent,
                 'used': psutil.disk_usage('/').used // (1024**3),
