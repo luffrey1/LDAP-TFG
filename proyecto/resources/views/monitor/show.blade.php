@@ -181,12 +181,44 @@
                             <div class="card-header bg-success text-white">Disco</div>
                             <div class="card-body">
                                 @if(isset($host->disk_usage['used']) && isset($host->disk_usage['total']))
-                                    <div class="fw-bold mb-1 text-success">Usado: {{ $host->disk_usage['used'] }} GB / {{ $host->disk_usage['total'] }} GB</div>
+                                    <div class="fw-bold mb-1 text-white">Total: {{ $host->disk_usage['used'] }} GB / {{ $host->disk_usage['total'] }} GB</div>
                                 @endif
                                 <canvas id="gauge-disk" width="120" height="120"></canvas>
-                                <div class="mt-2 h5">
+                                <div class="mt-2 h5 text-white">
                                     {{ is_array($host->disk_usage) && isset($host->disk_usage['percentage']) ? $host->disk_usage['percentage'] . '%' : ($host->disk_usage ?? 'N/A') }}
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-12 col-sm-12 col-12 mb-4">
+                        <div class="card text-center">
+                            <div class="card-header bg-success text-white">Discos Individuales</div>
+                            <div class="card-body">
+                                @if(isset($host->system_info['disks']) && is_array($host->system_info['disks']))
+                                    @foreach($host->system_info['disks'] as $disk)
+                                        <div class="mb-3">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span class="text-white">{{ $disk['mount'] }}</span>
+                                                <span class="text-white">{{ $disk['used'] }} GB / {{ $disk['total'] }} GB</span>
+                                            </div>
+                                            <div class="progress" style="height: 20px;">
+                                                @php
+                                                    $percentage = ($disk['used'] / $disk['total']) * 100;
+                                                    $colorClass = $percentage >= 90 ? 'bg-danger' : ($percentage >= 70 ? 'bg-warning' : 'bg-success');
+                                                @endphp
+                                                <div class="progress-bar {{ $colorClass }}" role="progressbar" 
+                                                     style="width: {{ $percentage }}%;" 
+                                                     aria-valuenow="{{ $percentage }}" 
+                                                     aria-valuemin="0" 
+                                                     aria-valuemax="100">
+                                                    {{ number_format($percentage, 1) }}%
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                @else
+                                    <div class="text-white">No hay información detallada de discos disponible.</div>
+                                @endif
                             </div>
                         </div>
                     </div>

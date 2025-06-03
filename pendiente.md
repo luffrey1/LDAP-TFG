@@ -1,5 +1,10 @@
 # Pendiente
-**No funciona boton de CREAR EVENTO EN /calendario , arreglar la creacion de eventos en calendario**
+
+
+
+
+
+IMPORTANTE **No funciona boton de CREAR EVENTO EN /calendario , arreglar la creacion de eventos en calendario** IMPORTANTE
 
 
 ARREGLADO COLORES ✅
@@ -28,7 +33,7 @@ Poner el texto "Automático" al UID como placeholder cuando el formulario está 
 
 el DN que no sea en formulario. Que aparezca debajo del username como texto sincronizado con el username.
 
-Filtrar usuarios LDAP por grupo no actualiza los grupos actuales. Hacer consulta al ldap.
+Filtrar usuarios LDAP por grupo no actualiza los grupos actuales. Hacer consulta al ldap.✅
 
 Poder modificar passwords a un grupo de usuarios.
 
@@ -46,7 +51,7 @@ En Escanear po IP quitar las tres opciones en escaneo de la red. Quitar también
 
 LDAP:
 
-al mostrar lista usuarios que se pueda pinchar en la etiqueta de un grupo para filtrar.
+al mostrar lista usuarios que se pueda pinchar en la etiqueta de un grupo para filtrar.✅
 
 Actualizar lastUID y lastGID al añadir usuario o grupo de usuarios. Igual para añadir grupo. IMPORTANTE!!!!!!
 

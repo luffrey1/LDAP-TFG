@@ -136,15 +136,6 @@ def get_temperatures():
         pass
     return temps
 
-def get_battery():
-    try:
-        if hasattr(psutil, 'sensors_battery'):
-            b = psutil.sensors_battery()
-            if b:
-                return {'percent': b.percent, 'plugged': b.power_plugged, 'secsleft': b.secsleft}
-    except Exception:
-        pass
-    return None
 
 def get_services():
     services = []
@@ -195,6 +186,28 @@ def get_hardware_info():
         pass
     return info
 
+def get_disk_info():
+    disks = []
+    try:
+        for partition in psutil.disk_partitions():
+            if partition.fstype:  # Solo particiones con sistema de archivos
+                try:
+                    usage = psutil.disk_usage(partition.mountpoint)
+                    disks.append({
+                        'mount': partition.mountpoint,
+                        'device': partition.device,
+                        'fstype': partition.fstype,
+                        'total': usage.total // (1024**3),  # Convertir a GB
+                        'used': usage.used // (1024**3),
+                        'free': usage.free // (1024**3),
+                        'percentage': usage.percent
+                    })
+                except Exception:
+                    continue
+    except Exception:
+        pass
+    return disks
+
 @app.route('/telemetry', methods=['GET'])
 def telemetry():
     try:
@@ -222,7 +235,10 @@ def telemetry():
             'temperatures': get_temperatures(),
             'battery': get_battery(),
             'services': get_services(),
-            'system_info': get_hardware_info()
+            'system_info': {
+                **get_hardware_info(),
+                'disks': get_disk_info()
+            }
         }
         return jsonify({'success': True, 'data': data})
     except Exception as e:
