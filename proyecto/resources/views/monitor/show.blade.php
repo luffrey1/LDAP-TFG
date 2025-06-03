@@ -148,9 +148,8 @@
                                 @if(isset($host->system_info['cpu_cores']) && isset($host->cpu_usage['percentage']))
                                     <div class="fw-bold mb-1 text-primary">Uso: {{ $host->cpu_usage['percentage'] }}% de {{ $host->system_info['cpu_cores'] }} núcleos</div>
                                 @endif
-                                <canvas id="gauge-cpu" width="120" height="120"></canvas>
-                                <div class="mt-2 h5">
-                                    {{ is_array($host->cpu_usage) && isset($host->cpu_usage['percentage']) ? $host->cpu_usage['percentage'] . '%' : ($host->cpu_usage ?? 'N/A') }}
+                                <div style="height: 20px;">
+                                    <canvas id="gauge-cpu"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -162,13 +161,8 @@
                                 @if(isset($host->memory_usage['used']) && isset($host->memory_usage['total']))
                                     <div class="fw-bold mb-1 text-warning">Usado: {{ number_format($host->memory_usage['used'], 2) }} MB / {{ number_format($host->memory_usage['total'], 2) }} MB</div>
                                 @endif
-                                <canvas id="gauge-mem" width="120" height="120"></canvas>
-                                <div class="mt-2 h5">
-                                    @if(is_array($host->memory_usage) && isset($host->memory_usage['percentage']))
-                                        {{ number_format($host->memory_usage['percentage'], 1) }}%
-                                    @else
-                                        {{ is_string($host->memory_usage) ? $host->memory_usage : 'N/A' }}
-                                    @endif
+                                <div style="height: 20px;">
+                                    <canvas id="gauge-mem"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -180,13 +174,8 @@
                                 @if(isset($host->disk_usage['used']) && isset($host->disk_usage['total']))
                                     <div class="fw-bold mb-1 text-white">Total: {{ number_format($host->disk_usage['used'], 2) }} GB / {{ number_format($host->disk_usage['total'], 2) }} GB</div>
                                 @endif
-                                <canvas id="gauge-disk" width="120" height="120"></canvas>
-                                <div class="mt-2 h5 text-white">
-                                    @if(is_array($host->disk_usage) && isset($host->disk_usage['percentage']))
-                                        {{ number_format($host->disk_usage['percentage'], 1) }}%
-                                    @else
-                                        {{ is_string($host->disk_usage) ? $host->disk_usage : 'N/A' }}
-                                    @endif
+                                <div style="height: 20px;">
+                                    <canvas id="gauge-disk"></canvas>
                                 </div>
                             </div>
                         </div>
