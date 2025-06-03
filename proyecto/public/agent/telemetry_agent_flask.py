@@ -154,29 +154,54 @@ def get_temperatures():
         pass
     return temps
 
-
 def get_services():
     services = []
     try:
         if os.name != 'nt':
-            # Solo Linux: servicios críticos
-            for svc in ['ssh', 'apache2', 'nginx', 'mysql', 'docker']:
+            # Servicios críticos para Linux
+            critical_services = [
+                'ssh', 'apache2', 'nginx', 'mysql', 'docker', 'postgresql',
+                'mongodb', 'redis-server', 'elasticsearch', 'kibana',
+                'prometheus', 'grafana-server', 'zabbix-agent', 'zabbix-server'
+            ]
+            
+            for svc in critical_services:
                 try:
-                    res = subprocess.run(['systemctl', 'is-active', svc], capture_output=True, text=True, timeout=2)
-                    services.append({'name': svc, 'status': res.stdout.strip()})
+                    # Intentar systemctl primero
+                    res = subprocess.run(['systemctl', 'is-active', svc], 
+                                      capture_output=True, text=True, timeout=2)
+                    status = res.stdout.strip()
+                    
+                    # Si no está en systemd, intentar con service
+                    if status == 'unknown':
+                        res = subprocess.run(['service', svc, 'status'], 
+                                          capture_output=True, text=True, timeout=2)
+                        status = 'active' if res.returncode == 0 else 'inactive'
+                    
+                    if status in ['active', 'running']:
+                        services.append({'name': svc, 'status': 'running'})
+                    else:
+                        services.append({'name': svc, 'status': 'stopped'})
                 except Exception:
-                    services.append({'name': svc, 'status': 'unknown'})
+                    continue
         else:
-            # Windows: servicios críticos
-            for svc in ['wuauserv', 'WinDefend', 'Spooler', 'w32time']:
+            # Servicios críticos para Windows
+            critical_services = [
+                'wuauserv', 'WinDefend', 'Spooler', 'w32time',
+                'MSSQLSERVER', 'MySQL', 'Apache2.4', 'nginx',
+                'Docker', 'PostgreSQL', 'MongoDB', 'Redis'
+            ]
+            
+            for svc in critical_services:
                 try:
-                    res = subprocess.run(['sc', 'query', svc], capture_output=True, text=True, timeout=2)
+                    res = subprocess.run(['sc', 'query', svc], 
+                                      capture_output=True, text=True, timeout=2)
                     status = 'running' if 'RUNNING' in res.stdout else 'stopped'
                     services.append({'name': svc, 'status': status})
                 except Exception:
-                    services.append({'name': svc, 'status': 'unknown'})
-    except Exception:
-        pass
+                    continue
+    except Exception as e:
+        print(f"Error obteniendo servicios: {str(e)}")
     return services
 
 def get_hardware_info():
@@ -217,25 +242,42 @@ def get_hardware_info():
 def get_disk_info():
     disks = []
     try:
+        # Lista de puntos de montaje a ignorar
+        ignore_mounts = [
+            '/snap',  # Snap packages
+            '/media',  # Unidades removibles
+            '/dev',   # Dispositivos
+            '/run',   # Sistema runtime
+            '/sys',   # Sistema
+            '/proc',  # Procesos
+            '/tmp',   # Archivos temporales
+            '/var/lib/snapd'  # Snapd
+        ]
+        
         for partition in psutil.disk_partitions():
+            # Ignorar puntos de montaje no relevantes
+            if any(partition.mountpoint.startswith(ignore) for ignore in ignore_mounts):
+                continue
+                
             if partition.fstype:  # Solo particiones con sistema de archivos
                 try:
                     usage = psutil.disk_usage(partition.mountpoint)
-                    # Asegurarse de que los valores sean válidos
-                    total = max(usage.total // (1024**3), 1)  # Mínimo 1 GB para evitar división por cero
-                    used = min(usage.used // (1024**3), total)  # No puede ser mayor que el total
-                    free = total - used
-                    percentage = min(100, max(0, usage.percent))  # Entre 0 y 100
-                    
-                    disks.append({
-                        'mount': partition.mountpoint,
-                        'device': partition.device,
-                        'fstype': partition.fstype,
-                        'total': total,
-                        'used': used,
-                        'free': free,
-                        'percentage': percentage
-                    })
+                    # Solo incluir si tiene espacio total significativo (> 1GB)
+                    if usage.total > (1024**3):  # 1GB en bytes
+                        total = usage.total // (1024**3)  # Convertir a GB
+                        used = usage.used // (1024**3)
+                        free = usage.free // (1024**3)
+                        percentage = usage.percent
+                        
+                        disks.append({
+                            'mount': partition.mountpoint,
+                            'device': partition.device,
+                            'fstype': partition.fstype,
+                            'total': total,
+                            'used': used,
+                            'free': free,
+                            'percentage': percentage
+                        })
                 except Exception as e:
                     print(f"Error obteniendo información del disco {partition.mountpoint}: {str(e)}")
                     continue
@@ -253,30 +295,6 @@ def get_telemetry_interval():
     except Exception as e:
         print(f"Error obteniendo intervalo de telemetría: {str(e)}")
     return 3600  # Valor por defecto: 1 hora
-
-def get_battery():
-    """Obtener información de la batería si está disponible"""
-    battery_info = {
-        'has_battery': False,
-        'percentage': None,
-        'power_plugged': None,
-        'time_left': None
-    }
-    
-    try:
-        if hasattr(psutil, 'sensors_battery'):
-            battery = psutil.sensors_battery()
-            if battery:
-                battery_info.update({
-                    'has_battery': True,
-                    'percentage': battery.percent,
-                    'power_plugged': battery.power_plugged,
-                    'time_left': battery.secsleft if battery.secsleft != -2 else None
-                })
-    except Exception as e:
-        print(f"Error obteniendo información de batería: {str(e)}")
-    
-    return battery_info
 
 def send_telemetry_data():
     try:
@@ -311,7 +329,6 @@ def send_telemetry_data():
             'processes': get_processes(),
             'network_info': get_network_info(),
             'temperatures': get_temperatures(),
-            'battery': get_battery(),
             'services': get_services(),
             'system_info': {
                 **get_hardware_info(),
