@@ -132,7 +132,7 @@ class LdapUserController extends Controller
             // Paginar resultados
             $total = count($users);
             $offset = ($page - 1) * $perPage;
-            $paginatedUsers = array_slice($users->toArray(), $offset, $perPage);
+            $paginatedUsers = array_slice($users, $offset, $perPage);
             
             $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
                 $paginatedUsers,
