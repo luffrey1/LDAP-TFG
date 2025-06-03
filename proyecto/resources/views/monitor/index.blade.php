@@ -36,9 +36,9 @@
                     @endif
 
                     <div class="row mb-4">
-                        <div class="col-md-3 mb-3">
+                        <div class="col-md-3 mb-3 text-white">
                             <div class="card bg-primary text-white h-100">
-                                <div class="card-body text-center">
+                                <div class="card-body text-white text-center">
                                     <h1 class="display-4">{{ count($hosts) }}</h1>
                                     <p class="lead">Total Equipos</p>
                                 </div>
