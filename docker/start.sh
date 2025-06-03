@@ -43,8 +43,8 @@ if [ -f "/etc/ssl/certs/site/certificate.crt" ] && [ -f "/etc/ssl/certs/site/pri
   
   # Configurar SSL en Apache
   echo "Configurando SSL en Apache..."
-  sed -i 's|SSLCertificateFile.*|SSLCertificateFile /etc/ssl/certs/site/certificate.crt|' /etc/apache2/sites-available/default-ssl.conf
-  sed -i 's|SSLCertificateKeyFile.*|SSLCertificateKeyFile /etc/ssl/certs/site/private.key|' /etc/apache2/sites-available/default-ssl.conf
+  sed -i 's|/etc/ssl/certs/ssl-cert-snakeoil.pem|/etc/ssl/certs/site/certificate.crt|g' /etc/apache2/sites-available/default-ssl.conf
+  sed -i 's|/etc/ssl/private/ssl-cert-snakeoil.key|/etc/ssl/certs/site/private.key|g' /etc/apache2/sites-available/default-ssl.conf
   sed -i 's|#SSLCertificateChainFile.*|SSLCertificateChainFile /etc/ssl/certs/site/ca_bundle.crt|' /etc/apache2/sites-available/default-ssl.conf
   
   # Habilitar el sitio SSL
