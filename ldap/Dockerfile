@@ -14,13 +14,8 @@ ENV LDAP_TLS_CRT_FILENAME="cert.pem"
 ENV LDAP_TLS_KEY_FILENAME="privkey.pem"
 ENV LDAP_TLS_CA_CRT_FILENAME="fullchain.pem"
 
-# Crear directorios necesarios
-RUN mkdir -p /container/service/slapd/assets/certs
-
 # Copiar certificados
-COPY certs/cert-tierno.es/cert.pem /container/service/slapd/assets/certs/
-COPY certs/cert-tierno.es/privkey.pem /container/service/slapd/assets/certs/
-COPY certs/cert-tierno.es/fullchain.pem /container/service/slapd/assets/certs/
+COPY ldap/certs/cert-tierno.es/ /container/service/slapd/assets/certs/
 
 # Establecer permisos correctos
 RUN chown -R 911:911 /container/service/slapd/assets/certs && \
@@ -28,5 +23,8 @@ RUN chown -R 911:911 /container/service/slapd/assets/certs && \
     chmod 644 /container/service/slapd/assets/certs/cert.pem && \
     chmod 644 /container/service/slapd/assets/certs/fullchain.pem
 
-# Exponer puertos LDAP
-EXPOSE 389 636 
+# Exponer puertos LDAP y LDAPS
+EXPOSE 389 636
+
+# Usar el comando por defecto de la imagen
+CMD ["/container/tool/run"] 
