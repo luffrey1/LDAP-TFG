@@ -5,6 +5,7 @@ namespace App\Logging;
 use App\Models\ActivityLog;
 use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Logger;
+use Monolog\LogRecord;
 
 class ActivityLogger extends AbstractProcessingHandler
 {
@@ -13,12 +14,12 @@ class ActivityLogger extends AbstractProcessingHandler
         parent::__construct($level, $bubble);
     }
 
-    protected function write(array $record): void
+    protected function write(LogRecord $record): void
     {
         try {
-            $level = strtoupper($record['level_name']);
-            $message = $record['message'];
-            $context = $record['context'];
+            $level = strtoupper($record->level->name);
+            $message = $record->message;
+            $context = $record->context;
 
             ActivityLog::create([
                 'level' => $level,
