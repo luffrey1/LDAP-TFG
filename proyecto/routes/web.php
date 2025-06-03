@@ -225,4 +225,10 @@ Route::post('/api/debug/log', function(\Illuminate\Http\Request $request) {
 
 Route::get('/monitor/estado-global', [App\Http\Controllers\MonitorController::class, 'healthStatus'])->name('monitor.health');
 
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    // ... existing routes ...
+    Route::get('/logs', [App\Http\Controllers\Admin\LogController::class, 'index'])->name('logs.index');
+    Route::get('/logs/delete/{count}', [App\Http\Controllers\Admin\LogController::class, 'delete'])->name('logs.delete');
+});
+
 

@@ -8,9 +8,24 @@
                 <div class="card-header bg-primary text-white">
                     <div class="d-flex justify-content-between align-items-center">
                         <span>{{ __('Logs de Actividad LDAP') }}</span>
-                        <a href="{{ route('admin.users.index') }}" class="btn btn-sm btn-light">
-                            <i class="fas fa-users"></i> {{ __('Volver a Usuarios') }}
-                        </a>
+                        <div>
+                            <div class="btn-group me-2">
+                                <button type="button" class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-trash"></i> {{ __('Borrar últimos') }}
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{{ route('admin.logs.delete', ['count' => 500]) }}" onclick="return confirm('¿Estás seguro de borrar los últimos 500 logs?')">Últimos 500</a></li>
+                                    <li><a class="dropdown-item" href="{{ route('admin.logs.delete', ['count' => 1000]) }}" onclick="return confirm('¿Estás seguro de borrar los últimos 1000 logs?')">Últimos 1000</a></li>
+                                    <li><a class="dropdown-item" href="{{ route('admin.logs.delete', ['count' => 2000]) }}" onclick="return confirm('¿Estás seguro de borrar los últimos 2000 logs?')">Últimos 2000</a></li>
+                                    <li><a class="dropdown-item" href="{{ route('admin.logs.delete', ['count' => 5000]) }}" onclick="return confirm('¿Estás seguro de borrar los últimos 5000 logs?')">Últimos 5000</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="{{ route('admin.logs.delete', ['count' => 'all']) }}" onclick="return confirm('¿Estás seguro de borrar TODOS los logs? Esta acción no se puede deshacer.')">Borrar todos</a></li>
+                                </ul>
+                            </div>
+                            <a href="{{ route('admin.users.index') }}" class="btn btn-sm btn-light">
+                                <i class="fas fa-users"></i> {{ __('Volver a Usuarios') }}
+                            </a>
+                        </div>
                     </div>
                 </div>
 
@@ -44,21 +59,21 @@
                             <tbody>
                                 @forelse ($logs as $log)
                                     <tr>
-                                        <td>{{ $log['id'] }}</td>
-                                        <td>{{ $log['fecha'] }}</td>
+                                        <td>{{ $log->id }}</td>
+                                        <td>{{ $log->created_at->format('d/m/Y H:i:s') }}</td>
                                         <td>
-                                            <span class="badge bg-{{ $log['nivel'] == 'ERROR' ? 'danger' : ($log['nivel'] == 'WARNING' ? 'warning' : ($log['nivel'] == 'INFO' ? 'info' : ($log['nivel'] == 'DEBUG' ? 'secondary' : 'primary'))) }}">
-                                                {{ $log['nivel'] }}
+                                            <span class="badge bg-{{ $log->level == 'ERROR' ? 'danger' : ($log->level == 'WARNING' ? 'warning' : ($log->level == 'INFO' ? 'info' : ($log->level == 'DEBUG' ? 'secondary' : 'primary'))) }}">
+                                                {{ $log->level }}
                                             </span>
                                         </td>
-                                        <td>{{ $log['usuario'] }}</td>
+                                        <td>{{ $log->user ?? 'Sistema' }}</td>
                                         <td>
-                                            <span class="badge bg-{{ $log['accion'] == 'Error' ? 'danger' : ($log['accion'] == 'Advertencia' ? 'warning' : ($log['accion'] == 'Información' ? 'info' : 'secondary')) }}">
-                                                {{ $log['accion'] }}
+                                            <span class="badge bg-{{ $log->action == 'Error' ? 'danger' : ($log->action == 'Advertencia' ? 'warning' : ($log->action == 'Información' ? 'info' : 'secondary')) }}">
+                                                {{ $log->action }}
                                             </span>
                                         </td>
-                                        <td class="text-truncate" style="max-width: 400px;" title="{{ $log['descripcion'] }}">
-                                            {{ \Illuminate\Support\Str::limit($log['descripcion'], 100) }}
+                                        <td class="text-truncate" style="max-width: 400px;" title="{{ $log->description }}">
+                                            {{ \Illuminate\Support\Str::limit($log->description, 100) }}
                                         </td>
                                     </tr>
                                 @empty
@@ -76,19 +91,7 @@
 
                     @if($logs->hasPages())
                         <div class="d-flex justify-content-center mt-4">
-                            <div class="btn-group" role="group">
-                                @if($logs->currentPage() > 1)
-                                    <a href="{{ $logs->previousPageUrl() }}" class="btn btn-outline-primary">
-                                        <i class="fas fa-chevron-left"></i> {{ __('Anterior') }}
-                                    </a>
-                                @endif
-
-                                @if($logs->hasMorePages())
-                                    <a href="{{ $logs->nextPageUrl() }}" class="btn btn-primary">
-                                        {{ __('Ver más') }} <i class="fas fa-chevron-right"></i>
-                                    </a>
-                                @endif
-                            </div>
+                            {{ $logs->links() }}
                         </div>
                     @endif
                 </div>
