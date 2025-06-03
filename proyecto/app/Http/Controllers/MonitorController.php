@@ -69,20 +69,22 @@ class MonitorController extends Controller
 
             // Validar datos básicos (hostname único)
             $validated = $request->validate([
-                'hostname' => 'required|string|max:255|unique:monitor_hosts,hostname',
+                'hostname' => 'required_if:tipo_host,dhcp|string|max:255|unique:monitor_hosts,hostname',
                 'tipo_host' => 'required|in:fija,dhcp',
-                'ip_address' => 'nullable|ip',
+                'ip_address' => 'required_if:tipo_host,fija|nullable|ip',
                 'description' => 'nullable|string',
                 'group_id' => 'nullable|exists:monitor_groups,id'
             ], [
-                'hostname.unique' => 'Ya existe un equipo con ese hostname. Edítalo o elimínalo antes de crear uno nuevo.'
+                'hostname.unique' => 'Ya existe un equipo con ese hostname. Edítalo o elimínalo antes de crear uno nuevo.',
+                'hostname.required_if' => 'El hostname es requerido para equipos DHCP.',
+                'ip_address.required_if' => 'La dirección IP es requerida para equipos con IP fija.'
             ]);
 
             \Log::info('Validación pasada', ['validated' => $validated]);
 
             // Crear el host directamente con los datos proporcionados
             $host = new MonitorHost();
-            $host->hostname = $validated['hostname'];
+            $host->hostname = $validated['hostname'] ?? $request->hostname_fija;
             // Usar la IP detectada si existe, sino la IP fija introducida
             $host->ip_address = $request->ip_address_display ?: $request->ip_address;
             $host->mac_address = $request->mac_address;
@@ -93,7 +95,7 @@ class MonitorController extends Controller
             // Asignar grupo automáticamente si no se especificó
             if (empty($validated['group_id'])) {
                 // Intentar detectar el grupo por el prefijo del hostname (ej: A27, B27, etc)
-                if (preg_match('/^([A-Z][0-9]{2})-/', $validated['hostname'], $matches)) {
+                if (preg_match('/^([A-Z][0-9]{2})-/', $host->hostname, $matches)) {
                     $nombreGrupo = $matches[1];
                     $grupoDetectado = MonitorGroup::firstOrCreate(
                         ['name' => $nombreGrupo],
