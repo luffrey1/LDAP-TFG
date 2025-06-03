@@ -308,8 +308,8 @@ class MonitorHost extends Model
             return null;
         }
         
-        // Intenta extraer el aula del hostname según el formato B27-A1
-        if (preg_match('/^([B][0-9]{2})-[A-F][0-9]/', $this->hostname, $matches)) {
+        // Intenta extraer el aula del hostname según el formato X27-A1 (donde X es cualquier letra)
+        if (preg_match('/^([A-Z][0-9]{2})-[A-F][0-9]/', $this->hostname, $matches)) {
             return $matches[1];
         }
         
@@ -318,7 +318,7 @@ class MonitorHost extends Model
     
     /**
      * Obtener la ubicación del host basado en el hostname
-     * Formato esperado: B27-A1 (Aula B27, columna A, fila 1)
+     * Formato esperado: X27-A1 (Aula X27, columna A, fila 1)
      */
     public function getLocationDetailsAttribute()
     {
@@ -326,7 +326,7 @@ class MonitorHost extends Model
             return null;
         }
         
-        if (preg_match('/^([B][0-9]{2})-([A-F])([0-9])/', $this->hostname, $matches)) {
+        if (preg_match('/^([A-Z][0-9]{2})-([A-F])([0-9])/', $this->hostname, $matches)) {
             return [
                 'aula' => $matches[1],
                 'columna' => $matches[2],

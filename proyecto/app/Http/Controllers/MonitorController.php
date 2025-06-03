@@ -28,7 +28,7 @@ class MonitorController extends Controller
         $groups = MonitorGroup::getGroupsForUser($user);
         // Asignar grupo automáticamente a hosts sin grupo
         foreach ($hosts as $host) {
-            if (empty($host->group_id) && preg_match('/^(B[0-9]{2})-/', $host->hostname, $matches)) {
+            if (empty($host->group_id) && preg_match('/^([A-Z][0-9]{2})-/', $host->hostname, $matches)) {
                 $nombreGrupo = $matches[1];
                 $grupoDetectado = \App\Models\MonitorGroup::firstOrCreate(
                     ['name' => $nombreGrupo],
@@ -205,8 +205,8 @@ class MonitorController extends Controller
 
             // Asignar grupo automáticamente si no se especificó
             if (empty($validated['group_id'])) {
-                // Intentar detectar el grupo por el prefijo del hostname (ej: B27)
-                if (preg_match('/^(B[0-9]{2})-/', $validated['hostname'], $matches)) {
+                // Intentar detectar el grupo por el prefijo del hostname (ej: A27, B27, etc)
+                if (preg_match('/^([A-Z][0-9]{2})-/', $validated['hostname'], $matches)) {
                     $nombreGrupo = $matches[1];
                     $grupoDetectado = MonitorGroup::firstOrCreate(
                         ['name' => $nombreGrupo],
@@ -368,7 +368,7 @@ class MonitorController extends Controller
             $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
             foreach ($hosts as $host) {
                 // Asignar grupo automáticamente si no tiene
-                if (empty($host->group_id) && preg_match('/^(B[0-9]{2})-/', $host->hostname, $matches)) {
+                if (empty($host->group_id) && preg_match('/^([A-Z][0-9]{2})-/', $host->hostname, $matches)) {
                     $nombreGrupo = $matches[1];
                     $grupoDetectado = \App\Models\MonitorGroup::firstOrCreate(
                         ['name' => $nombreGrupo],
@@ -1246,7 +1246,7 @@ class MonitorController extends Controller
             $host->mac_address = $request->mac_address;
 
             // En update, después de asignar el grupo:
-            if (preg_match('/^(B[0-9]{2})-/', $host->hostname, $matches)) {
+            if (preg_match('/^([A-Z][0-9]{2})-/', $host->hostname, $matches)) {
                 $nombreGrupo = $matches[1];
                 $grupoDetectado = \App\Models\MonitorGroup::firstOrCreate(
                     ['name' => $nombreGrupo],

@@ -80,12 +80,6 @@
                                             <a href="{{ route('monitor.create') }}" class="btn btn-success btn-sm me-2">
                                                 <i class="fas fa-plus me-1"></i> Añadir Equipo
                                             </a>
-                                            <a href="{{ route('monitor.ping-all') }}" class="btn btn-primary btn-sm">
-                                                <i class="fas fa-sync-alt me-1"></i> Actualizar Estado
-                                            </a>
-                                            <a href="{{ route('monitor.refresh-network') }}" class="btn btn-info btn-sm">
-                                                <i class="fas fa-network-wired me-1"></i> Actualizar Routers
-                                            </a>
                                         </div>
                                     </div>
                                 </div>
@@ -103,6 +97,14 @@
                                                     <i class="fas fa-{{ $groupHosts->first()->group && $groupHosts->first()->group->type == 'classroom' ? 'chalkboard-teacher' : ($groupName == 'Infraestructura' ? 'network-wired' : 'server') }} me-2"></i>
                                                     {{ $groupName }}
                                                     <span class="badge bg-secondary ms-2">{{ $groupHosts->count() }} equipos</span>
+                                                    <div class="float-end">
+                                                        <a href="{{ route('monitor.ping-all') }}" class="btn btn-primary btn-sm">
+                                                            <i class="fas fa-sync-alt me-1"></i> Actualizar Estado
+                                                        </a>
+                                                        <a href="{{ route('monitor.refresh-network') }}" class="btn btn-info btn-sm">
+                                                            <i class="fas fa-network-wired me-1"></i> Actualizar Routers
+                                                        </a>
+                                                    </div>
                                                 </h5>
                                                 <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
                                                     <table class="table table-hover mb-0">
