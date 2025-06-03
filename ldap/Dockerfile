@@ -16,7 +16,8 @@ ENV LDAP_TLS_CA_CRT_FILENAME="fullchain.pem"
 
 # Crear directorios necesarios
 RUN mkdir -p /container/service/slapd/assets/certs && \
-    mkdir -p /container/service/slapd/assets/config/tls
+    mkdir -p /container/service/slapd/assets/config/tls && \
+    mkdir -p /container/service/slapd/assets/config/bootstrap/ldif/custom
 
 # Copiar certificados
 COPY certs/cert-tierno.es/cert.pem /container/service/slapd/assets/certs/
@@ -26,16 +27,13 @@ COPY certs/cert-tierno.es/fullchain.pem /container/service/slapd/assets/certs/
 # Copiar archivo de configuración TLS
 COPY ldif/tls-enable.ldif /container/service/slapd/assets/config/tls/tls-enable.ldif
 
-# Copiar archivos LDIF personalizados
-COPY ldif/ /container/service/slapd/assets/config/bootstrap/ldif/custom/
-
 # Establecer permisos correctos
 RUN chown -R 911:911 /container/service/slapd/assets/certs && \
     chmod 600 /container/service/slapd/assets/certs/privkey.pem && \
     chmod 644 /container/service/slapd/assets/certs/cert.pem && \
     chmod 644 /container/service/slapd/assets/certs/fullchain.pem && \
     chown -R 911:911 /container/service/slapd/assets/config/tls && \
-    chown -R 911:911 /container/service/slapd/assets/config/bootstrap/ldif/custom
+    chmod 644 /container/service/slapd/assets/config/tls/tls-enable.ldif
 
 # Exponer puertos LDAP
 EXPOSE 389 636
