@@ -39,6 +39,9 @@ return [
             'version' => env('LDAP_VERSION', 3),
             'options' => [
                 LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                LDAP_OPT_X_TLS_CACERTFILE => '/etc/ssl/certs/site/ca_bundle.crt',
+                LDAP_OPT_X_TLS_CERTFILE => '/etc/ssl/certs/site/certificate.crt',
+                LDAP_OPT_X_TLS_KEYFILE => '/etc/ssl/certs/site/private.key',
                 LDAP_OPT_REFERRALS => 0,
                 LDAP_OPT_PROTOCOL_VERSION => 3,
                 LDAP_OPT_NETWORK_TIMEOUT => 5,
