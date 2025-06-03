@@ -224,6 +224,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (response.success) {
                     $('#mac_address').val(response.data.mac_address || 'No detectada');
                     $('#ip_address_display').val(response.data.ip_address || 'No detectada');
+                    $('#ip_address').val(response.data.ip_address || '');
                     showDetectionMessage('Equipo detectado correctamente', 'success');
                     $('#submitBtn').show();
                     $('#retryMessage').show();
@@ -274,6 +275,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (response.success) {
                     $('#mac_address').val(response.data.mac_address || 'No detectada');
                     $('#ip_address_display').val(response.data.ip_address || 'No detectada');
+                    $('#ip_address').val(response.data.ip_address || ip);
                     if (response.data.hostname) {
                         $('#hostname_fija').val(response.data.hostname);
                     }
