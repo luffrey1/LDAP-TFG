@@ -12,8 +12,15 @@ services:
       - LDAP_ADMIN_PASSWORD=admin
       - LDAP_REMOVE_CONFIG_AFTER_SETUP=false
       - LDAP_RFC2307BIS_SCHEMA=true
+      - LDAP_TLS_VERIFY_CLIENT=never
+      - LDAP_TLS_CRT_FILENAME=cert.pem
+      - LDAP_TLS_KEY_FILENAME=privkey.pem
+      - LDAP_TLS_CA_CRT_FILENAME=fullchain.pem
     volumes:
       - ../ldap/ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom
+      - ../ldap/certs/cert-tierno.es/cert.pem:/container/service/slapd/assets/certs/cert.pem
+      - ../ldap/certs/cert-tierno.es/privkey.pem:/container/service/slapd/assets/certs/privkey.pem
+      - ../ldap/certs/cert-tierno.es/fullchain.pem:/container/service/slapd/assets/certs/fullchain.pem
     networks:
       - app-network
     restart: unless-stopped
