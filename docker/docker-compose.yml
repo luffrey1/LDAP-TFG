@@ -1,32 +1,28 @@
 services:
   ldap:
-    image: osixia/openldap:latest
+    build:
+      context: ../ldap
+      dockerfile: Dockerfile
     container_name: openldap-osixia
-    command: ["--copy-service"]
+    environment:
+      LDAP_ORGANISATION: "IES TIERNO GALVAN"
+      LDAP_DOMAIN: "tierno.es"
+      LDAP_ADMIN_PASSWORD: "admin"
+      LDAP_CONFIG_PASSWORD: "admin"
+      LDAP_RFC2307BIS_SCHEMA: "true"
+      LDAP_TLS_ENFORCE: "true"
+      LDAP_TLS_VERIFY_CLIENT: "never"
+      LDAP_TLS_CIPHER_SUITE: "SECURE256:-VERS-SSL3.0"
+      LDAP_TLS_PROTOCOL_MIN: "3.1"
+      LDAP_TLS_CRT_FILENAME: "cert.pem"
+      LDAP_TLS_KEY_FILENAME: "privkey.pem"
+      LDAP_TLS_CA_CRT_FILENAME: "fullchain.pem"
+    volumes:
+      - ../ldap/certs/cert-tierno.es:/container/service/slapd/assets/certs
+      - ../ldap/ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom
     ports:
       - "389:389"
       - "636:636"
-    environment:
-      - LDAP_ORGANISATION=informatica
-      - LDAP_DOMAIN=tierno.es
-      - LDAP_ADMIN_PASSWORD=admin
-      - LDAP_REMOVE_CONFIG_AFTER_SETUP=false
-      - LDAP_RFC2307BIS_SCHEMA=true
-      - LDAP_TLS_VERIFY_CLIENT=never
-      - LDAP_TLS_CRT_FILENAME=cert.pem
-      - LDAP_TLS_KEY_FILENAME=privkey.pem
-      - LDAP_TLS_CA_CRT_FILENAME=fullchain.pem
-      - LDAP_TLS_ENFORCE=false
-      - LDAP_TLS_CIPHER_SUITE=SECURE256:-VERS-SSL3.0
-      - LDAP_TLS_PROTOCOL_MIN=3.1
-      - LDAP_TLS_CERT=/container/service/slapd/assets/certs/cert.pem
-      - LDAP_TLS_KEY=/container/service/slapd/assets/certs/privkey.pem
-      - LDAP_TLS_CA_CERT=/container/service/slapd/assets/certs/fullchain.pem
-    volumes:
-      - ../ldap/ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom
-      - ../ldap/certs/cert-tierno.es/cert.pem:/container/service/slapd/assets/certs/cert.pem:ro
-      - ../ldap/certs/cert-tierno.es/privkey.pem:/container/service/slapd/assets/certs/privkey.pem:ro
-      - ../ldap/certs/cert-tierno.es/fullchain.pem:/container/service/slapd/assets/certs/fullchain.pem:ro
     networks:
       - app-network
     restart: unless-stopped
@@ -75,7 +71,7 @@ services:
       - LDAP_DEFAULT_BASE_DN=dc=tierno,dc=es
       - LDAP_DEFAULT_USERNAME=cn=admin,dc=tierno,dc=es
       - LDAP_DEFAULT_SSL=true
-      - LDAP_DEFAULT_TLS=true
+      - LDAP_DEFAULT_TLS=false
       - DB_CONNECTION=mysql
       - DB_HOST=mysql
       - DB_PORT=3306
@@ -94,7 +90,7 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "https://localhost/"]
+      test: ["CMD", "curl", "-f", "-k", "http://localhost/"]
       interval: 10s
       timeout: 5s
       retries: 3
