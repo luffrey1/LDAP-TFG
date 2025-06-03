@@ -17,7 +17,7 @@ echo "MySQL está disponible."
 
 # Esperar a que OpenLDAP esté disponible usando el nombre de servicio
 LDAP_HOST="ldap"
-LDAP_PORT="636"  # Cambiado a 636 para LDAPS
+LDAP_PORT="636"  # Puerto para LDAPS
 echo "Esperando a que OpenLDAP esté disponible..."
 until nc -z -v -w30 $LDAP_HOST $LDAP_PORT; do
   echo "Esperando conexión a OpenLDAP..."

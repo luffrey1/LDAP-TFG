@@ -16,11 +16,17 @@ services:
       - LDAP_TLS_CRT_FILENAME=cert.pem
       - LDAP_TLS_KEY_FILENAME=privkey.pem
       - LDAP_TLS_CA_CRT_FILENAME=fullchain.pem
+      - LDAP_TLS_ENFORCE=false
+      - LDAP_TLS_CIPHER_SUITE=SECURE256:-VERS-SSL3.0
+      - LDAP_TLS_PROTOCOL_MIN=3.1
+      - LDAP_TLS_CERT=/container/service/slapd/assets/certs/cert.pem
+      - LDAP_TLS_KEY=/container/service/slapd/assets/certs/privkey.pem
+      - LDAP_TLS_CA_CERT=/container/service/slapd/assets/certs/fullchain.pem
     volumes:
       - ../ldap/ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom
-      - ../ldap/certs/cert-tierno.es/cert.pem:/container/service/slapd/assets/certs/cert.pem
-      - ../ldap/certs/cert-tierno.es/privkey.pem:/container/service/slapd/assets/certs/privkey.pem
-      - ../ldap/certs/cert-tierno.es/fullchain.pem:/container/service/slapd/assets/certs/fullchain.pem
+      - ../ldap/certs/cert-tierno.es/cert.pem:/container/service/slapd/assets/certs/cert.pem:ro
+      - ../ldap/certs/cert-tierno.es/privkey.pem:/container/service/slapd/assets/certs/privkey.pem:ro
+      - ../ldap/certs/cert-tierno.es/fullchain.pem:/container/service/slapd/assets/certs/fullchain.pem:ro
     networks:
       - app-network
     restart: unless-stopped
