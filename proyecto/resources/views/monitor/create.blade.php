@@ -87,12 +87,17 @@
                                         </div>
 
                                         <div class="mb-3">
+                                            <label for="ip_address_display" class="form-label text-black">Dirección IP</label>
+                                            <input type="text" class="form-control" id="ip_address_display" readonly>
+                                        </div>
+
+                                        <div class="mb-3">
                                             <label for="description" class="form-label text-black">Descripción</label>
                                             <textarea class="form-control" id="description" name="description" rows="3" 
                                                       placeholder="Descripción opcional del equipo"></textarea>
                                         </div>
 
-                                        <div class="mb-3">
+                                        <div id="groupSelector" class="mb-3" style="display: none;">
                                             <label for="group_id" class="form-label text-black">Grupo</label>
                                             <select class="form-select" id="group_id" name="group_id">
                                                 <option value="">Sin grupo</option>
@@ -144,11 +149,13 @@ document.addEventListener('DOMContentLoaded', function() {
             $('#fijaFields').hide();
             $('#ip_address').prop('required', false);
             $('#hostname').prop('required', true);
+            $('#groupSelector').hide();
         } else {
             $('#dhcpFields').hide();
             $('#fijaFields').show();
             $('#ip_address').prop('required', true);
             $('#hostname').prop('required', false);
+            $('#groupSelector').show();
         }
         resetForm();
     });
@@ -156,6 +163,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Función para resetear el formulario
     function resetForm() {
         $('#mac_address').val('');
+        $('#ip_address_display').val('');
         $('#detectionResult').hide();
         $('#submitBtn').hide();
         $('#hostname').val('');
@@ -195,8 +203,8 @@ document.addEventListener('DOMContentLoaded', function() {
             success: function(response) {
                 console.log('Respuesta exitosa:', response);
                 if (response.success) {
-                    $('#mac_address').val(response.data.mac_address);
-                    $('#ip_address').val(response.data.ip_address);
+                    $('#mac_address').val(response.data.mac_address || 'No detectada');
+                    $('#ip_address_display').val(response.data.ip_address || 'No detectada');
                     showDetectionMessage('Equipo detectado correctamente', 'success');
                     $('#submitBtn').show();
                 } else {
@@ -235,8 +243,9 @@ document.addEventListener('DOMContentLoaded', function() {
             success: function(response) {
                 console.log('Respuesta exitosa:', response);
                 if (response.success) {
-                    $('#mac_address').val(response.data.mac_address);
-                    $('#hostname').val(response.data.hostname);
+                    $('#mac_address').val(response.data.mac_address || 'No detectada');
+                    $('#ip_address_display').val(response.data.ip_address || 'No detectada');
+                    $('#hostname').val(response.data.hostname || '');
                     showDetectionMessage('Equipo detectado correctamente', 'success');
                     $('#submitBtn').show();
                 } else {
