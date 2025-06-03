@@ -16,13 +16,14 @@ services:
       - LDAP_TLS_KEY_FILENAME=privkey.pem
       - LDAP_TLS_CA_CRT_FILENAME=chain.pem
       - LDAP_BOOTSTRAP=true
+      - LDAP_REMOVE_CONFIG_AFTER_SETUP=false
+      - LDAP_READONLY_USER=false
     ports:
       - "389:389"
       - "636:636"
     volumes:
       - ../ldap/certs/cert-tierno.es:/container/service/slapd/assets/certs
       - ../ldap/ldif:/container/service/slapd/assets/config/bootstrap/ldif
-      - ldap_tls_config:/container/service/slapd/assets/config/tls
       - ldap_data:/var/lib/ldap
       - ldap_config:/etc/ldap/slapd.d
     networks:
