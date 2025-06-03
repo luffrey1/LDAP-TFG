@@ -42,8 +42,12 @@ if [ -f "/etc/ssl/certs/site/certificate.crt" ] && [ -f "/etc/ssl/certs/site/pri
     echo "Configurando certificado CA para LDAP..."
     mkdir -p /etc/ssl/certs/ldap
     cp /etc/ssl/certs/site/ca_bundle.crt /etc/ssl/certs/ldap/ca.crt
-    echo "TLS_CACERT /etc/ssl/certs/ldap/ca.crt" >> /etc/ldap/ldap.conf
     chmod 644 /etc/ssl/certs/ldap/ca.crt
+    
+    # Configurar ldap.conf
+    mkdir -p /etc/ldap
+    echo "TLS_CACERT /etc/ssl/certs/ldap/ca.crt" > /etc/ldap/ldap.conf
+    echo "TLS_REQCERT allow" >> /etc/ldap/ldap.conf
   else
     echo "ADVERTENCIA: No se encontró certificado intermedio."
   fi
@@ -109,8 +113,12 @@ sed -i "s/LDAP_DEFAULT_HOSTS=.*/LDAP_DEFAULT_HOSTS=$LDAP_HOST/" /var/www/html/.e
 sed -i "s/LDAP_DEFAULT_PORT=.*/LDAP_DEFAULT_PORT=$LDAP_PORT/" /var/www/html/.env
 sed -i "s/LDAP_DEFAULT_BASE_DN=.*/LDAP_DEFAULT_BASE_DN=dc=tierno,dc=es/" /var/www/html/.env
 sed -i "s/LDAP_DEFAULT_USERNAME=.*/LDAP_DEFAULT_USERNAME=cn=admin,dc=tierno,dc=es/" /var/www/html/.env
-sed -i "s/LDAP_DEFAULT_SSL=.*/LDAP_DEFAULT_SSL=false/" /var/www/html/.env
+sed -i "s/LDAP_DEFAULT_SSL=.*/LDAP_DEFAULT_SSL=true/" /var/www/html/.env
 sed -i "s/LDAP_DEFAULT_TLS=.*/LDAP_DEFAULT_TLS=true/" /var/www/html/.env
+
+# Actualizar también las variables LDAP_ normales
+sed -i "s/LDAP_SSL=.*/LDAP_SSL=true/" /var/www/html/.env
+sed -i "s/LDAP_TLS=.*/LDAP_TLS=true/" /var/www/html/.env
 
 sed -i "s/DB_HOST=.*/DB_HOST=$DB_HOST/" /var/www/html/.env
 sed -i "s/DB_PORT=.*/DB_PORT=$DB_PORT/" /var/www/html/.env
