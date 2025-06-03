@@ -16,6 +16,7 @@ services:
       - LDAP_TLS_KEY_FILENAME=privkey.pem
       - LDAP_TLS_CA_CRT_FILENAME=chain.pem
       - LDAP_BOOTSTRAP=false
+      - LDAP_TLS_ENFORCE=false
     ports:
       - "389:389"
       - "636:636"
