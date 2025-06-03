@@ -28,8 +28,30 @@ RUN chown -R 911:911 /container/service/slapd/assets/certs && \
     chmod 644 /container/service/slapd/assets/certs/cert.pem && \
     chmod 644 /container/service/slapd/assets/certs/fullchain.pem
 
+# Crear script de inicialización personalizado
+RUN echo '#!/bin/bash\n\
+echo "Esperando a que el servidor LDAP esté listo..."\n\
+sleep 30\n\
+echo "Procesando archivos LDIF..."\n\
+LDIF_DIR="/container/service/slapd/assets/config/bootstrap/ldif/custom"\n\
+for file in $(ls -v $LDIF_DIR/*.ldif); do\n\
+    if [ -f "$file" ]; then\n\
+        echo "Procesando $file..."\n\
+        ldapadd -x -H ldaps://localhost:636 -D "cn=admin,dc=tierno,dc=es" -w admin -f "$file"\n\
+        if [ $? -eq 0 ]; then\n\
+            echo "Archivo $file procesado correctamente"\n\
+        else\n\
+            echo "Error procesando $file"\n\
+            exit 1\n\
+        fi\n\
+    fi\n\
+done\n\
+echo "Procesamiento de LDIF completado."\n\
+/container/tool/run' > /container/service/slapd/assets/init-ldif.sh && \
+    chmod +x /container/service/slapd/assets/init-ldif.sh
+
 # Exponer puertos LDAP
 EXPOSE 389 636
 
-# Usar el comando por defecto de la imagen
-CMD ["/container/tool/run"] 
+# Usar nuestro script personalizado
+CMD ["/container/service/slapd/assets/init-ldif.sh"] 
