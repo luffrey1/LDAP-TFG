@@ -87,4 +87,3 @@
             </div>
         </td>
     </tr>
-@endforelse 

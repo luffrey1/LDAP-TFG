@@ -185,43 +185,7 @@
                                         </div>
                                     </div>
 
-                                    <div class="alert alert-warning">
-                                        <i class="fas fa-exclamation-triangle me-2"></i> <strong>Importante:</strong> Verifique que está conectado a la VPN o red local del instituto antes de continuar.
-                                    </div>
-
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <div class="form-check form-switch">
-                                                <input class="form-check-input" type="checkbox" id="force_register" name="force_register" value="1">
-                                                <label class="form-check-label" for="force_register">
-                                                    <i class="fas fa-magic me-1"></i> Forzar registro de hosts (incluso si no responden al ping)
-                                                </label>
-                                                <div class="form-text">Active esta opción para registrar equipos aunque no respondan al ping actualmente.</div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="row mb-3">
-                                        <div class="col-md-12">
-                                            <div class="form-check form-switch">
-                                                <input class="form-check-input" type="checkbox" id="scan_additional_ranges" name="scan_additional_ranges" value="1" checked>
-                                                <label class="form-check-label" for="scan_additional_ranges">
-                                                    <i class="fas fa-layer-group me-1"></i> Escanear rangos adicionales (Infraestructura + muestras DHCP)
-                                                </label>
-                                                <div class="form-text">Incluye automáticamente dispositivos críticos y muestras de otros rangos DHCP del instituto.</div>
-                                            </div>
-                                        </div>
-                                    </div>
-
                                     <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="force_register" name="force_register" value="1">
-                                            <label class="form-check-label" for="force_register">
-                                                <strong>Forzar registro de equipos</strong> aunque no respondan al ping
-                                            </label>
-                                            <div class="form-text">Útil cuando los equipos están apagados pero desea registrarlos igualmente</div>
-                                        </div>
-                                        
                                         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                                             <a href="{{ route('monitor.index') }}" class="btn btn-secondary me-md-2">
                                                 <i class="fas fa-times me-1"></i> Cancelar
