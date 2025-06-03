@@ -299,9 +299,19 @@ document.addEventListener('DOMContentLoaded', function() {
     // Validar formulario antes de enviar
     $('#createHostForm').on('submit', function(e) {
         const isWithoutCheck = $(e.target.activeElement).attr('id') === 'submitWithoutCheckBtn';
-        if (!isWithoutCheck && !$('#mac_address').val()) {
+        const tipoHost = $('#tipo_host').val();
+        
+        // Solo validar MAC para DHCP
+        if (tipoHost === 'dhcp' && !isWithoutCheck && !$('#mac_address').val()) {
             e.preventDefault();
             showDetectionMessage('Por favor, detecta el equipo antes de guardar', 'danger');
+            return false;
+        }
+        
+        // Para IP fija, asegurarse de que al menos hay IP
+        if (tipoHost === 'fija' && !$('#ip_address').val()) {
+            e.preventDefault();
+            showDetectionMessage('Por favor, introduce una dirección IP', 'danger');
             return false;
         }
     });
