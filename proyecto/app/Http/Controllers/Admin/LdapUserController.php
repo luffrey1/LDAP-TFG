@@ -465,6 +465,11 @@ class LdapUserController extends Controller
             $adminUser = $this->getCurrentUsername();
             Log::info("Usuario LDAP creado: {$request->uid} por {$adminUser}. Grupos: " . json_encode($request->grupos));
             
+            Log::channel('activity')->info('Usuario LDAP creado', [
+                'action' => 'Crear Usuario',
+                'username' => $request->username
+            ]);
+            
             // Cambiamos la redirección para usar nombre de ruta en lugar de URL directa
             return redirect()->route('admin.users.index')
                 ->with('success', 'Usuario creado correctamente y listo para iniciar sesión');
@@ -472,6 +477,10 @@ class LdapUserController extends Controller
         } catch (Exception $e) {
             Log::error('Error al crear usuario LDAP: ' . $e->getMessage());
             Log::error('Traza: ' . $e->getTraceAsString());
+            Log::channel('activity')->error('Error al crear usuario LDAP: ' . $e->getMessage(), [
+                'action' => 'Error',
+                'username' => $request->username
+            ]);
             return back()->with('error', 'Error al crear el usuario: ' . $e->getMessage());
         }
     }
@@ -835,6 +844,12 @@ class LdapUserController extends Controller
             $adminUser = $this->getCurrentUsername();
             Log::info("Usuario LDAP actualizado: {$uid} por {$adminUser}. Grupos: " . json_encode($request->grupos ?? []));
             
+            Log::channel('activity')->info('Usuario LDAP actualizado', [
+                'action' => 'Actualizar Usuario',
+                'username' => $request->username
+            ]);
+            
+            // Cambiamos la redirección para usar nombre de ruta
             // Cambiamos la redirección para usar nombre de ruta
             return redirect()->route('admin.users.index')
                 ->with('success', 'Usuario actualizado correctamente');

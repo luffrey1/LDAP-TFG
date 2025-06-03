@@ -15,15 +15,20 @@ class ActivityLogger extends AbstractProcessingHandler
 
     protected function write(array $record): void
     {
-        $level = strtoupper($record['level_name']);
-        $message = $record['message'];
-        $context = $record['context'];
+        try {
+            $level = strtoupper($record['level_name']);
+            $message = $record['message'];
+            $context = $record['context'];
 
-        ActivityLog::create([
-            'level' => $level,
-            'user' => auth()->user()->name ?? null,
-            'action' => $context['action'] ?? 'Información',
-            'description' => $message
-        ]);
+            ActivityLog::create([
+                'level' => $level,
+                'user' => auth()->user()->name ?? session('auth_user')['username'] ?? 'Sistema',
+                'action' => $context['action'] ?? 'Información',
+                'description' => $message
+            ]);
+        } catch (\Exception $e) {
+            // Si hay un error al escribir el log, lo registramos en el log del sistema
+            \Illuminate\Support\Facades\Log::error('Error al escribir log de actividad: ' . $e->getMessage());
+        }
     }
 } 

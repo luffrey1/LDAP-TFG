@@ -218,19 +218,23 @@ class LdapGroupController extends Controller
 
                 $connection->disconnect(); // Cerrar conexión después de operar
 
-                return redirect()->route('admin.groups.index')
-                    ->with('success', 'Grupo creado correctamente');
+                Log::channel('activity')->info('Grupo LDAP creado', [
+                    'action' => 'Crear Grupo',
+                    'group' => $request->cn
+                ]);
+                
+                return redirect()->route('admin.groups.index')->with('success', 'Grupo creado correctamente');
             } else {
                  $connection->disconnect(); // Cerrar conexión
                  throw new Exception($errorMessage); // Lanzar el error si ninguno tuvo éxito
             }
 
         } catch (\Exception $e) {
-            Log::error('Error final al crear grupo LDAP: ' . $e->getMessage());
-            Log::error('Stack trace: ' . $e->getTraceAsString());
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Error al crear el grupo: ' . $e->getMessage());
+            Log::channel('activity')->error('Error al crear grupo LDAP: ' . $e->getMessage(), [
+                'action' => 'Error',
+                'group' => $request->cn
+            ]);
+            return back()->with('error', 'Error al crear grupo: ' . $e->getMessage());
         }
     }
 
@@ -317,13 +321,18 @@ class LdapGroupController extends Controller
 
             $connection->query()->update($dn, $entry);
 
-            return redirect()->route('admin.groups.index')
-                ->with('success', 'Grupo actualizado correctamente');
+            Log::channel('activity')->info('Grupo LDAP actualizado', [
+                'action' => 'Actualizar Grupo',
+                'group' => $cn
+            ]);
+            
+            return redirect()->route('admin.groups.index')->with('success', 'Grupo actualizado correctamente');
         } catch (\Exception $e) {
-            Log::error('Error al actualizar grupo LDAP: ' . $e->getMessage());
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Error al actualizar el grupo: ' . $e->getMessage());
+            Log::channel('activity')->error('Error al actualizar grupo LDAP: ' . $e->getMessage(), [
+                'action' => 'Error',
+                'group' => $cn
+            ]);
+            return back()->with('error', 'Error al actualizar grupo: ' . $e->getMessage());
         }
     }
 
@@ -369,12 +378,18 @@ class LdapGroupController extends Controller
             $dn = "cn={$cn},ou=groups,dc=tierno,dc=es";
             $connection->query()->delete($dn);
 
-            return redirect()->route('admin.groups.index')
-                ->with('success', 'Grupo eliminado correctamente');
+            Log::channel('activity')->info('Grupo LDAP eliminado', [
+                'action' => 'Eliminar Grupo',
+                'group' => $cn
+            ]);
+            
+            return redirect()->route('admin.groups.index')->with('success', 'Grupo eliminado correctamente');
         } catch (\Exception $e) {
-            Log::error('Error al eliminar grupo LDAP: ' . $e->getMessage());
-            return redirect()->route('admin.groups.index')
-                ->with('error', 'Error al eliminar el grupo: ' . $e->getMessage());
+            Log::channel('activity')->error('Error al eliminar grupo LDAP: ' . $e->getMessage(), [
+                'action' => 'Error',
+                'group' => $cn
+            ]);
+            return back()->with('error', 'Error al eliminar grupo: ' . $e->getMessage());
         }
     }
 } 
