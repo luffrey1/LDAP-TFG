@@ -10,13 +10,11 @@ services:
       - LDAP_ADMIN_PASSWORD=admin
       - LDAP_CONFIG_PASSWORD=admin
       - LDAP_RFC2307BIS_SCHEMA=true
-      - LDAP_TLS_ENFORCE=true
+      - LDAP_TLS=true
       - LDAP_TLS_VERIFY_CLIENT=never
-      - LDAP_TLS_CIPHER_SUITE=SECURE256:-VERS-SSL3.0
-      - LDAP_TLS_PROTOCOL_MIN=3.1
-      - LDAP_TLS_CRT_FILENAME=cert.pem
+      - LDAP_TLS_CRT_FILENAME=fullchain.pem
       - LDAP_TLS_KEY_FILENAME=privkey.pem
-      - LDAP_TLS_CA_CRT_FILENAME=fullchain.pem
+      - LDAP_TLS_CA_CRT_FILENAME=chain.pem
       - LDAP_BOOTSTRAP=false
     ports:
       - "389:389"
