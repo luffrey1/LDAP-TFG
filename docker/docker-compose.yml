@@ -76,14 +76,14 @@ services:
       - "443:443"
       - "8080:8080"
     environment:
-      - LDAP_HOST=ldap
+      - LDAP_HOST=ldap.tierno.es
       - LDAP_PORT=636
       - LDAP_BASE_DN=dc=tierno,dc=es
       - LDAP_USERNAME=cn=admin,dc=tierno,dc=es
       - LDAP_PASSWORD=admin
       - LDAP_AUTH_LOGIN_FALLBACK=false
       # Variables LdapRecord específicas
-      - LDAP_DEFAULT_HOSTS=ldap
+      - LDAP_DEFAULT_HOSTS=ldap.tierno.es
       - LDAP_DEFAULT_PORT=636
       - LDAP_DEFAULT_BASE_DN=dc=tierno,dc=es
       - LDAP_DEFAULT_USERNAME=cn=admin,dc=tierno,dc=es
@@ -116,6 +116,8 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
+    command: >
+      bash -c "echo '172.18.0.3 ldap.tierno.es' >> /etc/hosts && docker-php-entrypoint apache2-foreground"
   webssh2:
     build:
       context: ../webssh2
