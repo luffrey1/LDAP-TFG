@@ -24,16 +24,11 @@ COPY certs/cert-tierno.es/cert.pem /container/service/slapd/assets/certs/
 COPY certs/cert-tierno.es/privkey.pem /container/service/slapd/assets/certs/
 COPY certs/cert-tierno.es/fullchain.pem /container/service/slapd/assets/certs/
 
-# Copiar archivo de configuración TLS
-COPY ldif/tls-enable.ldif /container/service/slapd/assets/config/tls/tls-enable.ldif
-
 # Establecer permisos correctos
 RUN chown -R 911:911 /container/service/slapd/assets/certs && \
     chmod 600 /container/service/slapd/assets/certs/privkey.pem && \
     chmod 644 /container/service/slapd/assets/certs/cert.pem && \
-    chmod 644 /container/service/slapd/assets/certs/fullchain.pem && \
-    chown -R 911:911 /container/service/slapd/assets/config/tls && \
-    chmod 644 /container/service/slapd/assets/config/tls/tls-enable.ldif
+    chmod 644 /container/service/slapd/assets/certs/fullchain.pem
 
 # Exponer puertos LDAP
 EXPOSE 389 636
