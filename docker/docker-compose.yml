@@ -101,6 +101,9 @@ services:
       - ../ldap/certs/cert-tierno.es/fullchain.pem:/etc/ssl/certs/site/certificate.crt
       - ../ldap/certs/cert-tierno.es/privkey.pem:/etc/ssl/certs/site/private.key
       - ../ldap/certs/cert-tierno.es/chain.pem:/etc/ssl/certs/site/ca_bundle.crt
+      - ../ldap/certs/cert-tierno.es/cert.pem:/etc/ssl/ldap/cert.pem
+      - ../ldap/certs/cert-tierno.es/chain.pem:/etc/ssl/ldap/chain.pem
+      - ../ldap/certs/cert-tierno.es/privkey.pem:/etc/ssl/ldap/privkey.pem
     depends_on:
       - ldap
       - mysql
