@@ -600,7 +600,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // CPU
     renderGauge(
         document.getElementById('gauge-cpu'),
-        {{ is_array($host->cpu_usage) && isset($host->cpu_usage['percentage']) ? $host->cpu_usage['percentage'] : ($host->cpu_usage ?? 0) }},
+        @if(is_array($host->cpu_usage) && isset($host->cpu_usage['percentage']))
+            {{ $host->cpu_usage['percentage'] }}
+        @else
+            {{ is_numeric($host->cpu_usage) ? $host->cpu_usage : 0 }}
+        @endif,
         'CPU', '#007bff',
         @if(isset($host->cpu_usage['percentage']) && isset($host->system_info['cpu_cores']))
             'Uso: {{ $host->cpu_usage['percentage'] }}% de {{ $host->system_info['cpu_cores'] }} núcleos'
@@ -611,10 +615,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Memoria
     renderGauge(
         document.getElementById('gauge-mem'),
-        {{ is_array($host->memory_usage) && isset($host->memory_usage['percentage']) ? $host->memory_usage['percentage'] : ($host->memory_usage ?? 0) }},
+        @if(is_array($host->memory_usage) && isset($host->memory_usage['percentage']))
+            {{ $host->memory_usage['percentage'] }}
+        @else
+            {{ is_numeric($host->memory_usage) ? $host->memory_usage : 0 }}
+        @endif,
         'Memoria', '#ffc107',
         @if(isset($host->memory_usage['used']) && isset($host->memory_usage['total']))
-            'Usado: {{ $host->memory_usage['used'] }} MB / {{ $host->memory_usage['total'] }} MB'
+            'Usado: {{ number_format($host->memory_usage['used'], 2) }} MB / {{ number_format($host->memory_usage['total'], 2) }} MB'
         @else
             null
         @endif
@@ -622,10 +630,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Disco
     renderGauge(
         document.getElementById('gauge-disk'),
-        {{ is_array($host->disk_usage) && isset($host->disk_usage['percentage']) ? $host->disk_usage['percentage'] : ($host->disk_usage ?? 0) }},
+        @if(is_array($host->disk_usage) && isset($host->disk_usage['percentage']))
+            {{ $host->disk_usage['percentage'] }}
+        @else
+            {{ is_numeric($host->disk_usage) ? $host->disk_usage : 0 }}
+        @endif,
         'Disco', '#28a745',
         @if(isset($host->disk_usage['used']) && isset($host->disk_usage['total']))
-            'Usado: {{ $host->disk_usage['used'] }} GB / {{ $host->disk_usage['total'] }} GB'
+            'Usado: {{ number_format($host->disk_usage['used'], 2) }} GB / {{ number_format($host->disk_usage['total'], 2) }} GB'
         @else
             null
         @endif
