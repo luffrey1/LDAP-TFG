@@ -10,6 +10,7 @@ import shutil
 import sqlite3
 from flask import Flask, jsonify, request
 from datetime import datetime
+from threading import Thread
 
 # Deshabilitar advertencias de SSL
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -487,9 +488,25 @@ if __name__ == '__main__':
     ssl_context = None
     try:
         ssl_context = ('cert.pem', 'key.pem')
+        print("Certificados SSL cargados correctamente")
     except Exception as e:
         print(f"Error cargando certificados SSL: {str(e)}")
         print("Ejecutando sin SSL (no recomendado para producción)")
+    
+    # Iniciar el servidor Flask en un hilo separado
+    def run_flask():
+        try:
+            print("Iniciando servidor Flask en puerto 5001...")
+            app.run(host='0.0.0.0', port=5001, ssl_context=ssl_context, debug=False)
+        except Exception as e:
+            print(f"Error iniciando servidor Flask: {str(e)}")
+    
+    flask_thread = Thread(target=run_flask, daemon=True)
+    flask_thread.start()
+    print("Servidor Flask iniciado en segundo plano")
+    
+    # Esperar un momento para asegurar que el servidor Flask está corriendo
+    time.sleep(2)
     
     while True:
         try:
@@ -508,7 +525,4 @@ if __name__ == '__main__':
             print(f"Error en el ciclo de telemetría: {str(e)}")
             
         # Esperar el intervalo configurado
-        time.sleep(interval)
-
-    # Iniciar el servidor Flask con SSL
-    app.run(host='0.0.0.0', port=5001, ssl_context=ssl_context) 
+        time.sleep(interval) 
