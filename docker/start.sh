@@ -150,7 +150,7 @@ try {
         'port' => $LDAP_PORT,
         'base_dn' => 'dc=tierno,dc=es',
         'username' => 'cn=admin,dc=tierno,dc=es',
-        'password' => 'password',
+        'password' => 'admin',
         'use_ssl' => true,
         'use_tls' => false,
     ]);

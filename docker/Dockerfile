@@ -43,11 +43,11 @@ RUN a2enmod rewrite
 
 # Establecer variables de entorno para LDAP
 ENV LDAP_HOST=openldap-osixia
-ENV LDAP_PORT=389
+ENV LDAP_PORT=636
 ENV LDAP_BASE_DN=dc=tierno,dc=es
 ENV LDAP_USERNAME=cn=admin,dc=tierno,dc=es
 ENV LDAP_PASSWORD=admin
-ENV LDAP_SSL=false
+ENV LDAP_SSL=true
 ENV LDAP_TLS=false
 ENV LDAP_TIMEOUT=5
 ENV LDAP_LOGGING=true
