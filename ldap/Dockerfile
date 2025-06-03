@@ -17,26 +17,22 @@ ENV LDAP_TLS_CA_CRT_FILENAME="fullchain.pem"
 # Crear directorio para certificados TLS
 RUN mkdir -p /container/service/slapd/assets/certs
 
-# Copiar certificados y establecer permisos
+# Copiar certificados
 COPY certs/cert-tierno.es/cert.pem /container/service/slapd/assets/certs/
 COPY certs/cert-tierno.es/privkey.pem /container/service/slapd/assets/certs/
 COPY certs/cert-tierno.es/fullchain.pem /container/service/slapd/assets/certs/
-COPY certs/cert-tierno.es/chain.pem /container/service/slapd/assets/certs/
-COPY certs/cert-tierno.es/dhparam.pem /container/service/slapd/assets/certs/
-
-# Establecer permisos correctos
-RUN chown -R 911:911 /container/service/slapd/assets/certs && \
-    chmod 600 /container/service/slapd/assets/certs/privkey.pem && \
-    chmod 600 /container/service/slapd/assets/certs/dhparam.pem && \
-    chmod 644 /container/service/slapd/assets/certs/cert.pem && \
-    chmod 644 /container/service/slapd/assets/certs/fullchain.pem && \
-    chmod 644 /container/service/slapd/assets/certs/chain.pem
 
 # Crear directorio para archivos LDIF
 RUN mkdir -p /container/service/slapd/assets/config/bootstrap/ldif/custom
 
 # Copiar archivos LDIF personalizados
 COPY ldif/ /container/service/slapd/assets/config/bootstrap/ldif/custom/
+
+# Establecer permisos correctos
+RUN chown -R 911:911 /container/service/slapd/assets/certs && \
+    chmod 600 /container/service/slapd/assets/certs/privkey.pem && \
+    chmod 644 /container/service/slapd/assets/certs/cert.pem && \
+    chmod 644 /container/service/slapd/assets/certs/fullchain.pem
 
 # Establecer permisos para los archivos LDIF
 RUN chown -R 911:911 /container/service/slapd/assets/config/bootstrap/ldif/custom
