@@ -747,7 +747,7 @@
                         <div class="sidebar-divider"></div>
                         <div class="nav-item-header">Administración</div>
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->is('admin/logs') ? 'active' : '' }}" href="{{ route('admin.logs.index') }}">
+                            <a class="nav-link {{ request()->is('admin/logs') ? 'active' : '' }}" href="{{ route('admin.logs') }}">
                                 <i class="fas fa-clipboard-list"></i> Logs LDAP
                             </a>
                         </li>
