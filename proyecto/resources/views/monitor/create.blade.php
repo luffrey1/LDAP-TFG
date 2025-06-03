@@ -194,6 +194,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (type === 'success') {
             $('#detectionMessage').html('<i class="fas fa-check-circle me-2"></i>' + message);
+        } else if (type === 'danger') {
+            $('#detectionMessage').html('<i class="fas fa-exclamation-circle me-2"></i>' + message);
         } else {
             $('#detectionMessage').html('<div class="d-flex align-items-center"><div class="spinner-border spinner-border-sm me-2" role="status"><span class="visually-hidden">Cargando...</span></div>' + message + '</div>');
         }
@@ -229,7 +231,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     $('#ip_address_display').val(response.data.ip_address || 'No detectada');
                     showDetectionMessage('Equipo detectado correctamente', 'success');
                     $('#submitBtn').show();
-                    $('#submitWithoutCheckBtn').show();
                     $('#retryMessage').show();
                 } else {
                     showDetectionMessage(response.message, 'danger');
@@ -283,7 +284,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     showDetectionMessage('Equipo detectado correctamente', 'success');
                     $('#submitBtn').show();
-                    $('#submitWithoutCheckBtn').show();
                     $('#retryMessage').show();
                 } else {
                     showDetectionMessage(response.message, 'danger');
