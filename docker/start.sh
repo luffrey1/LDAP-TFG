@@ -41,9 +41,14 @@ if [ -f "/etc/ssl/certs/site/certificate.crt" ] && [ -f "/etc/ssl/certs/site/pri
     echo "ADVERTENCIA: No se encontró certificado intermedio."
   fi
   
-  # Copiar la configuración de Apache con SSL
-  echo "Copiando configuración de Apache con SSL..."
-  cp /var/www/html/apache-config.conf /etc/apache2/sites-available/000-default.conf
+  # Configurar SSL en Apache
+  echo "Configurando SSL en Apache..."
+  sed -i 's|SSLCertificateFile.*|SSLCertificateFile /etc/ssl/certs/site/certificate.crt|' /etc/apache2/sites-available/default-ssl.conf
+  sed -i 's|SSLCertificateKeyFile.*|SSLCertificateKeyFile /etc/ssl/certs/site/private.key|' /etc/apache2/sites-available/default-ssl.conf
+  sed -i 's|#SSLCertificateChainFile.*|SSLCertificateChainFile /etc/ssl/certs/site/ca_bundle.crt|' /etc/apache2/sites-available/default-ssl.conf
+  
+  # Habilitar el sitio SSL
+  a2ensite default-ssl
   
   # Configurar permisos de los certificados
   chmod 644 /etc/ssl/certs/site/certificate.crt
@@ -53,25 +58,6 @@ if [ -f "/etc/ssl/certs/site/certificate.crt" ] && [ -f "/etc/ssl/certs/site/pri
   echo "Configuración SSL completada para ldap.tierno.es"
 else
   echo "ADVERTENCIA: No se encontraron certificados SSL. Usando configuración sin SSL."
-  
-  # Crear una configuración simple sin SSL
-  cat > /etc/apache2/sites-available/000-default.conf << 'EOF'
-<VirtualHost *:80>
-    ServerAdmin webmaster@localhost
-    ServerName tierno.es
-    ServerAlias www.tierno.es
-    DocumentRoot /var/www/html/public
-
-    <Directory /var/www/html/public>
-        Options Indexes FollowSymLinks
-        AllowOverride All
-        Require all granted
-    </Directory>
-
-    ErrorLog ${APACHE_LOG_DIR}/error.log
-    CustomLog ${APACHE_LOG_DIR}/access.log combined
-</VirtualHost>
-EOF
 fi
 
 # Habilitar módulos de Apache necesarios para SSL
