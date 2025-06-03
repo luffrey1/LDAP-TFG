@@ -15,13 +15,14 @@ services:
       - LDAP_TLS_CRT_FILENAME=cert.pem
       - LDAP_TLS_KEY_FILENAME=privkey.pem
       - LDAP_TLS_CA_CRT_FILENAME=chain.pem
-      - LDAP_BOOTSTRAP=false
+      - LDAP_BOOTSTRAP=true
     ports:
       - "389:389"
       - "636:636"
     volumes:
       - ../ldap/certs/cert-tierno.es:/container/service/slapd/assets/certs
       - ../ldap/ldif:/container/service/slapd/assets/config/bootstrap/ldif
+      - ../ldap/ldif/tls-enable.ldif:/container/service/slapd/assets/config/tls/tls-enable.ldif
       - ldap_data:/var/lib/ldap
       - ldap_config:/etc/ldap/slapd.d
     networks:
