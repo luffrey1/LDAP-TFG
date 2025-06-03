@@ -54,6 +54,13 @@ class LdapUserController extends Controller
             } catch (\Exception $connectException) {
                 Log::error("Error al conectar con el servidor LDAP: " . $connectException->getMessage());
                 
+                if ($request->ajax()) {
+                    return response()->json([
+                        'error' => true,
+                        'message' => 'No se pudo conectar al servidor LDAP'
+                    ], 500);
+                }
+                
                 return view('admin.users.index', [
                     'users' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10),
                     'userGroups' => [],
@@ -142,6 +149,22 @@ class LdapUserController extends Controller
                 ['path' => $request->url(), 'query' => $request->query()]
             );
             
+            // Si es una petición AJAX, devolver JSON
+            if ($request->ajax()) {
+                $view = view('admin.users.partials.user-table', [
+                    'users' => $paginator,
+                    'userGroups' => $userGroups,
+                    'adminUsers' => $adminUsers
+                ])->render();
+                
+                return response()->json([
+                    'html' => $view,
+                    'total' => $total,
+                    'currentPage' => $page,
+                    'lastPage' => $paginator->lastPage()
+                ]);
+            }
+            
             return view('admin.users.index', [
                 'users' => $paginator,
                 'userGroups' => $userGroups,
@@ -156,6 +179,14 @@ class LdapUserController extends Controller
         } catch (Exception $e) {
             Log::error('Error al obtener usuarios LDAP: ' . $e->getMessage());
             Log::error('Traza: ' . $e->getTraceAsString());
+            
+            if ($request->ajax()) {
+                return response()->json([
+                    'error' => true,
+                    'message' => 'Error al obtener los usuarios: ' . $e->getMessage()
+                ], 500);
+            }
+            
             return back()->with('error', 'Error al obtener los usuarios: ' . $e->getMessage());
         }
     }

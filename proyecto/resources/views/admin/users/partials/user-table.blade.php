@@ -1,0 +1,90 @@
+@forelse ($users as $user)
+    <tr>
+        <td>
+            @if (is_array($user))
+                {{ $user['uid'][0] ?? 'N/A' }}
+            @else
+                {{ $user->getFirstAttribute('uid') ?? 'N/A' }}
+            @endif
+        </td>
+        <td>
+            @if (is_array($user))
+                {{ $user['givenname'][0] ?? 'N/A' }}
+            @else
+                {{ $user->getFirstAttribute('givenname') ?? 'N/A' }}
+            @endif
+        </td>
+        <td>
+            @if (is_array($user))
+                {{ $user['sn'][0] ?? 'N/A' }}
+            @else
+                {{ $user->getFirstAttribute('sn') ?? 'N/A' }}
+            @endif
+        </td>
+        <td>
+            @if (is_array($user))
+                {{ $user['mail'][0] ?? 'N/A' }}
+            @else
+                {{ $user->getFirstAttribute('mail') ?? 'N/A' }}
+            @endif
+        </td>
+        <td>
+            @php
+                $uid = is_array($user) ? ($user['uid'][0] ?? '') : $user->getFirstAttribute('uid');
+            @endphp
+            @if (isset($userGroups[$uid]))
+                @foreach ($userGroups[$uid] as $group)
+                    <a href="{{ route('admin.users.index', ['group' => $group]) }}" class="badge bg-info text-decoration-none">{{ $group }}</a>
+                @endforeach
+            @else
+                <span class="badge bg-secondary">{{ __('Sin grupos') }}</span>
+            @endif
+        </td>
+        <td class="text-center">
+            @php
+                $encodedDn = is_array($user) ? ($user['encoded_dn'] ?? '') : $user->encoded_dn;
+                $userDn = is_array($user) ? ($user['dn'] ?? '') : $user->getDn();
+                $isAdmin = in_array($userDn, $adminUsers ?? []);
+                
+                if (empty($encodedDn) && !empty($userDn)) {
+                    $encodedDn = base64_encode($userDn);
+                }
+            @endphp
+            
+            <div class="btn-group" role="group">
+                <a href="{{ route('admin.users.edit', $encodedDn) }}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-edit"></i>
+                </a>
+                
+                @if(session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
+                <form action="{{ route('admin.users.toggle-admin', $encodedDn) }}" method="POST" class="d-inline">
+                    @csrf
+                    <button type="submit" class="btn btn-sm {{ $isAdmin ? 'btn-warning' : 'btn-secondary' }}" title="{{ $isAdmin ? 'Quitar admin' : 'Hacer admin' }}">
+                        <i class="fas fa-crown"></i>
+                    </button>
+                </form>
+                @endif
+                
+                <form action="{{ route('admin.users.destroy', $encodedDn) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Está seguro de que desea eliminar este usuario?')">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-sm btn-danger">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </form>
+            </div>
+        </td>
+    </tr>
+@empty
+    <tr>
+        <td colspan="6" class="text-center py-4">
+            <div class="alert alert-info mb-0">
+                @if (isset($connectionError) && $connectionError)
+                    <i class="fas fa-exclamation-triangle me-2"></i> {{ __('No se pueden mostrar usuarios debido a un error de conexión') }}
+                @else
+                    <i class="fas fa-info-circle me-2"></i> {{ __('No se encontraron usuarios') }}
+                @endif
+            </div>
+        </td>
+    </tr>
+@endforelse 

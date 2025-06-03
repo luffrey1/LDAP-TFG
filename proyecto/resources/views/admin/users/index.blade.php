@@ -41,18 +41,18 @@
                         </div>
                     @endif
 
-                    <form action="{{ route('admin.users.index') }}" method="GET" class="mb-4">
+                    <form action="{{ route('admin.users.index') }}" method="GET" class="mb-4" id="searchForm">
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <div class="input-group">
-                                    <input type="text" class="form-control" name="search" value="{{ $search }}" placeholder="{{ __('Buscar por nombre, apellido o email...') }}">
+                                    <input type="text" class="form-control" name="search" id="searchInput" value="{{ $search }}" placeholder="{{ __('Buscar por nombre, apellido o email...') }}">
                                     <button class="btn btn-outline-secondary" type="submit">
                                         <i class="fas fa-search"></i>
                                     </button>
                                 </div>
                             </div>
                             <div class="col-md-4">
-                                <select name="group" class="form-select" onchange="this.form.submit()">
+                                <select name="group" class="form-select" id="groupFilter" onchange="this.form.submit()">
                                     <option value="">{{ __('Todos los grupos') }}</option>
                                     @foreach($groupList as $group)
                                         <option value="{{ $group }}" {{ $selectedGroup == $group ? 'selected' : '' }}>{{ $group }}</option>
@@ -81,98 +81,8 @@
                                     <th class="text-center">{{ __('Acciones') }}</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                @forelse ($users as $user)
-                                    <tr>
-                                        <td>
-                                            @if (is_array($user))
-                                                {{ $user['uid'][0] ?? 'N/A' }}
-                                            @else
-                                                {{ $user->getFirstAttribute('uid') ?? 'N/A' }}
-                                            @endif
-                                        </td>
-                                        <td>
-                                            @if (is_array($user))
-                                                {{ $user['givenname'][0] ?? 'N/A' }}
-                                            @else
-                                                {{ $user->getFirstAttribute('givenname') ?? 'N/A' }}
-                                            @endif
-                                        </td>
-                                        <td>
-                                            @if (is_array($user))
-                                                {{ $user['sn'][0] ?? 'N/A' }}
-                                            @else
-                                                {{ $user->getFirstAttribute('sn') ?? 'N/A' }}
-                                            @endif
-                                        </td>
-                                        <td>
-                                            @if (is_array($user))
-                                                {{ $user['mail'][0] ?? 'N/A' }}
-                                            @else
-                                                {{ $user->getFirstAttribute('mail') ?? 'N/A' }}
-                                            @endif
-                                        </td>
-                                        <td>
-                                            @php
-                                                $uid = is_array($user) ? ($user['uid'][0] ?? '') : $user->getFirstAttribute('uid');
-                                            @endphp
-                                            @if (isset($userGroups[$uid]))
-                                                @foreach ($userGroups[$uid] as $group)
-                                                    <a href="{{ route('admin.users.index', ['group' => $group]) }}" class="badge bg-info text-decoration-none">{{ $group }}</a>
-                                                @endforeach
-                                            @else
-                                                <span class="badge bg-secondary">{{ __('Sin grupos') }}</span>
-                                            @endif
-                                        </td>
-                                        <td class="text-center">
-                                            @php
-                                                $encodedDn = is_array($user) ? ($user['encoded_dn'] ?? '') : $user->encoded_dn;
-                                                $userDn = is_array($user) ? ($user['dn'] ?? '') : $user->getDn();
-                                                $isAdmin = in_array($userDn, $adminUsers ?? []);
-                                                
-                                                // Si encodedDn está vacío, intentar generarlo nuevamente
-                                                if (empty($encodedDn) && !empty($userDn)) {
-                                                    $encodedDn = base64_encode($userDn);
-                                                }
-                                            @endphp
-                                            
-                                            <div class="btn-group" role="group">
-                                                <a href="{{ route('admin.users.edit', $encodedDn) }}" class="btn btn-sm btn-primary">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                                
-                                                @if(session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
-                                                <form action="{{ route('admin.users.toggle-admin', $encodedDn) }}" method="POST" class="d-inline">
-                                                    @csrf
-                                                    <button type="submit" class="btn btn-sm {{ $isAdmin ? 'btn-warning' : 'btn-secondary' }}" title="{{ $isAdmin ? 'Quitar admin' : 'Hacer admin' }}">
-                                                        <i class="fas fa-crown"></i>
-                                                    </button>
-                                                </form>
-                                                @endif
-                                                
-                                                <form action="{{ route('admin.users.destroy', $encodedDn) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Está seguro de que desea eliminar este usuario?')">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-danger">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="6" class="text-center py-4">
-                                            <div class="alert alert-info mb-0">
-                                                @if (isset($connectionError) && $connectionError)
-                                                    <i class="fas fa-exclamation-triangle me-2"></i> {{ __('No se pueden mostrar usuarios debido a un error de conexión') }}
-                                                @else
-                                                    <i class="fas fa-info-circle me-2"></i> {{ __('No se encontraron usuarios') }}
-                                                @endif
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforelse
+                            <tbody id="usersTableBody">
+                                @include('admin.users.partials.user-table')
                             </tbody>
                         </table>
                     </div>
@@ -204,15 +114,66 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.querySelector('input[name="search"]');
-    const searchForm = searchInput.closest('form');
+    const searchInput = document.getElementById('searchInput');
+    const groupFilter = document.getElementById('groupFilter');
+    const usersTableBody = document.getElementById('usersTableBody');
+    const perPageSelector = document.getElementById('perPageSelector');
     let searchTimeout;
 
+    // Función para realizar la búsqueda AJAX
+    function performSearch() {
+        const searchValue = searchInput.value;
+        const groupValue = groupFilter.value;
+        const perPage = perPageSelector.value;
+
+        // Mostrar indicador de carga
+        usersTableBody.innerHTML = '<tr><td colspan="6" class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div></td></tr>';
+
+        // Realizar la petición AJAX
+        fetch(`{{ route('admin.users.index') }}?search=${encodeURIComponent(searchValue)}&group=${encodeURIComponent(groupValue)}&perPage=${perPage}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                usersTableBody.innerHTML = `<tr><td colspan="6" class="text-center"><div class="alert alert-danger">${data.message}</div></td></tr>`;
+                return;
+            }
+            
+            // Actualizar la tabla con los nuevos resultados
+            usersTableBody.innerHTML = data.html;
+            
+            // Actualizar la URL sin recargar la página
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set('search', searchValue);
+            newUrl.searchParams.set('group', groupValue);
+            newUrl.searchParams.set('perPage', perPage);
+            window.history.pushState({}, '', newUrl);
+        })
+        .catch(error => {
+            usersTableBody.innerHTML = '<tr><td colspan="6" class="text-center"><div class="alert alert-danger">Error al cargar los resultados</div></td></tr>';
+            console.error('Error:', error);
+        });
+    }
+
+    // Evento de input para la búsqueda
     searchInput.addEventListener('input', function() {
         clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            searchForm.submit();
-        }, 500); // Esperar 500ms después de que el usuario deje de escribir
+        searchTimeout = setTimeout(performSearch, 500);
+    });
+
+    // Evento de cambio para el filtro de grupo
+    groupFilter.addEventListener('change', performSearch);
+
+    // Evento de cambio para el selector de elementos por página
+    perPageSelector.addEventListener('change', performSearch);
+
+    // Prevenir el envío del formulario tradicional
+    document.getElementById('searchForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        performSearch();
     });
 });
 </script>
