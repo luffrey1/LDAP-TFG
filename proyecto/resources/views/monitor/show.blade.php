@@ -54,14 +54,14 @@
                         </div>
                         <div>
                             @if($host->last_seen)
-                                <p class="mb-0"><strong>Último contacto:</strong></p>
-                                <p id="last-seen-text">{{ $host->last_seen->format('d/m/Y H:i:s') }} ({{ $host->last_seen->diffForHumans() }})</p>
+                                <p class="mb-0 text-white"><strong>Último contacto:</strong></p>
+                                <p id="last-seen-text text-white">{{ $host->last_seen->format('d/m/Y H:i:s') }} ({{ $host->last_seen->diffForHumans() }})</p>
                             @else
-                                <p id="last-seen-text" class="text-muted">Sin contacto previo</p>
+                                <p id="last-seen-text text-white" class="text-muted">Sin contacto previo</p>
                             @endif
                         </div>
                         <div class="mt-4">
-                            <h6 class="text-center">Información Básica</h6>
+                            <h6 class="text-center text-white">Información Básica</h6>
                             <div class="table-responsive">
                                 <table class="table table-bordered table-sm">
                                     <tr><th style="width: 40%;">Hostname</th><td id="info-hostname">{{ $host->hostname }}</td></tr>
@@ -77,7 +77,7 @@
                 {{-- Información del sistema en tarjeta --}}
                 <div class="card mb-4">
                     <div class="card-header bg-info text-white"><i class="fas fa-desktop me-2"></i> Sistema</div>
-                    <div class="card-body text-center">
+                    <div class="card-body text-center text-white">
                         <div><strong>OS:</strong> {{ $host->system_info['os'] ?? 'N/A' }}</div>
                         <div><strong>CPU:</strong> {{ $host->system_info['cpu_model'] ?? 'N/A' }}</div>
                         <div><strong>RAM:</strong> {{ $host->system_info['memory_total'] ?? 'N/A' }}</div>
@@ -155,7 +155,7 @@
                     <div class="col-md-4 col-sm-6 col-12 mb-4">
                         <div class="card text-center">
                             <div class="card-header bg-primary text-white">CPU</div>
-                            <div class="card-body">
+                            <div class="card-body text-white">
                                 @if(isset($host->system_info['cpu_cores']) && isset($host->cpu_usage['percentage']))
                                     <div class="fw-bold mb-1 text-primary">Uso: {{ $host->cpu_usage['percentage'] }}% de {{ $host->system_info['cpu_cores'] }} núcleos</div>
                                 @endif
@@ -172,7 +172,7 @@
                     <div class="col-md-4 col-sm-6 col-12 mb-4">
                         <div class="card text-center">
                             <div class="card-header bg-warning text-white">Memoria</div>
-                            <div class="card-body">
+                            <div class="card-body text-white">
                                 @if(isset($host->memory_usage['used']) && isset($host->memory_usage['total']))
                                     <div class="fw-bold mb-1 text-warning">Usado: {{ $host->memory_usage['used'] }} MB / {{ $host->memory_usage['total'] }} MB</div>
                                 @endif
@@ -186,7 +186,7 @@
                     <div class="col-md-4 col-sm-6 col-12 mb-4">
                         <div class="card text-center">
                             <div class="card-header bg-success text-white">Disco</div>
-                            <div class="card-body">
+                            <div class="card-body text-white">
                                 @if(isset($host->disk_usage['used']) && isset($host->disk_usage['total']))
                                     <div class="fw-bold mb-1 text-white">Total: {{ $host->disk_usage['used'] }} GB / {{ $host->disk_usage['total'] }} GB</div>
                                 @endif
@@ -200,7 +200,7 @@
                     <div class="col-md-12 col-sm-12 col-12 mb-4">
                         <div class="card text-center">
                             <div class="card-header bg-success text-white">Discos Individuales</div>
-                            <div class="card-body">
+                            <div class="card-body text-white">
                                 @if(isset($host->system_info['disks']) && is_array($host->system_info['disks']))
                                     @foreach($host->system_info['disks'] as $disk)
                                         <div class="mb-3">
@@ -232,7 +232,7 @@
                     <div class="col-md-12 col-sm-12 col-12 mb-4">
                         <div class="card text-center">
                             <div class="card-header bg-info text-white">Uptime</div>
-                            <div class="card-body">
+                            <div class="card-body text-white">
                                 <div class="display-6">{{ $host->uptime ?? 'N/A' }}</div>
                                 @if($host->last_boot)
                                     <div class="text-muted small">Último arranque: {{ \Carbon\Carbon::parse($host->last_boot)->format('d/m/Y H:i:s') }}</div>
@@ -312,7 +312,7 @@
                                         </tbody>
                                     </table>
                                 </div>
-                                <div class="mt-2 text-start">
+                                <div class="mt-2 text-start text-white">
                                     <strong>Gateway:</strong> {{ $host->system_info['network_info']['gateway'] ?? 'N/A' }}<br>
                                     <strong>DNS:</strong> {{ isset($host->system_info['network_info']['dns']) ? implode(', ', $host->system_info['network_info']['dns']) : 'N/A' }}
                                 </div>
@@ -382,7 +382,7 @@
                     <div class="col-md-12 col-sm-12 col-12 mb-4">
                         <div class="card text-center">
                             <div class="card-header bg-info text-white">Hardware</div>
-                            <div class="card-body text-start">
+                            <div class="card-body text-start text-white">
                                 @if(isset($host->system_info['platform']))
                                     <strong>Plataforma:</strong> {{ $host->system_info['platform'] }}<br>
                                     <strong>OS:</strong> {{ $host->system_info['os'] }}<br>
