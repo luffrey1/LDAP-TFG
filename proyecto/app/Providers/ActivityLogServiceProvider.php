@@ -11,13 +11,17 @@ class ActivityLogServiceProvider extends ServiceProvider
 {
     public function register()
     {
-        Log::extend('activity', function ($app, array $config) {
+        $this->app->singleton('log.activity', function ($app) {
             return new Logger('activity', [
                 new ActivityLogger(
-                    $config['level'] ?? Logger::DEBUG,
-                    $config['bubble'] ?? true
+                    $app['config']->get('logging.channels.activity.level', Logger::DEBUG),
+                    $app['config']->get('logging.channels.activity.bubble', true)
                 )
             ]);
+        });
+
+        Log::extend('activity', function ($app, array $config) {
+            return $app['log.activity'];
         });
     }
 
