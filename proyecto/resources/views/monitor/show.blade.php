@@ -19,17 +19,11 @@
     <div class="section-header">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="h3 mb-0 text-gray-800">{{ $host->hostname }}</h1>
-            <div>
-                <button id="refreshBtn" class="btn btn-primary">
-                    <i class="fas fa-sync-alt"></i> Comprobar ahora
-                </button>
-            </div>
         </div>
         <div class="section-header-breadcrumb d-flex align-items-center">
             <div class="breadcrumb-item"><a href="{{ route('dashboard.index') }}">Dashboard</a></div>
             <div class="breadcrumb-item"><a href="{{ route('monitor.index') }}">Monitoreo</a></div>
             <div class="breadcrumb-item">{{ $host->hostname }}</div>
-            <!-- Botón SSH a la derecha del nombre -->
             @if(\App\Models\SistemaConfig::obtenerConfig('modulo_ssh_activo', true))
             <button type="button" class="btn btn-primary btn-icon ms-3" id="open-ssh-terminal-header" title="Abrir terminal SSH">
                 <i class="fas fa-terminal"></i> SSH
@@ -61,15 +55,9 @@
                             @endif
                         </div>
                         <div class="mt-4">
-                            <h6 class="text-center text-white">Información Básica</h6>
-                            <div class="table-responsive">
-                                <table class="table table-bordered table-sm">
-                                    <tr><th style="width: 40%;">Hostname</th><td id="info-hostname">{{ $host->hostname }}</td></tr>
-                                    <tr><th>Dirección IP</th><td id="info-ip_address">{{ $host->ip_address }}</td></tr>
-                                    <tr><th>MAC Address</th><td id="info-mac_address">{{ $host->mac_address ?? 'No disponible' }}</td></tr>
-                                    <tr><th>Descripción</th><td id="info-description">{{ $host->description ?? 'Sin descripción' }}</td></tr>
-                                </table>
-                            </div>
+                            <button id="refreshBtn" class="btn btn-primary btn-block">
+                                <i class="fas fa-sync-alt"></i> <span class="btn-text">Comprobar ahora</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -577,7 +565,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     title: {
                         display: true,
                         text: label,
-                        font: { size: 16 }
+                        font: { size: 14 }
                     }
                 },
                 scales: {
@@ -593,7 +581,9 @@ document.addEventListener('DOMContentLoaded', function() {
                             display: false
                         }
                     }
-                }
+                },
+                maintainAspectRatio: false,
+                responsive: true
             }
         });
     }
@@ -690,6 +680,11 @@ $(document).ready(function() {
                         url: '{{ route("monitor.update-telemetry") }}',
                         method: 'POST',
                         data: response.data,
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
                         success: function() {
                             updateStatus('success', 'Datos actualizados correctamente');
                             setTimeout(() => location.reload(), 1000);
