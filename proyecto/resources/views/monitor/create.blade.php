@@ -121,9 +121,15 @@
 </div>
 @endsection
 
-@section('scripts')
+@push('scripts')
 <script>
-$(document).ready(function() {
+document.addEventListener('DOMContentLoaded', function() {
+    // Verificar que jQuery está disponible
+    if (typeof jQuery === 'undefined') {
+        console.error('jQuery no está cargado');
+        return;
+    }
+
     // Configuración global de AJAX
     $.ajaxSetup({
         headers: {
@@ -132,7 +138,7 @@ $(document).ready(function() {
     });
 
     // Cambiar campos según tipo de host
-    $('#tipo_host').change(function() {
+    $('#tipo_host').on('change', function() {
         if ($(this).val() === 'dhcp') {
             $('#dhcpFields').show();
             $('#fijaFields').hide();
@@ -166,7 +172,8 @@ $(document).ready(function() {
     }
 
     // Función para detectar host por hostname
-    $('#detectHostBtn').click(function() {
+    $('#detectHostBtn').on('click', function() {
+        console.log('Botón detectHostBtn clickeado');
         const hostname = $('#hostname').val();
         if (!hostname) {
             showDetectionMessage('Por favor, introduce un hostname', 'danger');
@@ -186,6 +193,7 @@ $(document).ready(function() {
                 _token: $('meta[name="csrf-token"]').attr('content')
             },
             success: function(response) {
+                console.log('Respuesta exitosa:', response);
                 if (response.success) {
                     $('#mac_address').val(response.data.mac_address);
                     $('#ip_address').val(response.data.ip_address);
@@ -195,8 +203,8 @@ $(document).ready(function() {
                     showDetectionMessage(response.message, 'danger');
                 }
             },
-            error: function(xhr) {
-                console.error('Error en la petición AJAX:', xhr);
+            error: function(xhr, status, error) {
+                console.error('Error en la petición AJAX:', {xhr, status, error});
                 const response = xhr.responseJSON;
                 showDetectionMessage(response?.message || 'Error al detectar el equipo', 'danger');
             }
@@ -204,7 +212,8 @@ $(document).ready(function() {
     });
 
     // Función para detectar host por IP
-    $('#detectIpBtn').click(function() {
+    $('#detectIpBtn').on('click', function() {
+        console.log('Botón detectIpBtn clickeado');
         const ip = $('#ip_address').val();
         if (!ip) {
             showDetectionMessage('Por favor, introduce una dirección IP', 'danger');
@@ -224,6 +233,7 @@ $(document).ready(function() {
                 _token: $('meta[name="csrf-token"]').attr('content')
             },
             success: function(response) {
+                console.log('Respuesta exitosa:', response);
                 if (response.success) {
                     $('#mac_address').val(response.data.mac_address);
                     $('#hostname').val(response.data.hostname);
@@ -233,8 +243,8 @@ $(document).ready(function() {
                     showDetectionMessage(response.message, 'danger');
                 }
             },
-            error: function(xhr) {
-                console.error('Error en la petición AJAX:', xhr);
+            error: function(xhr, status, error) {
+                console.error('Error en la petición AJAX:', {xhr, status, error});
                 const response = xhr.responseJSON;
                 showDetectionMessage(response?.message || 'Error al detectar el equipo', 'danger');
             }
@@ -242,14 +252,18 @@ $(document).ready(function() {
     });
 
     // Validar formulario antes de enviar
-    $('#createHostForm').submit(function(e) {
+    $('#createHostForm').on('submit', function(e) {
         if (!$('#mac_address').val()) {
             e.preventDefault();
             showDetectionMessage('Por favor, detecta el equipo antes de guardar', 'danger');
             return false;
         }
     });
+
+    // Verificar que los botones existen
+    console.log('Botón detectHostBtn existe:', $('#detectHostBtn').length > 0);
+    console.log('Botón detectIpBtn existe:', $('#detectIpBtn').length > 0);
 });
 </script>
-@endsection
+@endpush
 
