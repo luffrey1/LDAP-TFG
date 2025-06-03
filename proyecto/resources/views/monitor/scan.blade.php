@@ -34,38 +34,7 @@
                         <div class="card-header bg-primary text-white">
                             <h5 class="mb-0"><i class="fas fa-network-wired me-2"></i> Verificar Conectividad de Red</h5>
                         </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-9">
-                                    <div class="alert alert-secondary">
-                                        <p class="mb-2">Verifique su conectividad con la red del instituto antes de iniciar el escaneo:</p>
-                                        <div class="row mb-2">
-                                            <div class="col-md-4">
-                                                <button class="btn btn-outline-primary w-100" onclick="setRange('172.20.0', 1, 30)">
-                                                    <i class="fas fa-server me-1"></i> Red Administrativa
-                                                </button>
-                                            </div>
-                                            <div class="col-md-4">
-                                                <button class="btn btn-outline-success w-100" onclick="setRange('172.20.200', 1, 254)">
-                                                    <i class="fas fa-laptop me-1"></i> DHCP 1 (Aulas)
-                                                </button>
-                                            </div>
-                                            <div class="col-md-4">
-                                                <button class="btn btn-outline-info w-100" onclick="setRange('172.20.201', 1, 254)">
-                                                    <i class="fas fa-desktop me-1"></i> DHCP 2 (Más aulas)
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3 mb-2">
-                                            <button class="btn btn-warning w-100" id="checkNetworkBtn">
-                                                <i class="fas fa-plug me-1"></i> Verificar Conectividad
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                
 
                     <div class="mb-4">
                         <ul class="nav nav-tabs" id="scanModeTabs" role="tablist">
