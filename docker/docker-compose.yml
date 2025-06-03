@@ -19,6 +19,7 @@ services:
       - LDAP_REMOVE_CONFIG_AFTER_SETUP=false
       - LDAP_READONLY_USER=false
       - LDAP_BOOTSTRAP_LDIF_ORDER=01-ou.ldif,02-ldap-admin-user.ldif,03-ldapadmins-group.ldif,04-everybody-group.ldif,05-alumnos-users.ldif,06-alumnos-groups.ldif,07-profesor-users.ldif,08-profesores-group.ldif,09-docker-group.ldif,10-lastUID-GID.ldif,11-sudo-schema.ldif,12-sudo-profesores.ldif,13-uniqueMember-index.ldif,20_acl.ldif
+      - LDAP_BOOTSTRAP_LDIF_IGNORE=01-config-password.ldif
     ports:
       - "389:389"
       - "636:636"
