@@ -22,6 +22,11 @@ services:
       LDAP_READONLY_USER: "false"
       LDAP_REMOVE_CONFIG_AFTER_SETUP: "false"
       LDAP_NOFILE: "1024"
+      LDAP_BASE_DN: "dc=tierno,dc=es"
+      LDAP_ADMIN_DN: "cn=admin,dc=tierno,dc=es"
+      LDAP_BOOTSTRAP: "true"
+      LDAP_BOOTSTRAP_DEBUG: "true"
+      LDAP_BOOTSTRAP_DELAY: "10"
     volumes:
       - ../ldap/certs/cert-tierno.es:/container/service/slapd/assets/certs
       - ../ldap/ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom
@@ -33,6 +38,12 @@ services:
     networks:
       - app-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "ldapsearch", "-x", "-H", "ldap://localhost:389", "-b", "dc=tierno,dc=es", "-D", "cn=admin,dc=tierno,dc=es", "-w", "admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   mysql:
     image: mysql:8.0
