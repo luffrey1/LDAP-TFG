@@ -282,38 +282,29 @@ class MonitorController extends Controller
                 $ipDetectada = null;
                 $status = 'offline';
 
-                if ($scanType === 'hostname' && preg_match('/^([A-Z][0-9]{2})-([A-Z][0-9])$/i', $host->hostname, $matches)) {
+                if ($scanType === 'hostname') {
                     // Escaneo por hostname para equipos de aula
-                    $aula = $matches[1];
-                    $columna = $matches[2];
-                    $macscannerUrl = rtrim($baseUrl, '/') . '/scan-hostnames';
-                    $payload = [
-                        'aula' => $aula,
-                        'columnas' => [$columna],
-                        'filas' => [1],
-                        'dominio' => 'tierno.es'
-                    ];
-                    $options = [
-                        'http' => [
-                            'header'  => "Content-type: application/json\r\n",
-                            'method'  => 'POST',
-                            'content' => json_encode($payload),
-                            'timeout' => 20
-                        ]
-                    ];
-                    $context = stream_context_create($options);
-                    $response = @file_get_contents($macscannerUrl, false, $context);
-                    if ($response !== false) {
-                        $data = json_decode($response, true);
-                        if (isset($data['success']) && $data['success']) {
-                            foreach ($data['hosts'] as $hostData) {
-                                $foundHostname = preg_replace('/\.tierno\.es$/i', '', $hostData['hostname']);
-                                if (strcasecmp($foundHostname, $host->hostname) === 0) {
-                                    $ipDetectada = $hostData['ip'] ?? null;
-                                    $mac = $hostData['mac'] ?? null;
-                                    $status = 'online';
-                                    break;
-                                }
+                    $hostname = $host->hostname;
+                    if (!empty($hostname)) {
+                        $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan-hostnames';
+                        $ch = curl_init();
+                        curl_setopt($ch, CURLOPT_URL, $pythonServiceUrl);
+                        curl_setopt($ch, CURLOPT_POST, 1);
+                        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['hostname' => $hostname]));
+                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                        curl_setopt($ch, CURLOPT_TIMEOUT, 5); // 5 segundos de timeout
+                        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+                        
+                        $response = curl_exec($ch);
+                        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                        curl_close($ch);
+
+                        if ($response !== false && $httpCode === 200) {
+                            $data = json_decode($response, true);
+                            if (isset($data['success']) && $data['success']) {
+                                $mac = $data['mac'] ?? null;
+                                $ipDetectada = $data['ip'] ?? null;
+                                $status = 'online';
                             }
                         }
                     }
@@ -322,8 +313,16 @@ class MonitorController extends Controller
                     $ip = $host->ip_address;
                     if (!empty($ip)) {
                         $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($ip);
-                        $response = @file_get_contents($pythonServiceUrl);
-                        if ($response !== false) {
+                        $ch = curl_init();
+                        curl_setopt($ch, CURLOPT_URL, $pythonServiceUrl);
+                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                        curl_setopt($ch, CURLOPT_TIMEOUT, 5); // 5 segundos de timeout
+                        
+                        $response = curl_exec($ch);
+                        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                        curl_close($ch);
+
+                        if ($response !== false && $httpCode === 200) {
                             $data = json_decode($response, true);
                             if (isset($data['success']) && $data['success']) {
                                 $mac = $data['mac'] ?? null;
@@ -363,11 +362,11 @@ class MonitorController extends Controller
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Error al actualizar estado: ' . $e->getMessage()
+                    'message' => 'Error al actualizar el estado: ' . $e->getMessage()
                 ], 500);
             }
             return redirect()->route('monitor.index')
-                ->with('error', 'Error al actualizar estado: ' . $e->getMessage());
+                ->with('error', 'Error al actualizar el estado: ' . $e->getMessage());
         }
     }
     
