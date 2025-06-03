@@ -5,17 +5,12 @@
 # ldapadd -x -D cn=admin,dc=tierno,dc=es -W -f informatica.ldif
 #
 
-dn: dc=tierno,dc=es
-objectClass: top
-objectClass: dcObject
-objectClass: organization
-o: IES TIERNO GALVAN
-dc: tierno
-
+# Unidad organizativa para usuarios
 dn: ou=people,dc=tierno,dc=es
 objectClass: organizationalUnit
 ou: people
 
+# Unidad organizativa para grupos
 dn: ou=groups,dc=tierno,dc=es
 objectClass: organizationalUnit
 ou: groups
