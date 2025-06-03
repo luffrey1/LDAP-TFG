@@ -89,7 +89,7 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
         Route::get('/{id}/edit', [MonitorController::class, 'edit'])->name('edit');
         Route::put('/{id}', [MonitorController::class, 'update'])->name('update');
         Route::delete('/{id}', [MonitorController::class, 'destroy'])->name('destroy');
-        Route::get('/ping/{id}', [MonitorController::class, 'ping'])->name('ping');
+        Route::post('/ping/{id}', [MonitorController::class, 'ping'])->name('ping');
         Route::post('/ping-all', [MonitorController::class, 'pingAll'])->name('ping-all');
         Route::get('/refresh-network', [MonitorController::class, 'refreshNetworkDevices'])->name('refresh-network');
         Route::get('/scan', [MonitorController::class, 'scanNetworkForm'])->name('scan');
