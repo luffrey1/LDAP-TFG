@@ -2,11 +2,11 @@
 # CAUTION: this file gas automatically generated running make.sh. Do not edit.
 #
 # Password: password
-dn: uid=ldap-admin,ou=people,dc=test,dc=tierno,dc=es
+dn: uid=ldap-admin,ou=people,dc=tierno,dc=es
 givenName: LDAP
 sn: Admin
 uid: ldap-admin
-mail: ldap-admin@test.tierno.es
+mail: ldap-admin@tierno.es
 cn: LDAPAdmin
 objectClass: person
 objectClass: inetOrgPerson

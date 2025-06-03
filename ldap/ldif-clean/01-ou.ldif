@@ -2,14 +2,27 @@
 # CAUTION: this file gas automatically generated running make.sh. Do not edit.
 #
 # Para importar este fichero:
-# ldapadd -x -D cn=admin,dc=test,dc=tierno,dc=es -W -f informatica.ldif
+# ldapadd -x -D cn=admin,dc=tierno,dc=es -W -f informatica.ldif
 #
 
-dn: ou=people,dc=test,dc=tierno,dc=es
-objectClass: organizationalUnit
-ou: people
+dn: dc=tierno,dc=es
+objectClass: top
+objectClass: dcObject
+objectClass: organization
+o: IES TIERNO GALVAN
+dc: tierno
 
-dn: ou=groups,dc=test,dc=tierno,dc=es
+dn: cn=admin,dc=tierno,dc=es
+objectClass: simpleSecurityObject
+objectClass: organizationalRole
+cn: admin
+userPassword: admin
+
+dn: ou=users,dc=tierno,dc=es
+objectClass: organizationalUnit
+ou: users
+
+dn: ou=groups,dc=tierno,dc=es
 objectClass: organizationalUnit
 ou: groups
 
