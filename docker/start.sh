@@ -126,7 +126,7 @@ php artisan route:cache || true
 php artisan migrate --force || true
 
 # Crear usuario de prueba solo si no existe
-php artisan tinker --execute="if(!DB::table('users')->where('username', 'profesor')->exists()) { exit(1); }" || php artisan db:seed --class=UserSeeder
+php artisan tinker --execute="if(DB::table('users')->where('username', 'profesor')->count() == 0) { exit(1); }" || php artisan db:seed --class=UserSeeder
 
 # Establecer permisos adecuados
 echo "Estableciendo permisos..."

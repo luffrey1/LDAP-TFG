@@ -15,10 +15,10 @@ class UserSeeder extends Seeder
     {
         // Crear usuario administrador
         User::firstOrCreate(
-            ['email' => 'admin@example.com'],
+            ['username' => 'admin'],
             [
                 'name' => 'Administrador',
-                'username' => 'admin',
+                'email' => 'admin@example.com',
                 'password' => Hash::make('admin123'),
                 'email_verified_at' => now(),
             ]
@@ -26,10 +26,10 @@ class UserSeeder extends Seeder
 
         // Crear usuario profesor
         User::firstOrCreate(
-            ['email' => 'profesor@example.com'],
+            ['username' => 'profesor'],
             [
                 'name' => 'Profesor',
-                'username' => 'profesor',
+                'email' => 'profesor@example.com',
                 'password' => Hash::make('profesor123'),
                 'email_verified_at' => now(),
             ]
@@ -65,10 +65,10 @@ class UserSeeder extends Seeder
 
         foreach ($usuarios as $usuario) {
             User::firstOrCreate(
-                ['email' => $usuario['email']],
+                ['username' => $usuario['username']],
                 [
                     'name' => $usuario['name'],
-                    'username' => $usuario['username'],
+                    'email' => $usuario['email'],
                     'password' => $usuario['password'],
                     'email_verified_at' => now(),
                 ]
