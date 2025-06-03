@@ -45,9 +45,19 @@ if [ -f "/etc/ssl/certs/site/certificate.crt" ] && [ -f "/etc/ssl/certs/site/pri
     chmod 644 /etc/ssl/certs/ldap/ca.crt
     
     # Configurar ldap.conf
+    echo "Configurando ldap.conf..."
     mkdir -p /etc/ldap
     echo "TLS_CACERT /etc/ssl/certs/ldap/ca.crt" > /etc/ldap/ldap.conf
     echo "TLS_REQCERT allow" >> /etc/ldap/ldap.conf
+    chmod 644 /etc/ldap/ldap.conf
+    
+    # Verificar la conexión LDAP
+    echo "Verificando conexión LDAP..."
+    if ldapsearch -x -H ldaps://$LDAP_HOST:$LDAP_PORT -b "dc=tierno,dc=es" -D "cn=admin,dc=tierno,dc=es" -w admin > /dev/null 2>&1; then
+      echo "Conexión LDAP verificada correctamente."
+    else
+      echo "ADVERTENCIA: No se pudo verificar la conexión LDAP."
+    fi
   else
     echo "ADVERTENCIA: No se encontró certificado intermedio."
   fi

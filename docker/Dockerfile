@@ -27,6 +27,8 @@ RUN docker-php-ext-configure pcntl --enable-pcntl \
 
 # Crear directorio para certificados SSL
 RUN mkdir -p /etc/ssl/certs/site
+RUN mkdir -p /etc/ssl/certs/ldap
+RUN mkdir -p /etc/ldap
 
 # Habilitar módulos de Apache para SSL
 RUN a2enmod ssl
