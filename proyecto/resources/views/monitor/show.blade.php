@@ -46,7 +46,7 @@
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h4>Información del Host</h4>
                     </div>
-                    <div class="card-body text-center">
+                    <div class="card-body text-center text-white">
                         <div id="status-badge-container" class="mb-3">
                             <span class="badge badge-{{ $host->status_color }} badge-pill">
                                 {{ $host->status_text }}
