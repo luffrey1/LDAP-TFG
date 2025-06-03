@@ -39,6 +39,9 @@ return [
             'version' => env('LDAP_VERSION', 3),
             'options' => [
                 LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                LDAP_OPT_X_TLS_CACERTFILE => '/container/service/slapd/assets/certs/fullchain.pem',
+                LDAP_OPT_X_TLS_CERTFILE => '/container/service/slapd/assets/certs/cert.pem',
+                LDAP_OPT_X_TLS_KEYFILE => '/container/service/slapd/assets/certs/privkey.pem',
                 LDAP_OPT_REFERRALS => 0,
             ],
         ],
