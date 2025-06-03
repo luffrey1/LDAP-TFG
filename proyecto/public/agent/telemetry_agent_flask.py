@@ -4,9 +4,13 @@ import psutil
 import socket
 import time
 import subprocess
-from flask import Flask, jsonify
+import requests
+from flask import Flask, jsonify, request
 
 app = Flask(__name__)
+
+# URL base de Laravel
+LARAVEL_URL = "https://ldap.tierno.es"
 
 # --- Utilidades ---
 def get_ip():
@@ -208,8 +212,18 @@ def get_disk_info():
         pass
     return disks
 
-@app.route('/telemetry', methods=['GET'])
-def telemetry():
+def get_telemetry_interval():
+    try:
+        # Obtener el intervalo configurado en Laravel
+        response = requests.get(f"{LARAVEL_URL}/api/config/telemetry-interval")
+        if response.status_code == 200:
+            data = response.json()
+            return int(data.get('interval', 60)) * 60  # Convertir minutos a segundos
+    except Exception as e:
+        print(f"Error obteniendo intervalo de telemetría: {str(e)}")
+    return 3600  # Valor por defecto: 1 hora
+
+def send_telemetry_data():
     try:
         data = {
             'hostname': socket.gethostname(),
@@ -240,9 +254,47 @@ def telemetry():
                 'disks': get_disk_info()
             }
         }
-        return jsonify({'success': True, 'data': data})
+        
+        # Enviar datos al servidor Laravel
+        response = requests.post(f"{LARAVEL_URL}/api/telemetry/update", json=data)
+        if response.status_code == 200:
+            print(f"Datos enviados correctamente: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+            return True, data
+        else:
+            print(f"Error al enviar datos: {response.status_code} - {response.text}")
+            return False, None
+            
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        print(f"Error en el envío de telemetría: {str(e)}")
+        return False, None
+
+@app.route('/telemetry', methods=['GET'])
+def telemetry():
+    """Endpoint para obtener datos de telemetría bajo demanda"""
+    success, data = send_telemetry_data()
+    if success:
+        return jsonify({'success': True, 'data': data})
+    return jsonify({'success': False, 'error': 'Error al obtener datos de telemetría'})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001, debug=False) 
+    print("Iniciando agente de telemetría...")
+    print(f"URL del servidor: {LARAVEL_URL}")
+    
+    while True:
+        try:
+            # Obtener el intervalo actualizado
+            interval = get_telemetry_interval()
+            print(f"Intervalo de telemetría: {interval//60} minutos")
+            
+            # Enviar datos
+            success, _ = send_telemetry_data()
+            if success:
+                print(f"Datos enviados correctamente: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+            else:
+                print("Error al enviar datos")
+                
+        except Exception as e:
+            print(f"Error en el ciclo de telemetría: {str(e)}")
+            
+        # Esperar el intervalo configurado
+        time.sleep(interval) 

@@ -17,7 +17,14 @@
 </div>
 <section class="section">
     <div class="section-header">
-        <h1>{{ $host->hostname }}</h1>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 mb-0 text-gray-800">{{ $host->hostname }}</h1>
+            <div>
+                <button id="refreshBtn" class="btn btn-primary">
+                    <i class="fas fa-sync-alt"></i> Comprobar ahora
+                </button>
+            </div>
+        </div>
         <div class="section-header-breadcrumb d-flex align-items-center">
             <div class="breadcrumb-item"><a href="{{ route('dashboard.index') }}">Dashboard</a></div>
             <div class="breadcrumb-item"><a href="{{ route('monitor.index') }}">Monitoreo</a></div>
@@ -543,32 +550,140 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 $(function() {
-    $('#btn-refresh-agent').on('click', function() {
-        var btn = $(this);
-        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Comprobando...');
+    $('#refreshBtn').click(function() {
+        const button = $(this);
+        button.prop('disabled', true);
+        
+        // Intentar obtener datos del agente Flask
         $.ajax({
-            url: "{{ route('monitor.ping', ['id' => $host->id]) }}",
-            type: 'GET',
-            dataType: 'json',
+            url: `http://${window.location.hostname}:5001/telemetry`,
+            method: 'GET',
+            timeout: 5000,
             success: function(response) {
-                // Actualizar el recuadro de estado del agente
-                if (response.status === 'online') {
-                    $('#agent-status-text').text('Activo');
-                    btn.closest('.alert').removeClass('alert-danger').addClass('alert-success');
+                if (response.success) {
+                    // Enviar datos a Laravel
+                    $.ajax({
+                        url: '{{ route("monitor.update-telemetry") }}',
+                        method: 'POST',
+                        data: response.data,
+                        success: function() {
+                            // Actualizar estado del agente
+                            $('#agent-status-text').text('Activo');
+                            $('#agent-status-text').removeClass('text-danger').addClass('text-success');
+                            
+                            // Actualizar última vez visto
+                            const now = new Date();
+                            $('#agent-last-seen').text('Ahora mismo');
+                            
+                            // Recargar la página para actualizar los gráficos
+                            location.reload();
+                        },
+                        error: function() {
+                            alert('Error al actualizar los datos en el servidor');
+                        }
+                    });
                 } else {
-                    $('#agent-status-text').text('Inactivo');
-                    btn.closest('.alert').removeClass('alert-success').addClass('alert-danger');
+                    alert('Error al obtener datos del agente');
                 }
-                if (response.last_seen) {
-                    $('#agent-last-seen').text('(Último dato: ' + response.last_seen + ')');
-                }
-                btn.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Comprobar ahora');
-                // Opcional: recargar la página para actualizar los gráficos
-                location.reload();
             },
             error: function() {
-                btn.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Comprobar ahora');
-                toastr.error('Error al comprobar el estado del agente');
+                // Si falla la conexión con el agente, intentar ping
+                $.get('{{ route("monitor.ping", ["id" => $host->id]) }}', function(response) {
+                    if (response.status === 'online') {
+                        $('#agent-status-text').text('Activo');
+                        $('#agent-status-text').removeClass('text-danger').addClass('text-success');
+                        $('#agent-last-seen').text('Ahora mismo');
+                    } else {
+                        $('#agent-status-text').text('Inactivo');
+                        $('#agent-status-text').removeClass('text-success').addClass('text-danger');
+                    }
+                }).fail(function() {
+                    $('#agent-status-text').text('Inactivo');
+                    $('#agent-status-text').removeClass('text-success').addClass('text-danger');
+                });
+            },
+            complete: function() {
+                button.prop('disabled', false);
+            }
+        });
+                            // Si falla Laravel, intentar el método alternativo
+                            $.ajax({
+                                url: "{{ route('monitor.ping', ['id' => $host->id]) }}",
+                                type: 'GET',
+                                dataType: 'json',
+                                success: function(pingResponse) {
+                                    if (pingResponse.status === 'online') {
+                                        $('#agent-status-text').text('Activo');
+                                        btn.closest('.alert').removeClass('alert-danger').addClass('alert-success');
+                                    } else {
+                                        $('#agent-status-text').text('Inactivo');
+                                        btn.closest('.alert').removeClass('alert-success').addClass('alert-danger');
+                                    }
+                                    if (pingResponse.last_seen) {
+                                        $('#agent-last-seen').text('(Último dato: ' + pingResponse.last_seen + ')');
+                                    }
+                                    btn.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Comprobar ahora');
+                                    location.reload();
+                                },
+                                error: function() {
+                                    btn.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Comprobar ahora');
+                                    toastr.error('Error al comprobar el estado del agente');
+                                }
+                            });
+                        }
+                    });
+                } else {
+                    // Si falla el agente Flask, intentar el método alternativo
+                    $.ajax({
+                        url: "{{ route('monitor.ping', ['id' => $host->id]) }}",
+                        type: 'GET',
+                        dataType: 'json',
+                        success: function(pingResponse) {
+                            if (pingResponse.status === 'online') {
+                                $('#agent-status-text').text('Activo');
+                                btn.closest('.alert').removeClass('alert-danger').addClass('alert-success');
+                            } else {
+                                $('#agent-status-text').text('Inactivo');
+                                btn.closest('.alert').removeClass('alert-success').addClass('alert-danger');
+                            }
+                            if (pingResponse.last_seen) {
+                                $('#agent-last-seen').text('(Último dato: ' + pingResponse.last_seen + ')');
+                            }
+                            btn.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Comprobar ahora');
+                            location.reload();
+                        },
+                        error: function() {
+                            btn.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Comprobar ahora');
+                            toastr.error('Error al comprobar el estado del agente');
+                        }
+                    });
+                }
+            },
+            error: function() {
+                // Si falla el agente Flask, intentar el método alternativo
+                $.ajax({
+                    url: "{{ route('monitor.ping', ['id' => $host->id]) }}",
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(pingResponse) {
+                        if (pingResponse.status === 'online') {
+                            $('#agent-status-text').text('Activo');
+                            btn.closest('.alert').removeClass('alert-danger').addClass('alert-success');
+                        } else {
+                            $('#agent-status-text').text('Inactivo');
+                            btn.closest('.alert').removeClass('alert-success').addClass('alert-danger');
+                        }
+                        if (pingResponse.last_seen) {
+                            $('#agent-last-seen').text('(Último dato: ' + pingResponse.last_seen + ')');
+                        }
+                        btn.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Comprobar ahora');
+                        location.reload();
+                    },
+                    error: function() {
+                        btn.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Comprobar ahora');
+                        toastr.error('Error al comprobar el estado del agente');
+                    }
+                });
             }
         });
     });

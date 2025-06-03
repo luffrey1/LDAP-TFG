@@ -19,4 +19,11 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 
-Route::post('/telemetry/update', [\App\Http\Controllers\MonitorController::class, 'updateTelemetry']); 
+Route::post('/telemetry/update', [\App\Http\Controllers\MonitorController::class, 'updateTelemetry']);
+
+// Ruta para obtener el intervalo de telemetría
+Route::get('/config/telemetry-interval', function () {
+    $interval = \App\Models\SistemaConfig::where('clave', 'telemetria_intervalo_minutos')
+        ->value('valor') ?? 60;
+    return response()->json(['interval' => (int)$interval]);
+}); 
