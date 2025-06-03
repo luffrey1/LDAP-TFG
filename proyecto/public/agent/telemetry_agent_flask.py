@@ -484,20 +484,11 @@ if __name__ == '__main__':
     print("Iniciando agente de telemetría...")
     print(f"URL del servidor: {LARAVEL_URL}")
     
-    # Configurar SSL
-    ssl_context = None
-    try:
-        ssl_context = ('cert.pem', 'key.pem')
-        print("Certificados SSL cargados correctamente")
-    except Exception as e:
-        print(f"Error cargando certificados SSL: {str(e)}")
-        print("Ejecutando sin SSL (no recomendado para producción)")
-    
     # Iniciar el servidor Flask en un hilo separado
     def run_flask():
         try:
             print("Iniciando servidor Flask en puerto 5001...")
-            app.run(host='0.0.0.0', port=5001, ssl_context=ssl_context, debug=False)
+            app.run(host='0.0.0.0', port=5001, debug=False)
         except Exception as e:
             print(f"Error iniciando servidor Flask: {str(e)}")
     

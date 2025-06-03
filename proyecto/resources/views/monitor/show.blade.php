@@ -655,12 +655,9 @@ $(document).ready(function() {
         
         // Intentar obtener datos del agente Flask
         $.ajax({
-            url: `https://${hostIp}:5001/telemetry`,
+            url: `http://${hostIp}:5001/telemetry`,
             method: 'GET',
             timeout: 5000,
-            xhrFields: {
-                withCredentials: true
-            },
             success: function(response) {
                 console.log('Respuesta del agente:', response);
                 if (response.success) {
@@ -692,87 +689,28 @@ $(document).ready(function() {
             error: function(xhr, status, error) {
                 console.error('Error al conectar con el agente:', error);
                 
-                // Intentar primero con HTTP si HTTPS falla
-                if (status === 'error' && xhr.status === 0) {
-                    console.log('Intentando con HTTP...');
-                    $.ajax({
-                        url: `http://${hostIp}:5001/telemetry`,
-                        method: 'GET',
-                        timeout: 5000,
-                        success: function(response) {
-                            console.log('Respuesta HTTP del agente:', response);
-                            if (response.success) {
-                                // Procesar respuesta como antes...
-                                $.ajax({
-                                    url: '{{ route("monitor.update-telemetry") }}',
-                                    method: 'POST',
-                                    data: JSON.stringify(response.data),
-                                    headers: {
-                                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                        'Accept': 'application/json',
-                                        'Content-Type': 'application/json'
-                                    },
-                                    success: function() {
-                                        console.log('Datos actualizados en Laravel');
-                                        updateStatus('success', 'Datos actualizados correctamente');
-                                        setTimeout(() => location.reload(), 1000);
-                                    },
-                                    error: function(xhr, status, error) {
-                                        console.error('Error Laravel:', xhr.responseText);
-                                        updateStatus('error', 'Error al actualizar datos en el servidor: ' + error);
-                                    }
-                                });
-                            }
-                        },
-                        error: function() {
-                            // Si falla HTTP, intentar ping
-                            $.ajax({
-                                url: '{{ route("monitor.ping", ["id" => $host->id]) }}',
-                                method: 'POST',
-                                headers: {
-                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                    'Accept': 'application/json',
-                                    'Content-Type': 'application/json'
-                                },
-                                success: function(pingResponse) {
-                                    console.log('Respuesta ping:', pingResponse);
-                                    if (pingResponse.status === 'online') {
-                                        updateStatus('warning', 'Host activo pero agente no disponible');
-                                    } else {
-                                        updateStatus('error', 'Host inactivo');
-                                    }
-                                },
-                                error: function(xhr, status, error) {
-                                    console.error('Error en ping:', error);
-                                    updateStatus('error', 'No se pudo contactar con el host');
-                                }
-                            });
+                // Si falla, intentar ping
+                $.ajax({
+                    url: '{{ route("monitor.ping", ["id" => $host->id]) }}',
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    success: function(pingResponse) {
+                        console.log('Respuesta ping:', pingResponse);
+                        if (pingResponse.status === 'online') {
+                            updateStatus('warning', 'Host activo pero agente no disponible');
+                        } else {
+                            updateStatus('error', 'Host inactivo');
                         }
-                    });
-                } else {
-                    // Si no es error de conexión, intentar ping directamente
-                    $.ajax({
-                        url: '{{ route("monitor.ping", ["id" => $host->id]) }}',
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json'
-                        },
-                        success: function(pingResponse) {
-                            console.log('Respuesta ping:', pingResponse);
-                            if (pingResponse.status === 'online') {
-                                updateStatus('warning', 'Host activo pero agente no disponible');
-                            } else {
-                                updateStatus('error', 'Host inactivo');
-                            }
-                        },
-                        error: function(xhr, status, error) {
-                            console.error('Error en ping:', error);
-                            updateStatus('error', 'No se pudo contactar con el host');
-                        }
-                    });
-                }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error en ping:', error);
+                        updateStatus('error', 'No se pudo contactar con el host');
+                    }
+                });
             },
             complete: function() {
                 // Restaurar botón
