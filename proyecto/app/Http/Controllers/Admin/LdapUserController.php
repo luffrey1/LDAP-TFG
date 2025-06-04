@@ -767,213 +767,299 @@ class LdapUserController extends Controller
                     }
 
                     ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
-            ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
-            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
-            
-            // Intentar conexión SSL primero
-            if (config('ldap.connections.default.use_ssl', false)) {
-                Log::debug("Configurando SSL para conexión LDAP...");
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
+                    ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
+                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
+                    
+                    // Intentar bind con credenciales
+                    $bind = @ldap_bind(
+                        $ldapConn, 
+                        $config['username'], 
+                        $config['password']
+                    );
+                    
+                    if (!$bind) {
+                        $error = ldap_error($ldapConn);
+                        Log::error("Error al conectar al servidor LDAP: " . $error);
+                        throw new Exception("No se pudo autenticar en el servidor LDAP: " . $error);
+                    }
+                    
+                    // Realizar el renombramiento
+                    $success = ldap_rename($ldapConn, $decodedDn, 'uid=' . $request->uid, $this->peopleOu, true);
+                    
+                    if (!$success) {
+                        $error = ldap_error($ldapConn);
+                        Log::error("Error al renombrar usuario: " . $error);
+                        throw new Exception("Error al renombrar usuario: " . $error);
+                    }
+                    
+                    Log::debug("Usuario renombrado de {$decodedDn} a {$newDn}");
+                    $decodedDn = $newDn;
+                    
+                    ldap_close($ldapConn);
+                    
+                    // Buscar el usuario nuevamente después del renombramiento
+                    $user = $connection->query()
+                        ->in($config['base_dn'])
+                        ->where('dn', '=', $newDn)
+                        ->first();
+                        
+                    if (!$user) {
+                        throw new Exception("No se pudo encontrar el usuario después del renombramiento");
+                    }
+                } catch (Exception $e) {
+                    Log::error("Error al renombrar usuario: " . $e->getMessage());
+                    throw new Exception("Error al actualizar el nombre de usuario: " . $e->getMessage());
+                }
+            }
+
+            // Buscar el usuario por DN actualizado
+            $user = $connection->query()
+                ->in($config['base_dn'])
+                ->where('dn', '=', $decodedDn)
+                ->first();
+                
+            if (!$user) {
+                Log::error("Usuario no encontrado para actualizar. DN: {$decodedDn}");
+                return redirect()->route('admin.users.index')
+                    ->with('error', 'Usuario no encontrado');
+            }
+
+            // Obtener el DN del usuario de manera segura
+            $userDn = is_array($user) ? $user['dn'] : $user->getDn();
+            Log::debug("DN del usuario para actualizar: " . $userDn);
+
+            // Verificar si el usuario es administrador
+            $isAdminUser = false;
+            $userGroups = $this->getUserGroups($userDn);
+            foreach ($userGroups as $group) {
+                $groupName = '';
+                if (is_array($group)) {
+                    $groupName = $group['cn'][0] ?? '';
+                } else {
+                    $groupName = $group->getFirstAttribute('cn') ?? '';
+                }
+                
+                if ($groupName === 'ldapadmins') {
+                    $isAdminUser = true;
+                    break;
+                }
             }
             
-            Log::debug("Intentando bind con credenciales LDAP...");
-            Log::debug("Username: " . $config['username']);
+            // Si el usuario es administrador y el usuario actual no es administrador, solo permitir editar campos básicos
+            $isCurrentUserAdmin = session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin';
+            if ($isAdminUser && !$isCurrentUserAdmin) {
+                // Preservar los grupos actuales en lugar de permitir cambiarlos
+                $request->merge(['grupos' => []]);
+                foreach ($userGroups as $group) {
+                    if (is_array($group)) {
+                        $groupName = $group['cn'][0] ?? '';
+                    } else {
+                        $groupName = $group->getFirstAttribute('cn') ?? '';
+                    }
+                    $request->grupos[] = $groupName;
+                }
+            }
+
+            // Actualizar datos básicos
+            $updateData = [
+                'cn' => $request->nombre . ' ' . $request->apellidos,
+                'sn' => $request->apellidos,
+                'givenname' => $request->nombre,
+                'mail' => $request->email,
+                'uid' => $request->uid
+            ];
             
-            // Intentar bind con credenciales
-            $bind = @ldap_bind(
-                $ldapConn, 
-                $config['username'], 
-                $config['password']
-            );
-            
-            if (!$bind) {
-                $error = ldap_error($ldapConn);
-                Log::error("Error al conectar al servidor LDAP: " . $error);
-                Log::error("Código de error LDAP: " . ldap_errno($ldapConn));
-                throw new Exception("No se pudo conectar al servidor LDAP: " . $error);
+            // Actualizar uidNumber si se proporciona
+            if ($request->filled('uidNumber')) {
+                $updateData['uidnumber'] = $request->uidNumber;
             }
             
-            Log::debug("Conexión LDAP establecida correctamente para toggleAdmin");
+            // Actualizar gidNumber si se proporciona
+            if ($request->filled('gidNumber')) {
+                $updateData['gidnumber'] = $request->gidNumber;
+            }
+            
+            // Actualizar homeDirectory si se proporciona
+            if ($request->filled('homeDirectory')) {
+                $updateData['homedirectory'] = $request->homeDirectory;
+            }
+            
+            // Actualizar loginShell si se proporciona
+            if ($request->filled('loginShell')) {
+                $updateData['loginshell'] = $request->loginShell;
+            }
+            
+            // Si hay contraseña, actualizarla correctamente
+            if (!empty($request->password)) {
+                // Usar el método mejorado de hash de contraseñas
+                $hashedPassword = $this->hashPassword($request->password);
+                $updateData['userpassword'] = $hashedPassword;
+                $updateData['shadowLastChange'] = floor(time() / 86400);
+            }
+
+            // Nos aseguramos de que el usuario tenga todos los objectClass necesarios
+            try {
+                $this->ensureUserHasRequiredClasses($userDn, $connection);
+            } catch (Exception $e) {
+                Log::error("Error al asegurar clases de usuario: " . $e->getMessage());
+                // Continuamos con la actualización aunque falle esta parte
+            }
+
+            // Modificar el usuario usando LdapRecord
+            try {
+                // Si el usuario es un array, necesitamos convertirlo a objeto LdapRecord
+                if (is_array($user)) {
+                    $user = $connection->query()
+                        ->in($config['base_dn'])
+                        ->where('dn', '=', $userDn)
+                        ->first();
+                    
+                    if (!$user) {
+                        throw new Exception("No se pudo encontrar el usuario para actualizar");
+                    }
+                }
+
+                foreach ($updateData as $attribute => $value) {
+                    $user->setAttribute($attribute, $value);
+                }
+                
+                $user->save();
+                Log::debug("Usuario actualizado correctamente");
+                
+                // Actualizar grupos del usuario si se proporcionaron
+                if ($request->has('grupos')) {
+                    $this->updateUserGroupsDirect($userDn, $request->grupos, $connection);
+                }
+                
+                // Registrar la acción en logs
+                $adminUser = $this->getCurrentUsername();
+                Log::info("Usuario LDAP actualizado: {$request->uid} por {$adminUser}. Grupos: " . json_encode($request->grupos ?? []));
+                
+                Log::channel('activity')->info('Usuario LDAP actualizado', [
+                    'action' => 'Actualizar Usuario',
+                    'username' => $request->uid
+                ]);
+                
+                return redirect()->route('admin.users.index')
+                    ->with('success', 'Usuario actualizado correctamente');
+                    
+            } catch (Exception $e) {
+                Log::error("Error al actualizar usuario: " . $e->getMessage());
+                throw new Exception("Error al actualizar usuario: " . $e->getMessage());
+            }
+        } catch (Exception $e) {
+            Log::error('Error al actualizar usuario LDAP: ' . $e->getMessage());
+            Log::error('Traza: ' . $e->getTraceAsString());
+            return back()->with('error', 'Error al actualizar el usuario: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Remove the specified user from LDAP.
+     */
+    public function destroy($dn)
+    {
+        try {
+            $this->connection->connect();
+            
+            // Decodificar el DN y validar
+            $userDn = base64_decode($dn);
+            if (!$userDn) {
+                Log::error("Error al decodificar DN: " . $dn);
+                return redirect()->route('admin.users.index')
+                    ->with('error', 'Error: DN inválido');
+            }
+            
+            Log::debug("DN decodificado para eliminar: " . $userDn);
+            
+            // Extraer UID del DN para búsquedas alternativas
+            $uid = '';
+            if (preg_match('/uid=([^,]+)/', $userDn, $matches)) {
+                $uid = $matches[1];
+            }
+            
+            // Verificar si es el usuario ldap-admin
+            if ($uid === 'ldap-admin') {
+                Log::warning("Intento de eliminar usuario ldap-admin");
+                return redirect()->route('admin.users.index')
+                    ->with('error', 'No se puede eliminar el usuario ldap-admin');
+            }
+            
+            // Si no tenemos UID, no podemos continuar
+            if (empty($uid)) {
+                return redirect()->route('admin.users.index')
+                    ->with('error', 'Error: No se pudo obtener el UID del usuario');
+            }
             
             // Buscar el usuario por su UID para confirmar que existe
-            $filter = "(uid=$uid)";
-            $search = ldap_search($ldapConn, $this->peopleOu, $filter);
-            
-            if (!$search) {
-                throw new \Exception("Error al buscar usuario: " . ldap_error($ldapConn));
+            $user = $this->connection->query()
+                ->in($this->peopleOu)
+                ->where('uid', '=', $uid)
+                ->first();
+                
+            if (!$user) {
+                Log::debug("Usuario no encontrado por UID, buscando por DN en toda la base");
+                $user = $this->connection->query()
+                    ->in($this->baseDn)
+                    ->where('dn', '=', $userDn)
+                    ->first();
+                    
+                if ($user) {
+                    Log::debug("Usuario encontrado por DN para eliminar");
+                }
+            }
+                
+            if (!$user) {
+                Log::error("Usuario no encontrado para eliminar con DN: " . $userDn);
+                return redirect()->route('admin.users.index')
+                    ->with('error', 'Usuario no encontrado');
             }
             
-            $entries = ldap_get_entries($ldapConn, $search);
-            if ($entries['count'] == 0) {
-                throw new \Exception("No se encontró el usuario con UID: $uid");
-            }
+            // Obtener el DN actual del usuario
+            $actualUserDn = is_array($user) ? $user['dn'] : $user->getDn();
+            Log::debug("DN final para eliminar: " . $actualUserDn);
             
-            $user = $entries[0];
-            Log::debug("Usuario encontrado para toggleAdmin: " . $uid);
-            
-            // Buscar grupo de administradores
-            $adminGroupSearch = ldap_search($ldapConn, $this->groupsOu, "(cn=ldapadmins)");
-            if (!$adminGroupSearch) {
-                throw new \Exception("Error al buscar grupo de administradores: " . ldap_error($ldapConn));
-            }
-            
-            $adminGroupEntries = ldap_get_entries($ldapConn, $adminGroupSearch);
-            if ($adminGroupEntries['count'] == 0) {
-                throw new \Exception("No se encontró el grupo de administradores");
-            }
-            
-            $adminGroup = $adminGroupEntries[0];
-            $groupDn = $adminGroup['dn'];
-            Log::debug("Grupo de administradores encontrado: " . $groupDn);
-            
-            // Verificar si el usuario ya es miembro del grupo admin
-            $isAdmin = false;
-            
-            // Verificar memberUid (posixGroup)
-            if (isset($adminGroup['memberuid'])) {
-                for ($i = 0; $i < $adminGroup['memberuid']['count']; $i++) {
-                    if ($adminGroup['memberuid'][$i] == $uid) {
-                        $isAdmin = true;
-                        break;
-                    }
+            // Verificar si el usuario es administrador
+            $isAdminUser = false;
+            $userGroups = $this->getUserGroups($actualUserDn);
+            foreach ($userGroups as $group) {
+                $groupName = '';
+                if (is_array($group)) {
+                    $groupName = $group['cn'][0] ?? '';
+                } else {
+                    $groupName = $group->getFirstAttribute('cn') ?? '';
+                }
+                
+                if ($groupName === 'ldapadmins') {
+                    $isAdminUser = true;
+                    break;
                 }
             }
             
-            // Verificar uniqueMember (groupOfUniqueNames)
-            if (!$isAdmin && isset($adminGroup['uniquemember'])) {
-                for ($i = 0; $i < $adminGroup['uniquemember']['count']; $i++) {
-                    if ($adminGroup['uniquemember'][$i] == $userDn) {
-                        $isAdmin = true;
-                        break;
-                    }
-                }
+            // Si el usuario es administrador y el usuario actual no es administrador, no permitir eliminarlo
+            $isCurrentUserAdmin = session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin';
+            if ($isAdminUser && !$isCurrentUserAdmin) {
+                Log::warning("Intento de eliminar usuario administrador por usuario no administrador");
+                return redirect()->route('admin.users.index')
+                    ->with('error', 'No tienes permisos para eliminar a un administrador');
             }
             
-            Log::debug("¿El usuario es administrador actualmente?: " . ($isAdmin ? 'Sí' : 'No'));
-            
-            $hasErrors = false;
-            $errorMessages = [];
-            
-            // Cambiar estado de admin
-            if ($isAdmin) {
-                // Eliminar el usuario del grupo
-                
-                // 1. Actualizar memberUid (posixGroup)
-                if (isset($adminGroup['memberuid'])) {
-                    $memberUids = [];
-                    for ($i = 0; $i < $adminGroup['memberuid']['count']; $i++) {
-                        if ($adminGroup['memberuid'][$i] != $uid) {
-                            $memberUids[] = $adminGroup['memberuid'][$i];
-                        }
-                    }
-                    
-                    // Actualizar el grupo sin el usuario
-                    $entry = ["memberUid" => $memberUids];
-                    $resultModify = ldap_modify($ldapConn, $groupDn, $entry);
-                    
-                    if (!$resultModify) {
-                        $hasErrors = true;
-                        $errorMessages[] = 'Error al eliminar usuario del grupo admin (memberUid): ' . ldap_error($ldapConn);
-                    } else {
-                        Log::debug("Usuario eliminado de memberUid del grupo ldapadmins");
-                    }
-                }
-                
-                // 2. Actualizar uniqueMember (groupOfUniqueNames)
-                if (isset($adminGroup['uniquemember'])) {
-                    $uniqueMembers = [];
-                    for ($i = 0; $i < $adminGroup['uniquemember']['count']; $i++) {
-                        if ($adminGroup['uniquemember'][$i] != $userDn) {
-                            $uniqueMembers[] = $adminGroup['uniquemember'][$i];
-                        }
-                    }
-                    
-                    // Actualizar el grupo sin el usuario
-                    $entry = ["uniqueMember" => $uniqueMembers];
-                    $resultModify = ldap_modify($ldapConn, $groupDn, $entry);
-                    
-                    if (!$resultModify) {
-                        $hasErrors = true;
-                        $errorMessages[] = 'Error al eliminar usuario del grupo admin (uniqueMember): ' . ldap_error($ldapConn);
-                    } else {
-                        Log::debug("Usuario eliminado de uniqueMember del grupo ldapadmins");
-                    }
-                }
-                
-                $message = 'Usuario removido del grupo de administradores';
-            } else {
-                // Añadir el usuario al grupo
-                
-                // 1. Actualizar memberUid (posixGroup)
-                if (isset($adminGroup['memberuid'])) {
-                    $memberUids = [];
-                    for ($i = 0; $i < $adminGroup['memberuid']['count']; $i++) {
-                        $memberUids[] = $adminGroup['memberuid'][$i];
-                    }
-                    
-                    // Añadir el usuario solo si no existe
-                    if (!in_array($uid, $memberUids)) {
-                        $memberUids[] = $uid;
-                    }
-                    
-                    // Actualizar el grupo con el nuevo usuario
-                    $entry = ["memberUid" => $memberUids];
-                    $resultModify = ldap_modify($ldapConn, $groupDn, $entry);
-                    
-                    if (!$resultModify) {
-                        $hasErrors = true;
-                        $errorMessages[] = 'Error al añadir usuario al grupo admin (memberUid): ' . ldap_error($ldapConn);
-                    } else {
-                        Log::debug("Usuario añadido a memberUid del grupo ldapadmins");
-                    }
-                }
-                
-                // 2. Actualizar uniqueMember (groupOfUniqueNames)
-                if (isset($adminGroup['uniquemember'])) {
-                    $uniqueMembers = [];
-                    for ($i = 0; $i < $adminGroup['uniquemember']['count']; $i++) {
-                        $uniqueMembers[] = $adminGroup['uniquemember'][$i];
-                    }
-                    
-                    // Añadir el usuario solo si no existe
-                    if (!in_array($userDn, $uniqueMembers)) {
-                        $uniqueMembers[] = $userDn;
-                    }
-                    
-                    // Actualizar el grupo con el nuevo usuario
-                    $entry = ["uniqueMember" => $uniqueMembers];
-                    $resultModify = ldap_modify($ldapConn, $groupDn, $entry);
-                    
-                    if (!$resultModify) {
-                        $hasErrors = true;
-                        $errorMessages[] = 'Error al añadir usuario al grupo admin (uniqueMember): ' . ldap_error($ldapConn);
-                    } else {
-                        Log::debug("Usuario añadido a uniqueMember del grupo ldapadmins");
-                    }
-                }
-                
-                $message = 'Usuario añadido al grupo de administradores';
+            // Eliminar el usuario
+            try {
+                $this->connection->query()->delete($actualUserDn);
+                Log::info("Usuario eliminado correctamente: " . $actualUserDn);
+                return redirect()->route('admin.users.index')
+                    ->with('success', 'Usuario eliminado correctamente');
+            } catch (\Exception $e) {
+                Log::error("Error al eliminar usuario: " . $e->getMessage());
+                return redirect()->route('admin.users.index')
+                    ->with('error', 'Error al eliminar el usuario: ' . $e->getMessage());
             }
             
-            ldap_close($ldapConn);
-            
-            if ($hasErrors) {
-                return back()->with('warning', $message . ' con advertencias: ' . implode(', ', $errorMessages));
-            }
-            
-            // Registrar la acción en logs
-            $adminUser = $this->getCurrentUsername();
-            Log::info("Cambio de permisos de administrador para usuario $uid por $adminUser. Es admin ahora: " . (!$isAdmin ? 'Sí' : 'No'));
-            
-            return redirect()->route('admin.users.index')
-                ->with('success', $message);
-                
         } catch (\Exception $e) {
-            Log::error("Error al cambiar permisos de administrador: " . $e->getMessage());
-            Log::error("Traza: " . $e->getTraceAsString());
-            return back()->with('error', 'Error al cambiar permisos: ' . $e->getMessage());
+            Log::error("Error en destroy: " . $e->getMessage());
+            return redirect()->route('admin.users.index')
+                ->with('error', 'Error al procesar la solicitud: ' . $e->getMessage());
         }
     }
 
