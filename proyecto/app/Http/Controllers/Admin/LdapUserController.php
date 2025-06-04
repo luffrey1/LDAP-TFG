@@ -103,12 +103,25 @@ class LdapUserController extends Controller
             Log::debug('Filtro LDAP construido: ' . $searchFilter);
 
             // Ejecutar la búsqueda
-            $users = $this->connection->query()
+            $allUsers = $this->connection->query()
                 ->in('ou=people,dc=tierno,dc=es')
                 ->rawFilter($searchFilter)
                 ->get();
 
-            Log::debug('Usuarios encontrados: ' . count($users));
+            Log::debug('Usuarios encontrados: ' . count($allUsers));
+
+            // Crear el paginador manual
+            $total = count($allUsers);
+            $offset = ($page - 1) * $perPage;
+            $users = array_slice($allUsers, $offset, $perPage);
+
+            $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
+                $users,
+                $total,
+                $perPage,
+                $page,
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
 
             // Obtener usuarios admin
             $adminUsers = $this->getAdminUsers();
@@ -127,17 +140,22 @@ class LdapUserController extends Controller
                 return response()->json([
                     'users' => $users,
                     'adminUsers' => $adminUsers,
-                    'groupList' => $groupList
+                    'groupList' => $groupList,
+                    'total' => $total,
+                    'currentPage' => $page,
+                    'lastPage' => $paginator->lastPage()
                 ]);
             }
 
             // Para peticiones normales, devolver la vista
             return view('admin.users.index', [
-                'users' => $users,
+                'users' => $paginator,
                 'adminUsers' => $adminUsers,
                 'groupList' => $groupList,
                 'search' => $search,
-                'selectedGroup' => $selectedGroup
+                'selectedGroup' => $selectedGroup,
+                'total' => $total,
+                'perPage' => $perPage
             ]);
 
         } catch (\Exception $e) {
@@ -161,11 +179,13 @@ class LdapUserController extends Controller
                     'use_ssl' => true,
                     'use_tls' => false
                 ],
-                'users' => collect(),
+                'users' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10),
                 'adminUsers' => [],
                 'groupList' => [],
                 'search' => '',
-                'selectedGroup' => ''
+                'selectedGroup' => '',
+                'total' => 0,
+                'perPage' => 10
             ]);
         }
     }
