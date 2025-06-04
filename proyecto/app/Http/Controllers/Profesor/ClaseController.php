@@ -343,7 +343,22 @@ class ClaseController extends Controller
                         }
                         
                         $entries = ldap_get_entries($ldapConn, $search);
-                        if ($entries['count'] > 0) {
+                        
+                        // Si no se encuentra en LDAP, crear usuario local
+                        if ($entries['count'] == 0) {
+                            Log::info("Usuario no encontrado en LDAP, creando usuario local");
+                            
+                            // Crear usuario local con rol de profesor
+                            $user = new User();
+                            $user->name = $profesorId; // Usar el username como nombre inicial
+                            $user->username = $profesorId;
+                            $user->email = $profesorId . '@test.tierno.es';
+                            $user->password = bcrypt(Str::random(16));
+                            $user->role = 'profesor';
+                            $user->save();
+                            
+                            Log::info("Usuario local creado: {$user->id} - {$user->name}");
+                        } else {
                             $ldapUser = $entries[0];
                             Log::info("Usuario LDAP encontrado: " . json_encode($ldapUser));
                             
@@ -390,9 +405,6 @@ class ClaseController extends Controller
                             $user->save();
                             
                             Log::info("Usuario creado en la BD: {$user->id} - {$user->name}");
-                        } else {
-                            Log::error("No se encontró el usuario LDAP: " . $profesorId);
-                            throw new Exception("No se encontró el usuario LDAP: " . $profesorId);
                         }
                         
                         ldap_close($ldapConn);
