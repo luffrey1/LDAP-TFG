@@ -278,20 +278,22 @@ class AuthController extends Controller
         Log::debug("UID extraído del objeto LDAP: $uid");
         
         try {
-            // Configurar conexión LDAP usando variables del entorno
-            $ldapHost = env('LDAP_HOST', '172.19.0.4');
-            $ldapPort = (int)env('LDAP_PORT', 389);
-            $baseDn = env('LDAP_BASE_DN', 'dc=tierno,dc=es');
-            $adminDn = env('LDAP_USERNAME', 'cn=admin,dc=tierno,dc=es');
-            $adminPassword = env('LDAP_PASSWORD', 'admin');
+            // Obtener la configuración de LdapRecord que ya está funcionando
+            $config = Container::getDefaultConnection()->getConfiguration();
+            $hosts = $config->get('hosts');
+            $basedn = $config->get('base_dn');
+            $adminDn = $config->get('username');
+            $adminPassword = $config->get('password');
+            
+            Log::debug("Usando configuración LdapRecord existente: hosts=" . json_encode($hosts) . ", base_dn={$basedn}");
             
             $ldapConfig = [
-                'hosts' => [$ldapHost],
-                'port' => $ldapPort,
-                'base_dn' => $baseDn,
+                'hosts' => $hosts,
+                'base_dn' => $basedn,
                 'username' => $adminDn,
                 'password' => $adminPassword,
-                'use_ssl' => false,
+                'port' => 636,
+                'use_ssl' => true,
                 'use_tls' => false,
                 'timeout' => 5,
                 'options' => [
@@ -300,23 +302,25 @@ class AuthController extends Controller
                 ],
             ];
             
-            Log::debug("Usando configuración LDAP para buscar grupos: host={$ldapHost}, port={$ldapPort}");
-            
             $ldap = new Connection($ldapConfig);
             $ldap->connect();
             
             // Buscar el grupo ldapadmins
             $adminGroup = $ldap->query()
-                ->in('ou=groups,dc=tierno,dc=es')
+                ->in('ou=groups,' . $basedn)
                 ->where('cn', '=', 'ldapadmins')
                 ->first();
                 
             if ($adminGroup) {
+                Log::debug("Grupo ldapadmins encontrado: " . json_encode(array_keys($adminGroup)));
+                
                 // Verificar memberUid (posixGroup)
                 if (isset($adminGroup['memberuid'])) {
                     $memberUids = is_array($adminGroup['memberuid']) 
                         ? $adminGroup['memberuid'] 
                         : [$adminGroup['memberuid']];
+                    
+                    Log::debug("MemberUids en ldapadmins: " . json_encode($memberUids));
                     
                     if (in_array($uid, $memberUids)) {
                         Log::debug("Usuario {$uid} encontrado en ldapadmins por memberUid");
@@ -330,17 +334,22 @@ class AuthController extends Controller
                         ? $adminGroup['uniquemember'] 
                         : [$adminGroup['uniquemember']];
                     
-                    $userDn = "uid={$uid},ou=people,dc=tierno,dc=es";
+                    $userDn = "uid={$uid},ou=people,{$basedn}";
+                    Log::debug("Buscando uniqueMember: {$userDn}");
+                    Log::debug("UniqueMembers en ldapadmins: " . json_encode($uniqueMembers));
+                    
                     if (in_array($userDn, $uniqueMembers)) {
                         Log::debug("Usuario {$uid} encontrado en ldapadmins por uniqueMember");
                         return 'admin';
                     }
                 }
+            } else {
+                Log::warning("Grupo ldapadmins no encontrado");
             }
             
             // Si no es admin, verificar si es profesor
             $profesoresGroup = $ldap->query()
-                ->in('ou=groups,dc=tierno,dc=es')
+                ->in('ou=groups,' . $basedn)
                 ->where('cn', '=', 'profesores')
                 ->first();
                 
@@ -361,6 +370,7 @@ class AuthController extends Controller
             
         } catch (\Exception $e) {
             Log::error("Error al determinar rol desde grupos LDAP: " . $e->getMessage());
+            Log::error("Traza: " . $e->getTraceAsString());
             return 'alumno'; // Por defecto, asignar rol de alumno en caso de error
         }
     }
