@@ -24,43 +24,57 @@
 
         <div class="row">
             <div class="col-12 col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h4>Instrucciones</h4>
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0"><i class="fas fa-info-circle me-2"></i>Instrucciones</h4>
                     </div>
                     <div class="card-body">
-                        <div class="alert alert-info">
-                            <div class="alert-title">Formato del archivo</div>
-                            <p>El archivo debe contener las siguientes columnas:</p>
-                            <ul class="mb-0">
-                                <li><strong>nombre</strong> - Nombre del alumno</li>
-                                <li><strong>apellidos</strong> - Apellidos del alumno</li>
-                                <li><strong>identificacion</strong> - DNI o identificación del alumno</li>
-                                <li><strong>email</strong> - Correo electrónico (opcional)</li>
+                        <div class="alert alert-info border-0 shadow-sm">
+                            <div class="alert-title fw-bold mb-2">Formato del archivo</div>
+                            <p class="mb-3">El archivo debe contener las siguientes columnas:</p>
+                            <ul class="list-group list-group-flush mb-3">
+                                <li class="list-group-item bg-transparent border-0 ps-0">
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    <strong>nombre</strong> - Nombre del alumno
+                                </li>
+                                <li class="list-group-item bg-transparent border-0 ps-0">
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    <strong>apellidos</strong> - Apellidos del alumno
+                                </li>
+                                <li class="list-group-item bg-transparent border-0 ps-0">
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    <strong>identificacion</strong> - DNI o identificación del alumno
+                                </li>
+                                <li class="list-group-item bg-transparent border-0 ps-0">
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    <strong>email</strong> - Correo electrónico (opcional)
+                                </li>
                             </ul>
                         </div>
 
-                        <p>Puede descargar una plantilla de ejemplo para comenzar:</p>
-                        <a href="{{ route('profesor.alumnos.template') }}" class="btn btn-info">
-                            <i class="fas fa-download"></i> Descargar Plantilla
-                        </a>
+                        <div class="text-center">
+                            <p class="mb-3">Puede descargar una plantilla de ejemplo para comenzar:</p>
+                            <a href="{{ route('profesor.alumnos.template') }}" class="btn btn-info btn-lg shadow-sm">
+                                <i class="fas fa-download me-2"></i> Descargar Plantilla
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="col-12 col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h4>Subir Archivo</h4>
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0"><i class="fas fa-upload me-2"></i>Subir Archivo</h4>
                     </div>
                     <div class="card-body">
-                        <form action="{{ route('profesor.alumnos.import.process') }}" method="POST" enctype="multipart/form-data">
+                        <form action="{{ route('profesor.alumnos.import.process') }}" method="POST" enctype="multipart/form-data" class="dropzone" id="importForm">
                             @csrf
                             
                             @if(!isset($grupo))
-                            <div class="form-group">
-                                <label for="clase_grupo_id">Clase / Grupo</label>
-                                <select name="clase_grupo_id" id="clase_grupo_id" class="form-control select2" @if(!session('auth_user.is_admin')) required @endif>
+                            <div class="form-group mb-4">
+                                <label for="clase_grupo_id" class="form-label fw-bold">Clase / Grupo</label>
+                                <select name="clase_grupo_id" id="clase_grupo_id" class="form-select select2 shadow-sm" @if(!session('auth_user.is_admin')) required @endif>
                                     <option value="">@if(session('auth_user.is_admin'))(Opcional) Sin grupo asignado@else Seleccione un grupo @endif</option>
                                     @foreach($grupos as $grupo_select)
                                     <option value="{{ $grupo_select->id }}" {{ isset($grupo) && $grupo->id == $grupo_select->id ? 'selected' : '' }}>
@@ -73,58 +87,73 @@
                             <input type="hidden" name="clase_grupo_id" value="{{ $grupo->id }}">
                             @endif
                             
-                            <div class="form-group">
-                                <label>Archivo de Alumnos</label>
-                                <div class="custom-file">
-                                    <input type="file" name="archivo_csv" class="custom-file-input" id="archivo_csv" accept=".csv, .xlsx, .xls" required>
-                                    <label class="custom-file-label" for="archivo_csv">Seleccionar archivo</label>
-                                    <div class="form-text text-muted">Formatos aceptados: CSV, Excel (.xlsx, .xls)</div>
+                            <div class="form-group mb-4">
+                                <label class="form-label fw-bold">Archivo de Alumnos</label>
+                                <div class="dropzone-area p-5 text-center border-2 border-dashed rounded-3 bg-light" id="dropzone">
+                                    <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                                    <h5 class="mb-3">Arrastre y suelte su archivo aquí</h5>
+                                    <p class="text-muted mb-3">o</p>
+                                    <div class="custom-file">
+                                        <input type="file" name="archivo_csv" class="custom-file-input" id="archivo_csv" accept=".csv, .xlsx, .xls" required>
+                                        <label class="btn btn-outline-primary" for="archivo_csv">
+                                            <i class="fas fa-folder-open me-2"></i>Seleccionar archivo
+                                        </label>
+                                    </div>
+                                    <div class="form-text text-muted mt-2">Formatos aceptados: CSV, Excel (.xlsx, .xls)</div>
                                 </div>
                             </div>
 
-                            <div class="form-group">
-                                <label for="separador">Separador CSV</label>
-                                <select name="separador" id="separador" class="form-control" required>
+                            <div class="form-group mb-4">
+                                <label for="separador" class="form-label fw-bold">Separador CSV</label>
+                                <select name="separador" id="separador" class="form-select shadow-sm" required>
                                     <option value=",">Coma (,)</option>
                                     <option value=";">Punto y coma (;)</option>
                                     <option value="\t">Tabulador</option>
                                 </select>
                             </div>
 
-                            <div class="form-group">
-                                <div class="custom-control custom-checkbox">
-                                    <input type="checkbox" name="tiene_encabezados" id="tiene_encabezados" class="custom-control-input" checked>
-                                    <label class="custom-control-label" for="tiene_encabezados">El archivo contiene fila de encabezados</label>
+                            <div class="form-group mb-4">
+                                <div class="form-check">
+                                    <input type="checkbox" name="tiene_encabezados" id="tiene_encabezados" class="form-check-input" checked>
+                                    <label class="form-check-label" for="tiene_encabezados">El archivo contiene fila de encabezados</label>
                                 </div>
                             </div>
 
-                            <!-- Previsualización simple -->
-                            <div id="preview" class="table-responsive mt-3" style="display: none;">
-                                <h5>Previsualización:</h5>
-                                <div style="max-height: 400px; overflow-y: auto;">
-                                    <table class="table table-bordered table-striped">
-                                        <thead style="position: sticky; top: 0; background-color: #f8f9fa;">
-                                            <tr id="preview-header">
-                                            </tr>
-                                        </thead>
-                                        <tbody id="preview-content">
-                                        </tbody>
-                                    </table>
+                            <!-- Previsualización mejorada -->
+                            <div id="preview" class="mt-4" style="display: none;">
+                                <div class="card shadow-sm">
+                                    <div class="card-header bg-light">
+                                        <h5 class="mb-0"><i class="fas fa-table me-2"></i>Previsualización</h5>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <div class="table-responsive" style="max-height: 400px;">
+                                            <table class="table table-bordered table-hover mb-0">
+                                                <thead class="table-light sticky-top">
+                                                    <tr id="preview-header">
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="preview-content">
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="mt-3">
-                                    <button type="button" id="download-csv" class="btn btn-success">
-                                        <i class="fas fa-download"></i> Descargar CSV con Contraseñas
+                                
+                                <div class="mt-3 text-center">
+                                    <button type="button" id="download-csv" class="btn btn-success btn-lg shadow-sm">
+                                        <i class="fas fa-download me-2"></i> Descargar CSV con Contraseñas
                                     </button>
                                 </div>
-                                <div class="alert alert-warning mt-3">
-                                    <i class="fas fa-exclamation-triangle"></i>
+                                
+                                <div class="alert alert-warning mt-3 shadow-sm">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
                                     <strong>Importante:</strong> Las contraseñas solo las puedes ver ahora. Se almacenarán hasheadas en el sistema por seguridad.
                                 </div>
                             </div>
 
-                            <div class="form-group">
-                                <button type="submit" class="btn btn-primary btn-block">
-                                    <i class="fas fa-upload"></i> Importar Alumnos
+                            <div class="form-group mt-4">
+                                <button type="submit" class="btn btn-primary btn-lg btn-block w-100 shadow-sm">
+                                    <i class="fas fa-upload me-2"></i> Importar Alumnos
                                 </button>
                             </div>
                         </form>
@@ -149,13 +178,58 @@
             return password;
         }
 
+        // Configuración del área de dropzone
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('archivo_csv');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzone.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            dropzone.classList.add('bg-primary', 'bg-opacity-10');
+        }
+
+        function unhighlight(e) {
+            dropzone.classList.remove('bg-primary', 'bg-opacity-10');
+        }
+
+        dropzone.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            fileInput.files = files;
+            handleFiles(files);
+        }
+
         // Mostrar nombre del archivo y previsualizar
         $('.custom-file-input').on('change', function() {
-            let fileName = $(this).val().split('\\').pop();
-            $(this).next('.custom-file-label').addClass("selected").html(fileName);
+            handleFiles(this.files);
+        });
+
+        function handleFiles(files) {
+            const file = files[0];
+            if (!file) return;
+
+            // Actualizar UI
+            const fileName = file.name;
+            $('.custom-file-label').addClass("selected").html(fileName);
             
             // Previsualizar CSV
-            const file = this.files[0];
             const reader = new FileReader();
             const separator = $('#separador').val();
             
@@ -172,19 +246,19 @@
                         if (index === 0) {  // Primera fila (títulos)
                             let headerHtml = '';
                             cells.forEach(cell => {
-                                headerHtml += `<th style="font-weight: bold;">${cell.trim()}</th>`;
+                                headerHtml += `<th class="text-nowrap">${cell.trim()}</th>`;
                             });
-                            headerHtml += '<th style="font-weight: bold;">Contraseña</th>';
+                            headerHtml += '<th class="text-nowrap">Contraseña</th>';
                             $('#preview-header').html(headerHtml);
                             csvData.push([...cells, 'Contraseña']);
                         } else {  // Resto de filas (datos)
                             html += '<tr>';
                             cells.forEach(cell => {
-                                html += `<td>${cell.trim()}</td>`;
+                                html += `<td class="text-nowrap">${cell.trim()}</td>`;
                             });
                             // Añadir columna de contraseña
                             const password = generatePassword();
-                            html += `<td><span class="password">${password}</span></td>`;
+                            html += `<td class="text-nowrap"><code class="bg-light px-2 py-1 rounded">${password}</code></td>`;
                             html += '</tr>';
                             csvData.push([...cells, password]);
                         }
@@ -192,20 +266,20 @@
                 });
                 
                 $('#preview-content').html(html);
-                $('#preview').show();
+                $('#preview').slideDown();
 
                 // Guardar los datos del CSV generado para la descarga
                 window.csvData = csvData;
             };
             
             reader.readAsText(file);
-        });
+        }
 
         // Actualizar previsualización cuando cambie el separador
         $('#separador').on('change', function() {
             const fileInput = document.getElementById('archivo_csv');
             if(fileInput.files.length > 0) {
-                $(fileInput).trigger('change');
+                handleFiles(fileInput.files);
             }
         });
 
@@ -225,8 +299,82 @@
             document.body.removeChild(link);
         });
 
-        // Inicializar select2
-        $('.select2').select2();
+        // Inicializar select2 con estilo mejorado
+        $('.select2').select2({
+            theme: 'bootstrap-5',
+            width: '100%'
+        });
     });
 </script>
+
+<style>
+.dropzone-area {
+    transition: all 0.3s ease;
+    border: 2px dashed #dee2e6;
+}
+
+.dropzone-area:hover {
+    border-color: #0d6efd;
+    background-color: rgba(13, 110, 253, 0.05);
+}
+
+.table-responsive {
+    scrollbar-width: thin;
+    scrollbar-color: #dee2e6 #f8f9fa;
+}
+
+.table-responsive::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: #f8f9fa;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background-color: #dee2e6;
+    border-radius: 4px;
+}
+
+.sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.btn {
+    transition: all 0.2s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+.form-control:focus, .form-select:focus {
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+
+.alert {
+    border-radius: 0.5rem;
+}
+
+.card {
+    border-radius: 0.5rem;
+    border: none;
+}
+
+.card-header {
+    border-radius: 0.5rem 0.5rem 0 0 !important;
+}
+
+.table > :not(caption) > * > * {
+    padding: 1rem;
+}
+
+code {
+    font-size: 0.875em;
+    color: #0d6efd;
+}
+</style>
 @endsection 
