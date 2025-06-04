@@ -495,7 +495,8 @@ class AlumnoController extends Controller
     {
         // Convertir checkbox a booleano antes de la validación
         $data = $request->all();
-        $data['tiene_encabezados'] = $request->has('tiene_encabezados');
+        $data['tiene_encabezados'] = $request->has('tiene_encabezados') ? true : false;
+        $data['crear_cuentas_ldap'] = $request->has('crear_cuentas_ldap') ? true : false;
         
         // Validar formulario
         $validator = Validator::make($data, [
