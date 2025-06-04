@@ -290,8 +290,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
-    console.log('FullCalendar cargado correctamente');
-    
     // Inicializar el calendario
     var calendarEl = document.getElementById('calendar');
     if (!calendarEl) {
@@ -299,7 +297,8 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
-    var calendar = new FullCalendar.Calendar(calendarEl, {
+    // Configuración del calendario
+    var calendarConfig = {
         initialView: 'dayGridMonth',
         headerToolbar: {
             left: 'prev,next today',
@@ -314,10 +313,104 @@ document.addEventListener('DOMContentLoaded', function() {
         editable: false,
         selectable: true,
         dayMaxEvents: true,
-    });
+        dateClick: function(info) {
+            // Abrir el modal para crear un nuevo evento
+            $('#modalTitle').text('Nuevo Evento');
+            $('#eventoForm')[0].reset();
+            $('#evento_id').val('');
+            $('#method').val('POST');
+            $('#deleteButton').hide();
+            
+            // Establecer la fecha seleccionada
+            var fechaSeleccionada = info.dateStr;
+            $('#fecha_inicio').val(fechaSeleccionada + 'T00:00');
+            $('#fecha_fin').val(fechaSeleccionada + 'T23:59');
+            
+            // Mostrar el modal
+            $('#eventoModal').modal('show');
+        },
+        eventClick: function(info) {
+            // Abrir el modal para editar el evento
+            $('#modalTitle').text('Editar Evento');
+            $('#evento_id').val(info.event.id);
+            $('#method').val('PUT');
+            $('#titulo').val(info.event.title);
+            $('#descripcion').val(info.event.extendedProps.description);
+            $('#fecha_inicio').val(info.event.start.toISOString().slice(0, 16));
+            $('#fecha_fin').val(info.event.end.toISOString().slice(0, 16));
+            $('#color').val(info.event.backgroundColor);
+            $('#todo_el_dia').prop('checked', info.event.allDay);
+            $('#deleteButton').show();
+            
+            // Mostrar el modal
+            $('#eventoModal').modal('show');
+        }
+    };
     
+    // Crear y renderizar el calendario
+    var calendar = new FullCalendar.Calendar(calendarEl, calendarConfig);
     calendar.render();
-    console.log('Calendario renderizado');
+
+    // Manejar el envío del formulario
+    $('#eventoForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        var formData = new FormData(this);
+        var method = $('#method').val();
+        var eventoId = $('#evento_id').val();
+        
+        var url = '{{ route("dashboard.calendario.evento") }}';
+        if (method === 'PUT' && eventoId) {
+            url = '{{ route("dashboard.calendario.evento.update", "") }}/' + eventoId;
+        }
+        
+        $.ajax({
+            url: url,
+            method: method,
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                $('#eventoModal').modal('hide');
+                showNotification('Evento guardado correctamente', 'success');
+                setTimeout(function() {
+                    window.location.reload();
+                }, 1000);
+            },
+            error: function(xhr) {
+                var errorMessage = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Error desconocido';
+                showNotification('Error al guardar el evento: ' + errorMessage, 'error');
+            }
+        });
+    });
+
+    // Función para eliminar evento
+    window.eliminarEvento = function() {
+        if (!confirm('¿Estás seguro de que deseas eliminar este evento?')) {
+            return;
+        }
+        
+        var eventoId = $('#evento_id').val();
+        
+        $.ajax({
+            url: '{{ route("dashboard.calendario.eliminar", "") }}/' + eventoId,
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            success: function(response) {
+                $('#eventoModal').modal('hide');
+                showNotification('Evento eliminado correctamente', 'success');
+                setTimeout(function() {
+                    window.location.reload();
+                }, 1000);
+            },
+            error: function(xhr) {
+                var errorMessage = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Error desconocido';
+                showNotification('Error al eliminar el evento: ' + errorMessage, 'error');
+            }
+        });
+    };
 });
 </script>
 @endpush 
