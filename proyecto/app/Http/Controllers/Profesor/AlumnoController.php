@@ -504,6 +504,8 @@ class AlumnoController extends Controller
             'crear_cuentas_ldap' => 'boolean',
             'separador' => 'required|string|size:1',
             'tiene_encabezados' => 'boolean',
+            'confirmar_importacion' => 'boolean',
+            'alumnos_data' => 'required_if:confirmar_importacion,true|array',
         ]);
 
         if ($validator->fails()) {
@@ -511,28 +513,80 @@ class AlumnoController extends Controller
                 ->withErrors($validator)
                 ->withInput();
         }
-        
-        // Verificar acceso al grupo
-        $grupoId = $request->clase_grupo_id;
-        $user = session('auth_user');
-        $grupo = ClaseGrupo::findOrFail($grupoId);
-        
-        if (!$user['is_admin'] && $grupo->profesor_id != $user['id']) {
-            abort(403, 'No tienes permiso para añadir alumnos a este grupo');
+
+        // Si no es confirmación, mostrar previsualización
+        if (!$request->has('confirmar_importacion')) {
+            try {
+                // Procesar archivo CSV
+                $file = $request->file('archivo_csv');
+                $csv = Reader::createFromPath($file->getPathname(), 'r');
+                $csv->setDelimiter($request->separador);
+                
+                // Si tiene encabezados, saltamos la primera fila
+                if ($request->has('tiene_encabezados')) {
+                    $stmt = Statement::create()->offset(1);
+                    $records = $stmt->process($csv);
+                } else {
+                    $records = $csv->getRecords();
+                }
+                
+                $alumnosData = [];
+                $errores = [];
+                
+                foreach ($records as $index => $record) {
+                    // Verificar que tenga al menos nombre y apellidos
+                    if (count($record) < 2 || empty($record[0]) || empty($record[1])) {
+                        $errores[] = "Fila " . ($index + 1) . ": Faltan campos obligatorios (nombre y apellidos)";
+                        continue;
+                    }
+                    
+                    // Generar contraseña aleatoria
+                    $password = AlumnoClase::generarPassword();
+                    
+                    // Preparar datos del alumno
+                    $alumnoData = [
+                        'nombre' => $record[0],
+                        'apellidos' => $record[1],
+                        'email' => count($record) > 2 ? $record[2] : null,
+                        'dni' => count($record) > 3 ? $record[3] : null,
+                        'numero_expediente' => count($record) > 4 ? $record[4] : null,
+                        'fecha_nacimiento' => (count($record) > 5 && !empty($record[5])) ? 
+                            date('Y-m-d', strtotime($record[5])) : null,
+                        'password' => $password
+                    ];
+                    
+                    $alumnosData[] = $alumnoData;
+                }
+                
+                // Guardar datos en sesión para la confirmación
+                session([
+                    'import_preview' => [
+                        'alumnos' => $alumnosData,
+                        'grupo_id' => $request->clase_grupo_id,
+                        'crear_ldap' => $request->has('crear_cuentas_ldap'),
+                        'errores' => $errores
+                    ]
+                ]);
+                
+                return view('profesor.alumnos.import-preview', [
+                    'alumnos' => $alumnosData,
+                    'grupo' => ClaseGrupo::find($request->clase_grupo_id),
+                    'errores' => $errores
+                ]);
+                
+            } catch (\Exception $e) {
+                Log::error('Error al procesar CSV: ' . $e->getMessage());
+                return redirect()->back()
+                    ->with('error', 'Error al procesar el archivo: ' . $e->getMessage())
+                    ->withInput();
+            }
         }
         
+        // Si es confirmación, procesar la importación
         try {
-            // Procesar archivo CSV
-            $file = $request->file('archivo_csv');
-            $csv = Reader::createFromPath($file->getPathname(), 'r');
-            $csv->setDelimiter($request->separador);
-            
-            // Si tiene encabezados, saltamos la primera fila
-            if ($request->has('tiene_encabezados')) {
-                $stmt = Statement::create()->offset(1);
-                $records = $stmt->process($csv);
-            } else {
-                $records = $csv->getRecords();
+            $importData = session('import_preview');
+            if (!$importData) {
+                throw new \Exception('No hay datos de importación en la sesión');
             }
             
             DB::beginTransaction();
@@ -540,39 +594,40 @@ class AlumnoController extends Controller
             $alumnosImportados = 0;
             $errores = [];
             
-            foreach ($records as $index => $record) {
-                // Verificar que tenga al menos nombre y apellidos
-                if (count($record) < 2 || empty($record[0]) || empty($record[1])) {
-                    $errores[] = "Fila " . ($index + 1) . ": Faltan campos obligatorios (nombre y apellidos)";
-                    continue;
-                }
-                
-                // Crear alumno
-                $alumno = new AlumnoClase();
-                $alumno->nombre = $record[0];
-                $alumno->apellidos = $record[1];
-                $alumno->email = count($record) > 2 ? $record[2] : null;
-                $alumno->dni = count($record) > 3 ? $record[3] : null;
-                $alumno->numero_expediente = count($record) > 4 ? $record[4] : null;
-                $alumno->fecha_nacimiento = (count($record) > 5 && !empty($record[5])) ? 
-                    date('Y-m-d', strtotime($record[5])) : null;
-                $alumno->clase_grupo_id = $grupoId;
-                $alumno->activo = true;
-                
-                // Si se solicita crear cuentas LDAP
-                if ($request->has('crear_cuentas_ldap')) {
-                    $resultado = $alumno->crearCuentaLdap();
+            foreach ($importData['alumnos'] as $alumnoData) {
+                try {
+                    // Crear alumno
+                    $alumno = new AlumnoClase();
+                    $alumno->nombre = $alumnoData['nombre'];
+                    $alumno->apellidos = $alumnoData['apellidos'];
+                    $alumno->email = $alumnoData['email'];
+                    $alumno->dni = $alumnoData['dni'];
+                    $alumno->numero_expediente = $alumnoData['numero_expediente'];
+                    $alumno->fecha_nacimiento = $alumnoData['fecha_nacimiento'];
+                    $alumno->clase_grupo_id = $importData['grupo_id'];
+                    $alumno->activo = true;
                     
-                    if (!$resultado['exito']) {
-                        $errores[] = "Fila " . ($index + 1) . ": Error LDAP - " . $resultado['mensaje'];
+                    // Si se solicita crear cuentas LDAP
+                    if ($importData['crear_ldap']) {
+                        $resultado = $alumno->crearCuentaLdap($alumnoData['password']);
+                        
+                        if (!$resultado['success']) {
+                            $errores[] = "Error al crear cuenta LDAP para {$alumno->nombre_completo}: " . $resultado['message'];
+                        }
                     }
+                    
+                    $alumno->save();
+                    $alumnosImportados++;
+                    
+                } catch (\Exception $e) {
+                    $errores[] = "Error al importar {$alumnoData['nombre']} {$alumnoData['apellidos']}: " . $e->getMessage();
                 }
-                
-                $alumno->save();
-                $alumnosImportados++;
             }
             
             DB::commit();
+            
+            // Limpiar datos de sesión
+            session()->forget('import_preview');
             
             if (count($errores) > 0) {
                 $errorMsg = "Se importaron " . $alumnosImportados . " alumnos con " . count($errores) . " errores.";
