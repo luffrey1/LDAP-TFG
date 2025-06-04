@@ -121,7 +121,7 @@
 
                             <div class="form-group mb-4">
                                 <div class="form-check">
-                                    <input type="checkbox" name="crear_cuentas_ldap" id="crear_cuentas_ldap" class="form-check-input" value="1" checked>
+                                    <input type="checkbox" name="crear_cuentas_ldap" id="crear_cuentas_ldap" class="form-check-input" value="1" {{ old('crear_cuentas_ldap', true) ? 'checked' : '' }}>
                                     <label class="form-check-label" for="crear_cuentas_ldap">Crear cuentas LDAP para los alumnos</label>
                                 </div>
                             </div>
