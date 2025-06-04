@@ -352,8 +352,11 @@ class LdapUserController extends Controller
             // Crear el usuario directamente con LDAP nativo para mayor control
             $ldapConn = ldap_connect('ldaps://' . config('ldap.connections.default.hosts')[0], config('ldap.connections.default.port'));
             if (!$ldapConn) {
+                Log::error("Error al crear conexión LDAP");
                 throw new Exception("No se pudo establecer la conexión LDAP");
             }
+            
+            Log::debug("Conexión LDAP creada, configurando opciones...");
             
             ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
             ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
@@ -361,10 +364,14 @@ class LdapUserController extends Controller
             
             // Intentar conexión SSL primero
             if (config('ldap.connections.default.use_ssl', false)) {
+                Log::debug("Configurando SSL para conexión LDAP...");
                 ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
                 ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
                 ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
             }
+            
+            Log::debug("Intentando bind con credenciales LDAP...");
+            Log::debug("Username: " . config('ldap.connections.default.username'));
             
             // Intentar bind con credenciales
             $bind = @ldap_bind(
@@ -374,8 +381,10 @@ class LdapUserController extends Controller
             );
             
             if (!$bind) {
-                Log::error("Error al conectar al servidor LDAP: " . ldap_error($ldapConn));
-                throw new Exception("No se pudo conectar al servidor LDAP: " . ldap_error($ldapConn));
+                $error = ldap_error($ldapConn);
+                Log::error("Error al conectar al servidor LDAP: " . $error);
+                Log::error("Código de error LDAP: " . ldap_errno($ldapConn));
+                throw new Exception("No se pudo conectar al servidor LDAP: " . $error);
             }
             
             Log::debug("Conexión LDAP establecida correctamente");
