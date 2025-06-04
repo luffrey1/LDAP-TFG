@@ -82,53 +82,55 @@ class LdapUserController extends Controller
             }
             
             $search = $request->input('search', '');
-            $filter = $request->input('group', '');
+            $selectedGroup = $request->input('group', '');
             $page = $request->input('page', 1);
             $perPage = $request->input('perPage', 10);
             
             // Obtener todos los grupos disponibles
-            $allGroups = $this->connection->query()
-                ->in($this->baseDn)
-                ->rawFilter('(|(objectclass=groupOfUniqueNames)(objectclass=posixGroup))')
+            $groups = $this->connection->query()
+                ->in('ou=groups,dc=tierno,dc=es')
                 ->get();
             
-            // Crear lista de grupos para el dropdown
-            $groupList = collect($allGroups)->map(function($group) {
-                return is_array($group) ? ($group['cn'][0] ?? '') : $group->getFirstAttribute('cn');
-            })->filter()->unique()->values()->all();
+            // Construir la lista de grupos para el dropdown
+            $groupList = [];
+            foreach ($groups as $group) {
+                $cn = is_array($group) ? ($group['cn'][0] ?? '') : $group->getFirstAttribute('cn');
+                if (!empty($cn)) {
+                    $groupList[$cn] = $cn;
+                }
+            }
             
             // Construir el filtro de búsqueda
-            $searchFilter = '';
+            $searchFilter = '(&(objectclass=inetOrgPerson)';
             if (!empty($search)) {
-                $searchFilter = "(|(cn=*{$search}*)(sn=*{$search}*)(mail=*{$search}*)(uid=*{$search}*))";
+                $searchFilter .= '(|(cn=*' . $search . '*)(mail=*' . $search . '*)(uid=*' . $search . '*))';
             }
+            $searchFilter .= ')';
             
-            // Construir el filtro de grupo
-            $groupFilter = '';
-            if (!empty($filter)) {
-                $groupFilter = "(memberOf=cn={$filter},ou=groups,{$this->baseDn})";
+            // Ejecutar la búsqueda
+            $allUsers = $this->connection->query()
+                ->in('ou=people,dc=tierno,dc=es')
+                ->rawFilter($searchFilter)
+                ->get();
+            
+            // Si hay un grupo seleccionado, filtrar los usuarios que pertenecen a ese grupo
+            if (!empty($selectedGroup)) {
+                $filteredUsers = [];
+                foreach ($allUsers as $user) {
+                    $uid = is_array($user) ? ($user['uid'][0] ?? '') : $user->getFirstAttribute('uid');
+                    if (!empty($uid)) {
+                        $userGroups = $this->getUserGroups($uid);
+                        if (in_array($selectedGroup, $userGroups)) {
+                            $filteredUsers[] = $user;
+                        }
+                    }
+                }
+                $allUsers = $filteredUsers;
             }
-            
-            // Combinar filtros
-            $finalFilter = '(&(objectclass=inetOrgPerson)';
-            if (!empty($searchFilter)) {
-                $finalFilter .= $searchFilter;
-            }
-            if (!empty($groupFilter)) {
-                $finalFilter .= $groupFilter;
-            }
-            $finalFilter .= ')';
-            
-            // Buscar usuarios
-            $query = $this->connection->query();
-            $query->in($this->peopleOu);
-            $query->rawFilter($finalFilter);
-            
-            $users = $query->get();
             
             // Obtener grupos para cada usuario
             $userGroups = [];
-            foreach ($users as $user) {
+            foreach ($allUsers as $user) {
                 $uid = is_array($user) ? ($user['uid'][0] ?? '') : $user->getFirstAttribute('uid');
                 if (!empty($uid)) {
                     $userGroups[$uid] = $this->getUserGroups($uid);
@@ -139,9 +141,9 @@ class LdapUserController extends Controller
             $adminUsers = $this->getAdminUsers();
             
             // Paginar resultados
-            $total = count($users);
+            $total = count($allUsers);
             $offset = ($page - 1) * $perPage;
-            $paginatedUsers = array_slice($users, $offset, $perPage);
+            $paginatedUsers = array_slice($allUsers, $offset, $perPage);
             
             $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
                 $paginatedUsers,
@@ -172,7 +174,7 @@ class LdapUserController extends Controller
                 'userGroups' => $userGroups,
                 'adminUsers' => $adminUsers,
                 'search' => $search,
-                'selectedGroup' => $filter,
+                'selectedGroup' => $selectedGroup,
                 'groupList' => $groupList,
                 'total' => $total,
                 'perPage' => $perPage
