@@ -1034,8 +1034,6 @@ class LdapUserController extends Controller
     public function toggleAdmin($dn)
     {
         try {
-            $this->connection->connect();
-            
             // Decodificar el DN y validar
             $userDn = base64_decode($dn);
             if (!$userDn) {
@@ -1056,76 +1054,94 @@ class LdapUserController extends Controller
                 return back()->with('error', 'Error: No se pudo obtener el UID del usuario');
             }
             
-            // Buscar el usuario por su UID para confirmar que existe
-            $user = $this->connection->query()
-                ->in($this->peopleOu)
-                ->where('uid', '=', $uid)
-                ->first();
-                
-            if (!$user) {
-                // Intentar buscar en toda la base
-                $user = $this->connection->query()
-                    ->in($this->baseDn)
-                    ->where('uid', '=', $uid)
-                    ->first();
+            // Obtener la configuración LDAP
+            $config = config('ldap.connections.default');
+            
+            // Establecer conexión LDAP nativa para mayor compatibilidad
+            $ldapConn = ldap_connect($config['hosts'][0], $config['port']);
+            if (!$ldapConn) {
+                throw new \Exception("No se pudo crear la conexión LDAP: " . ldap_error($ldapConn));
             }
             
-            if (!$user) {
-                return back()->with('error', 'Usuario no encontrado');
+            // Configurar opciones de LDAP
+            ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
+            ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
+            ldap_set_option($ldapConn, LDAP_OPT_NETWORK_TIMEOUT, 10);
+            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
+            
+            // Configurar opciones de TLS si es necesario
+            if (isset($config['use_ssl']) && $config['use_ssl']) {
+                ldap_start_tls($ldapConn);
             }
-            $adminGroup = $this->connection->query()
-                ->in($this->baseDn)
-                ->where('cn', '=', 'ldapadmins')
-                ->first();
-                
-            if (!$adminGroup) {
-                return back()->with('error', 'Grupo de administradores no encontrado');
+            
+            Log::debug("Intentando conectar al servidor LDAP para toggleAdmin");
+            
+            // Autenticar con el servidor LDAP
+            $bind = @ldap_bind($ldapConn, $config['username'], $config['password']);
+            if (!$bind) {
+                $error = ldap_error($ldapConn);
+                $errno = ldap_errno($ldapConn);
+                throw new \Exception("Error al conectar al servidor LDAP: $error (errno: $errno)");
             }
-                        
+            
+            Log::debug("Conexión LDAP establecida correctamente para toggleAdmin");
+            
+            // Buscar el usuario por su UID para confirmar que existe
+            $filter = "(uid=$uid)";
+            $search = ldap_search($ldapConn, $this->peopleOu, $filter);
+            
+            if (!$search) {
+                throw new \Exception("Error al buscar usuario: " . ldap_error($ldapConn));
+            }
+            
+            $entries = ldap_get_entries($ldapConn, $search);
+            if ($entries['count'] == 0) {
+                throw new \Exception("No se encontró el usuario con UID: $uid");
+            }
+            
+            $user = $entries[0];
+            Log::debug("Usuario encontrado para toggleAdmin: " . $uid);
+            
+            // Buscar grupo de administradores
+            $adminGroupSearch = ldap_search($ldapConn, $this->groupsOu, "(cn=ldapadmins)");
+            if (!$adminGroupSearch) {
+                throw new \Exception("Error al buscar grupo de administradores: " . ldap_error($ldapConn));
+            }
+            
+            $adminGroupEntries = ldap_get_entries($ldapConn, $adminGroupSearch);
+            if ($adminGroupEntries['count'] == 0) {
+                throw new \Exception("No se encontró el grupo de administradores");
+            }
+            
+            $adminGroup = $adminGroupEntries[0];
+            $groupDn = $adminGroup['dn'];
+            Log::debug("Grupo de administradores encontrado: " . $groupDn);
+            
             // Verificar si el usuario ya es miembro del grupo admin
             $isAdmin = false;
             
             // Verificar memberUid (posixGroup)
             if (isset($adminGroup['memberuid'])) {
-                $memberUids = is_array($adminGroup['memberuid']) 
-                    ? $adminGroup['memberuid'] 
-                    : [$adminGroup['memberuid']];
-                
-                $isAdmin = in_array($uid, $memberUids);
+                for ($i = 0; $i < $adminGroup['memberuid']['count']; $i++) {
+                    if ($adminGroup['memberuid'][$i] == $uid) {
+                        $isAdmin = true;
+                        break;
+                    }
+                }
             }
             
             // Verificar uniqueMember (groupOfUniqueNames)
             if (!$isAdmin && isset($adminGroup['uniquemember'])) {
-                $uniqueMembers = is_array($adminGroup['uniquemember']) 
-                    ? $adminGroup['uniquemember'] 
-                    : [$adminGroup['uniquemember']];
-                
-                $isAdmin = in_array($userDn, $uniqueMembers);
+                for ($i = 0; $i < $adminGroup['uniquemember']['count']; $i++) {
+                    if ($adminGroup['uniquemember'][$i] == $userDn) {
+                        $isAdmin = true;
+                        break;
+                    }
+                }
             }
             
-            // Usar la conexión LDAP directamente
-            $ldapConnection = ldap_connect(config('ldap.connections.default.hosts')[0], config('ldap.connections.default.port'));
+            Log::debug("¿El usuario es administrador actualmente?: " . ($isAdmin ? 'Sí' : 'No'));
             
-            if (!$ldapConnection) {
-                return back()->with('error', 'Error al conectar con el servidor LDAP');
-            }
-            
-            // Configurar opciones de LDAP
-            ldap_set_option($ldapConnection, LDAP_OPT_PROTOCOL_VERSION, 3);
-            ldap_set_option($ldapConnection, LDAP_OPT_REFERRALS, 0);
-            
-            // Autenticar con el servidor LDAP
-            $ldapBind = ldap_bind(
-                $ldapConnection, 
-                config('ldap.connections.default.username'), 
-                config('ldap.connections.default.password')
-            );
-            
-            if (!$ldapBind) {
-                return back()->with('error', 'Error al autenticar con el servidor LDAP');
-            }
-            
-            $groupDn = $adminGroup['dn'];
             $hasErrors = false;
             $errorMessages = [];
             
@@ -1134,52 +1150,44 @@ class LdapUserController extends Controller
                 // Eliminar el usuario del grupo
                 
                 // 1. Actualizar memberUid (posixGroup)
-                $result = ldap_read($ldapConnection, $groupDn, "(objectclass=*)", ["memberUid"]);
-                
-                if ($result) {
-                    $entries = ldap_get_entries($ldapConnection, $result);
+                if (isset($adminGroup['memberuid'])) {
                     $memberUids = [];
+                    for ($i = 0; $i < $adminGroup['memberuid']['count']; $i++) {
+                        if ($adminGroup['memberuid'][$i] != $uid) {
+                            $memberUids[] = $adminGroup['memberuid'][$i];
+                        }
+                    }
                     
-                    if (isset($entries[0]['memberuid'])) {
-                        for ($i = 0; $i < $entries[0]['memberuid']['count']; $i++) {
-                            if ($entries[0]['memberuid'][$i] != $uid) {
-                                $memberUids[] = $entries[0]['memberuid'][$i];
-                            }
-                        }
-                        
-                        // Actualizar el grupo sin el usuario
-                        $entry = ["memberUid" => $memberUids];
-                        $resultModify = ldap_modify($ldapConnection, $groupDn, $entry);
-                        
-                        if (!$resultModify) {
-                            $hasErrors = true;
-                            $errorMessages[] = 'Error al eliminar usuario del grupo admin (memberUid)';
-                        }
+                    // Actualizar el grupo sin el usuario
+                    $entry = ["memberUid" => $memberUids];
+                    $resultModify = ldap_modify($ldapConn, $groupDn, $entry);
+                    
+                    if (!$resultModify) {
+                        $hasErrors = true;
+                        $errorMessages[] = 'Error al eliminar usuario del grupo admin (memberUid): ' . ldap_error($ldapConn);
+                    } else {
+                        Log::debug("Usuario eliminado de memberUid del grupo ldapadmins");
                     }
                 }
                 
                 // 2. Actualizar uniqueMember (groupOfUniqueNames)
-                $result = ldap_read($ldapConnection, $groupDn, "(objectclass=*)", ["uniqueMember"]);
-                
-                if ($result) {
-                    $entries = ldap_get_entries($ldapConnection, $result);
+                if (isset($adminGroup['uniquemember'])) {
                     $uniqueMembers = [];
+                    for ($i = 0; $i < $adminGroup['uniquemember']['count']; $i++) {
+                        if ($adminGroup['uniquemember'][$i] != $userDn) {
+                            $uniqueMembers[] = $adminGroup['uniquemember'][$i];
+                        }
+                    }
                     
-                    if (isset($entries[0]['uniquemember'])) {
-                        for ($i = 0; $i < $entries[0]['uniquemember']['count']; $i++) {
-                            if ($entries[0]['uniquemember'][$i] != $userDn) {
-                                $uniqueMembers[] = $entries[0]['uniquemember'][$i];
-                            }
-                        }
-                        
-                        // Actualizar el grupo sin el usuario
-                        $entry = ["uniqueMember" => $uniqueMembers];
-                        $resultModify = ldap_modify($ldapConnection, $groupDn, $entry);
-                        
-                        if (!$resultModify) {
-                            $hasErrors = true;
-                            $errorMessages[] = 'Error al eliminar usuario del grupo admin (uniqueMember)';
-                        }
+                    // Actualizar el grupo sin el usuario
+                    $entry = ["uniqueMember" => $uniqueMembers];
+                    $resultModify = ldap_modify($ldapConn, $groupDn, $entry);
+                    
+                    if (!$resultModify) {
+                        $hasErrors = true;
+                        $errorMessages[] = 'Error al eliminar usuario del grupo admin (uniqueMember): ' . ldap_error($ldapConn);
+                    } else {
+                        Log::debug("Usuario eliminado de uniqueMember del grupo ldapadmins");
                     }
                 }
                 
@@ -1188,16 +1196,10 @@ class LdapUserController extends Controller
                 // Añadir el usuario al grupo
                 
                 // 1. Actualizar memberUid (posixGroup)
-                $result = ldap_read($ldapConnection, $groupDn, "(objectclass=*)", ["memberUid"]);
-                
-                if ($result) {
-                    $entries = ldap_get_entries($ldapConnection, $result);
+                if (isset($adminGroup['memberuid'])) {
                     $memberUids = [];
-                    
-                    if (isset($entries[0]['memberuid'])) {
-                        for ($i = 0; $i < $entries[0]['memberuid']['count']; $i++) {
-                            $memberUids[] = $entries[0]['memberuid'][$i];
-                        }
+                    for ($i = 0; $i < $adminGroup['memberuid']['count']; $i++) {
+                        $memberUids[] = $adminGroup['memberuid'][$i];
                     }
                     
                     // Añadir el usuario solo si no existe
@@ -1207,25 +1209,21 @@ class LdapUserController extends Controller
                     
                     // Actualizar el grupo con el nuevo usuario
                     $entry = ["memberUid" => $memberUids];
-                    $resultModify = ldap_modify($ldapConnection, $groupDn, $entry);
+                    $resultModify = ldap_modify($ldapConn, $groupDn, $entry);
                     
                     if (!$resultModify) {
                         $hasErrors = true;
-                        $errorMessages[] = 'Error al añadir usuario al grupo admin (memberUid)';
+                        $errorMessages[] = 'Error al añadir usuario al grupo admin (memberUid): ' . ldap_error($ldapConn);
+                    } else {
+                        Log::debug("Usuario añadido a memberUid del grupo ldapadmins");
                     }
                 }
                 
                 // 2. Actualizar uniqueMember (groupOfUniqueNames)
-                $result = ldap_read($ldapConnection, $groupDn, "(objectclass=*)", ["uniqueMember"]);
-                
-                if ($result) {
-                    $entries = ldap_get_entries($ldapConnection, $result);
+                if (isset($adminGroup['uniquemember'])) {
                     $uniqueMembers = [];
-                    
-                    if (isset($entries[0]['uniquemember'])) {
-                        for ($i = 0; $i < $entries[0]['uniquemember']['count']; $i++) {
-                            $uniqueMembers[] = $entries[0]['uniquemember'][$i];
-                        }
+                    for ($i = 0; $i < $adminGroup['uniquemember']['count']; $i++) {
+                        $uniqueMembers[] = $adminGroup['uniquemember'][$i];
                     }
                     
                     // Añadir el usuario solo si no existe
@@ -1235,27 +1233,35 @@ class LdapUserController extends Controller
                     
                     // Actualizar el grupo con el nuevo usuario
                     $entry = ["uniqueMember" => $uniqueMembers];
-                    $resultModify = ldap_modify($ldapConnection, $groupDn, $entry);
+                    $resultModify = ldap_modify($ldapConn, $groupDn, $entry);
                     
                     if (!$resultModify) {
                         $hasErrors = true;
-                        $errorMessages[] = 'Error al añadir usuario al grupo admin (uniqueMember)';
+                        $errorMessages[] = 'Error al añadir usuario al grupo admin (uniqueMember): ' . ldap_error($ldapConn);
+                    } else {
+                        Log::debug("Usuario añadido a uniqueMember del grupo ldapadmins");
                     }
                 }
                 
                 $message = 'Usuario añadido al grupo de administradores';
             }
             
-            ldap_close($ldapConnection);
+            ldap_close($ldapConn);
             
             if ($hasErrors) {
                 return back()->with('warning', $message . ' con advertencias: ' . implode(', ', $errorMessages));
             }
             
+            // Registrar la acción en logs
+            $adminUser = $this->getCurrentUsername();
+            Log::info("Cambio de permisos de administrador para usuario $uid por $adminUser. Es admin ahora: " . (!$isAdmin ? 'Sí' : 'No'));
+            
             return redirect()->route('admin.users.index')
                 ->with('success', $message);
                 
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
+            Log::error("Error al cambiar permisos de administrador: " . $e->getMessage());
+            Log::error("Traza: " . $e->getTraceAsString());
             return back()->with('error', 'Error al cambiar permisos: ' . $e->getMessage());
         }
     }
