@@ -740,11 +740,7 @@ class LdapUserController extends Controller
                     LDAP_OPT_NETWORK_TIMEOUT => 5,
                 ],
             ]);
-            
-            Log::debug("Intentando conectar al servidor LDAP");
-            $connection->connect();
-            Log::debug("Conexión LDAP establecida");
-            
+
             // Buscar el usuario primero por UID en toda la base
             $user = null;
             if ($uid) {
@@ -769,14 +765,46 @@ class LdapUserController extends Controller
                     Log::debug("Usuario encontrado por DN para actualizar");
                 }
             }
-            
+                
             if (!$user) {
                 Log::error("Usuario con DN '{$decodedDn}' no encontrado para actualizar");
                 return redirect()->route('admin.users.index')
                     ->with('error', 'Usuario no encontrado');
             }
+
+            // Verificar si el usuario es administrador
+            $isAdminUser = false;
+            $userGroups = $this->getUserGroups($user->getDn());
+            foreach ($userGroups as $group) {
+                $groupName = '';
+                if (is_array($group)) {
+                    $groupName = $group['cn'][0] ?? '';
+                } else {
+                    $groupName = $group->getFirstAttribute('cn') ?? '';
+                }
+                
+                if ($groupName === 'ldapadmins') {
+                    $isAdminUser = true;
+                    break;
+                }
+            }
             
-            // Preparar datos para actualización
+            // Si el usuario es administrador y el usuario actual no es administrador, solo permitir editar campos básicos
+            $isCurrentUserAdmin = session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin';
+            if ($isAdminUser && !$isCurrentUserAdmin) {
+                // Preservar los grupos actuales en lugar de permitir cambiarlos
+                $request->merge(['grupos' => []]);
+                foreach ($userGroups as $group) {
+                    if (is_array($group)) {
+                        $groupName = $group['cn'][0] ?? '';
+                    } else {
+                        $groupName = $group->getFirstAttribute('cn') ?? '';
+                    }
+                    $request->grupos[] = $groupName;
+                }
+            }
+
+            // Actualizar datos básicos
             $updateData = [
                 'cn' => $request->nombre . ' ' . $request->apellidos,
                 'sn' => $request->apellidos,
@@ -784,38 +812,39 @@ class LdapUserController extends Controller
                 'mail' => $request->email
             ];
             
-            // Actualizar campos opcionales si se proporcionan
+            // Actualizar uidNumber si se proporciona
             if ($request->filled('uidNumber')) {
                 $updateData['uidnumber'] = $request->uidNumber;
             }
+            
+            // Actualizar gidNumber si se proporciona
             if ($request->filled('gidNumber')) {
                 $updateData['gidnumber'] = $request->gidNumber;
             }
+            
+            // Actualizar homeDirectory si se proporciona
             if ($request->filled('homeDirectory')) {
                 $updateData['homedirectory'] = $request->homeDirectory;
             }
+            
+            // Actualizar loginShell si se proporciona
             if ($request->filled('loginShell')) {
                 $updateData['loginshell'] = $request->loginShell;
             }
             
-            // Si hay contraseña, actualizarla
+            // Si hay contraseña, actualizarla correctamente
             if (!empty($request->password)) {
+                // Usar el método mejorado de hash de contraseñas
                 $hashedPassword = $this->hashPassword($request->password);
                 $updateData['userpassword'] = $hashedPassword;
                 $updateData['shadowLastChange'] = floor(time() / 86400);
             }
-            
-            // Modificar el usuario
+
+            // Nos aseguramos de que el usuario tenga todos los objectClass necesarios
+            $this->ensureUserHasRequiredClasses($user->getDn());
+
+            // Modificar el usuario usando LdapRecord
             try {
-                $user = $connection->query()
-                    ->in($config['base_dn'])
-                    ->where('dn', '=', $user['dn'])
-                    ->first();
-                
-                if (!$user) {
-                    throw new Exception("No se pudo encontrar el usuario para actualizar");
-                }
-                
                 foreach ($updateData as $attribute => $value) {
                     $user->setAttribute($attribute, $value);
                 }
@@ -823,23 +852,27 @@ class LdapUserController extends Controller
                 $user->save();
                 Log::debug("Usuario actualizado correctamente");
                 
+                // Actualizar grupos del usuario si se proporcionaron
+                if ($request->has('grupos')) {
+                    $this->updateUserGroupsDirect($user->getDn(), $request->grupos, $connection);
+                }
+                
+                // Registrar la acción en logs
+                $adminUser = $this->getCurrentUsername();
+                Log::info("Usuario LDAP actualizado: {$uid} por {$adminUser}. Grupos: " . json_encode($request->grupos ?? []));
+                
+                Log::channel('activity')->info('Usuario LDAP actualizado', [
+                    'action' => 'Actualizar Usuario',
+                    'username' => $request->username
+                ]);
+                
+                return redirect()->route('admin.users.index')
+                    ->with('success', 'Usuario actualizado correctamente');
+                    
             } catch (Exception $e) {
                 Log::error("Error al actualizar usuario: " . $e->getMessage());
                 throw new Exception("Error al actualizar usuario: " . $e->getMessage());
             }
-            
-            // Actualizar grupos del usuario si se proporcionaron
-            if ($request->has('grupos')) {
-                $this->updateUserGroupsDirect($user['dn'], $request->grupos, $connection);
-            }
-            
-            // Registrar la acción en logs
-            $adminUser = $this->getCurrentUsername();
-            Log::info("Usuario LDAP actualizado: {$uid} por {$adminUser}. Grupos: " . json_encode($request->grupos ?? []));
-            
-            return redirect()->route('admin.users.index')
-                ->with('success', 'Usuario actualizado correctamente');
-                
         } catch (Exception $e) {
             Log::error('Error al actualizar usuario LDAP: ' . $e->getMessage());
             Log::error('Traza: ' . $e->getTraceAsString());
