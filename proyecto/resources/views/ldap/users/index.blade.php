@@ -1,4 +1,4 @@
-@extends('layouts.departamento')
+@extends('layouts.dashboard')
 
 @section('title', 'Gestión de Usuarios LDAP')
 
