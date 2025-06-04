@@ -75,7 +75,7 @@
                             <div class="form-group mb-4">
                                 <label for="clase_grupo_id" class="form-label fw-bold text-black fs-5">Clase / Grupo</label>
                                 <select name="clase_grupo_id" id="clase_grupo_id" class="form-select select2 shadow-sm bg-white border-2" @if(!session('auth_user.is_admin')) required @endif>
-                                    <option value="" class="text-secondary fw-medium">@if(session('auth_user.is_admin'))(Opcional) Sin grupo asignado@else Seleccione un grupo @endif</option>
+                                    <option value="" class="text-dark fw-medium">@if(session('auth_user.is_admin'))(Opcional) Sin grupo asignado@else Seleccione un grupo @endif</option>
                                     @foreach($grupos as $grupo_select)
                                     <option value="{{ $grupo_select->id }}" {{ isset($grupo) && $grupo->id == $grupo_select->id ? 'selected' : '' }}>
                                         {{ $grupo_select->nombre }} ({{ $grupo_select->curso }}º {{ $grupo_select->seccion }})
@@ -366,7 +366,13 @@
 }
 
 .card-header {
-    border-radius: 0.5rem 0.5rem 0 0 !important;
+    background-color: #0d6efd !important;
+}
+
+.card-header h4, .card-header h5 {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    margin: 0 !important;
 }
 
 .table > :not(caption) > * > * {
@@ -383,7 +389,6 @@ code {
     font-size: 1.25rem !important;
     font-weight: 600 !important;
     margin-bottom: 0.75rem !important;
-    text-shadow: 0 0 1px rgba(0,0,0,0.1);
 }
 
 .form-select {
@@ -395,13 +400,13 @@ code {
 }
 
 .form-select option {
-    color: #000000;
-    background-color: #ffffff;
-    font-weight: 500;
+    color: #000000 !important;
+    background-color: #ffffff !important;
+    font-weight: 500 !important;
 }
 
 .form-select option:first-child {
-    color: #6c757d !important;
+    color: #495057 !important;
     font-weight: 500 !important;
     background-color: #f8f9fa !important;
 }
@@ -426,7 +431,7 @@ code {
 }
 
 .select2-container--bootstrap-5 .select2-selection--single .select2-selection__placeholder {
-    color: #6c757d !important;
+    color: #495057 !important;
     font-weight: 500 !important;
 }
 
