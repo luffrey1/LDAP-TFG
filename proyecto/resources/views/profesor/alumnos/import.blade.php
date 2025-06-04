@@ -75,7 +75,7 @@
                             <div class="form-group mb-4">
                                 <label for="clase_grupo_id" class="form-label fw-bold text-black fs-5">Clase / Grupo</label>
                                 <select name="clase_grupo_id" id="clase_grupo_id" class="form-select select2 shadow-sm bg-white border-2" @if(!session('auth_user.is_admin')) required @endif>
-                                    <option value="" class="text-muted">@if(session('auth_user.is_admin'))(Opcional) Sin grupo asignado@else Seleccione un grupo @endif</option>
+                                    <option value="" class="text-secondary fw-medium">@if(session('auth_user.is_admin'))(Opcional) Sin grupo asignado@else Seleccione un grupo @endif</option>
                                     @foreach($grupos as $grupo_select)
                                     <option value="{{ $grupo_select->id }}" {{ isset($grupo) && $grupo->id == $grupo_select->id ? 'selected' : '' }}>
                                         {{ $grupo_select->nombre }} ({{ $grupo_select->curso }}º {{ $grupo_select->seccion }})
@@ -401,8 +401,9 @@ code {
 }
 
 .form-select option:first-child {
-    color: #495057;
-    font-weight: 400;
+    color: #6c757d !important;
+    font-weight: 500 !important;
+    background-color: #f8f9fa !important;
 }
 
 .select2-container--bootstrap-5 .select2-selection {
@@ -424,6 +425,11 @@ code {
     font-weight: 500 !important;
 }
 
+.select2-container--bootstrap-5 .select2-selection--single .select2-selection__placeholder {
+    color: #6c757d !important;
+    font-weight: 500 !important;
+}
+
 .select2-container--bootstrap-5 .select2-results__option {
     color: #000000 !important;
     background-color: #ffffff !important;
@@ -441,6 +447,16 @@ code {
     background-color: #0d6efd !important;
     color: #ffffff !important;
     font-weight: 600 !important;
+}
+
+.select2-container--bootstrap-5 .select2-results__option[aria-selected="true"] {
+    background-color: #0d6efd !important;
+    color: #ffffff !important;
+}
+
+.select2-container--bootstrap-5 .select2-results__option--highlighted[aria-selected="true"] {
+    background-color: #0a58ca !important;
+    color: #ffffff !important;
 }
 </style>
 @endsection 
