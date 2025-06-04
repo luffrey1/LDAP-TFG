@@ -40,9 +40,9 @@
                             <tbody>
                                 @forelse ($groups as $group)
                                     @php
-                                        $cn = is_array($group) ? (isset($group['cn'][0]) ? $group['cn'][0] : '') : $group->getFirstAttribute('cn');
-                                        $gidNumber = is_array($group) ? (isset($group['gidNumber'][0]) ? $group['gidNumber'][0] : 'N/A') : $group->getFirstAttribute('gidNumber');
-                                        $description = is_array($group) ? (isset($group['description'][0]) ? $group['description'][0] : 'Sin descripción') : $group->getFirstAttribute('description');
+                                        $cn = $group['cn'] ?? '';
+                                        $gidNumber = $group['gidNumber'] ?? 'N/A';
+                                        $description = $group['description'] ?? 'Sin descripción';
                                     @endphp
                                     <tr>
                                         <td>{{ $cn }}</td>
