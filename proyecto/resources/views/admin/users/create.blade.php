@@ -33,6 +33,14 @@
                         @csrf
 
                         <div class="mb-3 text-white">
+                            <label class="form-label">{{ __('Tipo de Usuario') }}</label>
+                            <div class="btn-group w-100" role="group">
+                                <button type="button" class="btn btn-outline-secondary" id="btn-role-profesor">Profesor</button>
+                                <button type="button" class="btn btn-outline-secondary active" id="btn-role-alumno">Alumno</button>
+                            </div>
+                        </div>
+
+                        <div class="mb-3 text-white">
                             <label for="nombre" class="form-label">{{ __('Nombre') }} <span class="text-danger">*</span></label>
                             <input id="nombre" type="text" class="form-control @error('nombre') is-invalid @enderror" name="nombre" value="{{ old('nombre') }}" required>
                             @error('nombre')
@@ -54,8 +62,7 @@
 
                         <div class="mb-3 text-white">
                             <label for="uid" class="form-label">{{ __('Nombre de Usuario') }} <span class="text-danger">*</span></label>
-                            <input id="uid" type="text" class="form-control @error('uid') is-invalid @enderror" name="uid" value="{{ old('uid') }}" required autocomplete="uid" readonly>
-                            <div class="form-text">{{ __('Se genera automáticamente a partir del nombre y apellido.') }}</div>
+                            <input id="uid" type="text" class="form-control @error('uid') is-invalid @enderror" name="uid" value="{{ old('uid') }}" required autocomplete="uid" placeholder="Automático">
                             @error('uid')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>
@@ -63,10 +70,13 @@
                             @enderror
                         </div>
 
+                        <div class="mb-2 text-white">
+                            <small class="form-text">{{ __('DN:') }} <span id="dn_preview_text">uid=,ou=people,dc=tierno,dc=es</span></small>
+                        </div>
+
                         <div class="mb-3 text-white">
                             <label for="email" class="form-label">{{ __('Correo Electrónico') }} <span class="text-danger">*</span></label>
-                            <input id="email" type="email" class="form-control @error('email') is-invalid @enderror" name="email" value="{{ old('email') }}" required readonly>
-                            <div class="form-text">{{ __('Se genera automáticamente a partir del nombre y apellidos.') }}</div>
+                            <input id="email" type="email" class="form-control @error('email') is-invalid @enderror" name="email" value="{{ old('email') }}" required>
                             @error('email')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>
@@ -74,23 +84,17 @@
                             @enderror
                         </div>
 
-                        <div class="mb-3 text-white">
-                            <label for="dn_preview" class="form-label">{{ __('DN (Canonical Name)') }}</label>
-                            <input id="dn_preview" type="text" class="form-control" readonly>
-                            <div class="form-text">{{ __('Este será el identificador único del usuario en LDAP.') }}</div>
-                        </div>
-
                         <div class="row">
                             <div class="col-md-6 mb-3 text-white">
                                 <label for="uidNumber" class="form-label">{{ __('UID Number') }}</label>
-                                <input id="uidNumber" type="number" class="form-control" name="uidNumber" value="{{ old('uidNumber') }}">
+                                <input id="uidNumber" type="number" class="form-control" name="uidNumber" value="{{ old('uidNumber') }}" placeholder="Automático">
                                 <div class="form-text">{{ __('Se asignará automáticamente si se deja vacío.') }}</div>
                             </div>
 
                             <div class="col-md-6 mb-3 text-white">
                                 <label for="gidNumber" class="form-label">{{ __('GID Number') }}</label>
-                                <input id="gidNumber" type="number" class="form-control" name="gidNumber" value="{{ old('gidNumber', '9000') }}">
-                                <div class="form-text">{{ __('Grupo principal del usuario (9000 para everybody).') }}</div>
+                                <input id="gidNumber" type="number" class="form-control" name="gidNumber" value="{{ old('gidNumber') }}" readonly>
+                                <div class="form-text">{{ __('Se asigna según el tipo de usuario.') }}</div>
                             </div>
                         </div>
 
@@ -120,18 +124,6 @@
                         <div class="mb-3 text-white">
                             <label for="password_confirmation" class="form-label">{{ __('Confirmar Contraseña') }} <span class="text-danger">*</span></label>
                             <input id="password_confirmation" type="password" class="form-control" name="password_confirmation" required>
-                        </div>
-
-                        <div class="mb-3 text-white">
-                            <label class="form-label">{{ __('Rol Predefinido') }}</label>
-                            <div class="btn-group w-100" role="group">
-                                @if(session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
-                                <button type="button" class="btn btn-outline-secondary" id="btn-role-admin">Administrador</button>
-                                @endif
-                                <button type="button" class="btn btn-outline-secondary" id="btn-role-profesor">Profesor</button>
-                                <button type="button" class="btn btn-outline-secondary" id="btn-role-alumno">Alumno</button>
-                            </div>
-                            <div class="form-text">{{ __('Seleccione un rol para preconfigurar los grupos.') }}</div>
                         </div>
 
                         <div class="mb-4 text-white">
@@ -190,16 +182,16 @@
         const nombreInput = document.getElementById('nombre');
         const apellidosInput = document.getElementById('apellidos');
         const emailInput = document.getElementById('email');
-        const dnPreview = document.getElementById('dn_preview');
+        const dnPreviewText = document.getElementById('dn_preview_text');
         const homeDirectory = document.getElementById('homeDirectory');
-        const btnRoleAdmin = document.getElementById('btn-role-admin');
         const btnRoleProfesor = document.getElementById('btn-role-profesor');
         const btnRoleAlumno = document.getElementById('btn-role-alumno');
         const gruposSelect = document.getElementById('grupos');
+        const gidNumberInput = document.getElementById('gidNumber');
 
         // Función para actualizar el nombre de usuario basado en nombre y apellidos
         function updateUsername() {
-            if (nombreInput.value) {
+            if (nombreInput.value && !uidInput.value) {
                 // Obtener el nombre en minúsculas sin acentos
                 const nombre = nombreInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
                 
@@ -212,28 +204,26 @@
                 // Combinar para formar el nombre de usuario
                 uidInput.value = nombre + inicialApellido;
                 
-                // Actualizar también el DN y el homeDirectory
-                updateDnAndHome();
+                // Actualizar también el DN
+                updateDn();
             }
         }
 
         // Función para actualizar el email basado en nombre y apellidos
         function updateEmail() {
-            if (nombreInput.value && apellidosInput.value) {
+            if (nombreInput.value && apellidosInput.value && !emailInput.value) {
                 const nombre = nombreInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
                 const apellido = apellidosInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
                 emailInput.value = nombre + apellido + '@tierno.es';
             }
         }
 
-        // Función para actualizar el DN y home directory
-        function updateDnAndHome() {
+        // Función para actualizar el DN
+        function updateDn() {
             if (uidInput.value) {
-                dnPreview.value = `uid=${uidInput.value},ou=people,dc=tierno,dc=es`;
-                homeDirectory.value = `/home/${uidInput.value}`;
+                dnPreviewText.textContent = `uid=${uidInput.value},ou=people,dc=tierno,dc=es`;
             } else {
-                dnPreview.value = '';
-                homeDirectory.value = '/home/';
+                dnPreviewText.textContent = 'uid=,ou=people,dc=tierno,dc=es';
             }
         }
 
@@ -248,48 +238,38 @@
             const commonGroups = ['everybody'];
             let roleGroups = [];
 
-            if (role === 'admin') {
-                roleGroups = ['ldapadmins', 'docker'];
-                if (btnRoleAdmin) {
-                    btnRoleAdmin.classList.add('active', 'btn-secondary');
-                    btnRoleAdmin.classList.remove('btn-outline-secondary');
-                }
-                if (btnRoleProfesor) {
-                    btnRoleProfesor.classList.remove('active', 'btn-secondary');
-                    btnRoleProfesor.classList.add('btn-outline-secondary');
-                }
-                if (btnRoleAlumno) {
-                    btnRoleAlumno.classList.remove('active', 'btn-secondary');
-                    btnRoleAlumno.classList.add('btn-outline-secondary');
-                }
-            } else if (role === 'profesor') {
+            if (role === 'profesor') {
                 roleGroups = ['profesores', 'docker'];
                 if (btnRoleProfesor) {
                     btnRoleProfesor.classList.add('active', 'btn-secondary');
                     btnRoleProfesor.classList.remove('btn-outline-secondary');
                 }
-                if (btnRoleAdmin) {
-                    btnRoleAdmin.classList.remove('active', 'btn-secondary');
-                    btnRoleAdmin.classList.add('btn-outline-secondary');
-                }
                 if (btnRoleAlumno) {
                     btnRoleAlumno.classList.remove('active', 'btn-secondary');
                     btnRoleAlumno.classList.add('btn-outline-secondary');
                 }
+                // Actualizar GID para profesores
+                fetch('/api/ldap/groups/profesores/gid')
+                    .then(response => response.json())
+                    .then(data => {
+                        gidNumberInput.value = data.gidNumber;
+                    });
             } else if (role === 'alumno') {
                 roleGroups = ['alumnos'];
                 if (btnRoleAlumno) {
                     btnRoleAlumno.classList.add('active', 'btn-secondary');
                     btnRoleAlumno.classList.remove('btn-outline-secondary');
                 }
-                if (btnRoleAdmin) {
-                    btnRoleAdmin.classList.remove('active', 'btn-secondary');
-                    btnRoleAdmin.classList.add('btn-outline-secondary');
-                }
                 if (btnRoleProfesor) {
                     btnRoleProfesor.classList.remove('active', 'btn-secondary');
                     btnRoleProfesor.classList.add('btn-outline-secondary');
                 }
+                // Actualizar GID para alumnos
+                fetch('/api/ldap/groups/alumnos/gid')
+                    .then(response => response.json())
+                    .then(data => {
+                        gidNumberInput.value = data.gidNumber;
+                    });
             }
 
             const allGroups = [...commonGroups, ...roleGroups];
@@ -314,10 +294,10 @@
             updateEmail();
         });
 
+        // Evento para actualizar DN cuando cambia el username
+        uidInput.addEventListener('input', updateDn);
+
         // Eventos para los botones de rol
-        if (btnRoleAdmin) {
-            btnRoleAdmin.addEventListener('click', () => selectGroupsByRole('admin'));
-        }
         if (btnRoleProfesor) {
             btnRoleProfesor.addEventListener('click', () => selectGroupsByRole('profesor'));
         }
@@ -328,6 +308,9 @@
         // Inicializar valores
         updateUsername();
         updateEmail();
+        updateDn();
+        // Seleccionar alumno por defecto
+        selectGroupsByRole('alumno');
     });
 </script>
 @endpush
