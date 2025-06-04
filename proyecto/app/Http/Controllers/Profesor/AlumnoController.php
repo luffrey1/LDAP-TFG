@@ -493,6 +493,12 @@ class AlumnoController extends Controller
      */
     public function importProcess(Request $request)
     {
+        // Verificar que sea una petición POST
+        if (!$request->isMethod('post')) {
+            return redirect()->route('profesor.alumnos.import')
+                ->with('error', 'Por favor, utiliza el formulario para importar alumnos.');
+        }
+
         // Convertir checkbox a booleano antes de la validación
         $data = $request->all();
         $data['tiene_encabezados'] = $request->boolean('tiene_encabezados');

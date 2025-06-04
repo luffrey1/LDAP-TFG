@@ -70,6 +70,7 @@
                     <div class="card-body">
                         <form action="{{ route('profesor.alumnos.import.process') }}" method="POST" enctype="multipart/form-data" class="dropzone" id="importForm">
                             @csrf
+                            <input type="hidden" name="_method" value="POST">
                             
                             @if(!isset($grupo))
                             <div class="form-group mb-4">
