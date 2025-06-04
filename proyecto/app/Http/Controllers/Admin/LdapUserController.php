@@ -728,6 +728,8 @@ class LdapUserController extends Controller
                 return back()->with('error', 'Error: DN inválido');
             }
             
+            Log::debug("Iniciando actualización para DN: " . $decodedDn);
+            
             // Extraer uid del userDn para búsquedas adicionales
             $oldUid = '';
             if (preg_match('/uid=([^,]+)/', $decodedDn, $matches)) {
@@ -737,7 +739,6 @@ class LdapUserController extends Controller
             
             // Obtener la configuración LDAP
             $config = config('ldap.connections.default');
-            Log::debug("Configuración LDAP: " . json_encode($config));
             
             // Crear conexión LDAP usando la configuración
             $connection = new Connection([
@@ -757,7 +758,7 @@ class LdapUserController extends Controller
                 ],
             ]);
 
-            // Conectar al servidor LDAP con mejor manejo de errores
+            // Conectar al servidor LDAP
             try {
                 $connection->connect();
                 Log::debug("Conexión LDAP establecida");
@@ -766,8 +767,10 @@ class LdapUserController extends Controller
                 throw new Exception("No se pudo conectar al servidor LDAP. Por favor, verifique que el servidor esté disponible y accesible.");
             }
 
-            // Buscar el usuario primero por UID en toda la base
+            // Buscar el usuario de múltiples formas
             $user = null;
+            
+            // 1. Buscar por UID antiguo
             if ($oldUid) {
                 Log::debug("Buscando usuario por UID antiguo: " . $oldUid);
                 $user = $connection->query()
@@ -776,11 +779,11 @@ class LdapUserController extends Controller
                     ->first();
                     
                 if ($user) {
-                    Log::debug("Usuario encontrado por UID antiguo: " . $oldUid);
+                    Log::debug("Usuario encontrado por UID antiguo");
                 }
             }
             
-            // Si no se encontró por UID, intentar por DN exacto
+            // 2. Si no se encuentra, buscar por DN exacto
             if (!$user) {
                 Log::debug("Usuario no encontrado por UID, buscando por DN: " . $decodedDn);
                 $user = $connection->query()
@@ -793,7 +796,7 @@ class LdapUserController extends Controller
                 }
             }
             
-            // Si aún no se encuentra, intentar por el nuevo UID
+            // 3. Si aún no se encuentra, intentar por el nuevo UID
             if (!$user && $request->uid !== $oldUid) {
                 Log::debug("Usuario no encontrado por DN, buscando por nuevo UID: " . $request->uid);
                 $user = $connection->query()
@@ -802,7 +805,20 @@ class LdapUserController extends Controller
                     ->first();
                     
                 if ($user) {
-                    Log::debug("Usuario encontrado por nuevo UID: " . $request->uid);
+                    Log::debug("Usuario encontrado por nuevo UID");
+                }
+            }
+            
+            // 4. Último intento: búsqueda más amplia
+            if (!$user) {
+                Log::debug("Usuario no encontrado por métodos anteriores, intentando búsqueda amplia");
+                $user = $connection->query()
+                    ->in($config['base_dn'])
+                    ->rawFilter('(&(objectclass=inetOrgPerson)(|(uid=' . $oldUid . ')(uid=' . $request->uid . ')(dn=' . $decodedDn . ')))')
+                    ->first();
+                    
+                if ($user) {
+                    Log::debug("Usuario encontrado por búsqueda amplia");
                 }
             }
                 
@@ -823,7 +839,7 @@ class LdapUserController extends Controller
                 // Crear nuevo DN
                 $newDn = 'uid=' . $request->uid . ',' . $this->peopleOu;
                 
-                // Renombrar el usuario usando LDAP nativo con mejor manejo de errores
+                // Renombrar el usuario usando LDAP nativo
                 try {
                     $ldapConn = ldap_connect('ldaps://' . $config['hosts'][0], $config['port']);
                     if (!$ldapConn) {
@@ -939,7 +955,6 @@ class LdapUserController extends Controller
             
             // Si hay contraseña, actualizarla correctamente
             if (!empty($request->password)) {
-                // Usar el método mejorado de hash de contraseñas
                 $hashedPassword = $this->hashPassword($request->password);
                 $updateData['userpassword'] = $hashedPassword;
                 $updateData['shadowLastChange'] = floor(time() / 86400);
