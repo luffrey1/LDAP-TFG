@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Exception;
 
 class ClaseController extends Controller
 {
@@ -300,66 +301,101 @@ class ClaseController extends Controller
                     
                     // Intentar obtener información del usuario desde LDAP
                     try {
+                        // Crear una conexión LDAP usando la configuración
                         $config = config('ldap.connections.default');
-                        $connection = new \LdapRecord\Connection($config);
-                        $connection->connect();
+                        Log::info("Configuración LDAP: " . json_encode($config));
                         
-                        if ($connection->isConnected()) {
-                            $ldapUser = $connection->query()
-                                ->in('ou=people,dc=tierno,dc=es')
-                                ->where('uid', '=', $profesorId)
-                                ->first();
-                                
-                            if ($ldapUser) {
-                                Log::info("Usuario LDAP encontrado: " . json_encode($ldapUser));
-                                
-                                // Determinar si es admin por grupo
-                                $esAdmin = false;
-                                try {
-                                    $adminGroup = $connection->query()
-                                        ->in('ou=groups,dc=tierno,dc=es')
-                                        ->where('cn', '=', 'ldapadmins')
-                                        ->first();
-                                        
-                                    if ($adminGroup && isset($adminGroup['memberuid'])) {
-                                        $adminUids = is_array($adminGroup['memberuid']) ? 
-                                            $adminGroup['memberuid'] : [$adminGroup['memberuid']];
-                                        $esAdmin = in_array($profesorId, $adminUids);
-                                    }
-                                } catch (\Exception $e) {
-                                    Log::error("Error al verificar grupo admin: " . $e->getMessage());
-                                }
-                                
-                                // También es admin si el username es ldap-admin
-                                if (strtolower($profesorId) === 'ldap-admin' || strtolower($profesorId) === 'ldapadmin') {
-                                    $esAdmin = true;
-                                }
-                                
-                                // Extraer datos y crear usuario
-                                $name = isset($ldapUser['cn']) ? 
-                                    (is_array($ldapUser['cn']) ? $ldapUser['cn'][0] : $ldapUser['cn']) : $profesorId;
-                                    
-                                $email = isset($ldapUser['mail']) ? 
-                                    (is_array($ldapUser['mail']) ? $ldapUser['mail'][0] : $ldapUser['mail']) : "$profesorId@test.tierno.es";
-                                
-                                // Crear el usuario en la base de datos
-                                $user = new User();
-                                $user->name = $name;
-                                $user->username = $profesorId;
-                                $user->email = $email;
-                                $user->password = bcrypt(Str::random(16)); // Contraseña aleatoria
-                                $user->role = $esAdmin ? 'admin' : 'profesor';
-                                $user->save();
-                                
-                                Log::info("Usuario creado en la BD: {$user->id} - {$user->name}");
-                            } else {
-                                Log::error("No se encontró el usuario LDAP: " . $profesorId);
-                                throw new \Exception("No se encontró el usuario LDAP: " . $profesorId);
-                            }
-                        } else {
-                            Log::error("No se pudo conectar a LDAP");
-                            throw new \Exception("No se pudo conectar a LDAP");
+                        // Crear el grupo directamente con LDAP nativo para mayor control
+                        $ldapConn = ldap_connect('ldaps://' . $config['hosts'][0], 636);
+                        if (!$ldapConn) {
+                            Log::error("Error al crear conexión LDAP");
+                            throw new Exception("No se pudo establecer la conexión LDAP");
                         }
+                        
+                        Log::debug("Conexión LDAP creada, configurando opciones...");
+                        
+                        ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
+                        ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
+                        ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
+                        
+                        // Intentar bind con credenciales
+                        $bind = @ldap_bind(
+                            $ldapConn, 
+                            $config['username'], 
+                            $config['password']
+                        );
+                        
+                        if (!$bind) {
+                            $error = ldap_error($ldapConn);
+                            Log::error("Error al conectar al servidor LDAP: " . $error);
+                            Log::error("Código de error LDAP: " . ldap_errno($ldapConn));
+                            throw new Exception("No se pudo conectar al servidor LDAP: " . $error);
+                        }
+                        
+                        Log::debug("Conexión LDAP establecida correctamente");
+                        
+                        // Intenta buscar el usuario en LDAP
+                        $filter = "(uid={$profesorId})";
+                        $search = ldap_search($ldapConn, "ou=people,dc=tierno,dc=es", $filter);
+                        
+                        if (!$search) {
+                            throw new Exception("Error al buscar usuario: " . ldap_error($ldapConn));
+                        }
+                        
+                        $entries = ldap_get_entries($ldapConn, $search);
+                        if ($entries['count'] > 0) {
+                            $ldapUser = $entries[0];
+                            Log::info("Usuario LDAP encontrado: " . json_encode($ldapUser));
+                            
+                            // Determinar si es admin por grupo
+                            $esAdmin = false;
+                            try {
+                                $adminFilter = "(cn=ldapadmins)";
+                                $adminSearch = ldap_search($ldapConn, "ou=groups,dc=tierno,dc=es", $adminFilter);
+                                
+                                if ($adminSearch) {
+                                    $adminEntries = ldap_get_entries($ldapConn, $adminSearch);
+                                    if ($adminEntries['count'] > 0) {
+                                        $adminGroup = $adminEntries[0];
+                                        if (isset($adminGroup['memberuid'])) {
+                                            $adminUids = is_array($adminGroup['memberuid']) ? 
+                                                $adminGroup['memberuid'] : [$adminGroup['memberuid']];
+                                            $esAdmin = in_array($profesorId, $adminUids);
+                                        }
+                                    }
+                                }
+                            } catch (\Exception $e) {
+                                Log::error("Error al verificar grupo admin: " . $e->getMessage());
+                            }
+                            
+                            // También es admin si el username es ldap-admin
+                            if (strtolower($profesorId) === 'ldap-admin' || strtolower($profesorId) === 'ldapadmin') {
+                                $esAdmin = true;
+                            }
+                            
+                            // Extraer datos y crear usuario
+                            $name = isset($ldapUser['cn']) ? 
+                                (is_array($ldapUser['cn']) ? $ldapUser['cn'][0] : $ldapUser['cn']) : $profesorId;
+                                
+                            $email = isset($ldapUser['mail']) ? 
+                                (is_array($ldapUser['mail']) ? $ldapUser['mail'][0] : $ldapUser['mail']) : "$profesorId@test.tierno.es";
+                            
+                            // Crear el usuario en la base de datos
+                            $user = new User();
+                            $user->name = $name;
+                            $user->username = $profesorId;
+                            $user->email = $email;
+                            $user->password = bcrypt(Str::random(16)); // Contraseña aleatoria
+                            $user->role = $esAdmin ? 'admin' : 'profesor';
+                            $user->save();
+                            
+                            Log::info("Usuario creado en la BD: {$user->id} - {$user->name}");
+                        } else {
+                            Log::error("No se encontró el usuario LDAP: " . $profesorId);
+                            throw new Exception("No se encontró el usuario LDAP: " . $profesorId);
+                        }
+                        
+                        ldap_close($ldapConn);
                     } catch (\Exception $e) {
                         Log::error("Error al crear usuario desde LDAP: " . $e->getMessage());
                         throw new \Exception("Error al crear usuario desde LDAP: " . $e->getMessage());
