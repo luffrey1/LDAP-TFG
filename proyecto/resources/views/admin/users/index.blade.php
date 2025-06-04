@@ -11,7 +11,7 @@
                         <a href="{{ route('admin.users.create') }}" class="btn btn-sm btn-light">
                             <i class="fas fa-plus"></i> {{ __('Crear Usuario') }}
                         </a>
-                        <a href="/alumnos/import/form" class="btn btn-sm btn-success ms-2">
+                        <a href="{{ route('profesor.alumnos.import') }}" class="btn btn-sm btn-success ms-2">
                             <i class="fas fa-file-import"></i> Importar CSV
                         </a>
                     </div>
