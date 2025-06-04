@@ -199,6 +199,10 @@ Route::middleware(['App\Http\Middleware\LdapAuthMiddleware'])->prefix('profesor'
     // Rutas para importar alumnos
     Route::get('alumnos/import/form', [App\Http\Controllers\Profesor\AlumnoController::class, 'importForm'])->name('alumnos.import');
     Route::post('alumnos/import/process', [App\Http\Controllers\Profesor\AlumnoController::class, 'importProcess'])->name('alumnos.import.process');
+    // Redirección amigable si se accede por GET a la ruta de proceso de importación
+    Route::get('alumnos/import/process', function() {
+        return redirect()->route('profesor.alumnos.import')->with('error', 'Acceso no permitido. Por favor, sube el archivo de nuevo.');
+    });
     Route::get('alumnos/import/template', [App\Http\Controllers\Profesor\AlumnoController::class, 'downloadTemplate'])->name('alumnos.template');
     
     // Rutas para LDAP alumnos
