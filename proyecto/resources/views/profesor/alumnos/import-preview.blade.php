@@ -81,7 +81,7 @@
                             </div>
 
                             <div class="form-group">
-                                <button type="button" class="btn btn-primary" id="confirm-import">
+                                <button type="submit" class="btn btn-primary">
                                     <i class="fas fa-check"></i> Confirmar Importación
                                 </button>
                                 <a href="{{ route('profesor.alumnos.import') }}" class="btn btn-secondary">
@@ -136,13 +136,10 @@ $(document).ready(function() {
     });
 
     // Manejar el envío del formulario
-    $('#confirm-import').click(function(e) {
+    $('#import-form').on('submit', function(e) {
         e.preventDefault();
-        var form = $('#import-form');
-        var formData = new FormData(form[0]);
-        
-        // Añadir el token CSRF
-        formData.append('_token', '{{ csrf_token() }}');
+        var form = $(this);
+        var formData = new FormData(this);
         
         $.ajax({
             url: form.attr('action'),
@@ -150,9 +147,6 @@ $(document).ready(function() {
             data: formData,
             processData: false,
             contentType: false,
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
             success: function(response) {
                 if (response.redirect) {
                     window.location.href = response.redirect;
