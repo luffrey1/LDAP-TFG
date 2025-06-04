@@ -752,6 +752,56 @@ class LdapUserController extends Controller
                 throw new Exception("No se pudo conectar al servidor LDAP. Por favor, verifique que el servidor esté disponible y accesible.");
             }
 
+            // Buscar el usuario primero por UID en toda la base
+            $user = null;
+            if ($oldUid) {
+                Log::debug("Buscando usuario por UID antiguo: " . $oldUid);
+                $user = $connection->query()
+                    ->in($config['base_dn'])
+                    ->where('uid', '=', $oldUid)
+                    ->first();
+                    
+                if ($user) {
+                    Log::debug("Usuario encontrado por UID antiguo: " . $oldUid);
+                }
+            }
+            
+            // Si no se encontró por UID, intentar por DN exacto
+            if (!$user) {
+                Log::debug("Usuario no encontrado por UID, buscando por DN: " . $decodedDn);
+                $user = $connection->query()
+                    ->in($config['base_dn'])
+                    ->where('dn', '=', $decodedDn)
+                    ->first();
+                    
+                if ($user) {
+                    Log::debug("Usuario encontrado por DN");
+                }
+            }
+            
+            // Si aún no se encuentra, intentar por el nuevo UID
+            if (!$user && $request->uid !== $oldUid) {
+                Log::debug("Usuario no encontrado por DN, buscando por nuevo UID: " . $request->uid);
+                $user = $connection->query()
+                    ->in($config['base_dn'])
+                    ->where('uid', '=', $request->uid)
+                    ->first();
+                    
+                if ($user) {
+                    Log::debug("Usuario encontrado por nuevo UID: " . $request->uid);
+                }
+            }
+                
+            if (!$user) {
+                Log::error("Usuario no encontrado para actualizar. DN: {$decodedDn}, UID antiguo: {$oldUid}, UID nuevo: {$request->uid}");
+                return redirect()->route('admin.users.index')
+                    ->with('error', 'Usuario no encontrado');
+            }
+
+            // Obtener el DN del usuario de manera segura
+            $userDn = is_array($user) ? $user['dn'] : $user->getDn();
+            Log::debug("DN del usuario para actualizar: " . $userDn);
+
             // Si el UID ha cambiado, necesitamos renombrar el usuario
             if ($oldUid !== $request->uid) {
                 Log::debug("UID ha cambiado de {$oldUid} a {$request->uid}");
@@ -784,7 +834,7 @@ class LdapUserController extends Controller
                     }
                     
                     // Realizar el renombramiento
-                    $success = ldap_rename($ldapConn, $decodedDn, 'uid=' . $request->uid, $this->peopleOu, true);
+                    $success = ldap_rename($ldapConn, $userDn, 'uid=' . $request->uid, $this->peopleOu, true);
                     
                     if (!$success) {
                         $error = ldap_error($ldapConn);
@@ -792,8 +842,8 @@ class LdapUserController extends Controller
                         throw new Exception("Error al renombrar usuario: " . $error);
                     }
                     
-                    Log::debug("Usuario renombrado de {$decodedDn} a {$newDn}");
-                    $decodedDn = $newDn;
+                    Log::debug("Usuario renombrado de {$userDn} a {$newDn}");
+                    $userDn = $newDn;
                     
                     ldap_close($ldapConn);
                     
@@ -811,22 +861,6 @@ class LdapUserController extends Controller
                     throw new Exception("Error al actualizar el nombre de usuario: " . $e->getMessage());
                 }
             }
-
-            // Buscar el usuario por DN actualizado
-            $user = $connection->query()
-                ->in($config['base_dn'])
-                ->where('dn', '=', $decodedDn)
-                ->first();
-                
-            if (!$user) {
-                Log::error("Usuario no encontrado para actualizar. DN: {$decodedDn}");
-                return redirect()->route('admin.users.index')
-                    ->with('error', 'Usuario no encontrado');
-            }
-
-            // Obtener el DN del usuario de manera segura
-            $userDn = is_array($user) ? $user['dn'] : $user->getDn();
-            Log::debug("DN del usuario para actualizar: " . $userDn);
 
             // Verificar si el usuario es administrador
             $isAdminUser = false;
