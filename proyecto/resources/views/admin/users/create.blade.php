@@ -33,17 +33,6 @@
                         @csrf
 
                         <div class="mb-3 text-white">
-                            <label for="uid" class="form-label">{{ __('Nombre de Usuario') }} <span class="text-danger">*</span></label>
-                            <input id="uid" type="text" class="form-control @error('uid') is-invalid @enderror" name="uid" value="{{ old('uid') }}" required autocomplete="uid" readonly>
-                            <div class="form-text">{{ __('Se genera automáticamente a partir del nombre y apellido.') }}</div>
-                            @error('uid')
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                            @enderror
-                        </div>
-
-                        <div class="mb-3 text-white">
                             <label for="nombre" class="form-label">{{ __('Nombre') }} <span class="text-danger">*</span></label>
                             <input id="nombre" type="text" class="form-control @error('nombre') is-invalid @enderror" name="nombre" value="{{ old('nombre') }}" required>
                             @error('nombre')
@@ -57,6 +46,17 @@
                             <label for="apellidos" class="form-label">{{ __('Apellidos') }} <span class="text-danger">*</span></label>
                             <input id="apellidos" type="text" class="form-control @error('apellidos') is-invalid @enderror" name="apellidos" value="{{ old('apellidos') }}" required>
                             @error('apellidos')
+                                <span class="invalid-feedback" role="alert">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                            @enderror
+                        </div>
+
+                        <div class="mb-3 text-white">
+                            <label for="uid" class="form-label">{{ __('Nombre de Usuario') }} <span class="text-danger">*</span></label>
+                            <input id="uid" type="text" class="form-control @error('uid') is-invalid @enderror" name="uid" value="{{ old('uid') }}" required autocomplete="uid" readonly>
+                            <div class="form-text">{{ __('Se genera automáticamente a partir del nombre y apellido.') }}</div>
+                            @error('uid')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>
                                 </span>
