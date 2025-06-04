@@ -26,6 +26,16 @@ class LdapUserController extends Controller
         // Usar la configuración del archivo config/ldap.php
         $config = config('ldap.connections.default');
         
+        Log::debug("Configurando conexión LDAP con los siguientes parámetros:", [
+            'hosts' => $config['hosts'],
+            'port' => 636,
+            'base_dn' => $config['base_dn'],
+            'username' => $config['username'],
+            'use_ssl' => true,
+            'use_tls' => false,
+            'timeout' => $config['timeout']
+        ]);
+        
         $this->connection = new Connection([
             'hosts' => $config['hosts'],
             'port' => 636, // Forzar puerto 636 para LDAPS
@@ -43,6 +53,27 @@ class LdapUserController extends Controller
             ],
         ]);
         
+        // Intentar conectar y verificar la conexión
+        try {
+            $this->connection->connect();
+            Log::debug("Conexión LDAP establecida correctamente");
+            
+            // Verificar que podemos hacer una búsqueda básica
+            $testSearch = $this->connection->query()
+                ->in($this->baseDn)
+                ->limit(1)
+                ->get();
+                
+            Log::debug("Búsqueda de prueba exitosa");
+        } catch (Exception $e) {
+            Log::error("Error al conectar con LDAP: " . $e->getMessage());
+            Log::error("Detalles de la conexión: " . json_encode([
+                'hosts' => $config['hosts'],
+                'port' => 636,
+                'base_dn' => $config['base_dn'],
+                'username' => $config['username']
+            ]));
+        }
     }
 
     /**
@@ -573,50 +604,59 @@ class LdapUserController extends Controller
                 Log::debug("UID extraído: " . $uid);
             }
             
-            // Buscar el usuario directamente por uid
+            // Buscar el usuario de múltiples formas
             $user = null;
+            
+            // 1. Buscar por UID en ou=people
             if ($uid) {
+                Log::debug("Buscando usuario por UID en ou=people: " . $uid);
                 $user = $this->connection->query()
                     ->in($this->peopleOu)
                     ->where('uid', '=', $uid)
                     ->first();
                 
                 if ($user) {
-                    Log::debug("Usuario encontrado por UID: " . $uid);
+                    Log::debug("Usuario encontrado por UID en ou=people");
                 }
             }
             
-            // Si no lo encuentra por uid, intentar por DN
+            // 2. Si no se encuentra, buscar por DN exacto en toda la base
             if (!$user) {
-                Log::debug("Usuario no encontrado por UID, buscando por DN");
-                // Buscar el usuario de manera más específica
-                $query = $this->connection->query();
-                
-                // Intentar buscar primero en ou=people
-                $user = $query->in($this->peopleOu)
+                Log::debug("Usuario no encontrado por UID, buscando por DN exacto: " . $decodedDn);
+                $user = $this->connection->query()
+                    ->in($this->baseDn)
                     ->where('dn', '=', $decodedDn)
                     ->first();
                     
-                // Si no lo encuentra, intentar en toda la base
-                if (!$user) {
-                    Log::debug("Usuario no encontrado en ou=people, buscando en toda la base");
-                    $user = $query->newInstance()
-                        ->in($this->baseDn)
-                        ->where('dn', '=', $decodedDn)
-                        ->first();
+                if ($user) {
+                    Log::debug("Usuario encontrado por DN exacto");
+                }
+            }
+            
+            // 3. Si aún no se encuentra, intentar búsqueda más amplia
+            if (!$user) {
+                Log::debug("Usuario no encontrado por DN exacto, intentando búsqueda más amplia");
+                $user = $this->connection->query()
+                    ->in($this->baseDn)
+                    ->rawFilter('(&(objectclass=inetOrgPerson)(|(uid=' . $uid . ')(dn=' . $decodedDn . ')))')
+                    ->first();
+                    
+                if ($user) {
+                    Log::debug("Usuario encontrado por búsqueda amplia");
                 }
             }
                 
             if (!$user) {
-                Log::error("Usuario no encontrado para DN: " . $decodedDn);
+                Log::error("Usuario no encontrado para DN: " . $decodedDn . " y UID: " . $uid);
                 return redirect()->route('admin.users.index')
                     ->with('error', 'Usuario no encontrado. Por favor, inténtelo de nuevo desde la lista de usuarios.');
             }
             
             Log::debug("Usuario encontrado: " . json_encode(is_array($user) ? $user : $user->toArray()));
             
-            // Obtener grupos del usuario - MEJORADO
+            // Obtener grupos del usuario
             $userGroups = [];
+            $allGroups = [];
             
             try {
                 // Buscar todos los grupos
@@ -647,32 +687,6 @@ class LdapUserController extends Controller
                 }
             } catch (Exception $e) {
                 Log::error('Error al obtener grupos del usuario: ' . $e->getMessage());
-            }
-            
-            // Verificar si allGroups tiene contenido
-            if (empty($allGroups)) {
-                Log::error("No se encontraron grupos en el sistema");
-            } else {
-                // Verificar que los grupos tengan los atributos esperados
-                $groupDebug = [];
-                foreach ($allGroups as $key => $group) {
-                    if (is_array($group)) {
-                        $groupDebug[$key] = [
-                            'es_array' => true,
-                            'tiene_cn' => isset($group['cn']),
-                            'cn_valor' => isset($group['cn']) ? json_encode($group['cn']) : 'no hay',
-                            'keys' => array_keys($group)
-                        ];
-                    } else {
-                        $groupDebug[$key] = [
-                            'es_array' => false,
-                            'clase' => get_class($group),
-                            'tiene_cn' => method_exists($group, 'getFirstAttribute') && $group->getFirstAttribute('cn') !== null,
-                            'cn_valor' => method_exists($group, 'getFirstAttribute') ? $group->getFirstAttribute('cn') : 'método no existe'
-                        ];
-                    }
-                }
-                Log::debug("Debug de grupos: " . json_encode($groupDebug));
             }
             
             return view('admin.users.edit', [
