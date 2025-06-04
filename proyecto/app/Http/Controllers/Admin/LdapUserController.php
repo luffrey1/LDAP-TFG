@@ -50,20 +50,48 @@ class LdapUserController extends Controller
     public function index(Request $request)
     {
         try {
-            Log::debug('Intentando conectar al servidor LDAP...');
-            $this->connection->connect();
-            Log::debug('Conexión LDAP establecida correctamente');
+            Log::debug('Iniciando búsqueda de usuarios LDAP');
+            Log::debug('Configuración LDAP: ' . json_encode([
+                'hosts' => config('ldap.connections.default.hosts'),
+                'port' => 636,
+                'base_dn' => config('ldap.connections.default.base_dn'),
+                'username' => config('ldap.connections.default.username'),
+                'use_ssl' => true,
+                'use_tls' => false
+            ]));
+
+            try {
+                $this->connection->connect();
+                Log::debug('Conexión LDAP establecida correctamente');
+            } catch (\Exception $e) {
+                Log::error('Error al conectar con LDAP: ' . $e->getMessage());
+                throw $e;
+            }
 
             $search = $request->input('search', '');
             $filter = $request->input('group', '');
             $page = $request->input('page', 1);
             $perPage = $request->input('perPage', 10);
             
+            Log::debug('Parámetros de búsqueda: ' . json_encode([
+                'search' => $search,
+                'filter' => $filter,
+                'page' => $page,
+                'perPage' => $perPage
+            ]));
+            
             // Obtener todos los grupos disponibles
-            $allGroups = $this->connection->query()
-                ->in('ou=groups,dc=tierno,dc=es')
-                ->rawFilter('(|(objectclass=groupOfUniqueNames)(objectclass=posixGroup))')
-                ->get();
+            try {
+                $allGroups = $this->connection->query()
+                    ->in('ou=groups,dc=tierno,dc=es')
+                    ->rawFilter('(|(objectclass=groupOfUniqueNames)(objectclass=posixGroup))')
+                    ->get();
+                
+                Log::debug('Grupos encontrados: ' . count($allGroups));
+            } catch (\Exception $e) {
+                Log::error('Error al obtener grupos: ' . $e->getMessage());
+                throw $e;
+            }
             
             // Crear lista de grupos para el dropdown
             $groupList = collect($allGroups)->map(function($group) {
@@ -80,10 +108,7 @@ class LdapUserController extends Controller
             
             // Añadir filtro de grupo
             if ($filter) {
-                // Primero intentamos con memberOf
-                $searchFilter .= "(|(memberOf=cn=$filter,ou=groups,dc=tierno,dc=es)";
-                // También buscamos en member para groupOfNames
-                $searchFilter .= "(member=uid=*,ou=people,dc=tierno,dc=es))";
+                $searchFilter .= "(|(memberOf=cn=$filter,ou=groups,dc=tierno,dc=es)(member=uid=*,ou=people,dc=tierno,dc=es))";
             }
             
             $searchFilter .= ')';
@@ -91,13 +116,17 @@ class LdapUserController extends Controller
             Log::debug('Filtro LDAP construido: ' . $searchFilter);
 
             // Buscar usuarios
-            $query = $this->connection->query()
-                ->in($this->peopleOu)
-                ->rawFilter($searchFilter);
+            try {
+                $query = $this->connection->query()
+                    ->in($this->peopleOu)
+                    ->rawFilter($searchFilter);
 
-            // Obtener todos los resultados para la paginación manual
-            $allUsers = $query->get();
-            Log::debug('Usuarios encontrados: ' . count($allUsers));
+                $allUsers = $query->get();
+                Log::debug('Usuarios encontrados: ' . count($allUsers));
+            } catch (\Exception $e) {
+                Log::error('Error al buscar usuarios: ' . $e->getMessage());
+                throw $e;
+            }
             
             $total = count($allUsers);
             $offset = ($page - 1) * $perPage;
