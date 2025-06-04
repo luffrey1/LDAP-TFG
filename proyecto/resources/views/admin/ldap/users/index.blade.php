@@ -21,9 +21,6 @@
                     <a href="{{ route('ldap.users.create') }}" class="btn btn-primary btn-sm">
                         <i class="fas fa-plus me-1"></i> Nuevo Usuario
                     </a>
-                    <a href="{{ route('alumnos.import') }}" class="btn btn-success btn-sm ms-2">
-                        <i class="fas fa-file-import me-1"></i> Importar CSV
-                    </a>
                 </div>
             </div>
         </div>
