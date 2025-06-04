@@ -91,6 +91,15 @@ class LdapUserController extends Controller
             $offset = ($page - 1) * $perPage;
             $users = array_slice($allUsers, $offset, $perPage);
 
+            // Obtener grupos para cada usuario
+            $userGroups = [];
+            foreach ($users as $user) {
+                $uid = is_array($user) ? ($user['uid'][0] ?? '') : $user->getFirstAttribute('uid');
+                if (!empty($uid)) {
+                    $userGroups[$uid] = $this->getUserGroups($uid);
+                }
+            }
+
             // Crear paginador manual
             $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
                 $users,
@@ -107,6 +116,7 @@ class LdapUserController extends Controller
             if ($request->ajax()) {
                 $view = view('admin.users.partials.user-table', [
                     'users' => $paginator,
+                    'userGroups' => $userGroups,
                     'adminUsers' => $adminUsers
                 ])->render();
                 
@@ -120,7 +130,7 @@ class LdapUserController extends Controller
 
             return view('admin.users.index', [
                 'users' => $paginator,
-                'userGroups' => $groupList,
+                'userGroups' => $userGroups,
                 'adminUsers' => $adminUsers,
                 'search' => $search,
                 'selectedGroup' => $filter,
