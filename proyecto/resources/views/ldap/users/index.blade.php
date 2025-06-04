@@ -6,9 +6,14 @@
 <div class="container mx-auto px-4 py-8 animated-fade-in">
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-semibold text-blue-900">Gestión de Usuarios LDAP</h1>
-        <a href="{{ route('ldap.users.create') }}" class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300">
-            <i class="fas fa-user-plus mr-2"></i> Nuevo Usuario
-        </a>
+        <div class="flex space-x-2">
+            <a href="{{ route('ldap.users.create') }}" class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300">
+                <i class="fas fa-user-plus mr-2"></i> Nuevo Usuario
+            </a>
+            <a href="{{ route('profesor.alumnos.import') }}" class="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition duration-300">
+                <i class="fas fa-file-import mr-2"></i> Importar CSV
+            </a>
+        </div>
     </div>
 
     @if(session('success'))
