@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use LdapRecord\Models\ActiveDirectory\User;
 use LdapRecord\Models\ActiveDirectory\Group;
 use LdapRecord\Connection;
@@ -697,6 +698,7 @@ class LdapUserController extends Controller
             'nombre' => 'required|string|max:100',
             'apellidos' => 'required|string|max:100',
             'email' => 'required|email|max:100',
+            'uid' => 'required|string|max:50',
             'grupos' => 'sometimes|array',
             'homeDirectory' => 'nullable|string',
             'loginShell' => 'nullable|string',
@@ -713,10 +715,10 @@ class LdapUserController extends Controller
             }
             
             // Extraer uid del userDn para búsquedas adicionales
-            $uid = '';
+            $oldUid = '';
             if (preg_match('/uid=([^,]+)/', $decodedDn, $matches)) {
-                $uid = $matches[1];
-                Log::debug("UID extraído para actualización: " . $uid);
+                $oldUid = $matches[1];
+                Log::debug("UID extraído para actualización: " . $oldUid);
             }
             
             // Obtener la configuración LDAP
@@ -752,14 +754,14 @@ class LdapUserController extends Controller
 
             // Buscar el usuario primero por UID en toda la base
             $user = null;
-            if ($uid) {
+            if ($oldUid) {
                 $user = $connection->query()
                     ->in($config['base_dn'])
-                    ->where('uid', '=', $uid)
+                    ->where('uid', '=', $oldUid)
                     ->first();
                     
                 if ($user) {
-                    Log::debug("Usuario encontrado por UID para actualizar: " . $uid);
+                    Log::debug("Usuario encontrado por UID para actualizar: " . $oldUid);
                 }
             }
             
@@ -817,12 +819,54 @@ class LdapUserController extends Controller
                 }
             }
 
+            // Si el UID ha cambiado, necesitamos renombrar el usuario
+            if ($oldUid !== $request->uid) {
+                Log::debug("UID ha cambiado de {$oldUid} a {$request->uid}");
+                
+                // Crear nuevo DN
+                $newDn = 'uid=' . $request->uid . ',' . $this->peopleOu;
+                
+                // Renombrar el usuario usando LDAP nativo
+                try {
+                    $ldapConn = ldap_connect(config('ldap.connections.default.hosts')[0], config('ldap.connections.default.port'));
+                    ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
+                    ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
+                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
+                    
+                    $bind = ldap_bind(
+                        $ldapConn, 
+                        config('ldap.connections.default.username'), 
+                        config('ldap.connections.default.password')
+                    );
+                    
+                    if (!$bind) {
+                        throw new Exception("No se pudo conectar al servidor LDAP: " . ldap_error($ldapConn));
+                    }
+                    
+                    // Realizar el renombramiento
+                    $success = ldap_rename($ldapConn, $userDn, 'uid=' . $request->uid, $this->peopleOu, true);
+                    
+                    if (!$success) {
+                        throw new Exception("Error al renombrar usuario: " . ldap_error($ldapConn));
+                    }
+                    
+                    Log::debug("Usuario renombrado de {$userDn} a {$newDn}");
+                    $userDn = $newDn;
+                    
+                    ldap_close($ldapConn);
+                } catch (Exception $e) {
+                    Log::error("Error al renombrar usuario: " . $e->getMessage());
+                    throw new Exception("Error al actualizar el nombre de usuario: " . $e->getMessage());
+                }
+            }
+
             // Actualizar datos básicos
             $updateData = [
                 'cn' => $request->nombre . ' ' . $request->apellidos,
                 'sn' => $request->apellidos,
                 'givenname' => $request->nombre,
-                'mail' => $request->email
+                'mail' => $request->email,
+                'uid' => $request->uid
             ];
             
             // Actualizar uidNumber si se proporciona
@@ -889,11 +933,11 @@ class LdapUserController extends Controller
                 
                 // Registrar la acción en logs
                 $adminUser = $this->getCurrentUsername();
-                Log::info("Usuario LDAP actualizado: {$uid} por {$adminUser}. Grupos: " . json_encode($request->grupos ?? []));
+                Log::info("Usuario LDAP actualizado: {$request->uid} por {$adminUser}. Grupos: " . json_encode($request->grupos ?? []));
                 
                 Log::channel('activity')->info('Usuario LDAP actualizado', [
                     'action' => 'Actualizar Usuario',
-                    'username' => $request->username
+                    'username' => $request->uid
                 ]);
                 
                 return redirect()->route('admin.users.index')
@@ -2302,8 +2346,8 @@ class LdapUserController extends Controller
         }
         
         // Intentar obtener del usuario autenticado
-        if (auth()->check()) {
-            return auth()->user()->name;
+        if (Auth::check()) {
+            return Auth::user()->name;
         }
         
         // Intentar obtener de la sesión
@@ -2407,9 +2451,9 @@ class LdapUserController extends Controller
                     }
                 }
                 
-                \Log::info('Logs de acciones de usuarios LDAP procesados: ' . count($logs) . ' líneas.');
+                Log::info('Logs de acciones de usuarios LDAP procesados: ' . count($logs) . ' líneas.');
             } else {
-                \Log::warning('Archivo de log no encontrado: ' . $logFile);
+                Log::warning('Archivo de log no encontrado: ' . $logFile);
                 
                 // Generar mensaje de advertencia si no se encuentra el archivo
                 $logs[] = [
@@ -2435,7 +2479,7 @@ class LdapUserController extends Controller
             }
             
         } catch (\Exception $e) {
-            \Log::error('Error al procesar logs: ' . $e->getMessage());
+            Log::error('Error al procesar logs: ' . $e->getMessage());
             
             // En caso de error, mostrar entrada informativa
             $logs[] = [
