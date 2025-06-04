@@ -40,17 +40,17 @@
                             <tbody>
                                 @forelse ($groups as $group)
                                     <tr>
-                                        <td>{{ $group['cn'] }}</td>
+                                        <td>{{ is_array($group['cn']) ? $group['cn'][0] : $group['cn'] }}</td>
                                         <td>{{ $group['gidNumber'] ?? 'N/A' }}</td>
                                         <td>{{ $group['description'] ?? 'Sin descripción' }}</td>
                                         <td>
                                             <div class="btn-group" role="group">
-                                                <a href="{{ route('admin.groups.edit', $group['cn']) }}" class="btn btn-sm btn-info">
+                                                <a href="{{ route('admin.groups.edit', ['cn' => is_array($group['cn']) ? $group['cn'][0] : $group['cn']]) }}" class="btn btn-sm btn-info">
                                                     <i class="fas fa-edit"></i> Editar
                                                 </a>
-                                                @if (!in_array($group['cn'], ['admin', 'ldapadmins', 'sudo']))
+                                                @if (!in_array(is_array($group['cn']) ? $group['cn'][0] : $group['cn'], ['admin', 'ldapadmins', 'sudo']))
                                                     <button type="button" class="btn btn-sm btn-danger" 
-                                                            onclick="confirmDelete('{{ $group['cn'] }}')">
+                                                            onclick="confirmDelete('{{ is_array($group['cn']) ? $group['cn'][0] : $group['cn'] }}')">
                                                         <i class="fas fa-trash"></i> Eliminar
                                                     </button>
                                                 @endif
