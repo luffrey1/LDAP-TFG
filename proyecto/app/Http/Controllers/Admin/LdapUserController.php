@@ -358,19 +358,27 @@ class LdapUserController extends Controller
             ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
             ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
             ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
-            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
-            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
-            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
             
-            $bind = ldap_bind(
+            // Intentar conexión SSL primero
+            if (config('ldap.connections.default.use_ssl', false)) {
+                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
+                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
+                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
+            }
+            
+            // Intentar bind con credenciales
+            $bind = @ldap_bind(
                 $ldapConn, 
                 config('ldap.connections.default.username'), 
                 config('ldap.connections.default.password')
             );
             
             if (!$bind) {
+                Log::error("Error al conectar al servidor LDAP: " . ldap_error($ldapConn));
                 throw new Exception("No se pudo conectar al servidor LDAP: " . ldap_error($ldapConn));
             }
+            
+            Log::debug("Conexión LDAP establecida correctamente");
             
             // Crear el usuario
             $success = ldap_add($ldapConn, $userDn, $userData);
@@ -825,19 +833,27 @@ class LdapUserController extends Controller
             ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
             ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
             ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
-            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
-            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
-            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
             
-            $bind = ldap_bind(
+            // Intentar conexión SSL primero
+            if (config('ldap.connections.default.use_ssl', false)) {
+                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
+                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
+                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
+            }
+            
+            // Intentar bind con credenciales
+            $bind = @ldap_bind(
                 $ldapConn, 
                 config('ldap.connections.default.username'), 
                 config('ldap.connections.default.password')
             );
             
             if (!$bind) {
+                Log::error("Error al conectar al servidor LDAP: " . ldap_error($ldapConn));
                 throw new Exception("No se pudo conectar al servidor LDAP: " . ldap_error($ldapConn));
             }
+            
+            Log::debug("Conexión LDAP establecida correctamente");
             
             // Modificar el usuario
             $result = ldap_modify($ldapConn, $userDn, $updateData);
