@@ -61,6 +61,8 @@ class LdapGroupController extends Controller
                 ];
             }
 
+            Log::debug('Datos de grupos procesados:', ['groups' => $groupData]);
+
             return view('admin.groups.index', ['groups' => $groupData]);
 
         } catch (\Exception $e) {

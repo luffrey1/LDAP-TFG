@@ -50,6 +50,7 @@
                                         <td>{{ $description }}</td>
                                         <td>
                                             <div class="btn-group" role="group">
+                                                @if(!empty($cn))
                                                 <a href="{{ route('admin.groups.edit', ['cn' => $cn]) }}" class="btn btn-sm btn-info">
                                                     <i class="fas fa-edit"></i> Editar
                                                 </a>
@@ -58,6 +59,9 @@
                                                             onclick="confirmDelete('{{ $cn }}')">
                                                         <i class="fas fa-trash"></i> Eliminar
                                                     </button>
+                                                @endif
+                                                @else
+                                                <span class="text-muted">No se puede editar</span>
                                                 @endif
                                             </div>
                                         </td>
