@@ -71,134 +71,98 @@ class LdapUserController extends Controller
             $search = $request->input('search', '');
             $filter = $request->input('group', '');
             $page = $request->input('page', 1);
-            $perPage = $request->input('perPage', 10);
-            
+            $perPage = $request->input('per_page', 10);
+
             Log::debug('Parámetros de búsqueda: ' . json_encode([
                 'search' => $search,
                 'filter' => $filter,
                 'page' => $page,
                 'perPage' => $perPage
             ]));
-            
-            // Obtener todos los grupos disponibles
-            try {
-                $allGroups = $this->connection->query()
-                    ->in('ou=groups,dc=tierno,dc=es')
-                    ->rawFilter('(|(objectclass=groupOfUniqueNames)(objectclass=posixGroup))')
-                    ->get();
-                
-                Log::debug('Grupos encontrados: ' . count($allGroups));
-            } catch (\Exception $e) {
-                Log::error('Error al obtener grupos: ' . $e->getMessage());
-                throw $e;
-            }
-            
-            // Crear lista de grupos para el dropdown
-            $groupList = collect($allGroups)->map(function($group) {
-                return is_array($group) ? ($group['cn'][0] ?? '') : $group->getFirstAttribute('cn');
-            })->filter()->unique()->values()->all();
 
-            // Construir filtro de búsqueda
+            // Obtener todos los grupos disponibles
+            $groups = $this->connection->query()
+                ->in('ou=groups,dc=tierno,dc=es')
+                ->get();
+
+            Log::debug('Grupos encontrados: ' . count($groups));
+
+            // Construir el filtro de búsqueda
             $searchFilter = '(&(objectclass=inetOrgPerson)';
             
-            // Añadir filtro de búsqueda por texto
-            if ($search) {
-                $searchFilter .= "(|(uid=*$search*)(cn=*$search*)(mail=*$search*))";
+            if (!empty($search)) {
+                $searchFilter .= '(|(cn=*' . $search . '*)(mail=*' . $search . '*)(uid=*' . $search . '*))';
             }
             
-            // Añadir filtro de grupo
-            if ($filter) {
-                $searchFilter .= "(|(memberOf=cn=$filter,ou=groups,dc=tierno,dc=es)(member=uid=*,ou=people,dc=tierno,dc=es))";
+            if (!empty($filter)) {
+                $searchFilter .= '(|(member=uid=*,ou=people,dc=tierno,dc=es)(memberUid=*))';
             }
             
             $searchFilter .= ')';
 
             Log::debug('Filtro LDAP construido: ' . $searchFilter);
 
-            // Buscar usuarios
-            try {
-                $query = $this->connection->query()
-                    ->in($this->peopleOu)
-                    ->rawFilter($searchFilter);
+            // Ejecutar la búsqueda
+            $users = $this->connection->query()
+                ->in('ou=people,dc=tierno,dc=es')
+                ->rawFilter($searchFilter)
+                ->get();
 
-                $allUsers = $query->get();
-                Log::debug('Usuarios encontrados: ' . count($allUsers));
-            } catch (\Exception $e) {
-                Log::error('Error al buscar usuarios: ' . $e->getMessage());
-                throw $e;
-            }
-            
-            $total = count($allUsers);
-            $offset = ($page - 1) * $perPage;
-            $users = array_slice($allUsers, $offset, $perPage);
+            Log::debug('Usuarios encontrados: ' . count($users));
 
-            // Obtener grupos para cada usuario
-            $userGroups = [];
-            foreach ($users as $user) {
-                $uid = is_array($user) ? ($user['uid'][0] ?? '') : $user->getFirstAttribute('uid');
-                if (!empty($uid)) {
-                    $userGroups[$uid] = $this->getUserGroups($uid);
+            // Obtener usuarios admin
+            $adminUsers = $this->getAdminUsers();
+
+            // Construir la lista de grupos para el dropdown
+            $groupList = [];
+            foreach ($groups as $group) {
+                $cn = is_array($group) ? ($group['cn'][0] ?? '') : $group->getFirstAttribute('cn');
+                if (!empty($cn)) {
+                    $groupList[$cn] = $cn;
                 }
             }
 
-            // Crear paginador manual
-            $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
-                $users,
-                $total,
-                $perPage,
-                $page,
-                ['path' => $request->url(), 'query' => $request->query()]
-            );
-
-            // Obtener usuarios administradores
-            $adminUsers = $this->getAdminUsers();
-
-            // Si es una petición AJAX, devolver JSON
+            // Si es una petición AJAX, devolver solo los datos
             if ($request->ajax()) {
-                $view = view('admin.users.partials.user-table', [
-                    'users' => $paginator,
-                    'userGroups' => $userGroups,
-                    'adminUsers' => $adminUsers
-                ])->render();
-                
                 return response()->json([
-                    'html' => $view,
-                    'total' => $total,
-                    'currentPage' => $page,
-                    'lastPage' => $paginator->lastPage()
+                    'users' => $users,
+                    'adminUsers' => $adminUsers,
+                    'groupList' => $groupList
                 ]);
             }
 
+            // Para peticiones normales, devolver la vista
             return view('admin.users.index', [
-                'users' => $paginator,
-                'userGroups' => $userGroups,
+                'users' => $users,
                 'adminUsers' => $adminUsers,
+                'groupList' => $groupList,
                 'search' => $search,
-                'selectedGroup' => $filter,
-                'groupList' => $groupList
+                'filter' => $filter
             ]);
 
         } catch (\Exception $e) {
             Log::error('Error en LdapUserController@index: ' . $e->getMessage());
             Log::error('Stack trace: ' . $e->getTraceAsString());
+            
+            if ($request->ajax()) {
+                return response()->json([
+                    'error' => 'Error al conectar con el servidor LDAP: ' . $e->getMessage()
+                ], 500);
+            }
 
             return view('admin.users.index', [
-                'users' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10),
-                'userGroups' => [],
-                'adminUsers' => [],
-                'search' => $request->input('search', ''),
-                'selectedGroup' => $request->input('group', ''),
-                'connectionError' => true,
-                'errorMessage' => 'No se pudo conectar al servidor LDAP. Por favor, verifique la conexión e inténtelo de nuevo.',
-                'diagnostico' => [
+                'error' => 'No se pudo conectar al servidor LDAP. Por favor, verifique la conexión e inténtelo de nuevo.',
+                'diagnostic' => [
                     'error' => $e->getMessage(),
-                    'hosts' => config('ldap.connections.default.hosts'),
-                    'port' => 636,
-                    'base_dn' => config('ldap.connections.default.base_dn'),
-                    'username' => config('ldap.connections.default.username'),
+                    'ldap_host' => config('ldap.connections.default.hosts'),
+                    'ldap_port' => 636,
+                    'ldap_base_dn' => config('ldap.connections.default.base_dn'),
+                    'ldap_username' => config('ldap.connections.default.username'),
                     'use_ssl' => true,
                     'use_tls' => false
                 ],
+                'users' => collect(),
+                'adminUsers' => [],
                 'groupList' => []
             ]);
         }
