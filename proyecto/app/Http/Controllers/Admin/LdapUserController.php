@@ -158,7 +158,16 @@ class LdapUserController extends Controller
 
             // Si es una petición AJAX, devolver solo los datos
             if ($request->ajax()) {
+                $view = view('admin.users.user-table', [
+                    'users' => $users,
+                    'userGroups' => $userGroups,
+                    'adminUsers' => $adminUsers,
+                    'search' => $search,
+                    'selectedGroup' => $selectedGroup
+                ])->render();
+
                 return response()->json([
+                    'html' => $view,
                     'users' => $users,
                     'userGroups' => $userGroups,
                     'adminUsers' => $adminUsers,
