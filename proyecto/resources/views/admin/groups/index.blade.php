@@ -41,8 +41,8 @@
                                 @forelse ($groups as $group)
                                     <tr>
                                         <td>{{ $group['cn'] }}</td>
-                                        <td>{{ $group['gidNumber'] }}</td>
-                                        <td>{{ $group['description'] }}</td>
+                                        <td>{{ $group['gidNumber'] ?? 'N/A' }}</td>
+                                        <td>{{ $group['description'] ?? 'Sin descripción' }}</td>
                                         <td>
                                             <div class="btn-group" role="group">
                                                 <a href="{{ route('admin.groups.edit', $group['cn']) }}" class="btn btn-sm btn-info">
