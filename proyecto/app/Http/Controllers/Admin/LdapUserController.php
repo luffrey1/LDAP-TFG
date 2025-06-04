@@ -50,10 +50,38 @@ class LdapUserController extends Controller
     public function index(Request $request)
     {
         try {
-            Log::debug('Intentando conectar al servidor LDAP...');
-            $this->connection->connect();
-            Log::debug('Conexión LDAP establecida correctamente');
-
+            // Intentar conectar con LDAP
+            try {
+                $this->connection->connect();
+            } catch (\Exception $connectException) {
+                Log::error("Error al conectar con el servidor LDAP: " . $connectException->getMessage());
+                
+                if ($request->ajax()) {
+                    return response()->json([
+                        'error' => true,
+                        'message' => 'No se pudo conectar al servidor LDAP'
+                    ], 500);
+                }
+                
+                return view('admin.users.index', [
+                    'users' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10),
+                    'userGroups' => [],
+                    'adminUsers' => [],
+                    'search' => $request->input('search', ''),
+                    'selectedGroup' => $request->input('group', ''),
+                    'connectionError' => true,
+                    'errorMessage' => 'No se pudo conectar al servidor LDAP. Por favor, verifique la conexión e inténtelo de nuevo.',
+                    'diagnostico' => [
+                        'error' => $connectException->getMessage(),
+                        'hosts' => config('ldap.connections.default.hosts'),
+                        'port' => config('ldap.connections.default.port'),
+                        'base_dn' => config('ldap.connections.default.base_dn'),
+                        'username' => config('ldap.connections.default.username'),
+                    ],
+                    'groupList' => [] // Añadir lista vacía de grupos
+                ]);
+            }
+            
             $search = $request->input('search', '');
             $filter = $request->input('group', '');
             $page = $request->input('page', 1);
@@ -69,44 +97,66 @@ class LdapUserController extends Controller
             $groupList = collect($allGroups)->map(function($group) {
                 return is_array($group) ? ($group['cn'][0] ?? '') : $group->getFirstAttribute('cn');
             })->filter()->unique()->values()->all();
-
-            // Construir filtro de búsqueda
-            $searchFilter = '(&(objectclass=inetOrgPerson)';
-            if ($search) {
-                $searchFilter .= "(|(uid=*$search*)(cn=*$search*)(mail=*$search*))";
+            
+            // Construir el filtro de búsqueda
+            $searchFilter = '';
+            if (!empty($search)) {
+                $searchFilter = "(|(cn=*{$search}*)(sn=*{$search}*)(mail=*{$search}*)(uid=*{$search}*))";
             }
-            if ($filter) {
-                $searchFilter .= "(memberOf=cn=$filter,ou=groups,dc=tierno,dc=es)";
+            
+            // Construir el filtro de grupo
+            $groupFilter = '';
+            if (!empty($filter)) {
+                $groupFilter = "(memberOf=cn={$filter},ou=groups,{$this->baseDn})";
             }
-            $searchFilter .= ')';
-
+            
+            // Combinar filtros
+            $finalFilter = '(&(objectclass=inetOrgPerson)';
+            if (!empty($searchFilter)) {
+                $finalFilter .= $searchFilter;
+            }
+            if (!empty($groupFilter)) {
+                $finalFilter .= $groupFilter;
+            }
+            $finalFilter .= ')';
+            
             // Buscar usuarios
-            $query = $this->connection->query()
-                ->in($this->peopleOu)
-                ->rawFilter($searchFilter);
-
-            // Obtener todos los resultados para la paginación manual
-            $allUsers = $query->get();
-            $total = count($allUsers);
+            $query = $this->connection->query();
+            $query->in($this->peopleOu);
+            $query->rawFilter($finalFilter);
+            
+            $users = $query->get();
+            
+            // Obtener grupos para cada usuario
+            $userGroups = [];
+            foreach ($users as $user) {
+                $uid = is_array($user) ? ($user['uid'][0] ?? '') : $user->getFirstAttribute('uid');
+                if (!empty($uid)) {
+                    $userGroups[$uid] = $this->getUserGroups($uid);
+                }
+            }
+            
+            // Obtener usuarios administradores
+            $adminUsers = $this->getAdminUsers();
+            
+            // Paginar resultados
+            $total = count($users);
             $offset = ($page - 1) * $perPage;
-            $users = array_slice($allUsers, $offset, $perPage);
-
-            // Crear paginador manual
+            $paginatedUsers = array_slice($users, $offset, $perPage);
+            
             $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
-                $users,
+                $paginatedUsers,
                 $total,
                 $perPage,
                 $page,
                 ['path' => $request->url(), 'query' => $request->query()]
             );
-
-            // Obtener usuarios administradores
-            $adminUsers = $this->getAdminUsers();
-
+            
             // Si es una petición AJAX, devolver JSON
             if ($request->ajax()) {
                 $view = view('admin.users.partials.user-table', [
                     'users' => $paginator,
+                    'userGroups' => $userGroups,
                     'adminUsers' => $adminUsers
                 ])->render();
                 
@@ -117,39 +167,30 @@ class LdapUserController extends Controller
                     'lastPage' => $paginator->lastPage()
                 ]);
             }
-
+            
             return view('admin.users.index', [
                 'users' => $paginator,
-                'userGroups' => $groupList,
+                'userGroups' => $userGroups,
                 'adminUsers' => $adminUsers,
                 'search' => $search,
                 'selectedGroup' => $filter,
-                'groupList' => $groupList
+                'groupList' => $groupList,
+                'total' => $total,
+                'perPage' => $perPage
             ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error en LdapUserController@index: ' . $e->getMessage());
-            Log::error('Stack trace: ' . $e->getTraceAsString());
-
-            return view('admin.users.index', [
-                'users' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10),
-                'userGroups' => [],
-                'adminUsers' => [],
-                'search' => $request->input('search', ''),
-                'selectedGroup' => $request->input('group', ''),
-                'connectionError' => true,
-                'errorMessage' => 'No se pudo conectar al servidor LDAP. Por favor, verifique la conexión e inténtelo de nuevo.',
-                'diagnostico' => [
-                    'error' => $e->getMessage(),
-                    'hosts' => config('ldap.connections.default.hosts'),
-                    'port' => 636,
-                    'base_dn' => config('ldap.connections.default.base_dn'),
-                    'username' => config('ldap.connections.default.username'),
-                    'use_ssl' => true,
-                    'use_tls' => false
-                ],
-                'groupList' => []
-            ]);
+            
+        } catch (Exception $e) {
+            Log::error('Error al obtener usuarios LDAP: ' . $e->getMessage());
+            Log::error('Traza: ' . $e->getTraceAsString());
+            
+            if ($request->ajax()) {
+                return response()->json([
+                    'error' => true,
+                    'message' => 'Error al obtener los usuarios: ' . $e->getMessage()
+                ], 500);
+            }
+            
+            return back()->with('error', 'Error al obtener los usuarios: ' . $e->getMessage());
         }
     }
 
