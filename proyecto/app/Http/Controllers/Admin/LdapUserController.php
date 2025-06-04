@@ -769,67 +769,77 @@ class LdapUserController extends Controller
 
             // Buscar el usuario de múltiples formas
             $user = null;
+            $userDn = null;
             
-            // 1. Buscar por UID antiguo
-            if ($oldUid) {
-                Log::debug("Buscando usuario por UID antiguo: " . $oldUid);
+            // 1. Buscar por DN exacto primero
+            Log::debug("Buscando usuario por DN exacto: " . $decodedDn);
+            $user = $connection->query()
+                ->in($config['base_dn'])
+                ->where('dn', '=', $decodedDn)
+                ->first();
+                
+            if ($user) {
+                Log::debug("Usuario encontrado por DN exacto");
+                $userDn = is_array($user) ? $user['dn'] : $user->getDn();
+            }
+            
+            // 2. Si no se encuentra, buscar por UID antiguo
+            if (!$user && $oldUid) {
+                Log::debug("Usuario no encontrado por DN, buscando por UID antiguo: " . $oldUid);
                 $user = $connection->query()
-                    ->in($config['base_dn'])
+                    ->in($this->peopleOu)
                     ->where('uid', '=', $oldUid)
                     ->first();
                     
                 if ($user) {
                     Log::debug("Usuario encontrado por UID antiguo");
-                }
-            }
-            
-            // 2. Si no se encuentra, buscar por DN exacto
-            if (!$user) {
-                Log::debug("Usuario no encontrado por UID, buscando por DN: " . $decodedDn);
-                $user = $connection->query()
-                    ->in($config['base_dn'])
-                    ->where('dn', '=', $decodedDn)
-                    ->first();
-                    
-                if ($user) {
-                    Log::debug("Usuario encontrado por DN");
+                    $userDn = is_array($user) ? $user['dn'] : $user->getDn();
                 }
             }
             
             // 3. Si aún no se encuentra, intentar por el nuevo UID
             if (!$user && $request->uid !== $oldUid) {
-                Log::debug("Usuario no encontrado por DN, buscando por nuevo UID: " . $request->uid);
+                Log::debug("Usuario no encontrado por UID antiguo, buscando por nuevo UID: " . $request->uid);
                 $user = $connection->query()
-                    ->in($config['base_dn'])
+                    ->in($this->peopleOu)
                     ->where('uid', '=', $request->uid)
                     ->first();
                     
                 if ($user) {
                     Log::debug("Usuario encontrado por nuevo UID");
+                    $userDn = is_array($user) ? $user['dn'] : $user->getDn();
                 }
             }
             
             // 4. Último intento: búsqueda más amplia
             if (!$user) {
                 Log::debug("Usuario no encontrado por métodos anteriores, intentando búsqueda amplia");
+                $searchFilter = '(&(objectclass=inetOrgPerson)(|';
+                if ($oldUid) {
+                    $searchFilter .= '(uid=' . $oldUid . ')';
+                }
+                if ($request->uid !== $oldUid) {
+                    $searchFilter .= '(uid=' . $request->uid . ')';
+                }
+                $searchFilter .= '))';
+                
                 $user = $connection->query()
                     ->in($config['base_dn'])
-                    ->rawFilter('(&(objectclass=inetOrgPerson)(|(uid=' . $oldUid . ')(uid=' . $request->uid . ')(dn=' . $decodedDn . ')))')
+                    ->rawFilter($searchFilter)
                     ->first();
                     
                 if ($user) {
                     Log::debug("Usuario encontrado por búsqueda amplia");
+                    $userDn = is_array($user) ? $user['dn'] : $user->getDn();
                 }
             }
                 
-            if (!$user) {
+            if (!$user || !$userDn) {
                 Log::error("Usuario no encontrado para actualizar. DN: {$decodedDn}, UID antiguo: {$oldUid}, UID nuevo: {$request->uid}");
                 return redirect()->route('admin.users.index')
                     ->with('error', 'Usuario no encontrado');
             }
 
-            // Obtener el DN del usuario de manera segura
-            $userDn = is_array($user) ? $user['dn'] : $user->getDn();
             Log::debug("DN del usuario para actualizar: " . $userDn);
 
             // Si el UID ha cambiado, necesitamos renombrar el usuario
@@ -879,8 +889,8 @@ class LdapUserController extends Controller
                     
                     // Buscar el usuario nuevamente después del renombramiento
                     $user = $connection->query()
-                        ->in($config['base_dn'])
-                        ->where('dn', '=', $newDn)
+                        ->in($this->peopleOu)
+                        ->where('uid', '=', $request->uid)
                         ->first();
                         
                     if (!$user) {
@@ -973,8 +983,8 @@ class LdapUserController extends Controller
                 // Si el usuario es un array, necesitamos convertirlo a objeto LdapRecord
                 if (is_array($user)) {
                     $user = $connection->query()
-                        ->in($config['base_dn'])
-                        ->where('dn', '=', $userDn)
+                        ->in($this->peopleOu)
+                        ->where('uid', '=', $request->uid)
                         ->first();
                     
                     if (!$user) {
