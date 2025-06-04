@@ -34,6 +34,14 @@
                         @method('PUT')
 
                         <div class="mb-3 text-white">
+                            <label class="form-label">{{ __('Tipo de Usuario') }}</label>
+                            <div class="btn-group w-100" role="group">
+                                <button type="button" class="btn btn-outline-secondary" id="btn-role-profesor">Profesor</button>
+                                <button type="button" class="btn btn-outline-secondary" id="btn-role-alumno">Alumno</button>
+                            </div>
+                        </div>
+
+                        <div class="mb-3 text-white">
                             <label for="uid" class="form-label">{{ __('Nombre de Usuario') }}</label>
                             <input id="uid" type="text" class="form-control" name="uid" value="{{ is_array($user) ? ($user['uid'][0] ?? '') : $user->getFirstAttribute('uid') }}" readonly>
                             <div class="form-text">{{ __('El nombre de usuario no puede cambiarse.') }}</div>
@@ -116,18 +124,6 @@
                         <div class="mb-3 text-white">
                             <label for="password_confirmation" class="form-label">{{ __('Confirmar Contraseña') }}</label>
                             <input id="password_confirmation" type="password" class="form-control" name="password_confirmation">
-                        </div>
-
-                        <div class="mb-3 text-white">
-                            <label class="form-label">{{ __('Rol Predefinido') }}</label>
-                            <div class="btn-group w-100" role="group">
-                                @if(session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
-                                <button type="button" class="btn btn-outline-secondary" id="btn-role-admin">Administrador</button>
-                                @endif
-                                <button type="button" class="btn btn-outline-secondary" id="btn-role-profesor">Profesor</button>
-                                <button type="button" class="btn btn-outline-secondary" id="btn-role-alumno">Alumno</button>
-                            </div>
-                            <div class="form-text">{{ __('Seleccione un rol para actualizar los grupos.') }}</div>
                         </div>
 
                         <div class="mb-4 text-white">
@@ -229,7 +225,6 @@
         const nombreInput = document.getElementById('nombre');
         const apellidosInput = document.getElementById('apellidos');
         const emailInput = document.getElementById('email');
-        const btnRoleAdmin = document.getElementById('btn-role-admin');
         const btnRoleProfesor = document.getElementById('btn-role-profesor');
         const btnRoleAlumno = document.getElementById('btn-role-alumno');
         const gruposSelect = document.getElementById('grupos');
@@ -254,29 +249,11 @@
             const commonGroups = ['everybody'];
             let roleGroups = [];
 
-            if (role === 'admin') {
-                roleGroups = ['ldapadmins', 'docker'];
-                if (btnRoleAdmin) {
-                    btnRoleAdmin.classList.add('active', 'btn-secondary');
-                    btnRoleAdmin.classList.remove('btn-outline-secondary');
-                }
-                if (btnRoleProfesor) {
-                    btnRoleProfesor.classList.remove('active', 'btn-secondary');
-                    btnRoleProfesor.classList.add('btn-outline-secondary');
-                }
-                if (btnRoleAlumno) {
-                    btnRoleAlumno.classList.remove('active', 'btn-secondary');
-                    btnRoleAlumno.classList.add('btn-outline-secondary');
-                }
-            } else if (role === 'profesor') {
+            if (role === 'profesor') {
                 roleGroups = ['profesores', 'docker'];
                 if (btnRoleProfesor) {
                     btnRoleProfesor.classList.add('active', 'btn-secondary');
                     btnRoleProfesor.classList.remove('btn-outline-secondary');
-                }
-                if (btnRoleAdmin) {
-                    btnRoleAdmin.classList.remove('active', 'btn-secondary');
-                    btnRoleAdmin.classList.add('btn-outline-secondary');
                 }
                 if (btnRoleAlumno) {
                     btnRoleAlumno.classList.remove('active', 'btn-secondary');
@@ -287,10 +264,6 @@
                 if (btnRoleAlumno) {
                     btnRoleAlumno.classList.add('active', 'btn-secondary');
                     btnRoleAlumno.classList.remove('btn-outline-secondary');
-                }
-                if (btnRoleAdmin) {
-                    btnRoleAdmin.classList.remove('active', 'btn-secondary');
-                    btnRoleAdmin.classList.add('btn-outline-secondary');
                 }
                 if (btnRoleProfesor) {
                     btnRoleProfesor.classList.remove('active', 'btn-secondary');
@@ -314,9 +287,6 @@
         apellidosInput.addEventListener('input', updateEmail);
 
         // Eventos para los botones de rol
-        if (btnRoleAdmin) {
-            btnRoleAdmin.addEventListener('click', () => selectGroupsByRole('admin'));
-        }
         if (btnRoleProfesor) {
             btnRoleProfesor.addEventListener('click', () => selectGroupsByRole('profesor'));
         }
@@ -328,10 +298,7 @@
         function checkActiveRole() {
             const selectedGroups = Array.from(gruposSelect.selectedOptions).map(option => option.value);
             
-            if (selectedGroups.includes('ldapadmins')) {
-                btnRoleAdmin.classList.add('active', 'btn-secondary');
-                btnRoleAdmin.classList.remove('btn-outline-secondary');
-            } else if (selectedGroups.includes('profesores')) {
+            if (selectedGroups.includes('profesores')) {
                 btnRoleProfesor.classList.add('active', 'btn-secondary');
                 btnRoleProfesor.classList.remove('btn-outline-secondary');
             } else if (selectedGroups.includes('alumnos')) {
