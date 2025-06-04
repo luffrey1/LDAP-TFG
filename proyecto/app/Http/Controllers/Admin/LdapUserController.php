@@ -2477,13 +2477,28 @@ class LdapUserController extends Controller
     /**
      * Actualizar grupos de un usuario de manera directa mediante LDAP nativo
      */
-    protected function updateUserGroupsDirect($userDn, $selectedGroups, $ldapConn = null)
+    protected function updateUserGroupsDirect($userDn, $selectedGroups, $existingConn = null)
     {
         try {
             $closeConn = false;
+            $ldapConn = null;
+
+            // Si se proporciona una conexión existente, verificar si es un recurso LDAP nativo
+            if ($existingConn) {
+                if (is_resource($existingConn) && get_resource_type($existingConn) === 'ldap link') {
+                    $ldapConn = $existingConn;
+                } else {
+                    Log::warning("Conexión proporcionada no es un recurso LDAP nativo, creando nueva conexión");
+                }
+            }
+
+            // Si no tenemos una conexión válida, crear una nueva
             if (!$ldapConn) {
-                // Crear conexión si no se proporcionó una
-                $ldapConn = ldap_connect(config('ldap.connections.default.hosts')[0], config('ldap.connections.default.port'));
+                $ldapConn = ldap_connect('ldaps://' . config('ldap.connections.default.hosts')[0], config('ldap.connections.default.port'));
+                if (!$ldapConn) {
+                    throw new Exception("No se pudo crear la conexión LDAP");
+                }
+
                 ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
                 ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
                 ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
