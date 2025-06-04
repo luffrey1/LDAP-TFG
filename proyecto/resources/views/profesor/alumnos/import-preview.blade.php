@@ -67,7 +67,7 @@
                             </table>
                         </div>
 
-                        <form action="{{ route('profesor.alumnos.import.process') }}" method="POST" enctype="multipart/form-data" class="mt-4">
+                        <form action="{{ route('profesor.alumnos.import.process') }}" method="POST" enctype="multipart/form-data" class="mt-4" id="import-form">
                             @csrf
                             <input type="hidden" name="confirmar_importacion" value="1">
                             <input type="hidden" name="clase_grupo_id" value="{{ $grupo->id }}">
@@ -81,7 +81,7 @@
                             </div>
 
                             <div class="form-group">
-                                <button type="submit" class="btn btn-primary">
+                                <button type="submit" class="btn btn-primary" id="confirm-import">
                                     <i class="fas fa-check"></i> Confirmar Importación
                                 </button>
                                 <a href="{{ route('profesor.alumnos.import') }}" class="btn btn-secondary">
@@ -133,6 +133,31 @@ $(document).ready(function() {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    });
+
+    // Asegurarse de que el formulario se envía como POST
+    $('#import-form').on('submit', function(e) {
+        e.preventDefault();
+        var form = $(this);
+        var formData = new FormData(this);
+        
+        $.ajax({
+            url: form.attr('action'),
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                window.location.href = response.redirect || '{{ route("profesor.alumnos.index") }}';
+            },
+            error: function(xhr) {
+                if (xhr.status === 405) {
+                    alert('Error: Método no permitido. Por favor, intente nuevamente.');
+                } else {
+                    alert('Error al procesar la importación. Por favor, intente nuevamente.');
+                }
+            }
+        });
     });
 });
 </script>
