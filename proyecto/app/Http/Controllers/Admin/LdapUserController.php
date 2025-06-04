@@ -741,6 +741,15 @@ class LdapUserController extends Controller
                 ],
             ]);
 
+            // Conectar al servidor LDAP
+            try {
+                $connection->connect();
+                Log::debug("Conexión LDAP establecida");
+            } catch (Exception $e) {
+                Log::error("Error al conectar al servidor LDAP: " . $e->getMessage());
+                throw new Exception("No se pudo conectar al servidor LDAP: " . $e->getMessage());
+            }
+
             // Buscar el usuario primero por UID en toda la base
             $user = null;
             if ($uid) {
@@ -845,7 +854,12 @@ class LdapUserController extends Controller
             }
 
             // Nos aseguramos de que el usuario tenga todos los objectClass necesarios
-            $this->ensureUserHasRequiredClasses($userDn);
+            try {
+                $this->ensureUserHasRequiredClasses($userDn);
+            } catch (Exception $e) {
+                Log::error("Error al asegurar clases de usuario: " . $e->getMessage());
+                // Continuamos con la actualización aunque falle esta parte
+            }
 
             // Modificar el usuario usando LdapRecord
             try {
