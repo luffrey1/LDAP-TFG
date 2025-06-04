@@ -433,45 +433,76 @@ class LdapGroupController extends Controller
     {
         try {
             $config = config('ldap.connections.default');
-            $connection = new Connection([
-                'hosts' => $config['hosts'],
-                'port' => 636, // Forzar puerto 636 para LDAPS
-                'base_dn' => $config['base_dn'],
-                'username' => $config['username'],
-                'password' => $config['password'],
-                'use_ssl' => true, // Forzar SSL
-                'use_tls' => false, // Deshabilitar TLS
-                'timeout' => $config['timeout'],
-                'options' => [
-                    LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
-                    LDAP_OPT_REFERRALS => 0,
-                    LDAP_OPT_PROTOCOL_VERSION => 3,
-                    LDAP_OPT_NETWORK_TIMEOUT => 5,
-                ],
-            ]);
-
-            $connection->connect();
+            
+            // Crear conexión LDAP nativa con SSL
+            $ldapConn = ldap_connect('ldaps://' . $config['hosts'][0], 636);
+            if (!$ldapConn) {
+                Log::error("Error al crear conexión LDAP");
+                throw new Exception("No se pudo establecer la conexión LDAP");
+            }
+            
+            Log::debug("Conexión LDAP creada, configurando opciones...");
+            
+            ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
+            ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
+            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
+            
+            // Configurar SSL
+            Log::debug("Configurando SSL para conexión LDAP...");
+            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
+            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
+            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
+            
+            // Intentar bind con credenciales
+            $bind = @ldap_bind(
+                $ldapConn, 
+                $config['username'], 
+                $config['password']
+            );
+            
+            if (!$bind) {
+                $error = ldap_error($ldapConn);
+                Log::error("Error al conectar al servidor LDAP: " . $error);
+                Log::error("Código de error LDAP: " . ldap_errno($ldapConn));
+                throw new Exception("No se pudo conectar al servidor LDAP: " . $error);
+            }
+            
+            Log::debug("Conexión LDAP establecida correctamente");
 
             // Verificar si el grupo existe
-            $group = $connection->query()
-                ->in('ou=groups,dc=tierno,dc=es')
-                ->where('cn', '=', $cn)
-                ->first();
-
-            if (!$group) {
+            $filter = "(cn=$cn)";
+            $search = ldap_search($ldapConn, "ou=groups,dc=tierno,dc=es", $filter);
+            
+            if (!$search) {
+                ldap_close($ldapConn);
+                throw new Exception("Error al buscar grupo: " . ldap_error($ldapConn));
+            }
+            
+            $entries = ldap_get_entries($ldapConn, $search);
+            if ($entries['count'] == 0) {
+                ldap_close($ldapConn);
                 return redirect()->route('admin.groups.index')
                     ->with('error', 'Grupo no encontrado');
             }
 
             // Verificar si el grupo está protegido
-            $protectedGroups = ['admin', 'ldapadmins', 'sudo'];
+            $protectedGroups = ['admin', 'ldapadmins', 'sudo', 'profesores', 'alumnos'];
             if (in_array($cn, $protectedGroups)) {
+                ldap_close($ldapConn);
                 return redirect()->route('admin.groups.index')
                     ->with('error', 'No se puede eliminar un grupo protegido');
             }
 
+            // Eliminar el grupo
             $dn = "cn={$cn},ou=groups,dc=tierno,dc=es";
-            $connection->query()->delete($dn);
+            $result = ldap_delete($ldapConn, $dn);
+            
+            if (!$result) {
+                ldap_close($ldapConn);
+                throw new Exception("Error al eliminar grupo: " . ldap_error($ldapConn));
+            }
+            
+            ldap_close($ldapConn);
 
             Log::channel('activity')->info('Grupo LDAP eliminado', [
                 'action' => 'Eliminar Grupo',
