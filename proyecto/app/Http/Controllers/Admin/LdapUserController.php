@@ -2474,82 +2474,92 @@ class LdapUserController extends Controller
      */
     protected function ensureUserHasRequiredClasses($userDn, $connection = null)
     {
-        if (!$connection) {
-            // Obtener la configuración LDAP
-            $config = config('ldap.connections.default');
-            
-            // Crear conexión LDAP usando la configuración
-            $connection = new Connection([
-                'hosts' => $config['hosts'],
-                'port' => 636, // Forzar puerto 636 para LDAPS
-                'base_dn' => $config['base_dn'],
-                'username' => $config['username'],
-                'password' => $config['password'],
-                'use_ssl' => true, // Forzar SSL
-                'use_tls' => false, // Deshabilitar TLS
-                'timeout' => $config['timeout'],
-                'options' => [
-                    LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
-                    LDAP_OPT_REFERRALS => 0,
-                    LDAP_OPT_PROTOCOL_VERSION => 3,
-                    LDAP_OPT_NETWORK_TIMEOUT => 5,
-                ],
-            ]);
+        try {
+            if (!$connection) {
+                // Obtener la configuración LDAP
+                $config = config('ldap.connections.default');
+                
+                // Crear conexión LDAP usando la configuración
+                $connection = new Connection([
+                    'hosts' => $config['hosts'],
+                    'port' => 636, // Forzar puerto 636 para LDAPS
+                    'base_dn' => $config['base_dn'],
+                    'username' => $config['username'],
+                    'password' => $config['password'],
+                    'use_ssl' => true, // Forzar SSL
+                    'use_tls' => false, // Deshabilitar TLS
+                    'timeout' => $config['timeout'],
+                    'options' => [
+                        LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                        LDAP_OPT_REFERRALS => 0,
+                        LDAP_OPT_PROTOCOL_VERSION => 3,
+                        LDAP_OPT_NETWORK_TIMEOUT => 5,
+                    ],
+                ]);
 
-            // Conectar al servidor LDAP
-            try {
-                $connection->connect();
-            } catch (Exception $e) {
-                Log::error("Error al conectar al servidor LDAP: " . $e->getMessage());
-                throw new Exception("No se pudo conectar al servidor LDAP: " . $e->getMessage());
+                // Conectar al servidor LDAP
+                try {
+                    $connection->connect();
+                } catch (Exception $e) {
+                    Log::error("Error al conectar al servidor LDAP: " . $e->getMessage());
+                    throw new Exception("No se pudo conectar al servidor LDAP: " . $e->getMessage());
+                }
             }
-        }
 
-        // Buscar el usuario
-        $user = $connection->query()
-            ->in($config['base_dn'])
-            ->where('dn', '=', $userDn)
-            ->first();
+            // Buscar el usuario usando el DN
+            $user = $connection->query()
+                ->where('dn', '=', $userDn)
+                ->first();
 
-        if (!$user) {
-            throw new Exception("No se pudo encontrar el usuario para verificar clases");
-        }
-
-        // Obtener las clases actuales
-        $currentClasses = is_array($user) ? $user['objectclass'] : $user->getAttribute('objectclass');
-        if (!is_array($currentClasses)) {
-            $currentClasses = [$currentClasses];
-        }
-
-        // Clases requeridas
-        $requiredClasses = [
-            'top',
-            'person',
-            'organizationalPerson',
-            'inetOrgPerson',
-            'posixAccount',
-            'shadowAccount'
-        ];
-
-        // Verificar si faltan clases
-        $missingClasses = array_diff($requiredClasses, $currentClasses);
-
-        if (!empty($missingClasses)) {
-            // Añadir las clases faltantes
-            $newClasses = array_merge($currentClasses, $missingClasses);
-            
-            // Actualizar el usuario
-            if (is_array($user)) {
-                $user = $connection->query()
-                    ->in($config['base_dn'])
-                    ->where('dn', '=', $userDn)
-                    ->first();
+            if (!$user) {
+                Log::error("No se pudo encontrar el usuario para verificar clases: " . $userDn);
+                return false;
             }
-            
-            $user->setAttribute('objectclass', $newClasses);
-            $user->save();
-            
-            Log::debug("Clases añadidas al usuario: " . implode(', ', $missingClasses));
+
+            // Obtener las clases actuales
+            $currentClasses = is_array($user) ? $user['objectclass'] : $user->getAttribute('objectclass');
+            if (!is_array($currentClasses)) {
+                $currentClasses = [$currentClasses];
+            }
+
+            // Clases requeridas
+            $requiredClasses = [
+                'top',
+                'person',
+                'organizationalPerson',
+                'inetOrgPerson',
+                'posixAccount',
+                'shadowAccount'
+            ];
+
+            // Verificar si faltan clases
+            $missingClasses = array_diff($requiredClasses, $currentClasses);
+
+            if (!empty($missingClasses)) {
+                // Añadir las clases faltantes
+                $newClasses = array_merge($currentClasses, $missingClasses);
+                
+                // Actualizar el usuario
+                if (is_array($user)) {
+                    $user = $connection->query()
+                        ->where('dn', '=', $userDn)
+                        ->first();
+                }
+                
+                if ($user) {
+                    $user->setAttribute('objectclass', $newClasses);
+                    $user->save();
+                    Log::debug("Clases añadidas al usuario: " . implode(', ', $missingClasses));
+                } else {
+                    Log::error("No se pudo encontrar el usuario para actualizar clases: " . $userDn);
+                    return false;
+                }
+            }
+
+            return true;
+        } catch (Exception $e) {
+            Log::error("Error al asegurar clases de usuario: " . $e->getMessage());
+            return false;
         }
     }
     
