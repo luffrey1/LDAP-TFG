@@ -27,16 +27,18 @@ class LdapUserController extends Controller
         
         $this->connection = new Connection([
             'hosts' => $config['hosts'],
-            'port' => $config['port'],
+            'port' => 636, // Forzar puerto 636 para LDAPS
             'base_dn' => $config['base_dn'],
             'username' => $config['username'],
             'password' => $config['password'],
-            'use_ssl' => $config['use_ssl'],
-            'use_tls' => $config['use_tls'],
+            'use_ssl' => true, // Forzar SSL
+            'use_tls' => false, // Deshabilitar TLS
             'timeout' => $config['timeout'],
             'options' => [
                 LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
                 LDAP_OPT_REFERRALS => 0,
+                LDAP_OPT_PROTOCOL_VERSION => 3,
+                LDAP_OPT_NETWORK_TIMEOUT => 5,
             ],
         ]);
         
