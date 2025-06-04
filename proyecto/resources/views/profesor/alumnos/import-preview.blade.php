@@ -81,7 +81,7 @@
                             </div>
 
                             <div class="form-group">
-                                <button type="submit" class="btn btn-primary" id="confirm-import">
+                                <button type="button" class="btn btn-primary" id="confirm-import">
                                     <i class="fas fa-check"></i> Confirmar Importación
                                 </button>
                                 <a href="{{ route('profesor.alumnos.import') }}" class="btn btn-secondary">
@@ -135,11 +135,14 @@ $(document).ready(function() {
         document.body.removeChild(link);
     });
 
-    // Asegurarse de que el formulario se envía como POST
-    $('#import-form').on('submit', function(e) {
+    // Manejar el envío del formulario
+    $('#confirm-import').click(function(e) {
         e.preventDefault();
-        var form = $(this);
-        var formData = new FormData(this);
+        var form = $('#import-form');
+        var formData = new FormData(form[0]);
+        
+        // Añadir el token CSRF
+        formData.append('_token', '{{ csrf_token() }}');
         
         $.ajax({
             url: form.attr('action'),
@@ -147,14 +150,22 @@ $(document).ready(function() {
             data: formData,
             processData: false,
             contentType: false,
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
             success: function(response) {
-                window.location.href = response.redirect || '{{ route("profesor.alumnos.index") }}';
+                if (response.redirect) {
+                    window.location.href = response.redirect;
+                } else {
+                    window.location.href = '{{ route("profesor.alumnos.index") }}';
+                }
             },
             error: function(xhr) {
+                console.error('Error:', xhr);
                 if (xhr.status === 405) {
                     alert('Error: Método no permitido. Por favor, intente nuevamente.');
                 } else {
-                    alert('Error al procesar la importación. Por favor, intente nuevamente.');
+                    alert('Error al procesar la importación: ' + (xhr.responseJSON?.message || 'Error desconocido'));
                 }
             }
         });
