@@ -119,6 +119,13 @@
                                 </div>
                             </div>
 
+                            <div class="form-group mb-4">
+                                <div class="form-check">
+                                    <input type="checkbox" name="crear_cuentas_ldap" id="crear_cuentas_ldap" class="form-check-input" value="1" checked>
+                                    <label class="form-check-label" for="crear_cuentas_ldap">Crear cuentas LDAP para los alumnos</label>
+                                </div>
+                            </div>
+
                             <!-- Previsualización mejorada -->
                             <div id="preview" class="mt-4" style="display: none;">
                                 <div class="card shadow-sm">
