@@ -719,62 +719,54 @@ class LdapUserController extends Controller
                 Log::debug("UID extraído para actualización: " . $uid);
             }
             
-            // Crear conexión LDAP
-            $ldapConn = ldap_connect(config('ldap.connections.default.hosts')[0], config('ldap.connections.default.port'));
-            if (!$ldapConn) {
-                throw new Exception("No se pudo conectar al servidor LDAP");
-            }
+            // Obtener la configuración LDAP
+            $config = config('ldap.connections.default');
+            Log::debug("Configuración LDAP: " . json_encode($config));
             
-            // Configurar opciones LDAP
-            ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
-            ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
-            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
+            // Crear conexión LDAP usando la configuración
+            $connection = new Connection([
+                'hosts' => $config['hosts'],
+                'port' => 636, // Forzar puerto 636 para LDAPS
+                'base_dn' => $config['base_dn'],
+                'username' => $config['username'],
+                'password' => $config['password'],
+                'use_ssl' => true, // Forzar SSL
+                'use_tls' => false, // Deshabilitar TLS
+                'timeout' => $config['timeout'],
+                'options' => [
+                    LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                    LDAP_OPT_REFERRALS => 0,
+                    LDAP_OPT_PROTOCOL_VERSION => 3,
+                    LDAP_OPT_NETWORK_TIMEOUT => 5,
+                ],
+            ]);
             
-            // Configurar SSL si está habilitado
-            if (config('ldap.connections.default.use_ssl', false)) {
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
-            }
-            
-            // Intentar bind con credenciales
-            $bind = @ldap_bind(
-                $ldapConn, 
-                config('ldap.connections.default.username'), 
-                config('ldap.connections.default.password')
-            );
-            
-            if (!$bind) {
-                $error = ldap_error($ldapConn);
-                $errno = ldap_errno($ldapConn);
-                Log::error("Error al conectar al servidor LDAP: " . $error . " (errno: " . $errno . ")");
-                throw new Exception("No se pudo conectar al servidor LDAP: " . $error);
-            }
-            
-            Log::debug("Conexión LDAP establecida correctamente");
+            Log::debug("Intentando conectar al servidor LDAP");
+            $connection->connect();
+            Log::debug("Conexión LDAP establecida");
             
             // Buscar el usuario primero por UID en toda la base
             $user = null;
             if ($uid) {
-                $result = ldap_search($ldapConn, config('ldap.connections.default.base_dn'), "(uid=$uid)");
-                if ($result) {
-                    $entries = ldap_get_entries($ldapConn, $result);
-                    if ($entries['count'] > 0) {
-                        $user = $entries[0];
-                        Log::debug("Usuario encontrado por UID para actualizar: " . $uid);
-                    }
+                $user = $connection->query()
+                    ->in($config['base_dn'])
+                    ->where('uid', '=', $uid)
+                    ->first();
+                    
+                if ($user) {
+                    Log::debug("Usuario encontrado por UID para actualizar: " . $uid);
                 }
             }
             
             // Si no se encontró por UID, intentar por DN exacto
             if (!$user) {
-                $result = ldap_read($ldapConn, $decodedDn, "(objectclass=*)");
-                if ($result) {
-                    $entries = ldap_get_entries($ldapConn, $result);
-                    if ($entries['count'] > 0) {
-                        $user = $entries[0];
-                        Log::debug("Usuario encontrado por DN para actualizar");
-                    }
+                $user = $connection->query()
+                    ->in($config['base_dn'])
+                    ->where('dn', '=', $decodedDn)
+                    ->first();
+                    
+                if ($user) {
+                    Log::debug("Usuario encontrado por DN para actualizar");
                 }
             }
             
@@ -814,21 +806,18 @@ class LdapUserController extends Controller
             }
             
             // Modificar el usuario
-            $result = ldap_modify($ldapConn, $user['dn'], $updateData);
+            $result = $connection->modify($user['dn'], $updateData);
             
             if (!$result) {
-                $error = ldap_error($ldapConn);
-                $errno = ldap_errno($ldapConn);
-                Log::error("Error al actualizar usuario: " . $error . " (errno: " . $errno . ")");
+                $error = $connection->getLastError();
+                Log::error("Error al actualizar usuario: " . $error);
                 throw new Exception("Error al actualizar usuario: " . $error);
             }
             
             // Actualizar grupos del usuario si se proporcionaron
             if ($request->has('grupos')) {
-                $this->updateUserGroupsDirect($user['dn'], $request->grupos, $ldapConn);
+                $this->updateUserGroupsDirect($user['dn'], $request->grupos, $connection);
             }
-            
-            ldap_close($ldapConn);
             
             // Registrar la acción en logs
             $adminUser = $this->getCurrentUsername();
