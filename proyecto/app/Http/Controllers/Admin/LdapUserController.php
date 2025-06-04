@@ -75,7 +75,8 @@ class LdapUserController extends Controller
                         'port' => config('ldap.connections.default.port'),
                         'base_dn' => config('ldap.connections.default.base_dn'),
                         'username' => config('ldap.connections.default.username'),
-                    ]
+                    ],
+                    'groupList' => [] // Añadir lista vacía de grupos
                 ]);
             }
             
