@@ -56,6 +56,7 @@ class LdapGroupController extends Controller
                     'dn' => is_array($group) ? $group['dn'] : $group->getDn(),
                     'cn' => is_array($group) ? ($group['cn'][0] ?? '') : $group->getFirstAttribute('cn'),
                     'description' => is_array($group) ? ($group['description'][0] ?? '') : $group->getFirstAttribute('description'),
+                    'gidNumber' => is_array($group) ? ($group['gidNumber'][0] ?? '') : $group->getFirstAttribute('gidNumber'),
                     'memberCount' => is_array($group) ? (isset($group['member']) ? count($group['member']) : 0) : count($group->getAttribute('member', [])),
                 ];
             }
