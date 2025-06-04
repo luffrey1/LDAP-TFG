@@ -67,7 +67,7 @@
                             </table>
                         </div>
 
-                        <form action="{{ route('profesor.alumnos.import.process') }}" method="POST" class="mt-4">
+                        <form action="{{ route('profesor.alumnos.import.process') }}" method="POST" enctype="multipart/form-data" class="mt-4">
                             @csrf
                             <input type="hidden" name="confirmar_importacion" value="1">
                             <input type="hidden" name="clase_grupo_id" value="{{ $grupo->id }}">
