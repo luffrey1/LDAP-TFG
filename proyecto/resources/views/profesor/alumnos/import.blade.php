@@ -73,8 +73,8 @@
                             
                             @if(!isset($grupo))
                             <div class="form-group mb-4">
-                                <label for="clase_grupo_id" class="form-label fw-bold text-dark">Clase / Grupo</label>
-                                <select name="clase_grupo_id" id="clase_grupo_id" class="form-select select2 shadow-sm bg-white" @if(!session('auth_user.is_admin')) required @endif>
+                                <label for="clase_grupo_id" class="form-label fw-bold text-black fs-5">Clase / Grupo</label>
+                                <select name="clase_grupo_id" id="clase_grupo_id" class="form-select select2 shadow-sm bg-white border-2" @if(!session('auth_user.is_admin')) required @endif>
                                     <option value="" class="text-muted">@if(session('auth_user.is_admin'))(Opcional) Sin grupo asignado@else Seleccione un grupo @endif</option>
                                     @foreach($grupos as $grupo_select)
                                     <option value="{{ $grupo_select->id }}" {{ isset($grupo) && $grupo->id == $grupo_select->id ? 'selected' : '' }}>
@@ -88,7 +88,7 @@
                             @endif
                             
                             <div class="form-group mb-4">
-                                <label class="form-label fw-bold text-dark">Archivo de Alumnos</label>
+                                <label class="form-label fw-bold text-black fs-5">Archivo de Alumnos</label>
                                 <div class="dropzone-area p-5 text-center border-2 border-dashed rounded-3 bg-light" id="dropzone">
                                     <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
                                     <h5 class="mb-3">Arrastre y suelte su archivo aquí</h5>
@@ -104,8 +104,8 @@
                             </div>
 
                             <div class="form-group mb-4">
-                                <label for="separador" class="form-label fw-bold">Separador CSV</label>
-                                <select name="separador" id="separador" class="form-select shadow-sm" required>
+                                <label for="separador" class="form-label fw-bold text-black fs-5">Separador CSV</label>
+                                <select name="separador" id="separador" class="form-select shadow-sm bg-white border-2" required>
                                     <option value=",">Coma (,)</option>
                                     <option value=";">Punto y coma (;)</option>
                                     <option value="\t">Tabulador</option>
@@ -310,12 +310,13 @@
 <style>
 .dropzone-area {
     transition: all 0.3s ease;
-    border: 2px dashed #dee2e6;
+    border: 2px dashed #0d6efd !important;
+    background-color: #f8f9fa !important;
 }
 
 .dropzone-area:hover {
-    border-color: #0d6efd;
-    background-color: rgba(13, 110, 253, 0.05);
+    border-color: #0a58ca !important;
+    background-color: #e9ecef !important;
 }
 
 .table-responsive {
@@ -378,55 +379,68 @@ code {
 }
 
 .form-label {
-    color: #2c3e50 !important;
-    font-size: 1rem;
-    margin-bottom: 0.5rem;
+    color: #000000 !important;
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    margin-bottom: 0.75rem !important;
+    text-shadow: 0 0 1px rgba(0,0,0,0.1);
 }
 
 .form-select {
-    color: #2c3e50 !important;
+    color: #000000 !important;
     background-color: #ffffff !important;
-    border: 1px solid #dee2e6;
+    border: 2px solid #dee2e6 !important;
+    font-weight: 500 !important;
+    padding: 0.5rem 1rem !important;
 }
 
 .form-select option {
-    color: #2c3e50;
+    color: #000000;
     background-color: #ffffff;
+    font-weight: 500;
 }
 
 .form-select option:first-child {
-    color: #6c757d;
+    color: #495057;
+    font-weight: 400;
 }
 
 .select2-container--bootstrap-5 .select2-selection {
     background-color: #ffffff !important;
-    border: 1px solid #dee2e6 !important;
-    color: #2c3e50 !important;
+    border: 2px solid #dee2e6 !important;
+    color: #000000 !important;
+    font-weight: 500 !important;
+    padding: 0.5rem 1rem !important;
 }
 
 .select2-container--bootstrap-5 .select2-selection--single {
-    height: 38px !important;
-    padding: 0.375rem 0.75rem !important;
+    height: 42px !important;
+    padding: 0.5rem 1rem !important;
 }
 
 .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
-    color: #2c3e50 !important;
-    line-height: 24px !important;
+    color: #000000 !important;
+    line-height: 28px !important;
+    font-weight: 500 !important;
 }
 
 .select2-container--bootstrap-5 .select2-results__option {
-    color: #2c3e50 !important;
+    color: #000000 !important;
     background-color: #ffffff !important;
+    font-weight: 500 !important;
+    padding: 0.5rem 1rem !important;
 }
 
 .select2-container--bootstrap-5 .select2-results__option--highlighted {
     background-color: #e9ecef !important;
-    color: #2c3e50 !important;
+    color: #000000 !important;
+    font-weight: 600 !important;
 }
 
 .select2-container--bootstrap-5 .select2-results__option--selected {
     background-color: #0d6efd !important;
     color: #ffffff !important;
+    font-weight: 600 !important;
 }
 </style>
 @endsection 
