@@ -10,7 +10,7 @@
             <a href="{{ route('ldap.users.create') }}" class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300">
                 <i class="fas fa-user-plus mr-2"></i> Nuevo Usuario
             </a>
-            <a href="{{ route('profesor.alumnos.import') }}" class="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition duration-300">
+            <a href="{{ route('alumnos.import') }}" class="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition duration-300">
                 <i class="fas fa-file-import mr-2"></i> Importar CSV
             </a>
         </div>
