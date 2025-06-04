@@ -43,14 +43,12 @@
 
                         <div class="mb-3 text-white">
                             <label for="uid" class="form-label">{{ __('Nombre de Usuario') }}</label>
-                            <input id="uid" type="text" class="form-control" name="uid" value="{{ is_array($user) ? ($user['uid'][0] ?? '') : $user->getFirstAttribute('uid') }}" readonly>
-                            <div class="form-text">{{ __('El nombre de usuario no puede cambiarse.') }}</div>
+                            <input id="uid" type="text" class="form-control" name="uid" value="{{ is_array($user) ? ($user['uid'][0] ?? '') : $user->getFirstAttribute('uid') }}">
+                            <div class="form-text">{{ __('Nombre de usuario del sistema.') }}</div>
                         </div>
 
-                        <div class="mb-3 text-white">
-                            <label for="dn_preview" class="form-label">{{ __('DN (Canonical Name)') }}</label>
-                            <input id="dn_preview" type="text" class="form-control" value="{{ base64_decode($encoded_dn) }}" readonly>
-                            <div class="form-text">{{ __('Identificador único del usuario en LDAP.') }}</div>
+                        <div class="mb-2 text-white">
+                            <small class="form-text">{{ __('DN:') }} <span id="dn_preview_text">{{ base64_decode($encoded_dn) }}</span></small>
                         </div>
 
                         <div class="mb-3 text-white">
@@ -225,9 +223,20 @@
         const nombreInput = document.getElementById('nombre');
         const apellidosInput = document.getElementById('apellidos');
         const emailInput = document.getElementById('email');
+        const uidInput = document.getElementById('uid');
+        const dnPreviewText = document.getElementById('dn_preview_text');
         const btnRoleProfesor = document.getElementById('btn-role-profesor');
         const btnRoleAlumno = document.getElementById('btn-role-alumno');
         const gruposSelect = document.getElementById('grupos');
+
+        // Función para actualizar el DN cuando cambia el username
+        function updateDn() {
+            if (uidInput.value) {
+                dnPreviewText.textContent = `uid=${uidInput.value},ou=people,dc=tierno,dc=es`;
+            } else {
+                dnPreviewText.textContent = 'uid=,ou=people,dc=tierno,dc=es';
+            }
+        }
 
         // Función para actualizar el email basado en nombre y apellidos
         function updateEmail() {
@@ -237,6 +246,13 @@
                 emailInput.value = nombre + apellido + '@tierno.es';
             }
         }
+
+        // Evento para actualizar DN cuando cambia el username
+        uidInput.addEventListener('input', updateDn);
+
+        // Eventos para actualizar el email
+        nombreInput.addEventListener('input', updateEmail);
+        apellidosInput.addEventListener('input', updateEmail);
 
         // Función para seleccionar grupos según el rol
         function selectGroupsByRole(role) {
@@ -281,10 +297,6 @@
                 }
             }
         }
-
-        // Eventos para actualizar el email
-        nombreInput.addEventListener('input', updateEmail);
-        apellidosInput.addEventListener('input', updateEmail);
 
         // Eventos para los botones de rol
         if (btnRoleProfesor) {
