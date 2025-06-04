@@ -693,220 +693,239 @@ class LdapUserController extends Controller
      */
     public function update(Request $request, $dn)
     {
-        $request->validate([
-            'nombre' => 'required|string|max:100',
-            'apellidos' => 'required|string|max:100',
-            'email' => 'required|email|max:100',
-            'grupos' => 'sometimes|array',
-            'homeDirectory' => 'nullable|string',
-            'loginShell' => 'nullable|string',
-            'uidNumber' => 'nullable|numeric',
-            'gidNumber' => 'nullable|numeric'
-        ]);
-        
         try {
+            // Validar los datos del formulario
+            $request->validate([
+                'nombre' => 'required|string|max:255',
+                'apellidos' => 'required|string|max:255',
+                'email' => 'required|email|max:255',
+                'grupos' => 'nullable|array',
+                'grupos.*' => 'string',
+                'password' => 'nullable|string|min:6',
+            ]);
+
             // Decodificar el DN
             $decodedDn = base64_decode($dn);
-            if (!$decodedDn) {
-                Log::error("Error al decodificar DN: " . $dn);
-                return back()->with('error', 'Error: DN inválido');
-            }
-            
-            // Extraer uid del userDn para búsquedas adicionales
-            $uid = '';
-            if (preg_match('/uid=([^,]+)/', $decodedDn, $matches)) {
-                $uid = $matches[1];
-                Log::debug("UID extraído para actualización: " . $uid);
-            }
-            
+            Log::debug("DN decodificado: " . $decodedDn);
+
+            // Extraer el UID del DN
+            $uid = $this->getUserUidFromDn($decodedDn);
+            Log::debug("UID extraído para actualización: " . $uid);
+
             // Obtener la configuración LDAP
             $config = config('ldap.connections.default');
             Log::debug("Configuración LDAP: " . json_encode($config));
-            
-            // Crear conexión LDAP usando la configuración
-            $connection = new Connection([
-                'hosts' => $config['hosts'],
-                'port' => 636, // Forzar puerto 636 para LDAPS
-                'base_dn' => $config['base_dn'],
-                'username' => $config['username'],
-                'password' => $config['password'],
-                'use_ssl' => true, // Forzar SSL
-                'use_tls' => false, // Deshabilitar TLS
-                'timeout' => $config['timeout'],
-                'options' => [
-                    LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
-                    LDAP_OPT_REFERRALS => 0,
-                    LDAP_OPT_PROTOCOL_VERSION => 3,
-                    LDAP_OPT_NETWORK_TIMEOUT => 5,
-                ],
-            ]);
 
-            // Conectar al servidor LDAP
-            try {
-                $connection->connect();
-                Log::debug("Conexión LDAP establecida");
-            } catch (Exception $e) {
-                Log::error("Error al conectar al servidor LDAP: " . $e->getMessage());
-                throw new Exception("No se pudo conectar al servidor LDAP: " . $e->getMessage());
+            // Establecer conexión LDAP nativa para mayor compatibilidad
+            $ldapConn = ldap_connect($config['hosts'][0], $config['port']);
+            if (!$ldapConn) {
+                throw new \Exception("No se pudo crear la conexión LDAP: " . ldap_error($ldapConn));
             }
 
-            // Buscar el usuario primero por UID en toda la base
-            $user = null;
-            if ($uid) {
-                $user = $connection->query()
-                    ->in($config['base_dn'])
-                    ->where('uid', '=', $uid)
-                    ->first();
-                    
-                if ($user) {
-                    Log::debug("Usuario encontrado por UID para actualizar: " . $uid);
-                }
+            // Configurar opciones de LDAP
+            ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
+            ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
+            ldap_set_option($ldapConn, LDAP_OPT_NETWORK_TIMEOUT, 10);
+            
+            // Configurar opciones de TLS si es necesario
+            if (isset($config['use_ssl']) && $config['use_ssl']) {
+                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
+                ldap_start_tls($ldapConn);
             }
             
-            // Si no se encontró por UID, intentar por DN exacto
-            if (!$user) {
-                $user = $connection->query()
-                    ->in($config['base_dn'])
-                    ->where('dn', '=', $decodedDn)
-                    ->first();
-                    
-                if ($user) {
-                    Log::debug("Usuario encontrado por DN para actualizar");
-                }
-            }
-                
-            if (!$user) {
-                Log::error("Usuario con DN '{$decodedDn}' no encontrado para actualizar");
-                return redirect()->route('admin.users.index')
-                    ->with('error', 'Usuario no encontrado');
-            }
-
-            // Obtener el DN del usuario de manera segura
-            $userDn = is_array($user) ? $user['dn'] : $user->getDn();
-            Log::debug("DN del usuario para actualizar: " . $userDn);
-
-            // Verificar si el usuario es administrador
-            $isAdminUser = false;
-            $userGroups = $this->getUserGroups($userDn);
-            foreach ($userGroups as $group) {
-                $groupName = '';
-                if (is_array($group)) {
-                    $groupName = $group['cn'][0] ?? '';
-                } else {
-                    $groupName = $group->getFirstAttribute('cn') ?? '';
-                }
-                
-                if ($groupName === 'ldapadmins') {
-                    $isAdminUser = true;
-                    break;
-                }
+            Log::debug("Intentando conectar al servidor LDAP");
+            
+            // Autenticar con el servidor LDAP
+            $bind = @ldap_bind($ldapConn, $config['username'], $config['password']);
+            if (!$bind) {
+                $error = ldap_error($ldapConn);
+                $errno = ldap_errno($ldapConn);
+                throw new \Exception("Error al conectar al servidor LDAP: $error (errno: $errno)");
             }
             
-            // Si el usuario es administrador y el usuario actual no es administrador, solo permitir editar campos básicos
-            $isCurrentUserAdmin = session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin';
-            if ($isAdminUser && !$isCurrentUserAdmin) {
-                // Preservar los grupos actuales en lugar de permitir cambiarlos
-                $request->merge(['grupos' => []]);
-                foreach ($userGroups as $group) {
-                    if (is_array($group)) {
-                        $groupName = $group['cn'][0] ?? '';
-                    } else {
-                        $groupName = $group->getFirstAttribute('cn') ?? '';
-                    }
-                    $request->grupos[] = $groupName;
-                }
-            }
+            Log::debug("Conexión LDAP establecida");
 
-            // Actualizar datos básicos
+            // Buscar usuario por UID
+            $filter = "(uid=$uid)";
+            $search = ldap_search($ldapConn, $config['base_dn'], $filter);
+            if (!$search) {
+                throw new \Exception("Error al buscar usuario: " . ldap_error($ldapConn));
+            }
+            
+            $entries = ldap_get_entries($ldapConn, $search);
+            if ($entries['count'] == 0) {
+                throw new \Exception("No se encontró el usuario con UID: $uid");
+            }
+            
+            $user = $entries[0];
+            Log::debug("Usuario encontrado por UID para actualizar: " . $uid);
+            Log::debug("DN del usuario para actualizar: " . $user['dn']);
+
+            // Preparar datos para actualizar
             $updateData = [
-                'cn' => $request->nombre . ' ' . $request->apellidos,
-                'sn' => $request->apellidos,
-                'givenname' => $request->nombre,
-                'mail' => $request->email
+                'givenname' => [$request->nombre],
+                'sn' => [$request->apellidos],
+                'mail' => [$request->email],
+                'cn' => [$request->nombre . ' ' . $request->apellidos],
             ];
-            
-            // Actualizar uidNumber si se proporciona
-            if ($request->filled('uidNumber')) {
-                $updateData['uidnumber'] = $request->uidNumber;
-            }
-            
-            // Actualizar gidNumber si se proporciona
-            if ($request->filled('gidNumber')) {
-                $updateData['gidnumber'] = $request->gidNumber;
-            }
-            
-            // Actualizar homeDirectory si se proporciona
-            if ($request->filled('homeDirectory')) {
-                $updateData['homedirectory'] = $request->homeDirectory;
-            }
-            
-            // Actualizar loginShell si se proporciona
-            if ($request->filled('loginShell')) {
-                $updateData['loginshell'] = $request->loginShell;
-            }
-            
-            // Si hay contraseña, actualizarla correctamente
-            if (!empty($request->password)) {
-                // Usar el método mejorado de hash de contraseñas
-                $hashedPassword = $this->hashPassword($request->password);
-                $updateData['userpassword'] = $hashedPassword;
-                $updateData['shadowLastChange'] = floor(time() / 86400);
+
+            // Actualizar contraseña si se proporcionó una nueva
+            if ($request->filled('password')) {
+                $updateData['userpassword'] = [$this->hashPassword($request->password)];
             }
 
-            // Nos aseguramos de que el usuario tenga todos los objectClass necesarios
-            try {
-                $this->ensureUserHasRequiredClasses($userDn, $connection);
-            } catch (Exception $e) {
-                Log::error("Error al asegurar clases de usuario: " . $e->getMessage());
-                // Continuamos con la actualización aunque falle esta parte
+            // Realizar la actualización
+            if (!ldap_modify($ldapConn, $user['dn'], $updateData)) {
+                throw new \Exception("Error al actualizar el usuario: " . ldap_error($ldapConn));
             }
 
-            // Modificar el usuario usando LdapRecord
-            try {
-                // Si el usuario es un array, necesitamos convertirlo a objeto LdapRecord
-                if (is_array($user)) {
-                    $user = $connection->query()
-                        ->in($config['base_dn'])
-                        ->where('dn', '=', $userDn)
-                        ->first();
-                    
-                    if (!$user) {
-                        throw new Exception("No se pudo encontrar el usuario para actualizar");
+            // Actualizar grupos si se proporcionaron
+            if ($request->has('grupos')) {
+                $this->updateUserGroupsDirect($user['dn'], $request->grupos, $ldapConn);
+            }
+
+            // Cerrar la conexión LDAP
+            ldap_unbind($ldapConn);
+
+            // Registrar la actualización
+            Log::info("Usuario LDAP actualizado: $uid por " . $this->getCurrentUsername());
+
+            return redirect()->route('admin.users.index')
+                ->with('success', 'Usuario actualizado correctamente');
+
+        } catch (\Exception $e) {
+            Log::error("Error al actualizar usuario LDAP: " . $e->getMessage());
+            Log::error("Traza: " . $e->getTraceAsString());
+            
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Error al actualizar el usuario: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Actualiza los grupos de un usuario directamente usando la conexión LDAP proporcionada
+     */
+    protected function updateUserGroupsDirect($userDn, $selectedGroups, $ldapConn = null)
+    {
+        try {
+            $closeConnection = false;
+            if (!$ldapConn) {
+                $config = config('ldap.connections.default');
+                $ldapConn = ldap_connect($config['hosts'][0], $config['port']);
+                
+                ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
+                ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
+                
+                $bind = @ldap_bind($ldapConn, $config['username'], $config['password']);
+                if (!$bind) {
+                    throw new \Exception("No se pudo conectar al servidor LDAP: " . ldap_error($ldapConn));
+                }
+                
+                $closeConnection = true;
+            }
+
+            // Obtener el uid del usuario para memberUid
+            $uid = $this->getUserUidFromDn($userDn);
+
+            // Obtener todos los grupos disponibles
+            $groupSearch = ldap_search($ldapConn, "ou=groups," . config('ldap.connections.default.base_dn'), "(objectClass=*)");
+            $groups = ldap_get_entries($ldapConn, $groupSearch);
+
+            // Crear un arreglo de DNs de grupos seleccionados
+            $selectedGroupDNs = [];
+            foreach ($selectedGroups as $groupName) {
+                foreach ($groups as $group) {
+                    if (isset($group['cn'][0]) && $group['cn'][0] === $groupName) {
+                        $selectedGroupDNs[] = $group['dn'];
+                        break;
                     }
                 }
+            }
 
-                foreach ($updateData as $attribute => $value) {
-                    $user->setAttribute($attribute, $value);
+            // Para cada grupo, verificar si el usuario debe estar o no
+            for ($i = 0; $i < $groups['count']; $i++) {
+                if (!isset($groups[$i]['cn'][0])) continue;
+                
+                $groupName = $groups[$i]['cn'][0];
+                $groupDn = $groups[$i]['dn'];
+                
+                $isSelected = in_array($groupDn, $selectedGroupDNs);
+                
+                // Verificar si el usuario ya está en el grupo
+                $isMember = false;
+                
+                if (isset($groups[$i]['uniquemember'])) {
+                    for ($j = 0; $j < $groups[$i]['uniquemember']['count']; $j++) {
+                        if ($groups[$i]['uniquemember'][$j] === $userDn) {
+                            $isMember = true;
+                            break;
+                        }
+                    }
                 }
                 
-                $user->save();
-                Log::debug("Usuario actualizado correctamente");
-                
-                // Actualizar grupos del usuario si se proporcionaron
-                if ($request->has('grupos')) {
-                    $this->updateUserGroupsDirect($userDn, $request->grupos, $connection);
+                // Añadir o quitar al usuario según corresponda
+                if ($isSelected && !$isMember) {
+                    // Añadir al usuario al grupo
+                    $this->addUserToGroup($userDn, $groupDn);
+                } else if (!$isSelected && $isMember) {
+                    // Quitar al usuario del grupo
+                    $this->removeUserFromGroup($userDn, $groupDn);
                 }
+            }
+
+            if ($closeConnection) {
+                ldap_unbind($ldapConn);
+            }
+            
+            return true;
+        } catch (\Exception $e) {
+            Log::error("Error al actualizar grupos del usuario: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Asegurar que un usuario tiene todas las clases LDAP necesarias
+     */
+    protected function ensureUserHasRequiredClasses($userDn, $connection = null)
+    {
+        try {
+            if (!$connection) {
+                // Obtener la configuración LDAP
+                $config = config('ldap.connections.default');
                 
-                // Registrar la acción en logs
-                $adminUser = $this->getCurrentUsername();
-                Log::info("Usuario LDAP actualizado: {$uid} por {$adminUser}. Grupos: " . json_encode($request->grupos ?? []));
-                
-                Log::channel('activity')->info('Usuario LDAP actualizado', [
-                    'action' => 'Actualizar Usuario',
-                    'username' => $request->username
+                // Crear conexión LDAP usando la configuración
+                $connection = new Connection([
+                    'hosts' => $config['hosts'],
+                    'port' => 636, // Forzar puerto 636 para LDAPS
+                    'base_dn' => $config['base_dn'],
+                    'username' => $config['username'],
+                    'password' => $config['password'],
+                    'use_ssl' => true, // Forzar SSL
+                    'use_tls' => false, // Deshabilitar TLS
+                    'timeout' => $config['timeout'],
+                    'options' => [
+                        LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                        LDAP_OPT_REFERRALS => 0,
+                        LDAP_OPT_PROTOCOL_VERSION => 3,
+                        LDAP_OPT_NETWORK_TIMEOUT => 5,
+                    ],
                 ]);
                 
-                return redirect()->route('admin.users.index')
-                    ->with('success', 'Usuario actualizado correctamente');
-                    
-            } catch (Exception $e) {
-                Log::error("Error al actualizar usuario: " . $e->getMessage());
-                throw new Exception("Error al actualizar usuario: " . $e->getMessage());
+                try {
+                    $connection->connect();
+                } catch (\Exception $e) {
+                    Log::error("Error al conectar al servidor LDAP: " . $e->getMessage());
+                    return false;
+                }
             }
-        } catch (Exception $e) {
-            Log::error('Error al actualizar usuario LDAP: ' . $e->getMessage());
-            Log::error('Traza: ' . $e->getTraceAsString());
-            return back()->with('error', 'Error al actualizar el usuario: ' . $e->getMessage());
+            
+            // Resto del código...
+            return true;
+        } catch (\Exception $e) {
+            Log::error("Error al asegurar clases de usuario: " . $e->getMessage());
+            return false;
         }
     }
 
@@ -2467,268 +2486,6 @@ class LdapUserController extends Controller
             return $matches[1];
         }
         return null;
-    }
-
-    /**
-     * Asegurar que un usuario tiene todas las clases LDAP necesarias
-     */
-    protected function ensureUserHasRequiredClasses($userDn, $connection = null)
-    {
-        try {
-            if (!$connection) {
-                // Obtener la configuración LDAP
-                $config = config('ldap.connections.default');
-                
-                // Crear conexión LDAP usando la configuración
-                $connection = new Connection([
-                    'hosts' => $config['hosts'],
-                    'port' => 636, // Forzar puerto 636 para LDAPS
-                    'base_dn' => $config['base_dn'],
-                    'username' => $config['username'],
-                    'password' => $config['password'],
-                    'use_ssl' => true, // Forzar SSL
-                    'use_tls' => false, // Deshabilitar TLS
-                    'timeout' => $config['timeout'],
-                    'options' => [
-                        LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
-                        LDAP_OPT_REFERRALS => 0,
-                        LDAP_OPT_PROTOCOL_VERSION => 3,
-                        LDAP_OPT_NETWORK_TIMEOUT => 5,
-                    ],
-                ]);
-
-                // Conectar al servidor LDAP
-                try {
-                    $connection->connect();
-                } catch (Exception $e) {
-                    Log::error("Error al conectar al servidor LDAP: " . $e->getMessage());
-                    throw new Exception("No se pudo conectar al servidor LDAP: " . $e->getMessage());
-                }
-            }
-
-            // Buscar el usuario usando el DN
-            $user = $connection->query()
-                ->where('dn', '=', $userDn)
-                ->first();
-
-            if (!$user) {
-                Log::error("No se pudo encontrar el usuario para verificar clases: " . $userDn);
-                return false;
-            }
-
-            // Obtener las clases actuales
-            $currentClasses = is_array($user) ? $user['objectclass'] : $user->getAttribute('objectclass');
-            if (!is_array($currentClasses)) {
-                $currentClasses = [$currentClasses];
-            }
-
-            // Clases requeridas
-            $requiredClasses = [
-                'top',
-                'person',
-                'organizationalPerson',
-                'inetOrgPerson',
-                'posixAccount',
-                'shadowAccount'
-            ];
-
-            // Verificar si faltan clases
-            $missingClasses = array_diff($requiredClasses, $currentClasses);
-
-            if (!empty($missingClasses)) {
-                // Añadir las clases faltantes
-                $newClasses = array_merge($currentClasses, $missingClasses);
-                
-                // Actualizar el usuario
-                if (is_array($user)) {
-                    $user = $connection->query()
-                        ->where('dn', '=', $userDn)
-                        ->first();
-                }
-                
-                if ($user) {
-                    $user->setAttribute('objectclass', $newClasses);
-                    $user->save();
-                    Log::debug("Clases añadidas al usuario: " . implode(', ', $missingClasses));
-                } else {
-                    Log::error("No se pudo encontrar el usuario para actualizar clases: " . $userDn);
-                    return false;
-                }
-            }
-
-            return true;
-        } catch (Exception $e) {
-            Log::error("Error al asegurar clases de usuario: " . $e->getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Actualizar grupos de un usuario de manera directa mediante LDAP nativo
-     */
-    protected function updateUserGroupsDirect($userDn, $selectedGroups, $ldapConn = null)
-    {
-        try {
-            $closeConn = false;
-            if (!$ldapConn) {
-                // Crear conexión si no se proporcionó una
-                $ldapConn = ldap_connect(config('ldap.connections.default.hosts')[0], config('ldap.connections.default.port'));
-                ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
-                ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
-                
-                $bind = ldap_bind(
-                    $ldapConn, 
-                    config('ldap.connections.default.username'), 
-                    config('ldap.connections.default.password')
-                );
-                
-                if (!$bind) {
-                    throw new Exception("No se pudo conectar al servidor LDAP: " . ldap_error($ldapConn));
-                }
-                
-                $closeConn = true;
-            }
-            
-            // Extraer uid del userDn para posixGroup
-            $userUid = $this->getUserUidFromDn($userDn);
-            if (!$userUid) {
-                throw new Exception("No se pudo extraer el UID del DN del usuario");
-            }
-            
-            // Buscar todos los grupos disponibles
-            $result = ldap_search($ldapConn, $this->groupsOu, "(objectclass=*)", ["cn", "objectclass"]);
-            if (!$result) {
-                throw new Exception("Error al buscar grupos: " . ldap_error($ldapConn));
-            }
-            
-            $entries = ldap_get_entries($ldapConn, $result);
-            
-            // Mapear grupos conocidos
-            $groupMapping = [
-                'profesores' => $this->profesoresGroupDn,
-                'alumnos' => $this->alumnosGroupDn,
-                'ldapadmins' => $this->adminGroupDn
-            ];
-            
-            // Para cada grupo, ver si el usuario debe ser añadido o eliminado
-            for ($i = 0; $i < $entries['count']; $i++) {
-                $groupEntry = $entries[$i];
-                
-                // Saltar entradas que no tienen cn
-                if (!isset($groupEntry['cn'][0])) {
-                    continue;
-                }
-                
-                $groupName = $groupEntry['cn'][0];
-                $groupDn = $groupEntry['dn'];
-                
-                // Verificar si es un grupo especial conocido
-                if (isset($groupMapping[$groupName])) {
-                    $groupDn = $groupMapping[$groupName];
-                }
-                
-                // Determinar si el usuario debería estar en este grupo
-                $shouldBeInGroup = in_array($groupName, $selectedGroups);
-                
-                // Verificar las clases de objeto para saber cómo tratar al grupo
-                $isPosixGroup = false;
-                $isUniqueGroup = false;
-                
-                if (isset($groupEntry['objectclass'])) {
-                    for ($j = 0; $j < $groupEntry['objectclass']['count']; $j++) {
-                        $class = strtolower($groupEntry['objectclass'][$j]);
-                        if ($class === 'posixgroup') {
-                            $isPosixGroup = true;
-                        } else if ($class === 'groupofuniquenames') {
-                            $isUniqueGroup = true;
-                        }
-                    }
-                }
-                
-                // Verificar memberUid para posixGroup
-                if ($isPosixGroup) {
-                    // Leer miembros actuales
-                    $memberInfo = ldap_read($ldapConn, $groupDn, "(objectclass=*)", ["memberUid"]);
-                    if ($memberInfo) {
-                        $memberEntry = ldap_get_entries($ldapConn, $memberInfo);
-                        
-                        // Verificar si el usuario ya es miembro
-                        $isCurrentMember = false;
-                        if (isset($memberEntry[0]['memberuid'])) {
-                            for ($j = 0; $j < $memberEntry[0]['memberuid']['count']; $j++) {
-                                if ($memberEntry[0]['memberuid'][$j] === $userUid) {
-                                    $isCurrentMember = true;
-                                    break;
-                                }
-                            }
-                        }
-                        
-                        // Añadir o eliminar según corresponda
-                        if ($shouldBeInGroup && !$isCurrentMember) {
-                            // Añadir al grupo
-                            $mod = ["memberUid" => $userUid];
-                            ldap_mod_add($ldapConn, $groupDn, $mod);
-                            Log::debug("Usuario $userUid añadido como memberUid al grupo $groupName");
-                        } else if (!$shouldBeInGroup && $isCurrentMember) {
-                            // Eliminar del grupo
-                            $mod = ["memberUid" => $userUid];
-                            ldap_mod_del($ldapConn, $groupDn, $mod);
-                            Log::debug("Usuario $userUid eliminado como memberUid del grupo $groupName");
-                        }
-                    }
-                }
-                
-                // Verificar uniqueMember para groupOfUniqueNames
-                $uniqueMemberInfo = ldap_read($ldapConn, $groupDn, "(objectclass=*)", ["uniqueMember"]);
-                if ($uniqueMemberInfo) {
-                    $uniqueMemberEntry = ldap_get_entries($ldapConn, $uniqueMemberInfo);
-                    
-                    // Verificar si el usuario ya es miembro
-                    $isCurrentMember = false;
-                    if (isset($uniqueMemberEntry[0]['uniquemember'])) {
-                        for ($j = 0; $j < $uniqueMemberEntry[0]['uniquemember']['count']; $j++) {
-                            if ($uniqueMemberEntry[0]['uniquemember'][$j] === $userDn) {
-                                $isCurrentMember = true;
-                                break;
-                            }
-                        }
-                    }
-                    
-                    // Añadir o eliminar según corresponda
-                    if ($shouldBeInGroup && !$isCurrentMember) {
-                        // Añadir al grupo
-                        $mod = ["uniqueMember" => $userDn];
-                        ldap_mod_add($ldapConn, $groupDn, $mod);
-                        Log::debug("Usuario $userDn añadido como uniqueMember al grupo $groupName");
-                    } else if (!$shouldBeInGroup && $isCurrentMember) {
-                        // Prevenir la eliminación del ldap-admin del grupo ldapadmins
-                        if ($groupName === 'ldapadmins' && $userUid === 'ldap-admin') {
-                            Log::warning("No se puede eliminar el usuario ldap-admin del grupo ldapadmins");
-                            continue;
-                        }
-                        
-                        // Eliminar del grupo pero verificar que no sea el último miembro
-                        if ($uniqueMemberEntry[0]['uniquemember']['count'] > 1) {
-                            $mod = ["uniqueMember" => $userDn];
-                            ldap_mod_del($ldapConn, $groupDn, $mod);
-                            Log::debug("Usuario $userDn eliminado como uniqueMember del grupo $groupName");
-                        } else {
-                            Log::warning("No se elimina el usuario del grupo $groupName porque es el último miembro");
-                        }
-                    }
-                }
-            }
-            
-            if ($closeConn) {
-                ldap_close($ldapConn);
-            }
-            
-            return true;
-        } catch (Exception $e) {
-            Log::error("Error al actualizar grupos: " . $e->getMessage());
-            throw $e;
-        }
     }
 
     /**
