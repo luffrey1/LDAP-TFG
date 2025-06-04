@@ -982,6 +982,7 @@ class LdapUserController extends Controller
             try {
                 // Si el usuario es un array, necesitamos convertirlo a objeto LdapRecord
                 if (is_array($user)) {
+                    Log::debug("Usuario es un array, convirtiendo a objeto LdapRecord");
                     $user = $connection->query()
                         ->in($this->peopleOu)
                         ->where('uid', '=', $request->uid)
@@ -992,11 +993,45 @@ class LdapUserController extends Controller
                     }
                 }
 
-                foreach ($updateData as $attribute => $value) {
-                    $user->setAttribute($attribute, $value);
+                // Actualizar los atributos usando LDAP nativo para mayor control
+                $ldapConn = ldap_connect('ldaps://' . $config['hosts'][0], $config['port']);
+                if (!$ldapConn) {
+                    throw new Exception("No se pudo crear la conexión LDAP");
                 }
+
+                ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
+                ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
+                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
                 
-                $user->save();
+                // Intentar bind con credenciales
+                $bind = @ldap_bind(
+                    $ldapConn, 
+                    $config['username'], 
+                    $config['password']
+                );
+                
+                if (!$bind) {
+                    $error = ldap_error($ldapConn);
+                    Log::error("Error al conectar al servidor LDAP: " . $error);
+                    throw new Exception("No se pudo autenticar en el servidor LDAP: " . $error);
+                }
+
+                // Preparar los atributos para la actualización
+                $modifyData = [];
+                foreach ($updateData as $attribute => $value) {
+                    $modifyData[$attribute] = $value;
+                }
+
+                // Realizar la modificación
+                $success = ldap_modify($ldapConn, $userDn, $modifyData);
+                
+                if (!$success) {
+                    $error = ldap_error($ldapConn);
+                    Log::error("Error al actualizar usuario: " . $error);
+                    throw new Exception("Error al actualizar usuario: " . $error);
+                }
+
+                ldap_close($ldapConn);
                 Log::debug("Usuario actualizado correctamente");
                 
                 // Actualizar grupos del usuario si se proporcionaron
