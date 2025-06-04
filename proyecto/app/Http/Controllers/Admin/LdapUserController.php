@@ -806,12 +806,26 @@ class LdapUserController extends Controller
             }
             
             // Modificar el usuario
-            $result = $connection->modify($user['dn'], $updateData);
-            
-            if (!$result) {
-                $error = $connection->getLastError();
-                Log::error("Error al actualizar usuario: " . $error);
-                throw new Exception("Error al actualizar usuario: " . $error);
+            try {
+                $user = $connection->query()
+                    ->in($config['base_dn'])
+                    ->where('dn', '=', $user['dn'])
+                    ->first();
+                
+                if (!$user) {
+                    throw new Exception("No se pudo encontrar el usuario para actualizar");
+                }
+                
+                foreach ($updateData as $attribute => $value) {
+                    $user->setAttribute($attribute, $value);
+                }
+                
+                $user->save();
+                Log::debug("Usuario actualizado correctamente");
+                
+            } catch (Exception $e) {
+                Log::error("Error al actualizar usuario: " . $e->getMessage());
+                throw new Exception("Error al actualizar usuario: " . $e->getMessage());
             }
             
             // Actualizar grupos del usuario si se proporcionaron
