@@ -110,6 +110,22 @@ class LdapUserController extends Controller
 
             Log::debug('Usuarios encontrados: ' . count($allUsers));
 
+            // Si hay un grupo seleccionado, filtrar los usuarios que pertenecen a ese grupo
+            if (!empty($selectedGroup)) {
+                $filteredUsers = [];
+                foreach ($allUsers as $user) {
+                    $uid = is_array($user) ? ($user['uid'][0] ?? '') : $user->getFirstAttribute('uid');
+                    if (!empty($uid)) {
+                        $userGroups = $this->getUserGroups($uid);
+                        if (in_array($selectedGroup, $userGroups)) {
+                            $filteredUsers[] = $user;
+                        }
+                    }
+                }
+                $allUsers = $filteredUsers;
+                Log::debug('Usuarios filtrados por grupo ' . $selectedGroup . ': ' . count($allUsers));
+            }
+
             // Crear el paginador manual
             $total = count($allUsers);
             $offset = ($page - 1) * $perPage;
