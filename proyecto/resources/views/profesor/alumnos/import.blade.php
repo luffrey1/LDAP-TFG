@@ -73,9 +73,9 @@
                             
                             @if(!isset($grupo))
                             <div class="form-group mb-4">
-                                <label for="clase_grupo_id" class="form-label fw-bold">Clase / Grupo</label>
-                                <select name="clase_grupo_id" id="clase_grupo_id" class="form-select select2 shadow-sm" @if(!session('auth_user.is_admin')) required @endif>
-                                    <option value="">@if(session('auth_user.is_admin'))(Opcional) Sin grupo asignado@else Seleccione un grupo @endif</option>
+                                <label for="clase_grupo_id" class="form-label fw-bold text-dark">Clase / Grupo</label>
+                                <select name="clase_grupo_id" id="clase_grupo_id" class="form-select select2 shadow-sm bg-white" @if(!session('auth_user.is_admin')) required @endif>
+                                    <option value="" class="text-muted">@if(session('auth_user.is_admin'))(Opcional) Sin grupo asignado@else Seleccione un grupo @endif</option>
                                     @foreach($grupos as $grupo_select)
                                     <option value="{{ $grupo_select->id }}" {{ isset($grupo) && $grupo->id == $grupo_select->id ? 'selected' : '' }}>
                                         {{ $grupo_select->nombre }} ({{ $grupo_select->curso }}º {{ $grupo_select->seccion }})
@@ -88,7 +88,7 @@
                             @endif
                             
                             <div class="form-group mb-4">
-                                <label class="form-label fw-bold">Archivo de Alumnos</label>
+                                <label class="form-label fw-bold text-dark">Archivo de Alumnos</label>
                                 <div class="dropzone-area p-5 text-center border-2 border-dashed rounded-3 bg-light" id="dropzone">
                                     <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
                                     <h5 class="mb-3">Arrastre y suelte su archivo aquí</h5>
@@ -375,6 +375,58 @@
 code {
     font-size: 0.875em;
     color: #0d6efd;
+}
+
+.form-label {
+    color: #2c3e50 !important;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.form-select {
+    color: #2c3e50 !important;
+    background-color: #ffffff !important;
+    border: 1px solid #dee2e6;
+}
+
+.form-select option {
+    color: #2c3e50;
+    background-color: #ffffff;
+}
+
+.form-select option:first-child {
+    color: #6c757d;
+}
+
+.select2-container--bootstrap-5 .select2-selection {
+    background-color: #ffffff !important;
+    border: 1px solid #dee2e6 !important;
+    color: #2c3e50 !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--single {
+    height: 38px !important;
+    padding: 0.375rem 0.75rem !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+    color: #2c3e50 !important;
+    line-height: 24px !important;
+}
+
+.select2-container--bootstrap-5 .select2-results__option {
+    color: #2c3e50 !important;
+    background-color: #ffffff !important;
+}
+
+.select2-container--bootstrap-5 .select2-results__option--highlighted {
+    background-color: #e9ecef !important;
+    color: #2c3e50 !important;
+}
+
+.select2-container--bootstrap-5 .select2-results__option--selected {
+    background-color: #0d6efd !important;
+    color: #ffffff !important;
 }
 </style>
 @endsection 
