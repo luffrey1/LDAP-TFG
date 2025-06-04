@@ -69,13 +69,13 @@ class LdapUserController extends Controller
             }
 
             $search = $request->input('search', '');
-            $filter = $request->input('group', '');
+            $selectedGroup = $request->input('group', '');
             $page = $request->input('page', 1);
             $perPage = $request->input('per_page', 10);
 
             Log::debug('Parámetros de búsqueda: ' . json_encode([
                 'search' => $search,
-                'filter' => $filter,
+                'filter' => $selectedGroup,
                 'page' => $page,
                 'perPage' => $perPage
             ]));
@@ -94,7 +94,7 @@ class LdapUserController extends Controller
                 $searchFilter .= '(|(cn=*' . $search . '*)(mail=*' . $search . '*)(uid=*' . $search . '*))';
             }
             
-            if (!empty($filter)) {
+            if (!empty($selectedGroup)) {
                 $searchFilter .= '(|(member=uid=*,ou=people,dc=tierno,dc=es)(memberUid=*))';
             }
             
@@ -137,7 +137,7 @@ class LdapUserController extends Controller
                 'adminUsers' => $adminUsers,
                 'groupList' => $groupList,
                 'search' => $search,
-                'filter' => $filter
+                'selectedGroup' => $selectedGroup
             ]);
 
         } catch (\Exception $e) {
@@ -163,7 +163,9 @@ class LdapUserController extends Controller
                 ],
                 'users' => collect(),
                 'adminUsers' => [],
-                'groupList' => []
+                'groupList' => [],
+                'search' => '',
+                'selectedGroup' => ''
             ]);
         }
     }
