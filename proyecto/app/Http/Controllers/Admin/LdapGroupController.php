@@ -20,16 +20,18 @@ class LdapGroupController extends Controller
             
             $connection = new Connection([
                 'hosts' => $config['hosts'],
-                'port' => $config['port'],
+                'port' => 636, // Forzar puerto 636 para LDAPS
                 'base_dn' => $config['base_dn'],
                 'username' => $config['username'],
                 'password' => $config['password'],
-                'use_ssl' => $config['use_ssl'],
-                'use_tls' => $config['use_tls'],
+                'use_ssl' => true, // Forzar SSL
+                'use_tls' => false, // Deshabilitar TLS
                 'timeout' => $config['timeout'],
                 'options' => [
                     LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
                     LDAP_OPT_REFERRALS => 0,
+                    LDAP_OPT_PROTOCOL_VERSION => 3,
+                    LDAP_OPT_NETWORK_TIMEOUT => 5,
                 ],
             ]);
 
@@ -50,37 +52,34 @@ class LdapGroupController extends Controller
 
             $groupData = [];
             foreach ($groups as $group) {
-                // Verificar si el objeto es un grupo y tiene los atributos básicos necesarios
-                if (!isset($group['cn']) || !isset($group['objectclass'])) {
-                    Log::debug('Objeto omitido por falta de atributos básicos: ' . json_encode($group));
-                    continue; // Saltar objetos que no parecen grupos (como la OU)
-                }
-                
-                Log::debug('Procesando posible grupo: ' . json_encode($group));
-                
-                try {
-                    $gidNumber = null; // Inicializar la variable
-                    $gidNumber = isset($group['gidnumber']) ? (is_array($group['gidnumber']) ? $group['gidnumber'][0] : $group['gidnumber']) : null;
-                    $groupData[] = [
-                        'cn' => is_array($group['cn']) ? $group['cn'][0] : $group['cn'],
-                        'gidNumber' => $gidNumber,
-                        'description' => isset($group['description']) ? (is_array($group['description']) ? $group['description'][0] : $group['description']) : '',
-                        'member' => $group['member'] ?? [],
-                    ];
-                } catch (\Exception $e) {
-                    Log::error('Error procesando grupo: ' . $e->getMessage());
-                    Log::error('Datos del grupo: ' . json_encode($group));
-                }
+                $groupData[] = [
+                    'dn' => is_array($group) ? $group['dn'] : $group->getDn(),
+                    'cn' => is_array($group) ? ($group['cn'][0] ?? '') : $group->getFirstAttribute('cn'),
+                    'description' => is_array($group) ? ($group['description'][0] ?? '') : $group->getFirstAttribute('description'),
+                    'memberCount' => is_array($group) ? (isset($group['member']) ? count($group['member']) : 0) : count($group->getAttribute('member', [])),
+                ];
             }
 
-            Log::debug('Grupos procesados: ' . json_encode($groupData));
-            Log::debug('Renderizando vista con ' . count($groupData) . ' grupos');
-
             return view('admin.groups.index', ['groups' => $groupData]);
+
         } catch (\Exception $e) {
             Log::error('Error al obtener grupos LDAP: ' . $e->getMessage());
             Log::error('Stack trace: ' . $e->getTraceAsString());
-            return redirect()->back()->with('error', 'Error al obtener los grupos LDAP: ' . $e->getMessage());
+
+            return view('admin.groups.index', [
+                'groups' => [],
+                'error' => true,
+                'errorMessage' => 'Error al obtener los grupos LDAP: ' . $e->getMessage(),
+                'diagnostico' => [
+                    'error' => $e->getMessage(),
+                    'hosts' => config('ldap.connections.default.hosts'),
+                    'port' => 636,
+                    'base_dn' => config('ldap.connections.default.base_dn'),
+                    'username' => config('ldap.connections.default.username'),
+                    'use_ssl' => true,
+                    'use_tls' => false
+                ]
+            ]);
         }
     }
 
