@@ -39,18 +39,23 @@
                             </thead>
                             <tbody>
                                 @forelse ($groups as $group)
+                                    @php
+                                        $cn = is_array($group['cn']) ? $group['cn'][0] : $group['cn'];
+                                        $gidNumber = isset($group['gidNumber']) ? (is_array($group['gidNumber']) ? $group['gidNumber'][0] : $group['gidNumber']) : 'N/A';
+                                        $description = isset($group['description']) ? (is_array($group['description']) ? $group['description'][0] : $group['description']) : 'Sin descripción';
+                                    @endphp
                                     <tr>
-                                        <td>{{ is_array($group['cn']) ? $group['cn'][0] : $group['cn'] }}</td>
-                                        <td>{{ $group['gidNumber'] ?? 'N/A' }}</td>
-                                        <td>{{ $group['description'] ?? 'Sin descripción' }}</td>
+                                        <td>{{ $cn }}</td>
+                                        <td>{{ $gidNumber }}</td>
+                                        <td>{{ $description }}</td>
                                         <td>
                                             <div class="btn-group" role="group">
-                                                <a href="{{ route('admin.groups.edit', ['cn' => is_array($group['cn']) ? $group['cn'][0] : $group['cn']]) }}" class="btn btn-sm btn-info">
+                                                <a href="{{ route('admin.groups.edit', $cn) }}" class="btn btn-sm btn-info">
                                                     <i class="fas fa-edit"></i> Editar
                                                 </a>
-                                                @if (!in_array(is_array($group['cn']) ? $group['cn'][0] : $group['cn'], ['admin', 'ldapadmins', 'sudo']))
+                                                @if (!in_array($cn, ['admin', 'ldapadmins', 'sudo']))
                                                     <button type="button" class="btn btn-sm btn-danger" 
-                                                            onclick="confirmDelete('{{ is_array($group['cn']) ? $group['cn'][0] : $group['cn'] }}')">
+                                                            onclick="confirmDelete('{{ $cn }}')">
                                                         <i class="fas fa-trash"></i> Eliminar
                                                     </button>
                                                 @endif
