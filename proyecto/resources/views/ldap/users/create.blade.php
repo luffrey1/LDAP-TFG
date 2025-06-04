@@ -28,16 +28,6 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
-                        <label for="uid" class="block text-sm font-medium text-gray-700 mb-1">Usuario (UID) <span class="text-red-600">*</span></label>
-                        <input type="text" name="uid" id="uid" required 
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 @error('uid') border-red-500 @enderror" 
-                            value="{{ old('uid') }}" placeholder="Nombre de usuario">
-                        @error('uid')
-                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <div>
                         <label for="cn" class="block text-sm font-medium text-gray-700 mb-1">Nombre Completo <span class="text-red-600">*</span></label>
                         <input type="text" name="cn" id="cn" required 
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 @error('cn') border-red-500 @enderror" 
@@ -53,6 +43,16 @@
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 @error('sn') border-red-500 @enderror" 
                             value="{{ old('sn') }}" placeholder="Apellido">
                         @error('sn')
+                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label for="uid" class="block text-sm font-medium text-gray-700 mb-1">Usuario (UID) <span class="text-red-600">*</span></label>
+                        <input type="text" name="uid" id="uid" required 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 @error('uid') border-red-500 @enderror" 
+                            value="{{ old('uid') }}" placeholder="Nombre de usuario">
+                        @error('uid')
                             <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                         @enderror
                     </div>
