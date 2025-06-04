@@ -587,7 +587,7 @@ class AlumnoController extends Controller
         try {
             $importData = session('import_preview');
             if (!$importData) {
-                throw new \Exception('No hay datos de importación en la sesión');
+                return redirect()->route('profesor.alumnos.import')->with('error', 'No hay datos de importación. Por favor, sube el archivo de nuevo.');
             }
             
             DB::beginTransaction();
