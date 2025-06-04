@@ -72,13 +72,23 @@ class LdapUserController extends Controller
 
             // Construir filtro de búsqueda
             $searchFilter = '(&(objectclass=inetOrgPerson)';
+            
+            // Añadir filtro de búsqueda por texto
             if ($search) {
                 $searchFilter .= "(|(uid=*$search*)(cn=*$search*)(mail=*$search*))";
             }
+            
+            // Añadir filtro de grupo
             if ($filter) {
-                $searchFilter .= "(memberOf=cn=$filter,ou=groups,dc=tierno,dc=es)";
+                // Primero intentamos con memberOf
+                $searchFilter .= "(|(memberOf=cn=$filter,ou=groups,dc=tierno,dc=es)";
+                // También buscamos en member para groupOfNames
+                $searchFilter .= "(member=uid=*,ou=people,dc=tierno,dc=es))";
             }
+            
             $searchFilter .= ')';
+
+            Log::debug('Filtro LDAP construido: ' . $searchFilter);
 
             // Buscar usuarios
             $query = $this->connection->query()
@@ -87,6 +97,8 @@ class LdapUserController extends Controller
 
             // Obtener todos los resultados para la paginación manual
             $allUsers = $query->get();
+            Log::debug('Usuarios encontrados: ' . count($allUsers));
+            
             $total = count($allUsers);
             $offset = ($page - 1) * $perPage;
             $users = array_slice($allUsers, $offset, $perPage);
