@@ -60,8 +60,8 @@
                             @if(!isset($grupo))
                             <div class="form-group">
                                 <label for="clase_grupo_id">Clase / Grupo</label>
-                                <select name="clase_grupo_id" id="clase_grupo_id" class="form-control select2" required>
-                                    <option value="">Seleccione un grupo</option>
+                                <select name="clase_grupo_id" id="clase_grupo_id" class="form-control select2" @if(!session('auth_user.is_admin')) required @endif>
+                                    <option value="">@if(session('auth_user.is_admin'))(Opcional) Sin grupo asignado@else Seleccione un grupo @endif</option>
                                     @foreach($grupos as $grupo_select)
                                     <option value="{{ $grupo_select->id }}" {{ isset($grupo) && $grupo->id == $grupo_select->id ? 'selected' : '' }}>
                                         {{ $grupo_select->nombre }} ({{ $grupo_select->curso }}º {{ $grupo_select->seccion }})
