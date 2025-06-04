@@ -197,7 +197,7 @@
     </div>
 </div>
 
-<!-- Modal para crear/editar eventos -->
+<!-- Modal para crear eventos -->
 <div class="modal fade" id="eventoModal" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
@@ -210,8 +210,6 @@
             <div class="modal-body event-modal-content">
                 <form id="eventoForm" method="POST" action="{{ route('dashboard.calendario.evento') }}">
                     @csrf
-                    <input type="hidden" id="evento_id" name="id">
-                    <input type="hidden" id="method" name="_method" value="POST">
                     
                     <div class="form-group">
                         <label class="form-label" for="titulo">Título del evento</label>
@@ -263,16 +261,9 @@
                     </div>
                     
                     <div class="modal-footer">
-                        <button type="button" id="deleteButton" class="btn btn-danger" onclick="eliminarEvento()">Eliminar</button>
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
                         <button type="submit" class="btn btn-primary">Guardar</button>
                     </div>
-                </form>
-                
-                <!-- Formulario separado para eliminar eventos -->
-                <form id="deleteForm" method="POST">
-                    @csrf
-                    <input type="hidden" name="_method" value="DELETE">
                 </form>
             </div>
         </div>
@@ -298,7 +289,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Configuración del calendario
-    var calendarConfig = {
+    var calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
         headerToolbar: {
             left: 'prev,next today',
@@ -317,9 +308,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Abrir el modal para crear un nuevo evento
             $('#modalTitle').text('Nuevo Evento');
             $('#eventoForm')[0].reset();
-            $('#evento_id').val('');
-            $('#method').val('POST');
-            $('#deleteButton').hide();
             
             // Establecer la fecha seleccionada
             var fechaSeleccionada = info.dateStr;
@@ -328,27 +316,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Mostrar el modal
             $('#eventoModal').modal('show');
-        },
-        eventClick: function(info) {
-            // Abrir el modal para editar el evento
-            $('#modalTitle').text('Editar Evento');
-            $('#evento_id').val(info.event.id);
-            $('#method').val('PUT');
-            $('#titulo').val(info.event.title);
-            $('#descripcion').val(info.event.extendedProps.description);
-            $('#fecha_inicio').val(info.event.start.toISOString().slice(0, 16));
-            $('#fecha_fin').val(info.event.end.toISOString().slice(0, 16));
-            $('#color').val(info.event.backgroundColor);
-            $('#todo_el_dia').prop('checked', info.event.allDay);
-            $('#deleteButton').show();
-            
-            // Mostrar el modal
-            $('#eventoModal').modal('show');
         }
-    };
+    });
     
-    // Crear y renderizar el calendario
-    var calendar = new FullCalendar.Calendar(calendarEl, calendarConfig);
     calendar.render();
 
     // Manejar el envío del formulario
@@ -356,17 +326,10 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         
         var formData = new FormData(this);
-        var method = $('#method').val();
-        var eventoId = $('#evento_id').val();
-        
-        var url = '{{ route("dashboard.calendario.evento") }}';
-        if (method === 'PUT' && eventoId) {
-            url = '{{ route("dashboard.calendario.evento.update", ["id" => ""]) }}'.replace('/evento/', '/evento/' + eventoId + '/');
-        }
         
         $.ajax({
-            url: url,
-            method: method,
+            url: '{{ route("dashboard.calendario.evento") }}',
+            method: 'POST',
             data: formData,
             processData: false,
             contentType: false,
@@ -383,34 +346,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-
-    // Función para eliminar evento
-    window.eliminarEvento = function() {
-        if (!confirm('¿Estás seguro de que deseas eliminar este evento?')) {
-            return;
-        }
-        
-        var eventoId = $('#evento_id').val();
-        
-        $.ajax({
-            url: '{{ route("dashboard.calendario.eliminar", ["id" => ""]) }}'.replace('/evento/', '/evento/' + eventoId + '/'),
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            success: function(response) {
-                $('#eventoModal').modal('hide');
-                showNotification('Evento eliminado correctamente', 'success');
-                setTimeout(function() {
-                    window.location.reload();
-                }, 1000);
-            },
-            error: function(xhr) {
-                var errorMessage = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Error desconocido';
-                showNotification('Error al eliminar el evento: ' + errorMessage, 'error');
-            }
-        });
-    };
 });
 </script>
 @endpush 
