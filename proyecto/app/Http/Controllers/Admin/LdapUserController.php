@@ -772,9 +772,13 @@ class LdapUserController extends Controller
                     ->with('error', 'Usuario no encontrado');
             }
 
+            // Obtener el DN del usuario de manera segura
+            $userDn = is_array($user) ? $user['dn'] : $user->getDn();
+            Log::debug("DN del usuario para actualizar: " . $userDn);
+
             // Verificar si el usuario es administrador
             $isAdminUser = false;
-            $userGroups = $this->getUserGroups($user->getDn());
+            $userGroups = $this->getUserGroups($userDn);
             foreach ($userGroups as $group) {
                 $groupName = '';
                 if (is_array($group)) {
@@ -841,10 +845,22 @@ class LdapUserController extends Controller
             }
 
             // Nos aseguramos de que el usuario tenga todos los objectClass necesarios
-            $this->ensureUserHasRequiredClasses($user->getDn());
+            $this->ensureUserHasRequiredClasses($userDn);
 
             // Modificar el usuario usando LdapRecord
             try {
+                // Si el usuario es un array, necesitamos convertirlo a objeto LdapRecord
+                if (is_array($user)) {
+                    $user = $connection->query()
+                        ->in($config['base_dn'])
+                        ->where('dn', '=', $userDn)
+                        ->first();
+                    
+                    if (!$user) {
+                        throw new Exception("No se pudo encontrar el usuario para actualizar");
+                    }
+                }
+
                 foreach ($updateData as $attribute => $value) {
                     $user->setAttribute($attribute, $value);
                 }
@@ -854,7 +870,7 @@ class LdapUserController extends Controller
                 
                 // Actualizar grupos del usuario si se proporcionaron
                 if ($request->has('grupos')) {
-                    $this->updateUserGroupsDirect($user->getDn(), $request->grupos, $connection);
+                    $this->updateUserGroupsDirect($userDn, $request->grupos, $connection);
                 }
                 
                 // Registrar la acción en logs
