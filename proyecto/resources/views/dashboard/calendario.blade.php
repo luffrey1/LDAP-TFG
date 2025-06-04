@@ -361,7 +361,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         var url = '{{ route("dashboard.calendario.evento") }}';
         if (method === 'PUT' && eventoId) {
-            url = '{{ route("dashboard.calendario.evento.update", "") }}/' + eventoId;
+            url = '{{ route("dashboard.calendario.evento.update", ["id" => ""]) }}'.replace('/evento/', '/evento/' + eventoId + '/');
         }
         
         $.ajax({
@@ -393,7 +393,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var eventoId = $('#evento_id').val();
         
         $.ajax({
-            url: '{{ route("dashboard.calendario.eliminar", "") }}/' + eventoId,
+            url: '{{ route("dashboard.calendario.eliminar", ["id" => ""]) }}'.replace('/evento/', '/evento/' + eventoId + '/'),
             method: 'DELETE',
             headers: {
                 'X-CSRF-TOKEN': '{{ csrf_token() }}'
