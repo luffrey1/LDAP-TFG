@@ -2521,21 +2521,47 @@ class LdapUserController extends Controller
             if (!$userUid) {
                 throw new Exception("No se pudo extraer el UID del DN del usuario");
             }
+
+            // Obtener el GID actual del usuario
+            $userInfo = ldap_read($ldapConn, $userDn, "(objectclass=*)", ["gidNumber"]);
+            if (!$userInfo) {
+                throw new Exception("Error al leer información del usuario: " . ldap_error($ldapConn));
+            }
+            $userEntry = ldap_get_entries($ldapConn, $userInfo);
+            $currentGid = isset($userEntry[0]['gidnumber'][0]) ? $userEntry[0]['gidnumber'][0] : null;
             
             // Buscar todos los grupos disponibles
-            $result = ldap_search($ldapConn, $this->groupsOu, "(objectclass=*)", ["cn", "objectclass"]);
+            $result = ldap_search($ldapConn, $this->groupsOu, "(objectclass=*)", ["cn", "objectclass", "gidNumber"]);
             if (!$result) {
                 throw new Exception("Error al buscar grupos: " . ldap_error($ldapConn));
             }
             
             $entries = ldap_get_entries($ldapConn, $result);
             
-            // Mapear grupos conocidos
+            // Mapear grupos conocidos y sus GIDs
             $groupMapping = [
-                'profesores' => $this->profesoresGroupDn,
-                'alumnos' => $this->alumnosGroupDn,
-                'ldapadmins' => $this->adminGroupDn
+                'profesores' => ['dn' => $this->profesoresGroupDn, 'gid' => '10000'],
+                'alumnos' => ['dn' => $this->alumnosGroupDn, 'gid' => '10001'],
+                'ldapadmins' => ['dn' => $this->adminGroupDn, 'gid' => '9001']
             ];
+
+            // Determinar el nuevo GID basado en los grupos seleccionados
+            $newGid = null;
+            if (in_array('profesores', $selectedGroups)) {
+                $newGid = '10000';
+            } elseif (in_array('alumnos', $selectedGroups)) {
+                $newGid = '10001';
+            }
+            
+            // Actualizar el GID del usuario si es necesario
+            if ($newGid && $newGid !== $currentGid) {
+                $mod = ["gidNumber" => $newGid];
+                if (!ldap_modify($ldapConn, $userDn, $mod)) {
+                    Log::error("Error al actualizar GID del usuario: " . ldap_error($ldapConn));
+                } else {
+                    Log::debug("GID del usuario actualizado de {$currentGid} a {$newGid}");
+                }
+            }
             
             // Para cada grupo, ver si el usuario debe ser añadido o eliminado
             for ($i = 0; $i < $entries['count']; $i++) {
@@ -2551,7 +2577,7 @@ class LdapUserController extends Controller
                 
                 // Verificar si es un grupo especial conocido
                 if (isset($groupMapping[$groupName])) {
-                    $groupDn = $groupMapping[$groupName];
+                    $groupDn = $groupMapping[$groupName]['dn'];
                 }
                 
                 // Determinar si el usuario debería estar en este grupo
