@@ -94,10 +94,6 @@ class LdapUserController extends Controller
                 $searchFilter .= '(|(cn=*' . $search . '*)(mail=*' . $search . '*)(uid=*' . $search . '*))';
             }
             
-            if (!empty($selectedGroup)) {
-                $searchFilter .= '(|(member=uid=*,ou=people,dc=tierno,dc=es)(memberUid=*))';
-            }
-            
             $searchFilter .= ')';
 
             Log::debug('Filtro LDAP construido: ' . $searchFilter);
@@ -169,7 +165,9 @@ class LdapUserController extends Controller
                     'groupList' => $groupList,
                     'total' => $total,
                     'currentPage' => $page,
-                    'lastPage' => $paginator->lastPage()
+                    'lastPage' => $paginator->lastPage(),
+                    'search' => $search,
+                    'selectedGroup' => $selectedGroup
                 ]);
             }
 
