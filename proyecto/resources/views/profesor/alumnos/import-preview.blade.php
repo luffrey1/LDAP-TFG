@@ -67,7 +67,7 @@
                             </table>
                         </div>
 
-                        <form action="{{ route('profesor.alumnos.import.process') }}" method="POST" enctype="multipart/form-data" class="mt-4" id="import-form">
+                        <form action="{{ route('profesor.alumnos.import.process') }}" method="POST" enctype="multipart/form-data" class="mt-4">
                             @csrf
                             <input type="hidden" name="confirmar_importacion" value="1">
                             <input type="hidden" name="clase_grupo_id" value="{{ $grupo->id }}">
@@ -133,36 +133,6 @@ $(document).ready(function() {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-    });
-
-    // Manejar el envío del formulario
-    $('#import-form').on('submit', function(e) {
-        e.preventDefault();
-        var form = $(this);
-        var formData = new FormData(this);
-        
-        $.ajax({
-            url: form.attr('action'),
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                if (response.redirect) {
-                    window.location.href = response.redirect;
-                } else {
-                    window.location.href = '{{ route("profesor.alumnos.index") }}';
-                }
-            },
-            error: function(xhr) {
-                console.error('Error:', xhr);
-                if (xhr.status === 405) {
-                    alert('Error: Método no permitido. Por favor, intente nuevamente.');
-                } else {
-                    alert('Error al procesar la importación: ' + (xhr.responseJSON?.message || 'Error desconocido'));
-                }
-            }
-        });
     });
 });
 </script>
