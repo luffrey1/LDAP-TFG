@@ -70,6 +70,7 @@
                         <form action="{{ route('profesor.alumnos.import.process') }}" method="POST" class="mt-4">
                             @csrf
                             <input type="hidden" name="confirmar_importacion" value="1">
+                            <input type="hidden" name="clase_grupo_id" value="{{ $grupo->id }}">
                             <input type="hidden" name="alumnos_data" value="{{ json_encode($alumnos) }}">
                             
                             <div class="form-group">
