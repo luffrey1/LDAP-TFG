@@ -323,36 +323,96 @@ class LdapGroupController extends Controller
 
         try {
             $config = config('ldap.connections.default');
-            $connection = new Connection([
-                'hosts' => $config['hosts'],
-                'port' => 636, // Forzar puerto 636 para LDAPS
-                'base_dn' => $config['base_dn'],
-                'username' => $config['username'],
-                'password' => $config['password'],
-                'use_ssl' => true, // Forzar SSL
-                'use_tls' => false, // Deshabilitar TLS
-                'timeout' => $config['timeout'],
-                'options' => [
-                    LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
-                    LDAP_OPT_REFERRALS => 0,
-                    LDAP_OPT_PROTOCOL_VERSION => 3,
-                    LDAP_OPT_NETWORK_TIMEOUT => 5,
-                ],
-            ]);
-
-            $connection->connect();
-
-            $dn = "cn={$cn},ou=groups,dc=tierno,dc=es";
             
-            $entry = [
-                'gidNumber' => $request->gidNumber,
-            ];
-
-            if ($request->description) {
-                $entry['description'] = $request->description;
+            // Crear conexión LDAP nativa con SSL
+            $ldapConn = ldap_connect('ldaps://' . $config['hosts'][0], 636);
+            if (!$ldapConn) {
+                Log::error("Error al crear conexión LDAP");
+                throw new Exception("No se pudo establecer la conexión LDAP");
             }
+            
+            Log::debug("Conexión LDAP creada, configurando opciones...");
+            
+            ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
+            ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
+            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
+            
+            // Configurar SSL
+            Log::debug("Configurando SSL para conexión LDAP...");
+            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
+            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
+            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
+            
+            // Intentar bind con credenciales
+            $bind = @ldap_bind(
+                $ldapConn, 
+                $config['username'], 
+                $config['password']
+            );
+            
+            if (!$bind) {
+                $error = ldap_error($ldapConn);
+                Log::error("Error al conectar al servidor LDAP: " . $error);
+                Log::error("Código de error LDAP: " . ldap_errno($ldapConn));
+                throw new Exception("No se pudo conectar al servidor LDAP: " . $error);
+            }
+            
+            Log::debug("Conexión LDAP establecida correctamente");
 
-            $connection->query()->update($dn, $entry);
+            // Verificar que el grupo existe
+            $dn = "cn={$cn},ou=groups,dc=tierno,dc=es";
+            $filter = "(objectClass=*)";
+            $search = ldap_read($ldapConn, $dn, $filter);
+            
+            if (!$search) {
+                ldap_close($ldapConn);
+                throw new Exception("Grupo no encontrado: " . ldap_error($ldapConn));
+            }
+            
+            // Preparar los atributos a modificar
+            $entry = [];
+            
+            // Verificar si el grupo es posixGroup para actualizar gidNumber
+            $entries = ldap_get_entries($ldapConn, $search);
+            $isPosixGroup = false;
+            
+            if ($entries['count'] > 0) {
+                if (isset($entries[0]['objectclass'])) {
+                    for ($i = 0; $i < $entries[0]['objectclass']['count']; $i++) {
+                        if (strtolower($entries[0]['objectclass'][$i]) === 'posixgroup') {
+                            $isPosixGroup = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Solo actualizar gidNumber si es posixGroup
+            if ($isPosixGroup) {
+                $entry['gidnumber'] = $request->gidNumber;
+            }
+            
+            // La descripción se puede actualizar para cualquier tipo de grupo
+            if ($request->filled('description')) {
+                $entry['description'] = $request->description;
+            } else {
+                // Si se envió una descripción vacía, eliminarla
+                $modOperation = [];
+                $modOperation['description'] = [];
+                ldap_mod_del($ldapConn, $dn, $modOperation);
+            }
+            
+            // Actualizar el grupo si hay atributos para modificar
+            if (!empty($entry)) {
+                $result = ldap_modify($ldapConn, $dn, $entry);
+                
+                if (!$result) {
+                    ldap_close($ldapConn);
+                    throw new Exception("Error al actualizar grupo: " . ldap_error($ldapConn));
+                }
+            }
+            
+            ldap_close($ldapConn);
 
             Log::channel('activity')->info('Grupo LDAP actualizado', [
                 'action' => 'Actualizar Grupo',
