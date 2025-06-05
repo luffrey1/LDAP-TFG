@@ -95,7 +95,7 @@ class LdapGroupController extends Controller
     {
         $request->validate([
             'cn' => 'required|string|max:255|regex:/^[a-zA-Z0-9_-]+$/',
-            'gidNumber' => 'required|integer|min:1000',
+            'gidNumber' => 'nullable|integer|min:1000',
             'description' => 'nullable|string|max:255',
         ], [
             'cn.regex' => 'El nombre del grupo solo puede contener letras, números, guiones y guiones bajos',
@@ -164,15 +164,37 @@ class LdapGroupController extends Controller
                     ->with('error', 'Ya existe un grupo con ese nombre');
             }
 
+            // Si no se proporcionó un GID, obtener el siguiente disponible
+            $gidNumber = $request->gidNumber;
+            if (!$gidNumber) {
+                // Buscar el último GID usado
+                $gidSearch = ldap_search($ldapConn, "ou=groups,dc=tierno,dc=es", "(objectClass=posixGroup)", ["gidNumber"]);
+                if ($gidSearch) {
+                    $gidEntries = ldap_get_entries($ldapConn, $gidSearch);
+                    $maxGid = 1000; // GID mínimo
+                    for ($i = 0; $i < $gidEntries['count']; $i++) {
+                        if (isset($gidEntries[$i]['gidnumber'][0])) {
+                            $currentGid = (int)$gidEntries[$i]['gidnumber'][0];
+                            if ($currentGid > $maxGid) {
+                                $maxGid = $currentGid;
+                            }
+                        }
+                    }
+                    $gidNumber = $maxGid + 1;
+                } else {
+                    $gidNumber = 1000; // GID inicial si no hay grupos
+                }
+            }
+
             // Verificar si el GID ya está en uso
-            $gidFilter = "(gidNumber={$request->gidNumber})";
+            $gidFilter = "(gidNumber={$gidNumber})";
             $gidSearch = ldap_search($ldapConn, "ou=groups,dc=tierno,dc=es", $gidFilter);
             
             if ($gidSearch) {
                 $gidEntries = ldap_get_entries($ldapConn, $gidSearch);
                 if ($gidEntries['count'] > 0) {
                     ldap_close($ldapConn);
-                    Log::warning('El GID ya está en uso: ' . $request->gidNumber);
+                    Log::warning('El GID ya está en uso: ' . $gidNumber);
                     return redirect()->back()
                         ->withInput()
                         ->with('error', 'El GID especificado ya está en uso');
@@ -192,7 +214,7 @@ class LdapGroupController extends Controller
                 $entry = [
                     'objectclass' => ['top', 'posixGroup'],
                     'cn' => $request->cn,
-                    'gidNumber' => $request->gidNumber
+                    'gidNumber' => $gidNumber
                 ];
                 
                 // Añadir descripción si se proporcionó

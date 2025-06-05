@@ -26,8 +26,8 @@
                         </div>
 
                         <div class="form-group text-white">
-                            <label for="gidNumber">GID</label>
-                            <input type="number" class="form-control @error('gidNumber') is-invalid @enderror" id="gidNumber" name="gidNumber" value="{{ old('gidNumber') }}" required>
+                            <label for="gidNumber">GID (opcional - se asignará automáticamente si se deja vacío)</label>
+                            <input type="number" class="form-control @error('gidNumber') is-invalid @enderror" id="gidNumber" name="gidNumber" value="{{ old('gidNumber') }}">
                             @error('gidNumber')
                                 <span class="invalid-feedback">{{ $message }}</span>
                             @enderror
