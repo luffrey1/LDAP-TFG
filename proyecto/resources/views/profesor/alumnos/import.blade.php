@@ -63,7 +63,7 @@
             </div>
 
             <div class="col-12 col-md-6">
-                <div class="card shadow-sm">
+                <div class="card shadow-sm" id="import-card">
                     <div class="card-header bg-primary text-white">
                         <h4 class="mb-0"><i class="fas fa-upload me-2"></i>Subir Archivo</h4>
                     </div>
@@ -513,6 +513,12 @@ code {
 #importForm .form-text, #importForm .text-muted {
     color: #000 !important;
     opacity: 0.8 !important;
+}
+
+.card#import-card {
+    background: #fff !important;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 1.5px 4px rgba(0,0,0,0.03);
+    border-radius: 0.5rem;
 }
 </style>
 @endsection 
