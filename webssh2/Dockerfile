@@ -9,7 +9,7 @@ RUN mkdir -p /usr/src/app/config
 
 # Copiar los archivos de configuración
 COPY app/config.json /usr/src/config.json
-COPY app/config/administrator-id_ed25519 /usr/src/app/config/administrator-id_ed25519
+COPY config/administrator-id_ed25519 /usr/src/app/config/administrator-id_ed25519
 
 # Copiar el resto de la aplicación
 COPY app/ /usr/src/
