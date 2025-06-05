@@ -40,7 +40,14 @@ const io = require('socket.io')(server, {
   allowEIO3: true,
   cors: {
     origin: "*",
-    methods: ["GET", "POST"]
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  cookie: {
+    name: 'WebSSH2',
+    path: '/ssh',
+    httpOnly: true,
+    secure: false
   }
 });
 
@@ -48,6 +55,7 @@ const io = require('socket.io')(server, {
 app.use((req, res, next) => {
   console.log('Request path:', req.path);
   console.log('Session ID:', req.sessionID);
+  console.log('Cookies:', req.headers.cookie);
   next();
 });
 
@@ -116,7 +124,8 @@ io.use((socket, next) => {
       }
       console.log('Socket session:', {
         id: socket.request.session?.id,
-        cookie: socket.request.session?.cookie
+        cookie: socket.request.session?.cookie,
+        headers: socket.request.headers
       });
       next();
     });
