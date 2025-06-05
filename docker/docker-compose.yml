@@ -126,11 +126,6 @@ services:
     user: root
     ports:
       - "2222:2222"
-    environment:
-      - SSHHOST=0.0.0.0
-      - SSHPORT=22
-      - SSHUSER=administrator
-      - SSHKEY=/usr/src/app/config/administrator-id_ed25519
     networks:
       - app-network
   macscanner:
