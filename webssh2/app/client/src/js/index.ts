@@ -59,7 +59,10 @@ const socket = io({
   withCredentials: true,
   extraHeaders: {
     'Access-Control-Allow-Credentials': 'true'
-  }
+  },
+  forceNew: true,
+  autoConnect: true,
+  rejectUnauthorized: false
 });
 
 // reauthenticate
