@@ -142,7 +142,7 @@
                         <i class="fas fa-desktop me-2"></i> Equipos del Grupo
                     </h4>
                     <div>
-                        <button id="refresh-status" class="btn btn-sm btn-light me-1">
+                        <button type="button" class="btn btn-sm btn-light me-1" data-bs-toggle="modal" data-bs-target="#updateStatusModal" data-group-id="{{ $group->id }}">
                             <i class="fas fa-sync-alt me-1"></i> Actualizar Estado
                         </button>
                         <a href="{{ route('monitor.create') }}?group_id={{ $group->id }}" class="btn btn-sm btn-success">
@@ -376,12 +376,11 @@
         });
 
         // Manejar el clic en el botón de actualizar estado del grupo
-        $('#refresh-status').on('click', function() {
+        $('[data-bs-target="#updateStatusModal"]').on('click', function() {
             currentHostId = null;
             currentHostname = null;
             $('#updateStatusModal .modal-title').text('Actualizar estado del grupo');
             resetScanState();
-            $('#updateStatusModal').modal('show');
         });
 
         // Manejar el clic en el botón de inicio de escaneo
