@@ -16,12 +16,9 @@ COPY app/ /usr/src/
 RUN npm ci --audit=false --bin-links=false --fund=false
 
 # Configurar permisos
-RUN chown -R node:node /usr/src && \
+RUN chown -R root:root /usr/src && \
     chmod 600 /usr/src/app/config/administrator-id_ed25519 && \
     chmod 644 /usr/src/config.json
-
-# Cambiar al usuario node
-USER node
 
 EXPOSE 2222/tcp
 ENTRYPOINT [ "/usr/local/bin/node", "index.js" ]
