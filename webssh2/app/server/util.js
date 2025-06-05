@@ -49,6 +49,11 @@ function basicAuth(req, res, next) {
   
   // Verificar credenciales
   if (username === config.user.name && password === config.user.password) {
+    // Establecer las credenciales en la sesión
+    if (req.session) {
+      req.session.username = username;
+      req.session.userpassword = password;
+    }
     return next();
   }
 
