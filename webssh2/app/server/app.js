@@ -20,8 +20,8 @@ const favicon = require('serve-favicon');
 const session = require('express-session')({
   secret: 'mysecret',
   name: 'WebSSH2',
-  resave: true,
-  saveUninitialized: true,
+  resave: false,
+  saveUninitialized: false,
   rolling: true,
   cookie: {
     path: '/ssh',
@@ -121,6 +121,10 @@ io.use((socket, next) => {
       if (err) {
         console.error('Session middleware error:', err);
         return next(new Error('Session error'));
+      }
+      if (!socket.request.session) {
+        console.error('No session found');
+        return next(new Error('No session'));
       }
       console.log('Socket session:', {
         id: socket.request.session?.id,
