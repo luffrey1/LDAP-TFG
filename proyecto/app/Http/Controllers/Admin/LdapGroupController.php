@@ -207,37 +207,25 @@ class LdapGroupController extends Controller
             $groupCreated = false;
             $errorMessage = '';
 
-            // Intento 1: Crear como posixGroup SIN memberUid
+            // Intento 1: Crear como posixGroup con todos los atributos típicos
             try {
-                Log::debug('Intentando crear grupo como posixGroup SIN memberUid');
+                Log::debug('Intentando crear grupo como posixGroup con todos los atributos típicos');
                 $entry = [
                     'objectclass' => ['top', 'posixGroup'],
                     'cn' => $request->cn,
-                    'gidNumber' => strval($gidNumber)
+                    'gidNumber' => strval($gidNumber),
+                    'description' => $request->description ?? '',
+                    'memberUid' => ['ldap-admin']
                 ];
-                if ($request->description) {
-                    $entry['description'] = $request->description;
-                }
                 $success = ldap_add($ldapConn, $dn, $entry);
                 if (!$success) {
                     $error1 = ldap_error($ldapConn);
-                    Log::warning('Fallo crear grupo sin memberUid: ' . $error1);
-                    // Intentar con memberUid: ldap-admin
-                    Log::debug('Intentando crear grupo como posixGroup CON memberUid: ldap-admin');
-                    $entry['memberUid'] = ['ldap-admin'];
-                    $success2 = ldap_add($ldapConn, $dn, $entry);
-                    if (!$success2) {
-                        $error2 = ldap_error($ldapConn);
-                        Log::error('Fallo crear grupo con memberUid: ' . $error2);
-                        ldap_close($ldapConn);
-                        return back()->with('error', 'Error al crear grupo como posixGroup.\nSin memberUid: ' . $error1 . '\nCon memberUid: ' . $error2);
-                    } else {
-                        $groupCreated = true;
-                        Log::info('Grupo creado exitosamente como posixGroup con memberUid: ldap-admin');
-                    }
+                    Log::error('Fallo crear grupo con todos los atributos típicos: ' . $error1);
+                    ldap_close($ldapConn);
+                    return back()->with('error', 'Error al crear grupo como posixGroup (todos los atributos típicos): ' . $error1);
                 } else {
                     $groupCreated = true;
-                    Log::info('Grupo creado exitosamente como posixGroup SIN memberUid');
+                    Log::info('Grupo creado exitosamente como posixGroup con todos los atributos típicos');
                 }
             } catch (\Exception $e) {
                 $errorMessage = $e->getMessage();
