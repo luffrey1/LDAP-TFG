@@ -114,8 +114,9 @@
                             </div>
 
                             <div class="form-group mb-4">
+                                <input type="hidden" name="tiene_encabezados" value="0">
                                 <div class="form-check">
-                                    <input type="checkbox" name="tiene_encabezados" id="tiene_encabezados" class="form-check-input" checked>
+                                    <input type="checkbox" name="tiene_encabezados" id="tiene_encabezados" class="form-check-input" value="1" checked>
                                     <label class="form-check-label text-white" for="tiene_encabezados">El archivo contiene fila de encabezados</label>
                                 </div>
                             </div>

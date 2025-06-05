@@ -548,7 +548,7 @@ class AlumnoController extends Controller
                 $csv->setDelimiter($request->separador);
                 
                 // Si tiene encabezados, saltamos la primera fila
-                if ($request->has('tiene_encabezados')) {
+                if ($request->boolean('tiene_encabezados')) {
                     $stmt = Statement::create()->offset(1);
                     $records = $stmt->process($csv);
                 } else {
