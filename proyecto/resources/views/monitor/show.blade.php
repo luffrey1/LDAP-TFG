@@ -421,34 +421,12 @@ $(function() {
                 return;
             }
             console.log('Conectando a hostname:', hostname);
-            // URL base para la conexión SSH
-            var baseUrl = `http://${webssh2Host}:${webssh2Port}`;
-            var url = `${baseUrl}/ssh/host/${hostname}`;
+            var url = `http://${webssh2Host}:${webssh2Port}/ssh/host/${hostname}`;
             console.log('URL de conexión:', url);
-            
-            // Crear un iframe oculto para precargar los recursos
-            var iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = baseUrl;
-            document.body.appendChild(iframe);
-            
-            // Precargar Socket.IO
-            var socketScript = document.createElement('script');
-            socketScript.src = `${baseUrl}/ssh/socket.io/socket.io.js`;
-            document.head.appendChild(socketScript);
-            
-            // Abrir la ventana después de un breve retraso
-            setTimeout(function() {
-                var win = window.open(url, '_blank', 'width=800,height=600,resizable=yes,scrollbars=yes');
-                if (!win) {
-                    alert('El navegador ha bloqueado la nueva ventana. Permite popups para este sitio.');
-                }
-                // Eliminar el iframe y el script después de un tiempo
-                setTimeout(function() {
-                    document.body.removeChild(iframe);
-                    document.head.removeChild(socketScript);
-                }, 5000);
-            }, 1000);
+            var win = window.open(url, '_blank', 'width=800,height=600,resizable=yes,scrollbars=yes');
+            if (!win) {
+                alert('El navegador ha bloqueado la nueva ventana. Permite popups para este sitio.');
+            }
         });
     }
     // Botón SSH antiguo (por compatibilidad)
@@ -462,34 +440,12 @@ $(function() {
                 return;
             }
             console.log('Conectando a hostname:', hostname);
-            // URL base para la conexión SSH
-            var baseUrl = `http://${webssh2Host}:${webssh2Port}`;
-            var url = `${baseUrl}/ssh/host/${hostname}`;
+            var url = `http://${webssh2Host}:${webssh2Port}/ssh/host/${hostname}`;
             console.log('URL de conexión:', url);
-            
-            // Crear un iframe oculto para precargar los recursos
-            var iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = baseUrl;
-            document.body.appendChild(iframe);
-            
-            // Precargar Socket.IO
-            var socketScript = document.createElement('script');
-            socketScript.src = `${baseUrl}/ssh/socket.io/socket.io.js`;
-            document.head.appendChild(socketScript);
-            
-            // Abrir la ventana después de un breve retraso
-            setTimeout(function() {
-                var win = window.open(url, '_blank', 'width=800,height=600,resizable=yes,scrollbars=yes');
-                if (!win) {
-                    alert('El navegador ha bloqueado la nueva ventana. Permite popups para este sitio.');
-                }
-                // Eliminar el iframe y el script después de un tiempo
-                setTimeout(function() {
-                    document.body.removeChild(iframe);
-                    document.head.removeChild(socketScript);
-                }, 5000);
-            }, 1000);
+            var win = window.open(url, '_blank', 'width=800,height=600,resizable=yes,scrollbars=yes');
+            if (!win) {
+                alert('El navegador ha bloqueado la nueva ventana. Permite popups para este sitio.');
+            }
         });
     }
 });
