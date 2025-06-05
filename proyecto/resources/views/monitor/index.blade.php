@@ -214,7 +214,7 @@
                                                             </span>
                                                         </h5>
                                                     </div>
-                                                    <div class="card-body">
+                                                    <div class="card-body text-white">
                                                         <p>{{ \Illuminate\Support\Str::limit($group->description, 100) ?: 'Sin descripción' }}</p>
                                                         <div class="progress" style="height: 20px;">
                                                             @php
