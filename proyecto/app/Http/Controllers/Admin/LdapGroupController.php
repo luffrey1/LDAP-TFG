@@ -214,8 +214,7 @@ class LdapGroupController extends Controller
                 $entry = [
                     'objectclass' => ['top', 'posixGroup'],
                     'cn' => $request->cn,
-                    'gidNumber' => $gidNumber,
-                    'memberUid' => [] // Para cumplir schema si es necesario
+                    'gidNumber' => strval($gidNumber)
                 ];
                 
                 // Añadir descripción si se proporcionó
