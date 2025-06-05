@@ -1,24 +1,24 @@
 @extends('layouts.dashboard')
 
-@section('title', 'Importar Alumnos')
+@section('title', 'Importar Usuarios')
 
 @section('content')
 <section class="section">
     <div class="section-header">
-        <h1><i class="fas fa-file-import"></i> Importar Alumnos</h1>
+        <h1><i class="fas fa-file-import"></i> Importar Usuarios</h1>
         <div class="section-header-breadcrumb">
             <div class="breadcrumb-item active"><a href="{{ route('dashboard.index') }}">Dashboard</a></div>
             <div class="breadcrumb-item"><a href="{{ route('profesor.clases.index') }}">Clases</a></div>
             @if(isset($grupo))
             <div class="breadcrumb-item"><a href="{{ route('profesor.clases.show', $grupo->id) }}">{{ $grupo->nombre }}</a></div>
             @endif
-            <div class="breadcrumb-item">Importar Alumnos</div>
+            <div class="breadcrumb-item">Importar Usuarios</div>
         </div>
     </div>
 
     <div class="section-body">
-        <h2 class="section-title">Importar Alumnos desde Archivo</h2>
-        <p class="section-lead">Importe múltiples alumnos utilizando un archivo CSV o Excel.</p>
+        <h2 class="section-title">Importar Usuarios desde Archivo</h2>
+        <p class="section-lead">Importe múltiples usuarios utilizando un archivo CSV o Excel.</p>
 
         @include('partials.session_messages')
 
@@ -35,15 +35,15 @@
                             <ul class="list-group list-group-flush mb-3">
                                 <li class="list-group-item bg-transparent border-0 ps-0">
                                     <i class="fas fa-check-circle text-success me-2"></i>
-                                    <strong>nombre</strong> - Nombre del alumno
+                                    <strong>nombre</strong> - Nombre del usuario
                                 </li>
                                 <li class="list-group-item bg-transparent border-0 ps-0">
                                     <i class="fas fa-check-circle text-success me-2"></i>
-                                    <strong>apellidos</strong> - Apellidos del alumno
+                                    <strong>apellidos</strong> - Apellidos del usuario
                                 </li>
                                 <li class="list-group-item bg-transparent border-0 ps-0">
                                     <i class="fas fa-check-circle text-success me-2"></i>
-                                    <strong>identificacion</strong> - DNI o identificación del alumno
+                                    <strong>identificacion</strong> - DNI o identificación del usuario
                                 </li>
                                 <li class="list-group-item bg-transparent border-0 ps-0">
                                     <i class="fas fa-check-circle text-success me-2"></i>
@@ -97,7 +97,7 @@
                             </div>
                             
                             <div class="form-group mb-4">
-                                <label class="form-label fw-bold text-black fs-5">Archivo de Alumnos</label>
+                                <label class="form-label fw-bold text-black fs-5">Archivo de Usuarios</label>
                                 <div class="dropzone-area p-5 text-center border-2 border-dashed rounded-3 bg-light" id="dropzone">
                                     <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
                                     <h5 class="mb-3">Arrastre y suelte su archivo aquí</h5>
@@ -132,7 +132,7 @@
                             <div class="form-group mb-4">
                                 <div class="form-check">
                                     <input type="checkbox" name="crear_cuentas_ldap" id="crear_cuentas_ldap" class="form-check-input" value="1" {{ old('crear_cuentas_ldap', true) ? 'checked' : '' }}>
-                                    <label class="form-check-label text-white" for="crear_cuentas_ldap">Crear cuentas LDAP para los alumnos</label>
+                                    <label class="form-check-label text-white" for="crear_cuentas_ldap">Crear cuentas LDAP para los usuarios</label>
                                 </div>
                             </div>
 
@@ -170,7 +170,7 @@
 
                             <div class="form-group mt-4">
                                 <button type="submit" class="btn btn-primary btn-lg btn-block w-100 shadow-sm">
-                                    <i class="fas fa-upload me-2"></i> Importar Alumnos
+                                    <i class="fas fa-upload me-2"></i> Importar Usuarios
                                 </button>
                             </div>
                         </form>
@@ -309,7 +309,7 @@
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.setAttribute('href', url);
-            link.setAttribute('download', 'alumnos_con_contraseñas.csv');
+            link.setAttribute('download', 'usuarios_con_contraseñas.csv');
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
