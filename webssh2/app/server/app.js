@@ -20,15 +20,13 @@ const favicon = require('serve-favicon');
 const session = require('express-session')({
   secret: 'mysecret',
   name: 'WebSSH2',
-  resave: false,
-  saveUninitialized: false,
-  rolling: true,
+  resave: true,
+  saveUninitialized: true,
   cookie: {
     path: '/ssh',
     httpOnly: true,
     secure: false,
-    maxAge: 86400000,
-    sameSite: 'lax'
+    maxAge: 86400000
   }
 });
 
@@ -39,17 +37,7 @@ app.use(session);
 const io = require('socket.io')(server, {
   path: '/ssh/socket.io',
   serveClient: false,
-  pingInterval: 10000,
-  pingTimeout: 5000,
-  cookie: false,
-  allowEIO3: true,
-  transports: ['websocket', 'polling'],
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST", "OPTIONS"],
-    credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
-  }
+  transports: ['websocket', 'polling']
 });
 
 // Middleware para debug
@@ -121,10 +109,6 @@ io.use((socket, next) => {
       if (err) {
         console.error('Session middleware error:', err);
         return next(new Error('Session error'));
-      }
-      if (!socket.request.session) {
-        console.error('No session found');
-        return next(new Error('No session'));
       }
       console.log('Socket session:', {
         id: socket.request.session?.id,
