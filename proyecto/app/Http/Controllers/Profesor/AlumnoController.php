@@ -511,6 +511,10 @@ class AlumnoController extends Controller
                 $request->merge(['alumnos_data' => $decoded]);
             }
         }
+        // Forzar confirmar_importacion a booleano
+        if ($request->has('confirmar_importacion')) {
+            $request->merge(['confirmar_importacion' => $request->boolean('confirmar_importacion')]);
+        }
         
         // Validar formulario
         if ($request->has('confirmar_importacion')) {
