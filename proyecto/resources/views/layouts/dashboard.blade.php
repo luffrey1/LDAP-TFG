@@ -658,7 +658,7 @@
                                             Usuario
                                         @endif
                                     </div>
-                                    <div class="user-role text-muted small">
+                                    <div class="user-role text-white small">
                                         {{ session('auth_user')['role'] ?? 'Usuario' }}
                                     </div>
                                 </div>
