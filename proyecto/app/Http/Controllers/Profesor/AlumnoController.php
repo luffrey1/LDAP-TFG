@@ -205,20 +205,29 @@ class AlumnoController extends Controller
                     
                     // Guardar usuario LDAP
                     $ldapConn = ldap_connect('ldaps://' . $ldapConfig['hosts'][0], 636);
+                    if (!$ldapConn) {
+                        throw new \Exception("No se pudo establecer la conexión LDAP");
+                    }
+                    
                     ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
                     ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
                     ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
+                    
+                    // Configurar SSL
                     ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
                     ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
                     ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
-                    $bind = ldap_bind(
+                    
+                    // Intentar bind con credenciales
+                    $bind = @ldap_bind(
                         $ldapConn, 
                         $ldapConfig['username'], 
                         $ldapConfig['password']
                     );
                     
                     if (!$bind) {
-                        throw new Exception("Error al conectar con LDAP: " . ldap_error($ldapConn));
+                        $error = ldap_error($ldapConn);
+                        throw new \Exception("No se pudo conectar al servidor LDAP: " . $error);
                     }
                     
                     $result = ldap_add($ldapConn, $userDn, $userData);
