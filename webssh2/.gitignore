@@ -50,3 +50,16 @@ jspm_packages
 
 Build/Release
 app/bob_rsa
+
+# SSH Keys
+config/*.pem
+config/*.key
+config/*_rsa
+config/*_dsa
+config/*_ed25519
+config/*_ecdsa
+config/administrator-id_ed25519
+config/id_rsa
+config/id_ed25519
+config/*.pub
+!config/*.pub.example
