@@ -415,13 +415,14 @@ $(function() {
         $sshBtnHeader.addClass('ssh-btn-long').html('<i class="fas fa-terminal"></i> Conectar SSH');
         $sshBtnHeader.on('click', function(e) {
             e.preventDefault();
-            var ip = '{{ $host->ip_address }}';
-            if (!ip) {
-                alert('No se pudo obtener la IP del host');
+            var hostname = '{{ $host->hostname }}';
+            if (!hostname) {
+                alert('No se pudo obtener el hostname del host');
                 return;
             }
-            console.log('Conectando a IP:', ip);
-            var url = `http://${webssh2Host}:${webssh2Port}/ssh/host/${ip}`;
+            console.log('Conectando a hostname:', hostname);
+            // Usar la URL base para permitir autenticación manual
+            var url = `http://${webssh2Host}:${webssh2Port}/ssh/host/${hostname}`;
             console.log('URL de conexión:', url);
             var win = window.open(url, '_blank');
             if (!win) {
@@ -434,13 +435,14 @@ $(function() {
     if ($sshBtn.length) {
         $sshBtn.on('click', function(e) {
             e.preventDefault();
-            var ip = '{{ $host->ip_address }}';
-            if (!ip) {
-                alert('No se pudo obtener la IP del host');
+            var hostname = '{{ $host->hostname }}';
+            if (!hostname) {
+                alert('No se pudo obtener el hostname del host');
                 return;
             }
-            console.log('Conectando a IP:', ip);
-            var url = `http://${webssh2Host}:${webssh2Port}/ssh/host/${ip}`;
+            console.log('Conectando a hostname:', hostname);
+            // Usar la URL base para permitir autenticación manual
+            var url = `http://${webssh2Host}:${webssh2Port}/ssh/host/${hostname}`;
             console.log('URL de conexión:', url);
             var win = window.open(url, '_blank');
             if (!win) {
