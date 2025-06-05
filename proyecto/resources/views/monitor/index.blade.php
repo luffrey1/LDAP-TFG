@@ -319,35 +319,23 @@
             $('.alert').alert('close');
         }, 5000);
 
-        // Inicializar el modal de Bootstrap
-        const updateStatusModal = new bootstrap.Modal(document.getElementById('updateStatusModal'));
-
-        let scanInProgress = false;
-        const scanProgress = $('#scanProgress');
-        const scanStatus = $('#scanStatus');
-        const progressBar = $('.progress-bar');
-        const startScanBtn = $('#startScanBtn');
-
         // Manejador del botón de escaneo por grupo
         $('.update-group-status').on('click', function() {
-            const groupId = $(this).data('group-id');
+            const button = $(this);
+            const groupId = button.data('group-id');
+            
             if (!groupId) {
                 alert('Este grupo no tiene un ID válido');
                 return;
             }
             
-            if (scanInProgress) return;
-            
-            // Mostrar progreso
-            scanProgress.show();
-            startScanBtn.prop('disabled', true);
-            scanInProgress = true;
-            progressBar.css('width', '0%');
-            scanStatus.html('<i class="fas fa-spinner fa-spin me-2"></i>Detectando equipos...');
+            // Deshabilitar el botón y mostrar loading
+            button.prop('disabled', true);
+            button.html('<i class="fas fa-spinner fa-spin me-1"></i> Actualizando...');
             
             // Realizar el escaneo
             $.ajax({
-                url: '{{ route("monitor.ping-all") }}',
+                url: '/monitor/ping-all',
                 type: 'POST',
                 data: {
                     _token: '{{ csrf_token() }}',
@@ -355,21 +343,29 @@
                     group: groupId
                 },
                 success: function(response) {
-                    progressBar.css('width', '100%');
-                    scanStatus.html('<i class="fas fa-check-circle me-2 text-success"></i>Escaneo completado');
-                    
-                    setTimeout(() => {
-                        updateStatusModal.hide();
-                        location.reload();
-                    }, 1000);
+                    if (response.success) {
+                        // Mostrar mensaje de éxito
+                        const toast = $('<div class="alert alert-success alert-dismissible fade show" role="alert">' +
+                            '<i class="fas fa-check-circle me-2"></i>Estado actualizado correctamente' +
+                            '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+                            '</div>');
+                        $('.card-body').prepend(toast);
+                        
+                        // Recargar la página después de 1 segundo
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        alert('Error al actualizar el estado: ' + (response.message || 'Error desconocido'));
+                    }
                 },
                 error: function(xhr) {
-                    scanStatus.html('<i class="fas fa-exclamation-circle me-2 text-danger"></i>Error en el escaneo');
-                    startScanBtn.prop('disabled', false);
+                    alert('Error al actualizar el estado: ' + (xhr.responseJSON?.message || 'Error de conexión'));
                 },
                 complete: function() {
-                    scanInProgress = false;
-                    startScanBtn.prop('disabled', false);
+                    // Restaurar el botón
+                    button.prop('disabled', false);
+                    button.html('<i class="fas fa-sync-alt me-1"></i> Actualizar Estado');
                 }
             });
         });
