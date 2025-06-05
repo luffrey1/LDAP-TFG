@@ -99,7 +99,7 @@
                                                         {{ $groupName }}
                                                         <span class="badge bg-secondary ms-2">{{ $groupHosts->count() }} equipos</span>
                                                     </div>
-                                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#updateStatusModal">
+                                                    <button type="button" class="btn btn-primary update-group-status" data-group-id="{{ $groupHosts->first()->group ? $groupHosts->first()->group->id : null }}">
                                                         <i class="fas fa-sync-alt me-1"></i> Actualizar Estado
                                                     </button>
                                                 </h5>
@@ -328,12 +328,15 @@
         const progressBar = $('.progress-bar');
         const startScanBtn = $('#startScanBtn');
 
-        // Manejador del botón de escaneo global
-        $('#startScanBtn').on('click', function() {
-            if (scanInProgress) return;
+        // Manejador del botón de escaneo por grupo
+        $('.update-group-status').on('click', function() {
+            const groupId = $(this).data('group-id');
+            if (!groupId) {
+                alert('Este grupo no tiene un ID válido');
+                return;
+            }
             
-            const scanType = $('input[name="scanType"]:checked').val();
-            const groupId = '{{ request()->query("group") }}';
+            if (scanInProgress) return;
             
             // Mostrar progreso
             scanProgress.show();
@@ -348,7 +351,7 @@
                 type: 'POST',
                 data: {
                     _token: '{{ csrf_token() }}',
-                    scan_type: scanType,
+                    scan_type: 'hostname',
                     group: groupId
                 },
                 success: function(response) {
