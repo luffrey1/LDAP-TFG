@@ -155,23 +155,35 @@ io.on('connection', (socket) => {
 
 // socket.io middleware
 io.use((socket, next) => {
-  if (socket.request.res) {
-    session(socket.request, socket.request.res, (err) => {
-      if (err) {
-        log('Socket.IO Session Error', { error: err.message });
-        return next(new Error('Session error'));
-      }
-      log('Socket.IO Connection', {
-        sessionID: socket.request.session?.id,
-        cookie: socket.request.session?.cookie,
-        headers: socket.request.headers,
-        transport: socket.conn.transport.name
-      });
-      next();
-    });
-  } else {
-    next();
+  // Si no hay sesión, permitir la conexión
+  if (!socket.request.session) {
+    return next();
   }
+
+  // Si overridebasic es true, permitir la conexión
+  if (config.user && config.user.overridebasic) {
+    return next();
+  }
+
+  // Verificar autenticación
+  const auth = socket.request.headers.authorization;
+  if (!auth) {
+    return next(new Error('Authentication required'));
+  }
+
+  const [type, credentials] = auth.split(' ');
+  if (type !== 'Basic') {
+    return next(new Error('Invalid authentication type'));
+  }
+
+  const [username, password] = Buffer.from(credentials, 'base64').toString().split(':');
+  
+  // Verificar credenciales
+  if (username === config.user.name && password === config.user.password) {
+    return next();
+  }
+
+  return next(new Error('Invalid credentials'));
 });
 
 // Manejar errores de Socket.IO
