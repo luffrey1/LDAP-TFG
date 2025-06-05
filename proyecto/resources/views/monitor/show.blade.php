@@ -546,11 +546,13 @@ $(document).ready(function() {
         
         if (status === 'success') {
             statusBadge.removeClass('badge-danger badge-warning').addClass('badge-success');
+            statusBadge.text('Online');
             agentStatus.text('Activo').removeClass('text-danger').addClass('text-success');
             lastSeen.text('(Último dato: Ahora mismo)');
             alert.removeClass('alert-danger').addClass('alert-success');
         } else if (status === 'error') {
             statusBadge.removeClass('badge-success badge-warning').addClass('badge-danger');
+            statusBadge.text('Offline');
             agentStatus.text('Inactivo').removeClass('text-success').addClass('text-danger');
             alert.removeClass('alert-success').addClass('alert-danger');
         }
@@ -627,7 +629,8 @@ $(document).ready(function() {
                     success: function(pingResponse) {
                         console.log('Respuesta ping:', pingResponse);
                         if (pingResponse.status === 'online') {
-                            updateStatus('warning', 'Host activo pero agente no disponible');
+                            updateStatus('success', 'Host activo');
+                            setTimeout(() => location.reload(), 1000);
                         } else {
                             updateStatus('error', 'Host inactivo');
                         }
