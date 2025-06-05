@@ -508,6 +508,7 @@ class AlumnoController extends Controller
             $decoded = json_decode($data['alumnos_data'], true);
             if (is_array($decoded)) {
                 $data['alumnos_data'] = $decoded;
+                $request->merge(['alumnos_data' => $decoded]);
             }
         }
         
