@@ -28,7 +28,7 @@
                         <div class="card-body">
                             @include('partials.session_messages')
 
-                            <div class="form-group row">
+                            <div class="form-group row text-white">
                                 <label for="nombre" class="col-sm-3 col-form-label">Nombre del Grupo <span class="text-danger">*</span></label>
                                 <div class="col-sm-9">
                                     <input type="text" name="nombre" id="nombre" class="form-control @error('nombre') is-invalid @enderror" value="{{ old('nombre') }}" required autofocus>

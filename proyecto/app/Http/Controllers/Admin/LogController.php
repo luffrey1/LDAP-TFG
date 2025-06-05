@@ -31,9 +31,9 @@ class LogController extends Controller
             $deleted = $logs->count();
             $logs->each->delete();
 
-            return redirect()->route('admin.logs.index')->with('status', "Se han eliminado {$deleted} logs.");
+            return redirect()->route('admin.logs')->with('status', "Se han eliminado {$deleted} logs.");
         } catch (\Exception $e) {
-            return redirect()->route('admin.logs.index')->with('error', 'Error al eliminar los logs: ' . $e->getMessage());
+            return redirect()->route('admin.logs')->with('error', 'Error al eliminar los logs: ' . $e->getMessage());
         }
     }
 } 
