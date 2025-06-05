@@ -99,7 +99,7 @@
                                                         {{ $groupName }}
                                                         <span class="badge bg-secondary ms-2">{{ $groupHosts->count() }} equipos</span>
                                                     </div>
-                                                    <button type="button" class="btn btn-primary update-group-status" data-group-id="{{ $groupHosts->first()->group ? $groupHosts->first()->group->id : null }}">
+                                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#updateStatusModal" data-group-id="{{ $groupHosts->first()->group ? $groupHosts->first()->group->id : null }}">
                                                         <i class="fas fa-sync-alt me-1"></i> Actualizar Estado
                                                     </button>
                                                 </h5>
@@ -319,19 +319,37 @@
             $('.alert').alert('close');
         }, 5000);
 
+        // Inicializar el modal de Bootstrap
+        const updateStatusModal = new bootstrap.Modal(document.getElementById('updateStatusModal'));
+
+        let scanInProgress = false;
+        const scanProgress = $('#scanProgress');
+        const scanStatus = $('#scanStatus');
+        const progressBar = $('.progress-bar');
+        const startScanBtn = $('#startScanBtn');
+        let currentGroupId = null;
+
         // Manejador del botón de escaneo por grupo
-        $('.update-group-status').on('click', function() {
-            const button = $(this);
-            const groupId = button.data('group-id');
-            
-            if (!groupId) {
+        $('[data-bs-target="#updateStatusModal"]').on('click', function() {
+            currentGroupId = $(this).data('group-id');
+            if (!currentGroupId) {
                 alert('Este grupo no tiene un ID válido');
                 return;
             }
+        });
+
+        // Manejador del botón de inicio de escaneo
+        $('#startScanBtn').on('click', function() {
+            if (scanInProgress) return;
             
-            // Deshabilitar el botón y mostrar loading
-            button.prop('disabled', true);
-            button.html('<i class="fas fa-spinner fa-spin me-1"></i> Actualizando...');
+            const scanType = $('input[name="scanType"]:checked').val();
+            
+            // Mostrar progreso
+            scanProgress.show();
+            startScanBtn.prop('disabled', true);
+            scanInProgress = true;
+            progressBar.css('width', '0%');
+            scanStatus.html('<i class="fas fa-spinner fa-spin me-2"></i>Detectando equipos...');
             
             // Realizar el escaneo
             $.ajax({
@@ -339,154 +357,51 @@
                 type: 'POST',
                 data: {
                     _token: '{{ csrf_token() }}',
-                    scan_type: 'hostname',
-                    group: groupId
+                    scan_type: scanType,
+                    group: currentGroupId
                 },
                 success: function(response) {
-                    if (response.success) {
-                        // Mostrar mensaje de éxito
-                        const toast = $('<div class="alert alert-success alert-dismissible fade show" role="alert">' +
-                            '<i class="fas fa-check-circle me-2"></i>Estado actualizado correctamente' +
-                            '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
-                            '</div>');
-                        $('.card-body').prepend(toast);
-                        
-                        // Recargar la página después de 1 segundo
-                        setTimeout(() => {
-                            location.reload();
-                        }, 1000);
-                    } else {
-                        alert('Error al actualizar el estado: ' + (response.message || 'Error desconocido'));
-                    }
+                    progressBar.css('width', '100%');
+                    scanStatus.html('<i class="fas fa-check-circle me-2 text-success"></i>Escaneo completado');
+                    
+                    setTimeout(() => {
+                        updateStatusModal.hide();
+                        location.reload();
+                    }, 1000);
                 },
                 error: function(xhr) {
                     console.error('Error en la petición:', xhr);
-                    alert('Error al actualizar el estado: ' + (xhr.responseJSON?.message || 'Error de conexión'));
+                    scanStatus.html('<i class="fas fa-exclamation-circle me-2 text-danger"></i>Error en el escaneo');
+                    startScanBtn.prop('disabled', false);
                 },
                 complete: function() {
-                    // Restaurar el botón
-                    button.prop('disabled', false);
-                    button.html('<i class="fas fa-sync-alt me-1"></i> Actualizar Estado');
+                    scanInProgress = false;
+                    startScanBtn.prop('disabled', false);
                 }
-            });
-        });
-
-        // Manejador del botón de ping individual
-        $('.btn-ping').on('click', function(e) {
-            e.preventDefault();
-            const hostId = $(this).data('host-id');
-            const row = $(this).closest('tr');
-            const statusCell = row.find('td:first-child');
-            const ipCell = row.find('td:nth-child(3)');
-            const macCell = row.find('td:nth-child(4)');
-            const lastSeenCell = row.find('td:nth-child(5)');
-            
-            // Mostrar el modal
-            $('#updateStatusModal').modal('show');
-            
-            // Configurar el modal para un solo host
-            $('#updateStatusModal .modal-title').text('Escanear Host Individual');
-            $('#updateStatusModal .modal-body').html(`
-                <div class="mb-3">
-                    <label class="form-label">Seleccione el tipo de escaneo:</label>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="scanType" id="scanTypeHostname" value="hostname" checked>
-                        <label class="form-check-label" for="scanTypeHostname">
-                            Escanear por hostname
-                        </label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="scanType" id="scanTypeIP" value="ip">
-                        <label class="form-check-label" for="scanTypeIP">
-                            Escanear por IP
-                        </label>
-                    </div>
-                </div>
-                <div id="scanProgress" class="d-none">
-                    <div class="progress mb-3">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
-                    </div>
-                    <p id="scanStatus" class="text-center mb-0">Detectando host...</p>
-                </div>
-            `);
-            
-            // Configurar el botón de inicio
-            const startScanBtn = $('#updateStatusModal .modal-footer .btn-primary');
-            startScanBtn.text('Iniciar Escaneo');
-            
-            // Manejador del botón de inicio
-            startScanBtn.off('click').on('click', function() {
-                const scanType = $('input[name="scanType"]:checked').val();
-                const scanProgress = $('#scanProgress');
-                const progressBar = scanProgress.find('.progress-bar');
-                const scanStatus = $('#scanStatus');
-                
-                // Mostrar progreso
-                scanProgress.removeClass('d-none');
-                startScanBtn.prop('disabled', true);
-                progressBar.css('width', '0%');
-                scanStatus.html('<i class="fas fa-spinner fa-spin me-2"></i>Detectando host...');
-                
-                // Realizar el escaneo
-                $.ajax({
-                    url: "{{ route('monitor.ping', ['id' => '__id__']) }}".replace('__id__', hostId),
-                    type: 'POST',
-                    data: {
-                        _token: '{{ csrf_token() }}',
-                        scan_type: scanType
-                    },
-                    success: function(response) {
-                        progressBar.css('width', '100%');
-                        
-                        if (response.success) {
-                            scanStatus.html('<i class="fas fa-check-circle me-2 text-success"></i>Host detectado');
-                            
-                            // Actualizar la fila
-                            if (response.status === 'online') {
-                                statusCell.html('<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> En línea</span>');
-                                if (response.ip) ipCell.text(response.ip);
-                                if (response.mac) macCell.html('<span class="text-success"><i class="fas fa-check-circle"></i> ' + response.mac + '</span>');
-                                if (response.last_seen) lastSeenCell.text(response.last_seen);
-                            } else {
-                                statusCell.html('<span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i> Desconectado</span>');
-                            }
-                        } else {
-                            scanStatus.html('<i class="fas fa-times-circle me-2 text-danger"></i>No se pudo detectar el host');
-                        }
-                        
-                        // Cerrar el modal después de 1 segundo
-                        setTimeout(() => {
-                            $('#updateStatusModal').modal('hide');
-                        }, 1000);
-                    },
-                    error: function(xhr) {
-                        scanStatus.html('<i class="fas fa-exclamation-circle me-2 text-danger"></i>Error en el escaneo');
-                        startScanBtn.prop('disabled', false);
-                    }
-                });
             });
         });
 
         // Resetear el modal cuando se cierra
         $('#updateStatusModal').on('hidden.bs.modal', function() {
-            $('#scanProgress').addClass('d-none');
-            $('#scanStatus').text('Detectando host...');
-            $('.progress-bar').css('width', '0%');
-            $('.modal-footer .btn-primary').prop('disabled', false);
+            scanProgress.hide();
+            scanStatus.text('Detectando equipos...');
+            progressBar.css('width', '0%');
+            startScanBtn.prop('disabled', false);
+            currentGroupId = null;
         });
-    });
 
-    // Definir eliminarHost en el scope global
-    function eliminarHost(id, nombre) {
-        var form = document.getElementById('form-eliminar-' + id);
-        if (!form) {
-            alert('No se encontró el formulario para eliminar el host.');
-            return;
+        // Definir eliminarHost en el scope global
+        function eliminarHost(id, nombre) {
+            var form = document.getElementById('form-eliminar-' + id);
+            if (!form) {
+                alert('No se encontró el formulario para eliminar el host.');
+                return;
+            }
+            if (confirm('¿Está seguro que desea eliminar el equipo "' + nombre + '"? Esta acción no se puede deshacer.')) {
+                form.submit();
+            }
         }
-        if (confirm('¿Está seguro que desea eliminar el equipo "' + nombre + '"? Esta acción no se puede deshacer.')) {
-            form.submit();
-        }
-    }
+    });
 </script>
 @endpush
 @endsection 
