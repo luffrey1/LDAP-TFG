@@ -501,8 +501,9 @@ code {
 #importForm .form-label, 
 #importForm .form-check-label {
     color: #000 !important;
-    font-size: 1.1rem !important;
-    font-weight: 600 !important;
+    font-size: 1.15rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 0.5rem !important;
     letter-spacing: 0.01em;
 }
 #importForm .form-control::placeholder {
