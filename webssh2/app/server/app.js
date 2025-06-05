@@ -15,7 +15,18 @@ const logger = require('morgan');
 const app = express();
 const server = require('http').createServer(app);
 const favicon = require('serve-favicon');
-const io = require('socket.io')(server, config.socketio);
+const io = require('socket.io')(server, {
+  ...config.socketio,
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST", "OPTIONS"],
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
+  },
+  transports: ['websocket'],
+  allowEIO3: true,
+  path: '/ssh/socket.io'
+});
 
 // Configurar sesión
 const session = require('express-session')({
