@@ -55,7 +55,11 @@ const socket = io({
   timeout: 60000,
   reconnection: true,
   reconnectionAttempts: 5,
-  reconnectionDelay: 1000
+  reconnectionDelay: 1000,
+  withCredentials: true,
+  extraHeaders: {
+    'Access-Control-Allow-Credentials': 'true'
+  }
 });
 
 // reauthenticate
