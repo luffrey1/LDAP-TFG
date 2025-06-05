@@ -204,12 +204,12 @@
                                     <div class="row">
                                         @foreach($groups as $group)
                                             <div class="col-md-4 mb-3">
-                                                <div class="card h-100 border-{{ $group->is_active ? 'success' : 'secondary' }}">
+                                                <div class="card h-100 border-{{ $group->is_active ? 'success' : 'secondary' }} text-white">
                                                     <div class="card-header bg-{{ $group->is_active ? 'success' : 'secondary' }} text-white">
                                                         <h5 class="mb-0">
                                                             <i class="fas fa-{{ $group->type == 'classroom' ? 'chalkboard-teacher' : 'building' }} me-2 text-white"></i>
                                                             {{ $group->name }}
-                                                            <span class="badge bg-light text-dark float-end text-white">
+                                                            <span class="badge bg-light text-dark float-end">
                                                                 {{ $group->total_hosts_count }} equipos
                                                             </span>
                                                         </h5>
