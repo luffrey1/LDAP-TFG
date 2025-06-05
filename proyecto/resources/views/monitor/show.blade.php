@@ -423,29 +423,7 @@ $(function() {
             console.log('Conectando a hostname:', hostname);
             var url = `http://${webssh2Host}:${webssh2Port}/ssh/host/${hostname}`;
             console.log('URL de conexión:', url);
-            var win = window.open(url, '_blank', 'width=800,height=600,resizable=yes,scrollbars=yes');
-            if (!win) {
-                alert('El navegador ha bloqueado la nueva ventana. Permite popups para este sitio.');
-            }
-        });
-    }
-    // Botón SSH antiguo (por compatibilidad)
-    var $sshBtn = $('#connect-terminal-button');
-    if ($sshBtn.length) {
-        $sshBtn.on('click', function(e) {
-            e.preventDefault();
-            var hostname = '{{ $host->hostname }}';
-            if (!hostname) {
-                alert('No se pudo obtener el hostname del host');
-                return;
-            }
-            console.log('Conectando a hostname:', hostname);
-            var url = `http://${webssh2Host}:${webssh2Port}/ssh/host/${hostname}`;
-            console.log('URL de conexión:', url);
-            var win = window.open(url, '_blank', 'width=800,height=600,resizable=yes,scrollbars=yes');
-            if (!win) {
-                alert('El navegador ha bloqueado la nueva ventana. Permite popups para este sitio.');
-            }
+            window.location.href = url;
         });
     }
 });
