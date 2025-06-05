@@ -124,10 +124,9 @@ services:
     container_name: webssh2
     restart: unless-stopped
     user: root
-    ports:
-      - "2222:2222"
-    networks:
-      - app-network
+    network_mode: host
+    environment:
+      - TZ=Europe/Madrid
   macscanner:
     build:
       context: ../macscanner
@@ -144,6 +143,10 @@ services:
 networks:
   app-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
 
 volumes:
   mysql_data:
