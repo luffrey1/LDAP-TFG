@@ -8,7 +8,7 @@ body, .container-fluid {
     background: #181c24 !important;
 }
 .card-configuracion {
-    background: #fff !important;
+    background: #f7f9fb !important;
     box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 1.5px 4px rgba(0,0,0,0.03);
     border-radius: 0.7rem;
     margin-bottom: 30px;
@@ -18,7 +18,7 @@ body, .container-fluid {
     background: transparent !important;
 }
 .modulo-card, .seguridad-item {
-    background: #fff !important;
+    background: #f7f9fb !important;
     color: #111 !important;
     border: 1px solid #e9ecef;
     border-radius: 10px;
@@ -27,7 +27,7 @@ body, .container-fluid {
     box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
 .modulo-card:hover, .seguridad-item:hover {
-    background: #f3f8ff !important;
+    background: #e9eef3 !important;
 }
 .modulo-titulo, .form-label, .card-header h6, h6.text-gray-800 {
     color: #111 !important;
@@ -41,7 +41,7 @@ body, .container-fluid {
     opacity: 0.85;
 }
 input.form-control, select.form-control, .form-check-input {
-    background: #fff !important;
+    background: #fafdff !important;
     color: #111 !important;
     border: 1.5px solid #bfc9d1 !important;
     border-radius: 0.4rem !important;
@@ -66,7 +66,7 @@ input.form-control:focus, select.form-control:focus {
     font-size: 1.08rem;
 }
 .badge-vpn {
-    background: #f3f8ff !important;
+    background: #e9eef3 !important;
     color: #1976ed !important;
     border: 1.5px dashed #1976ed !important;
 }
