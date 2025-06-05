@@ -128,11 +128,11 @@ services:
     environment:
       - SSHHOST=0.0.0.0
       - SSHPORT=22
-      - SSHUSER=root
-      - SSHKEY=/usr/src/app/config/id_rsa
+      - SSHUSER=administrator
+      - SSHKEY=/usr/src/app/config/administrator-id_ed25519
     volumes:
       - ../webssh2/app/config.json:/usr/src/config.json:ro
-      - ../webssh2/config/id_rsa:/usr/src/app/config/id_rsa:ro
+      - ../webssh2/config/administrator-id_ed25519:/usr/src/app/config/administrator-id_ed25519:ro
     networks:
       - app-network
   macscanner:
