@@ -4,64 +4,72 @@
 
 @section('styles')
 <style>
-    .card-configuracion {
-        margin-bottom: 30px;
-        transition: all 0.3s;
-    }
-    .form-check-input {
-        height: 1.2rem;
-        width: 2.4rem;
-    }
-    .form-switch .form-check-input {
-        margin-left: 0;
-    }
-    .panel-descripcion {
-        font-size: 0.9rem;
-        color: #6c757d;
-    }
-    .badge-vpn {
-        font-family: monospace;
-        font-size: 1rem;
-        padding: 10px;
-        letter-spacing: 1px;
-        background-color: #f8f9fa;
-        border: 1px dashed #ced4da;
-    }
-    .seguridad-item {
-        padding: 10px;
-        border: 1px solid #f1f1f1;
-        border-radius: 8px;
-        margin-bottom: 15px;
-        transition: all 0.2s;
-    }
-    .seguridad-item:hover {
-        background-color:rgb(172, 204, 236);
-    }
-    .modulo-card {
-        padding: 15px;
-        border: 1px solid #e9ecef;
-        border-radius: 8px;
-        margin-bottom: 15px;
-        position: relative;
-        transition: all 0.2s;
-    }
-    .modulo-card:hover {
-        background-color: #f8f9fa;
-    }
-    .modulo-titulo {
-        font-weight: 600;
-        margin-bottom: 5px;
-    }
-    .modulo-descripcion {
-        color: #6c757d;
-        font-size: 0.9rem;
-        margin-bottom: 15px;
-    }
-    .modulo-switch {
-        position: absolute;
-        top: 15px;
-        right: 15px;
-    }
+body, .container-fluid {
+    background: #181c24 !important;
+}
+.card-configuracion {
+    background: #fff !important;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 1.5px 4px rgba(0,0,0,0.03);
+    border-radius: 0.7rem;
+    margin-bottom: 30px;
+    transition: all 0.3s;
+}
+.card-header, .card-body {
+    background: transparent !important;
+}
+.modulo-card, .seguridad-item {
+    background: #fff !important;
+    color: #111 !important;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    transition: all 0.2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.modulo-card:hover, .seguridad-item:hover {
+    background: #f3f8ff !important;
+}
+.modulo-titulo, .form-label, .card-header h6, h6.text-gray-800 {
+    color: #111 !important;
+    font-size: 1.15rem;
+    font-weight: 700 !important;
+    letter-spacing: 0.01em;
+}
+.panel-descripcion, .modulo-descripcion, .form-text, .form-check-label, small {
+    color: #222 !important;
+    font-size: 1rem !important;
+    opacity: 0.85;
+}
+input.form-control, select.form-control, .form-check-input {
+    background: #fff !important;
+    color: #111 !important;
+    border: 1.5px solid #bfc9d1 !important;
+    border-radius: 0.4rem !important;
+    font-size: 1.08rem !important;
+    font-weight: 500;
+    box-shadow: none !important;
+}
+input.form-control:focus, select.form-control:focus {
+    border-color: #1976ed !important;
+    box-shadow: 0 0 0 2px #1976ed22 !important;
+}
+.form-check-input:checked {
+    background-color: #1976ed !important;
+    border-color: #1976ed !important;
+}
+.btn-primary, .btn-secondary {
+    font-size: 1.08rem;
+    font-weight: 700;
+    border-radius: 0.4rem;
+}
+.alert {
+    font-size: 1.08rem;
+}
+.badge-vpn {
+    background: #f3f8ff !important;
+    color: #1976ed !important;
+    border: 1.5px dashed #1976ed !important;
+}
 </style>
 @endsection
 
