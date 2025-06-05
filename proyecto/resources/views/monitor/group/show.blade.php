@@ -293,7 +293,7 @@
         function resetScanState() {
             $('#scanProgress').hide();
             $('#scanStatus').text('Detectando...');
-            $('.progress-bar').css('width', '0%');
+            $('#scanProgress .progress-bar').css('width', '0%');
             $('#startScanBtn').prop('disabled', false);
             scanInProgress = false;
         }
@@ -310,7 +310,7 @@
             $('#scanProgress').show();
             $('#startScanBtn').prop('disabled', true);
             scanInProgress = true;
-            $('.progress-bar').css('width', '0%');
+            $('#scanProgress .progress-bar').css('width', '0%');
             $('#scanStatus').html('<i class="fas fa-spinner fa-spin me-2"></i>Detectando...');
 
             // Realizar la petición AJAX
@@ -319,7 +319,7 @@
                 method: 'POST',
                 data: data,
                 success: function(response) {
-                    $('.progress-bar').css('width', '100%');
+                    $('#scanProgress .progress-bar').css('width', '100%');
                     $('#scanStatus').html('<i class="fas fa-check-circle me-2 text-success"></i>Escaneo completado');
                     
                     if (hostId) {
@@ -381,6 +381,7 @@
             currentHostname = null;
             $('#updateStatusModal .modal-title').text('Actualizar estado del grupo');
             resetScanState();
+            $('#updateStatusModal').modal('show');
         });
 
         // Manejar el clic en el botón de inicio de escaneo
