@@ -22,6 +22,7 @@ const session = require('express-session')({
   name: 'WebSSH2',
   resave: true,
   saveUninitialized: true,
+  rolling: true,
   cookie: {
     path: '/ssh',
     httpOnly: true,
@@ -41,10 +42,13 @@ const io = require('socket.io')(server, {
   pingInterval: 10000,
   pingTimeout: 5000,
   cookie: false,
+  allowEIO3: true,
+  transports: ['websocket', 'polling'],
   cors: {
     origin: "*",
     methods: ["GET", "POST", "OPTIONS"],
-    credentials: true
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
   }
 });
 
@@ -128,6 +132,15 @@ io.use((socket, next) => {
   } else {
     next();
   }
+});
+
+// Manejar errores de Socket.IO
+io.on('connect_error', (err) => {
+  console.error('Socket.IO connection error:', err);
+});
+
+io.on('connect_timeout', (timeout) => {
+  console.error('Socket.IO connection timeout:', timeout);
 });
 
 function countdownTimer() {
