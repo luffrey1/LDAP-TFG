@@ -432,15 +432,21 @@ $(function() {
             iframe.src = baseUrl;
             document.body.appendChild(iframe);
             
+            // Precargar Socket.IO
+            var socketScript = document.createElement('script');
+            socketScript.src = `${baseUrl}/ssh/socket.io/socket.io.js`;
+            document.head.appendChild(socketScript);
+            
             // Abrir la ventana después de un breve retraso
             setTimeout(function() {
                 var win = window.open(url, '_blank', 'width=800,height=600,resizable=yes,scrollbars=yes');
                 if (!win) {
                     alert('El navegador ha bloqueado la nueva ventana. Permite popups para este sitio.');
                 }
-                // Eliminar el iframe después de un tiempo
+                // Eliminar el iframe y el script después de un tiempo
                 setTimeout(function() {
                     document.body.removeChild(iframe);
+                    document.head.removeChild(socketScript);
                 }, 5000);
             }, 1000);
         });
@@ -467,15 +473,21 @@ $(function() {
             iframe.src = baseUrl;
             document.body.appendChild(iframe);
             
+            // Precargar Socket.IO
+            var socketScript = document.createElement('script');
+            socketScript.src = `${baseUrl}/ssh/socket.io/socket.io.js`;
+            document.head.appendChild(socketScript);
+            
             // Abrir la ventana después de un breve retraso
             setTimeout(function() {
                 var win = window.open(url, '_blank', 'width=800,height=600,resizable=yes,scrollbars=yes');
                 if (!win) {
                     alert('El navegador ha bloqueado la nueva ventana. Permite popups para este sitio.');
                 }
-                // Eliminar el iframe después de un tiempo
+                // Eliminar el iframe y el script después de un tiempo
                 setTimeout(function() {
                     document.body.removeChild(iframe);
+                    document.head.removeChild(socketScript);
                 }, 5000);
             }, 1000);
         });
