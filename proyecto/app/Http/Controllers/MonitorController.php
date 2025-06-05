@@ -299,108 +299,118 @@ class MonitorController extends Controller
                     ->with('error', 'No se encontraron hosts para escanear.');
             }
 
-            $updated = 0;
-            $errors = 0;
-            $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
+            $onlineCount = 0;
+            $offlineCount = 0;
 
             foreach ($hosts as $host) {
-                $mac = null;
-                $ipDetectada = null;
-                $status = 'offline';
-
-                if ($scanType === 'hostname') {
-                    // Escaneo por hostname para equipos de aula
-                    $hostname = $host->hostname;
-                    if (!empty($hostname)) {
-                        $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan-hostnames';
-                        $ch = curl_init();
-                        curl_setopt($ch, CURLOPT_URL, $pythonServiceUrl);
-                        curl_setopt($ch, CURLOPT_POST, 1);
-                        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['hostname' => $hostname]));
-                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                        curl_setopt($ch, CURLOPT_TIMEOUT, 3);
-                        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-                        
-                        $response = curl_exec($ch);
-                        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                        curl_close($ch);
-
-                        if ($response !== false && $httpCode === 200) {
-                            $data = json_decode($response, true);
-                            if (isset($data['success']) && $data['success'] && isset($data['hosts'][0])) {
-                                $hostData = $data['hosts'][0];
-                                $mac = $hostData['mac'] ?? null;
-                                $ipDetectada = $hostData['ip'] ?? null;
-                                $status = 'online';
-                            }
-                        }
-                    }
-                } else {
-                    // Escaneo por IP para equipos de infraestructura
-                    $ip = $host->ip_address;
-                    if (!empty($ip)) {
-                        $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($ip);
-                        $ch = curl_init();
-                        curl_setopt($ch, CURLOPT_URL, $pythonServiceUrl);
-                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                        curl_setopt($ch, CURLOPT_TIMEOUT, 3);
-                        
-                        $response = curl_exec($ch);
-                        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                        curl_close($ch);
-
-                        if ($response !== false && $httpCode === 200) {
-                            $data = json_decode($response, true);
-                            if (isset($data['success']) && $data['success']) {
-                                $mac = $data['mac'] ?? null;
-                                $ipDetectada = $ip;
-                                $status = 'online';
-                            }
-                        }
-                    }
-                }
-
                 try {
-                    // Solo actualizar si realmente se detectó el host
-                    if ($status === 'online') {
-                        $host->status = $status;
-                        $host->last_seen = now();
-                        if (!empty($mac)) $host->mac_address = $mac;
-                        if (!empty($ipDetectada)) $host->ip_address = $ipDetectada;
-                        $host->save();
-                        $updated++;
+                    \Log::info("Escaneando host: {$host->hostname}", [
+                        'ip' => $host->ip_address,
+                        'scan_type' => $scanType
+                    ]);
+
+                    $status = 'offline';
+                    $ipDetectada = null;
+                    $mac = null;
+
+                    if ($scanType === 'hostname') {
+                        // Escanear por hostname
+                        $command = "ping -c 1 -W 1 " . escapeshellarg($host->hostname);
+                        exec($command, $output, $returnVar);
+                        
+                        if ($returnVar === 0) {
+                            $status = 'online';
+                            $ipDetectada = gethostbyname($host->hostname);
+                            
+                            // Intentar obtener MAC
+                            if ($ipDetectada) {
+                                $macCommand = "arp -n " . escapeshellarg($ipDetectada) . " | grep " . escapeshellarg($ipDetectada);
+                                exec($macCommand, $macOutput);
+                                if (!empty($macOutput)) {
+                                    preg_match('/([0-9A-Fa-f]{2}[:-][0-9A-Fa-f]{2}[:-][0-9A-Fa-f]{2}[:-][0-9A-Fa-f]{2}[:-][0-9A-Fa-f]{2}[:-][0-9A-Fa-f]{2})/', $macOutput[0], $matches);
+                                    if (!empty($matches[1])) {
+                                        $mac = strtoupper($matches[1]);
+                                    }
+                                }
+                            }
+                        }
                     } else {
-                        // Si no se detectó, marcar como offline
-                        $host->status = 'offline';
-                        $host->save();
+                        // Escanear por IP
+                        $command = "ping -c 1 -W 1 " . escapeshellarg($host->ip_address);
+                        exec($command, $output, $returnVar);
+                        
+                        if ($returnVar === 0) {
+                            $status = 'online';
+                            $ipDetectada = $host->ip_address;
+                            
+                            // Intentar obtener MAC
+                            $macCommand = "arp -n " . escapeshellarg($ipDetectada) . " | grep " . escapeshellarg($ipDetectada);
+                            exec($macCommand, $macOutput);
+                            if (!empty($macOutput)) {
+                                preg_match('/([0-9A-Fa-f]{2}[:-][0-9A-Fa-f]{2}[:-][0-9A-Fa-f]{2}[:-][0-9A-Fa-f]{2}[:-][0-9A-Fa-f]{2}[:-][0-9A-Fa-f]{2})/', $macOutput[0], $matches);
+                                if (!empty($matches[1])) {
+                                    $mac = strtoupper($matches[1]);
+                                }
+                            }
+                        }
                     }
+
+                    \Log::info("Resultado del escaneo para {$host->hostname}", [
+                        'status' => $status,
+                        'ip' => $ipDetectada,
+                        'mac' => $mac,
+                        'scan_type' => $scanType
+                    ]);
+
+                    // Actualizar el host
+                    $host->status = $status;
+                    $host->last_seen = $status === 'online' ? now() : $host->last_seen;
+                    if (!empty($mac)) $host->mac_address = $mac;
+                    if (!empty($ipDetectada)) $host->ip_address = $ipDetectada;
+                    $host->save();
+
+                    if ($status === 'online') {
+                        $onlineCount++;
+                    } else {
+                        $offlineCount++;
+                    }
+
                 } catch (\Exception $e) {
-                    \Log::error('Error actualizando host en pingAll: ' . $e->getMessage());
-                    $errors++;
+                    \Log::error("Error al escanear host {$host->hostname}: " . $e->getMessage());
+                    $offlineCount++;
                 }
             }
-            
+
+            \Log::info('Resumen del escaneo', [
+                'total_hosts' => $hosts->count(),
+                'online' => $onlineCount,
+                'offline' => $offlineCount
+            ]);
+
             if ($request->ajax()) {
                 return response()->json([
                     'success' => true,
-                    'message' => "Estado actualizado. {$updated} hosts actualizados, {$errors} errores.",
-                    'updated' => $updated,
-                    'errors' => $errors
+                    'message' => "Escaneo completado. {$onlineCount} hosts en línea, {$offlineCount} desconectados.",
+                    'online_count' => $onlineCount,
+                    'offline_count' => $offlineCount
                 ]);
             }
 
             return redirect()->route('monitor.index')
-                ->with('success', "Estado actualizado. {$updated} hosts actualizados, {$errors} errores.");
+                ->with('success', "Escaneo completado. {$onlineCount} hosts en línea, {$offlineCount} desconectados.");
+
         } catch (\Exception $e) {
             \Log::error('Error en pingAll: ' . $e->getMessage());
+            
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Error al actualizar el estado: ' . $e->getMessage()
+                    'message' => 'Error al realizar el escaneo: ' . $e->getMessage()
                 ], 500);
             }
+            
             return redirect()->route('monitor.index')
-                ->with('error', 'Error al actualizar el estado: ' . $e->getMessage());
+                ->with('error', 'Error al realizar el escaneo: ' . $e->getMessage());
         }
     }
     
