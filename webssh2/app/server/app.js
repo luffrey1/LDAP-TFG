@@ -16,6 +16,26 @@ const app = express();
 const server = require('http').createServer(app);
 const favicon = require('serve-favicon');
 
+// Función de logging mejorada
+function log(message, data = null) {
+  const timestamp = new Date().toISOString();
+  console.log('\n=== WebSSH2 Log ===');
+  console.log(`[${timestamp}] ${message}`);
+  if (data) {
+    console.log('Data:', JSON.stringify(data, null, 2));
+  }
+  console.log('==================\n');
+}
+
+// Log inicial
+log('Iniciando WebSSH2 Server', {
+  config: {
+    port: config.listen.port,
+    ip: config.listen.ip,
+    socketPath: config.socketio.path
+  }
+});
+
 // Configurar sesión
 const session = require('express-session')({
   secret: 'mysecret',
@@ -53,9 +73,13 @@ const io = require('socket.io')(server, {
 
 // Middleware para debug
 app.use((req, res, next) => {
-  console.log('Request path:', req.path);
-  console.log('Session ID:', req.sessionID);
-  console.log('Cookies:', req.headers.cookie);
+  log('HTTP Request', {
+    path: req.path,
+    method: req.method,
+    sessionID: req.sessionID,
+    cookies: req.headers.cookie,
+    headers: req.headers
+  });
   next();
 });
 
@@ -93,12 +117,20 @@ app.use(favicon(path.join(publicPath, 'favicon.ico')));
 app.use(express.urlencoded({ extended: true }));
 
 // Rutas
-app.post('/ssh/host/:host?', connect);
-app.post('/ssh', express.static(publicPath, config.express.ssh));
-app.use('/ssh', express.static(publicPath, config.express.ssh));
+app.post('/ssh/host/:host?', (req, res) => {
+  log('POST /ssh/host', { host: req.params.host, body: req.body });
+  connect(req, res);
+});
+
+app.get('/ssh/host/:host?', (req, res) => {
+  log('GET /ssh/host', { host: req.params.host, query: req.query });
+  connect(req, res);
+});
+
+app.post('/ssh', express.static(path.join(__dirname, 'client', 'public')));
+app.use('/ssh', express.static(path.join(__dirname, 'client', 'public')));
 app.use(basicAuth);
 app.get('/ssh/reauth', reauth);
-app.get('/ssh/host/:host?', connect);
 app.use(notfound);
 app.use(handleErrors);
 
@@ -112,20 +144,28 @@ function stopApp(reason) {
 }
 
 // bring up socket
-io.on('connection', appSocket);
+io.on('connection', (socket) => {
+  log('New Socket.IO Connection', {
+    id: socket.id,
+    transport: socket.conn.transport.name,
+    handshake: socket.handshake
+  });
+  appSocket(socket);
+});
 
 // socket.io middleware
 io.use((socket, next) => {
   if (socket.request.res) {
     session(socket.request, socket.request.res, (err) => {
       if (err) {
-        console.error('Session middleware error:', err);
+        log('Socket.IO Session Error', { error: err.message });
         return next(new Error('Session error'));
       }
-      console.log('Socket session:', {
-        id: socket.request.session?.id,
+      log('Socket.IO Connection', {
+        sessionID: socket.request.session?.id,
         cookie: socket.request.session?.cookie,
-        headers: socket.request.headers
+        headers: socket.request.headers,
+        transport: socket.conn.transport.name
       });
       next();
     });
@@ -136,11 +176,11 @@ io.use((socket, next) => {
 
 // Manejar errores de Socket.IO
 io.on('connect_error', (err) => {
-  console.error('Socket.IO connection error:', err);
+  log('Socket.IO Connection Error', { error: err.message });
 });
 
-io.on('connect_timeout', (timeout) => {
-  console.error('Socket.IO connection timeout:', timeout);
+io.on('error', (err) => {
+  log('Socket.IO Error', { error: err.message });
 });
 
 function countdownTimer() {
@@ -183,3 +223,15 @@ const onConnection = (socket) => {
 };
 
 io.on('connection', onConnection);
+
+// Log cuando el servidor inicia
+server.listen(config.listen.port, config.listen.ip, () => {
+  log('Server Started', {
+    port: config.listen.port,
+    ip: config.listen.ip,
+    config: {
+      socketPath: config.socketio.path,
+      transports: config.socketio.transports
+    }
+  });
+});
