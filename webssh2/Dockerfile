@@ -13,7 +13,8 @@ COPY config/administrator-id_ed25519 /usr/src/app/config/administrator-id_ed2551
 
 # Copiar el resto de la aplicación
 COPY app/ /usr/src/
-RUN npm ci --audit=false --bin-links=false --fund=false
+RUN npm ci --audit=false --bin-links=false --fund=false && \
+    npm install webssh2@0.5.0 --save-exact
 
 # Configurar permisos
 RUN chown -R root:root /usr/src && \
