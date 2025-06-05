@@ -16,16 +16,39 @@ const app = express();
 const server = require('http').createServer(app);
 const favicon = require('serve-favicon');
 const io = require('socket.io')(server, config.socketio);
+
+// Configurar sesión
 const session = require('express-session')({
-  ...config.express,
+  secret: 'mysecret',
+  name: 'WebSSH2',
+  resave: true,
+  saveUninitialized: true,
   cookie: {
-    ...config.express.cookie,
     path: '/ssh',
     httpOnly: true,
     secure: false,
     maxAge: 86400000,
     sameSite: 'lax'
   }
+});
+
+// Middleware para debug
+app.use((req, res, next) => {
+  console.log('Request path:', req.path);
+  console.log('Session ID:', req.sessionID);
+  next();
+});
+
+// Usar sesión
+app.use(session);
+
+// Configurar CORS
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  next();
 });
 
 const appSocket = require('./socket');
@@ -47,11 +70,12 @@ function safeShutdownGuard(req, res, next) {
 }
 // express
 app.use(safeShutdownGuard);
-app.use(session);
 if (config.accesslog) app.use(logger('common'));
 app.disable('x-powered-by');
 app.use(favicon(path.join(publicPath, 'favicon.ico')));
 app.use(express.urlencoded({ extended: true }));
+
+// Rutas
 app.post('/ssh/host/:host?', connect);
 app.post('/ssh', express.static(publicPath, config.express.ssh));
 app.use('/ssh', express.static(publicPath, config.express.ssh));
@@ -73,8 +97,7 @@ function stopApp(reason) {
 // bring up socket
 io.on('connection', appSocket);
 
-// socket.io
-// expose express session with socket.request.session
+// socket.io middleware
 io.use((socket, next) => {
   if (socket.request.res) {
     session(socket.request, socket.request.res, (err) => {
@@ -82,6 +105,11 @@ io.use((socket, next) => {
         console.error('Session middleware error:', err);
         return next(new Error('Session error'));
       }
+      console.log('Socket session:', {
+        id: socket.request.session?.id,
+        cookie: socket.request.session?.cookie,
+        headers: socket.request.headers
+      });
       next();
     });
   } else {
