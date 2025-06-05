@@ -592,6 +592,15 @@ class AlumnoController extends Controller
         // Si es confirmación, procesar la importación
         try {
             $importData = session('import_preview');
+            // Si no hay datos en sesión, intenta leer del campo oculto
+            if (!$importData && $request->has('alumnos_data')) {
+                $importData = [
+                    'alumnos' => json_decode($request->input('alumnos_data'), true),
+                    'grupo_id' => $request->input('clase_grupo_id'),
+                    'crear_ldap' => $request->boolean('crear_cuentas_ldap'),
+                    'errores' => []
+                ];
+            }
             if (!$importData) {
                 return redirect()->route('profesor.alumnos.import')->with('error', 'No hay datos de importación. Por favor, sube el archivo de nuevo.');
             }
