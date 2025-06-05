@@ -324,6 +324,7 @@
     });
 </script>
 
+@section('styles')
 <style>
 .dropzone-area {
     transition: all 0.3s ease;
@@ -484,15 +485,23 @@ code {
 #importForm .form-control, 
 #importForm .form-select {
     background-color: #fff !important;
-    color: #000 !important;
+    color: #212529 !important;
     border: 2px solid #dee2e6 !important;
     font-weight: 500 !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+#importForm .form-control:focus, 
+#importForm .form-select:focus {
+    border-color: #0d6efd !important;
+    box-shadow: 0 0 0 0.15rem rgba(13,110,253,.08) !important;
 }
 #importForm .form-label, 
 #importForm .form-check-label {
-    color: #000 !important;
-    font-size: 1.25rem !important;
-    font-weight: 600 !important;
+    color: #212529 !important;
+    font-size: 1.1rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.01em;
 }
 </style>
 @endsection 
