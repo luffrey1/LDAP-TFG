@@ -49,6 +49,13 @@ fitAddon.fit();
 
 const socket = io({
   path: '/ssh/socket.io',
+  transports: ['websocket'],
+  upgrade: false,
+  rememberUpgrade: true,
+  timeout: 60000,
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000
 });
 
 // reauthenticate
