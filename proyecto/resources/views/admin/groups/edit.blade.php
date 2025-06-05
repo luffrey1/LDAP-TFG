@@ -22,7 +22,7 @@
                         <div class="form-group text-white">
                             <label for="cn">Nombre del Grupo (CN)</label>
                             <input type="text" class="form-control text-black" id="cn" value="{{ $groupData['cn'] }}" disabled>
-                            <small class="form-text text-muted">El nombre del grupo no se puede modificar.</small>
+                            <small class="form-text text-white">El nombre del grupo no se puede modificar.</small>
                         </div>
 
                         <div class="form-group text-white">

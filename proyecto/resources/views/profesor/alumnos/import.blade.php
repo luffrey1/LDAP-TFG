@@ -53,7 +53,7 @@
                         </div>
 
                         <div class="text-center">
-                            <p class="mb-3">Puede descargar una plantilla de ejemplo para comenzar:</p>
+                            <p class="mb-3 text-white">Puede descargar una plantilla de ejemplo para comenzar:</p>
                             <a href="{{ route('profesor.alumnos.template') }}" class="btn btn-info btn-lg shadow-sm">
                                 <i class="fas fa-download me-2"></i> Descargar Plantilla
                             </a>
@@ -116,14 +116,14 @@
                             <div class="form-group mb-4">
                                 <div class="form-check">
                                     <input type="checkbox" name="tiene_encabezados" id="tiene_encabezados" class="form-check-input" checked>
-                                    <label class="form-check-label" for="tiene_encabezados">El archivo contiene fila de encabezados</label>
+                                    <label class="form-check-label text-white" for="tiene_encabezados">El archivo contiene fila de encabezados</label>
                                 </div>
                             </div>
 
                             <div class="form-group mb-4">
                                 <div class="form-check">
                                     <input type="checkbox" name="crear_cuentas_ldap" id="crear_cuentas_ldap" class="form-check-input" value="1" {{ old('crear_cuentas_ldap', true) ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="crear_cuentas_ldap">Crear cuentas LDAP para los alumnos</label>
+                                    <label class="form-check-label text-white" for="crear_cuentas_ldap">Crear cuentas LDAP para los alumnos</label>
                                 </div>
                             </div>
 

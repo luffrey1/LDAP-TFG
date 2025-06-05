@@ -17,7 +17,7 @@
 
                     <form action="{{ route('admin.groups.store') }}" method="POST">
                         @csrf
-                        <div class="form-group">
+                        <div class="form-group text-white">
                             <label for="cn">Nombre del Grupo (CN)</label>
                             <input type="text" class="form-control @error('cn') is-invalid @enderror" id="cn" name="cn" value="{{ old('cn') }}" required>
                             @error('cn')
@@ -25,7 +25,7 @@
                             @enderror
                         </div>
 
-                        <div class="form-group">
+                        <div class="form-group text-white">
                             <label for="gidNumber">GID</label>
                             <input type="number" class="form-control @error('gidNumber') is-invalid @enderror" id="gidNumber" name="gidNumber" value="{{ old('gidNumber') }}" required>
                             @error('gidNumber')
@@ -33,7 +33,7 @@
                             @enderror
                         </div>
 
-                        <div class="form-group">
+                        <div class="form-group text-white">
                             <label for="description">Descripción (opcional)</label>
                             <input type="text" class="form-control @error('description') is-invalid @enderror" id="description" name="description" value="{{ old('description') }}">
                             @error('description')
@@ -41,7 +41,7 @@
                             @enderror
                         </div>
 
-                        <div class="form-group">
+                        <div class="form-group text-white">
                             <button type="submit" class="btn btn-primary">Crear Grupo</button>
                             <a href="{{ route('admin.groups.index') }}" class="btn btn-secondary">Cancelar</a>
                         </div>
