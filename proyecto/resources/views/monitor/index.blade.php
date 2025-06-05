@@ -335,7 +335,7 @@
             
             // Realizar el escaneo
             $.ajax({
-                url: '/monitor/ping-all',
+                url: "{{ route('monitor.ping-all') }}",
                 type: 'POST',
                 data: {
                     _token: '{{ csrf_token() }}',
@@ -360,6 +360,7 @@
                     }
                 },
                 error: function(xhr) {
+                    console.error('Error en la petición:', xhr);
                     alert('Error al actualizar el estado: ' + (xhr.responseJSON?.message || 'Error de conexión'));
                 },
                 complete: function() {

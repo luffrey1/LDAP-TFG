@@ -268,21 +268,35 @@ class MonitorController extends Controller
     public function pingAll(Request $request)
     {
         try {
-            $groupId = $request->query('group');
+            $groupId = $request->input('group');
             $scanType = $request->input('scan_type', 'hostname');
             
-            // Solo obtener hosts del grupo seleccionado
-            $hosts = MonitorHost::where('group_id', $groupId)->get();
+            \Log::info('Iniciando escaneo de grupo', [
+                'group_id' => $groupId,
+                'scan_type' => $scanType
+            ]);
+            
+            // Obtener hosts del grupo
+            $query = MonitorHost::query();
+            if ($groupId) {
+                $query->where('group_id', $groupId);
+            }
+            $hosts = $query->get();
+            
+            \Log::info('Hosts encontrados', [
+                'count' => $hosts->count(),
+                'group_id' => $groupId
+            ]);
             
             if ($hosts->isEmpty()) {
                 if ($request->ajax()) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'No se encontraron hosts en este grupo.'
+                        'message' => 'No se encontraron hosts para escanear.'
                     ], 404);
                 }
                 return redirect()->route('monitor.index')
-                    ->with('error', 'No se encontraron hosts en este grupo.');
+                    ->with('error', 'No se encontraron hosts para escanear.');
             }
 
             $updated = 0;
