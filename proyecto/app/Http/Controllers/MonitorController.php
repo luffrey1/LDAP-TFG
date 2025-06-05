@@ -153,13 +153,14 @@ class MonitorController extends Controller
                 // Escaneo por hostname
                 $hostname = $host->hostname;
                 if (!empty($hostname)) {
+                    // Primero intentar con el endpoint de hostnames
                     $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan-hostnames';
                     $ch = curl_init();
                     curl_setopt($ch, CURLOPT_URL, $pythonServiceUrl);
                     curl_setopt($ch, CURLOPT_POST, 1);
                     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['hostname' => $hostname]));
                     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                    curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
                     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
                     
                     $response = curl_exec($ch);
@@ -173,6 +174,31 @@ class MonitorController extends Controller
                             $mac = $hostData['mac'] ?? null;
                             $ipDetectada = $hostData['ip'] ?? null;
                             $status = 'online';
+                            \Log::info("Host detectado por hostname (scan-hostnames): {$hostname}", ['data' => $hostData]);
+                        }
+                    }
+
+                    // Si no se detectó, intentar con el endpoint de scan normal
+                    if ($status === 'offline') {
+                        $hostnameCompleto = !str_contains($hostname, '.') ? $hostname . '.tierno.es' : $hostname;
+                        $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostnameCompleto);
+                        $ch = curl_init();
+                        curl_setopt($ch, CURLOPT_URL, $pythonServiceUrl);
+                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+                        
+                        $response = curl_exec($ch);
+                        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                        curl_close($ch);
+
+                        if ($response !== false && $httpCode === 200) {
+                            $data = json_decode($response, true);
+                            if (isset($data['success']) && $data['success']) {
+                                $mac = $data['mac'] ?? null;
+                                $ipDetectada = $data['ip'] ?? null;
+                                $status = 'online';
+                                \Log::info("Host detectado por hostname (scan): {$hostname}", ['data' => $data]);
+                            }
                         }
                     }
                 }
@@ -184,7 +210,7 @@ class MonitorController extends Controller
                     $ch = curl_init();
                     curl_setopt($ch, CURLOPT_URL, $pythonServiceUrl);
                     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                    curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
                     
                     $response = curl_exec($ch);
                     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -196,6 +222,7 @@ class MonitorController extends Controller
                             $mac = $data['mac'] ?? null;
                             $ipDetectada = $ip;
                             $status = 'online';
+                            \Log::info("Host detectado por IP: {$ip}", ['data' => $data]);
                         }
                     }
                 }
@@ -208,12 +235,20 @@ class MonitorController extends Controller
                 if (!empty($mac)) $host->mac_address = $mac;
                 if (!empty($ipDetectada)) $host->ip_address = $ipDetectada;
                 $host->save();
+                \Log::info("Host actualizado como online: {$host->hostname}", [
+                    'ip' => $ipDetectada,
+                    'mac' => $mac,
+                    'scan_type' => $scanType
+                ]);
             } else {
                 // Si no se detectó, marcar como offline
                 $host->status = 'offline';
                 $host->save();
+                \Log::info("Host marcado como offline: {$host->hostname}", [
+                    'scan_type' => $scanType
+                ]);
             }
-                
+
             return response()->json([
                 'success' => true,
                 'status' => $status,
@@ -223,6 +258,10 @@ class MonitorController extends Controller
                 'mac' => $host->mac_address
             ]);
         } catch (\Exception $e) {
+            \Log::error('Error al escanear el host: ' . $e->getMessage(), [
+                'host_id' => $id,
+                'scan_type' => $scanType ?? 'unknown'
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Error al escanear el host: ' . $e->getMessage()
