@@ -133,6 +133,7 @@ class AlumnoController extends Controller
                     LDAP_OPT_PROTOCOL_VERSION => 3,
                     LDAP_OPT_NETWORK_TIMEOUT => 5,
                 ];
+
                 $connection = new \LdapRecord\Connection($ldapConfig);
                 $connection->connect();
                 
@@ -780,6 +781,7 @@ class AlumnoController extends Controller
                         LDAP_OPT_PROTOCOL_VERSION => 3,
                         LDAP_OPT_NETWORK_TIMEOUT => 5,
                     ];
+
                     $connection = new \LdapRecord\Connection($ldapConfig);
                     $connection->connect();
                     
@@ -948,7 +950,7 @@ class AlumnoController extends Controller
         }
         
         try {
-            // Crear conexión LDAP
+            // Crear una conexión LDAP usando la configuración
             $ldapConfig = config('ldap.connections.default');
             // Forzar configuración robusta igual que en LdapGroupController
             $ldapConfig['port'] = 636;
@@ -960,6 +962,7 @@ class AlumnoController extends Controller
                 LDAP_OPT_PROTOCOL_VERSION => 3,
                 LDAP_OPT_NETWORK_TIMEOUT => 5,
             ];
+
             $connection = new \LdapRecord\Connection($ldapConfig);
             $connection->connect();
             
