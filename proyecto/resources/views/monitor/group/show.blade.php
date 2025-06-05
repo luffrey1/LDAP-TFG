@@ -232,14 +232,42 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="updateStatusModalLabel">Actualizar estado</h5>
+                <h5 class="modal-title" id="updateStatusModalLabel">Actualizar Estado</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <!-- El contenido se actualizará dinámicamente -->
+                <div class="mb-3">
+                    <label class="form-label">Seleccione el tipo de escaneo:</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="scanType" id="scanByHostname" value="hostname" checked>
+                        <label class="form-check-label" for="scanByHostname">
+                            Escanear por Hostname (para equipos de aula)
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="scanType" id="scanByIP" value="ip">
+                        <label class="form-check-label" for="scanByIP">
+                            Escanear por IP (para equipos de infraestructura)
+                        </label>
+                    </div>
+                </div>
+                <div id="scanProgress" style="display: none;">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="spinner-border spinner-border-sm me-2" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <span id="scanStatus">Detectando...</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="startScanBtn">
+                    <i class="fas fa-sync-alt me-1"></i> Iniciar Escaneo
+                </button>
             </div>
         </div>
     </div>
@@ -257,24 +285,22 @@
             }
         });
 
+        let currentHostId = null;
+        let currentHostname = null;
+        let scanInProgress = false;
+
         // Función para actualizar el estado
         function updateStatus(hostId = null) {
+            const scanType = $('input[name="scanType"]:checked').val();
             const url = hostId ? `/monitor/ping/${hostId}` : "{{ route('monitor.ping-all') }}";
-            const data = hostId ? {} : { group: "{{ $group->id }}" };
+            const data = hostId ? { scan_type: scanType } : { group: "{{ $group->id }}", scan_type: scanType };
             
-            // Mostrar el modal con el spinner
-            $('#updateStatusModal').modal('show');
-            $('#updateStatusModal .modal-title').text(hostId ? 
-                `Actualizando estado de ${$(`#host-row-${hostId}`).find('td:eq(1)').text()}` : 
-                'Actualizando estado del grupo');
-            $('#updateStatusModal .modal-body').html(`
-                <div class="text-center">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Cargando...</span>
-                    </div>
-                    <p class="mt-2">${hostId ? 'Enviando ping...' : 'Actualizando estado de todos los equipos...'}</p>
-                </div>
-            `);
+            // Mostrar progreso
+            $('#scanProgress').show();
+            $('#startScanBtn').prop('disabled', true);
+            scanInProgress = true;
+            $('.progress-bar').css('width', '0%');
+            $('#scanStatus').html('<i class="fas fa-spinner fa-spin me-2"></i>Detectando...');
 
             // Realizar la petición AJAX
             $.ajax({
@@ -282,12 +308,9 @@
                 method: 'POST',
                 data: data,
                 success: function(response) {
-                    $('#updateStatusModal .modal-body').html(`
-                        <div class="alert alert-success">
-                            <i class="fas fa-check-circle"></i> ${response.message}
-                        </div>
-                    `);
-
+                    $('.progress-bar').css('width', '100%');
+                    $('#scanStatus').html('<i class="fas fa-check-circle me-2 text-success"></i>Escaneo completado');
+                    
                     if (hostId) {
                         // Actualizar estado individual
                         const statusBadge = $(`#host-row-${hostId} .host-status`);
@@ -309,12 +332,8 @@
                         errorMessage = xhr.responseJSON.message;
                     }
                     
-                    $('#updateStatusModal .modal-body').html(`
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-circle"></i> ${errorMessage}
-                        </div>
-                    `);
-
+                    $('#scanStatus').html(`<i class="fas fa-exclamation-circle me-2 text-danger"></i>${errorMessage}`);
+                    
                     if (hostId) {
                         // Actualizar estado individual
                         const statusBadge = $(`#host-row-${hostId} .host-status`);
@@ -324,28 +343,48 @@
                             Offline
                         `);
                     }
+                },
+                complete: function() {
+                    scanInProgress = false;
+                    $('#startScanBtn').prop('disabled', false);
                 }
             });
         }
 
         // Manejar el clic en el botón de ping individual
         $('.btn-ping').on('click', function() {
-            const hostId = $(this).data('host-id');
-            updateStatus(hostId);
+            currentHostId = $(this).data('host-id');
+            currentHostname = $(this).data('hostname');
+            $('#updateStatusModal .modal-title').text(`Actualizar estado de ${currentHostname}`);
+            $('#scanProgress').hide();
+            $('#startScanBtn').prop('disabled', false);
         });
 
         // Manejar el clic en el botón de actualizar estado del grupo
         $('#refresh-status').on('click', function() {
-            updateStatus();
+            currentHostId = null;
+            currentHostname = null;
+            $('#updateStatusModal .modal-title').text('Actualizar estado del grupo');
+            $('#scanProgress').hide();
+            $('#startScanBtn').prop('disabled', false);
+        });
+
+        // Manejar el clic en el botón de inicio de escaneo
+        $('#startScanBtn').on('click', function() {
+            if (!scanInProgress) {
+                updateStatus(currentHostId);
+            }
         });
         
-        // Cerrar el modal después de 2 segundos si la operación fue exitosa
-        $('#updateStatusModal').on('show.bs.modal', function() {
-            setTimeout(function() {
-                if ($('#updateStatusModal .alert-success').length > 0) {
-                    $('#updateStatusModal').modal('hide');
-                }
-            }, 2000);
+        // Resetear el modal cuando se cierra
+        $('#updateStatusModal').on('hidden.bs.modal', function() {
+            $('#scanProgress').hide();
+            $('#scanStatus').text('Detectando...');
+            $('.progress-bar').css('width', '0%');
+            $('#startScanBtn').prop('disabled', false);
+            currentHostId = null;
+            currentHostname = null;
+            scanInProgress = false;
         });
 
         // Cerrar alertas automáticamente después de 5 segundos
