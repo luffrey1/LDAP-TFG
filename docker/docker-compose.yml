@@ -129,11 +129,10 @@ services:
       - SSHHOST=0.0.0.0
       - SSHPORT=22
       - SSHUSER=root
-      - SSHKEY=/config/id_rsa
+      - SSHKEY=/usr/src/app/config/id_rsa
     volumes:
       - ../webssh2/app/config.json:/usr/src/app/config.json:ro
-      - ../webssh2/config:/config
-      - ../webssh2/config/id_rsa:/config/id_rsa:ro
+      - ../webssh2/config/id_rsa:/usr/src/app/config/id_rsa:ro
     networks:
       - app-network
   macscanner:
