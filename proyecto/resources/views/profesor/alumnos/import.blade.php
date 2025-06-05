@@ -89,6 +89,14 @@
                             @endif
                             
                             <div class="form-group mb-4">
+                                <label for="tipo_importacion" class="text-white">Tipo de importación</label>
+                                <select name="tipo_importacion" id="tipo_importacion" class="form-control">
+                                    <option value="alumno" selected>Alumnos</option>
+                                    <option value="profesor">Profesores</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group mb-4">
                                 <label class="form-label fw-bold text-black fs-5">Archivo de Alumnos</label>
                                 <div class="dropzone-area p-5 text-center border-2 border-dashed rounded-3 bg-light" id="dropzone">
                                     <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>

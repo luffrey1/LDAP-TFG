@@ -240,34 +240,28 @@ class AlumnoController extends Controller
                         throw new Exception("Error al crear usuario LDAP: " . ldap_error($ldapConn));
                     }
                     
-                    // Añadir usuario al grupo alumnos
-                    $alumnosGroupDn = "cn=alumnos,ou=groups,dc=tierno,dc=es";
-                    $alumnosGroup = $connection->query()
+                    // Añadir usuario al grupo adecuado
+                    $tipoImportacion = $request->input('tipo_importacion', 'alumno');
+                    $grupoLdap = $tipoImportacion === 'profesor' ? 'profesores' : 'alumnos';
+                    $grupoDn = "cn={$grupoLdap},ou=groups,dc=tierno,dc=es";
+                    $grupo = $connection->query()
                         ->in("ou=groups,dc=tierno,dc=es")
-                        ->where('cn', '=', 'alumnos')
+                        ->where('cn', '=', $grupoLdap)
                         ->first();
-                    
-                    if ($alumnosGroup) {
-                        // Obtener miembros actuales
+                    if ($grupo) {
                         $memberUids = [];
-                        if (isset($alumnosGroup['memberuid'])) {
-                            $memberUids = is_array($alumnosGroup['memberuid']) ? $alumnosGroup['memberuid'] : [$alumnosGroup['memberuid']];
+                        if (isset($grupo['memberuid'])) {
+                            $memberUids = is_array($grupo['memberuid']) ? $grupo['memberuid'] : [$grupo['memberuid']];
                         }
-                        
-                        // Asegurarnos que es un array indexado numéricamente
                         $memberUids = array_values($memberUids);
-                        
-                        // Añadir el nuevo usuario si no existe
                         if (!in_array($nombreUsuario, $memberUids)) {
                             $memberUids[] = $nombreUsuario;
                             $memberUids = array_values($memberUids);
-                            
-                            $result = ldap_modify($ldapConn, $alumnosGroupDn, ['memberuid' => $memberUids]);
-                            
+                            $result = ldap_modify($ldapConn, $grupoDn, ['memberuid' => $memberUids]);
                             if (!$result) {
-                                Log::warning("Error al añadir usuario al grupo alumnos: " . ldap_error($ldapConn));
+                                Log::warning("Error al añadir usuario al grupo {$grupoLdap}: " . ldap_error($ldapConn));
                             } else {
-                                Log::info("Usuario {$nombreUsuario} añadido al grupo alumnos");
+                                Log::info("Usuario {$nombreUsuario} añadido al grupo {$grupoLdap}");
                             }
                         }
                     }
