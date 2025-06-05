@@ -42,12 +42,50 @@ if (config.accesslog) app.use(logger('common'));
 app.disable('x-powered-by');
 app.use(favicon(path.join(publicPath, 'favicon.ico')));
 app.use(express.urlencoded({ extended: true }));
+
+// Aplicar autenticación básica a todas las rutas /ssh
+app.use('/ssh', basicAuth);
+
+// Rutas de WebSSH2
 app.post('/ssh/host/:host?', connect);
-app.post('/ssh', express.static(publicPath, config.express.ssh));
-app.use('/ssh', express.static(publicPath, config.express.ssh));
-app.use(basicAuth);
-app.get('/ssh/reauth', reauth);
 app.get('/ssh/host/:host?', connect);
+app.get('/ssh/reauth', reauth);
+
+// Servir archivos estáticos después de la autenticación
+app.use('/ssh', express.static(publicPath, config.express.ssh));
+
+// Configurar Socket.IO con la sesión
+io.use((socket, next) => {
+  if (socket.request.res) {
+    session(socket.request, socket.request.res, next);
+  } else {
+    next();
+  }
+});
+
+// Manejar conexiones Socket.IO
+io.on('connection', (socket) => {
+  connectionCount += 1;
+  
+  socket.on('disconnect', () => {
+    connectionCount -= 1;
+    if (connectionCount <= 0 && shutdownMode) {
+      stopApp('All clients disconnected');
+    }
+  });
+
+  socket.on('geometry', (cols, rows) => {
+    if (socket.request.session) {
+      socket.request.session.ssh = socket.request.session.ssh || {};
+      socket.request.session.ssh.cols = cols;
+      socket.request.session.ssh.rows = rows;
+      webssh2debug(socket, `SOCKET GEOMETRY: termCols = ${cols}, termRows = ${rows}`);
+    }
+  });
+
+  appSocket(socket);
+});
+
 app.use(notfound);
 app.use(handleErrors);
 
@@ -59,15 +97,6 @@ function stopApp(reason) {
   io.close();
   server.close();
 }
-
-// bring up socket
-io.on('connection', appSocket);
-
-// socket.io
-// expose express session with socket.request.session
-io.use((socket, next) => {
-  socket.request.res ? session(socket.request, socket.request.res, next) : next(next); // eslint disable-line
-});
 
 function countdownTimer() {
   if (!shutdownMode) clearInterval(shutdownInterval);
@@ -91,21 +120,3 @@ signals.forEach((signal) =>
 );
 
 module.exports = { server, config };
-
-const onConnection = (socket) => {
-  connectionCount += 1;
-  socket.on('disconnect', () => {
-    connectionCount -= 1;
-    if (connectionCount <= 0 && shutdownMode) {
-      stopApp('All clients disconnected');
-    }
-  });
-  socket.on('geometry', (cols, rows) => {
-    // TODO need to rework how we pass settings to ssh2, this is less than ideal
-    socket.request.session.ssh.cols = cols;
-    socket.request.session.ssh.rows = rows;
-    webssh2debug(socket, `SOCKET GEOMETRY: termCols = ${cols}, termRows = ${rows}`);
-  });
-};
-
-io.on('connection', onConnection);
