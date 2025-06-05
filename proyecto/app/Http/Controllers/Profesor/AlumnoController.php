@@ -513,15 +513,21 @@ class AlumnoController extends Controller
         }
         
         // Validar formulario
-        $validator = Validator::make($data, [
-            'archivo_csv' => 'required|file|mimes:csv,txt|max:2048',
-            'clase_grupo_id' => 'required|exists:clase_grupos,id',
-            'crear_cuentas_ldap' => 'boolean',
-            'separador' => 'required|string|size:1',
-            'tiene_encabezados' => 'boolean',
-            'confirmar_importacion' => 'boolean',
-            'alumnos_data' => 'required_if:confirmar_importacion,true|array',
-        ]);
+        if ($request->has('confirmar_importacion')) {
+            $validator = Validator::make($request->all(), [
+                'clase_grupo_id' => 'required|exists:clase_grupos,id',
+                'alumnos_data' => 'required|array',
+                'confirmar_importacion' => 'boolean',
+            ]);
+        } else {
+            $validator = Validator::make($request->all(), [
+                'archivo_csv' => 'required|file|mimes:csv,txt|max:2048',
+                'clase_grupo_id' => 'required|exists:clase_grupos,id',
+                'crear_cuentas_ldap' => 'boolean',
+                'separador' => 'required|string|size:1',
+                'tiene_encabezados' => 'boolean',
+            ]);
+        }
 
         if ($validator->fails()) {
             return redirect()->back()
