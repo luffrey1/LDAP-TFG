@@ -124,13 +124,9 @@ services:
     container_name: webssh2
     restart: unless-stopped
     user: root
+    network_mode: host
     environment:
       - TZ=Europe/Madrid
-    ports:
-      - "2222:2222"
-    networks:
-      app-network:
-        ipv4_address: 172.20.0.6
   macscanner:
     build:
       context: ../macscanner
