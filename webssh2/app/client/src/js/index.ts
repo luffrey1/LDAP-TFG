@@ -47,52 +47,8 @@ term.open(terminalContainer);
 term.focus();
 fitAddon.fit();
 
-// Configuración directa de WebSocket sin fallback
 const socket = io({
   path: '/ssh/socket.io',
-  transports: ['websocket'],
-  upgrade: false,
-  rememberUpgrade: false,
-  timeout: 60000,
-  reconnection: true,
-  reconnectionAttempts: 5,
-  reconnectionDelay: 1000,
-  withCredentials: true,
-  extraHeaders: {
-    'Access-Control-Allow-Credentials': 'true'
-  },
-  forceNew: true,
-  autoConnect: true,
-  rejectUnauthorized: false,
-  // Forzar WebSocket y evitar polling
-  transportOptions: {
-    websocket: {
-      protocols: ['websocket']
-    }
-  },
-  // Deshabilitar polling completamente
-  polling: false,
-  // Configuración específica de WebSocket
-  websocket: {
-    protocols: ['websocket'],
-    perMessageDeflate: false,
-    maxPayload: 1000000
-  }
-});
-
-// Asegurarse de que solo se use WebSocket
-socket.io.engine.on('upgrade', () => {
-  console.log('Upgraded to WebSocket');
-});
-
-socket.io.engine.on('upgradeError', (err) => {
-  console.error('WebSocket upgrade error:', err);
-});
-
-// Forzar WebSocket en la conexión
-socket.io.engine.on('open', () => {
-  console.log('Connection opened, forcing WebSocket');
-  socket.io.engine.transport.name = 'websocket';
 });
 
 // reauthenticate
