@@ -99,7 +99,7 @@
                                                         {{ $groupName }}
                                                         <span class="badge bg-secondary ms-2">{{ $groupHosts->count() }} equipos</span>
                                                     </div>
-                                                    <button type="button" class="btn btn-primary" id="startScanBtn" onclick="return false;">
+                                                    <button type="button" class="btn btn-primary" id="startScanBtn">
                                                         <i class="fas fa-sync-alt me-1"></i> Actualizar Estado
                                                     </button>
                                                 </h5>
