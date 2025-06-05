@@ -289,8 +289,19 @@
         let currentHostname = null;
         let scanInProgress = false;
 
+        // Función para resetear el estado del escaneo
+        function resetScanState() {
+            $('#scanProgress').hide();
+            $('#scanStatus').text('Detectando...');
+            $('.progress-bar').css('width', '0%');
+            $('#startScanBtn').prop('disabled', false);
+            scanInProgress = false;
+        }
+
         // Función para actualizar el estado
         function updateStatus(hostId = null) {
+            if (scanInProgress) return;
+            
             const scanType = $('input[name="scanType"]:checked').val();
             const url = hostId ? `/monitor/ping/${hostId}` : "{{ route('monitor.ping-all') }}";
             const data = hostId ? { scan_type: scanType } : { group: "{{ $group->id }}", scan_type: scanType };
@@ -319,6 +330,11 @@
                             <i class="fas fa-check-circle me-1"></i>
                             Online
                         `);
+                        
+                        // Cerrar el modal después de 1 segundo
+                        setTimeout(() => {
+                            $('#updateStatusModal').modal('hide');
+                        }, 1000);
                     } else {
                         // Recargar la página para actualizar todos los estados
                         setTimeout(() => {
@@ -356,8 +372,7 @@
             currentHostId = $(this).data('host-id');
             currentHostname = $(this).data('hostname');
             $('#updateStatusModal .modal-title').text(`Actualizar estado de ${currentHostname}`);
-            $('#scanProgress').hide();
-            $('#startScanBtn').prop('disabled', false);
+            resetScanState();
         });
 
         // Manejar el clic en el botón de actualizar estado del grupo
@@ -365,8 +380,7 @@
             currentHostId = null;
             currentHostname = null;
             $('#updateStatusModal .modal-title').text('Actualizar estado del grupo');
-            $('#scanProgress').hide();
-            $('#startScanBtn').prop('disabled', false);
+            resetScanState();
         });
 
         // Manejar el clic en el botón de inicio de escaneo
@@ -378,13 +392,9 @@
         
         // Resetear el modal cuando se cierra
         $('#updateStatusModal').on('hidden.bs.modal', function() {
-            $('#scanProgress').hide();
-            $('#scanStatus').text('Detectando...');
-            $('.progress-bar').css('width', '0%');
-            $('#startScanBtn').prop('disabled', false);
+            resetScanState();
             currentHostId = null;
             currentHostname = null;
-            scanInProgress = false;
         });
 
         // Cerrar alertas automáticamente después de 5 segundos
