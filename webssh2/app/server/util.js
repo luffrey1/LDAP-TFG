@@ -17,18 +17,11 @@ exports.setDefaultCredentials = function setDefaultCredentials({
 };
 
 exports.basicAuth = function basicAuth(req, res, next) {
-  // Asegurarnos de que req.session existe
-  if (!req.session) {
-    debug('No session available');
-    return next();
-  }
-
   const myAuth = Auth(req);
   // If Authorize: Basic header exists and the password isn't blank
   // AND config.user.overridebasic is false, extract basic credentials
   // from client]
   const { username, password, privatekey, overridebasic } = defaultCredentials;
-  
   if (myAuth && myAuth.pass !== '' && !overridebasic) {
     req.session.username = myAuth.name;
     req.session.userpassword = myAuth.pass;
@@ -38,7 +31,6 @@ exports.basicAuth = function basicAuth(req, res, next) {
     req.session.userpassword = password;
     req.session.privatekey = privatekey;
   }
-
   if (!req.session.userpassword && !req.session.privatekey) {
     res.statusCode = 401;
     debug('basicAuth credential request (401)');
