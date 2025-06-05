@@ -503,6 +503,13 @@ class AlumnoController extends Controller
         $data = $request->all();
         $data['tiene_encabezados'] = $request->boolean('tiene_encabezados');
         $data['crear_cuentas_ldap'] = $request->boolean('crear_cuentas_ldap');
+        // Decodificar alumnos_data si es string
+        if (isset($data['alumnos_data']) && is_string($data['alumnos_data'])) {
+            $decoded = json_decode($data['alumnos_data'], true);
+            if (is_array($decoded)) {
+                $data['alumnos_data'] = $decoded;
+            }
+        }
         
         // Validar formulario
         $validator = Validator::make($data, [
