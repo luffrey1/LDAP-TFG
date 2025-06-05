@@ -228,26 +228,19 @@ class MonitorController extends Controller
                 }
             }
 
-            // Solo actualizar si realmente se detectó el host
-            if ($status === 'online') {
-                $host->status = $status;
-                $host->last_seen = now();
-                if (!empty($mac)) $host->mac_address = $mac;
-                if (!empty($ipDetectada)) $host->ip_address = $ipDetectada;
-                $host->save();
-                \Log::info("Host actualizado como online: {$host->hostname}", [
-                    'ip' => $ipDetectada,
-                    'mac' => $mac,
-                    'scan_type' => $scanType
-                ]);
-            } else {
-                // Si no se detectó, marcar como offline
-                $host->status = 'offline';
-                $host->save();
-                \Log::info("Host marcado como offline: {$host->hostname}", [
-                    'scan_type' => $scanType
-                ]);
-            }
+            // Actualizar el estado del host en la base de datos
+            $host->status = $status;
+            $host->last_seen = $status === 'online' ? now() : $host->last_seen;
+            if (!empty($mac)) $host->mac_address = $mac;
+            if (!empty($ipDetectada)) $host->ip_address = $ipDetectada;
+            $host->save();
+
+            \Log::info("Estado del host actualizado: {$host->hostname}", [
+                'status' => $status,
+                'ip' => $ipDetectada,
+                'mac' => $mac,
+                'scan_type' => $scanType
+            ]);
 
             return response()->json([
                 'success' => true,
