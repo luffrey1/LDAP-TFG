@@ -25,7 +25,8 @@ const session = require('express-session')({
   cookie: {
     path: '/ssh',
     httpOnly: true,
-    secure: false
+    secure: false,
+    maxAge: 86400000 // 24 horas
   }
 });
 
@@ -35,7 +36,12 @@ app.use(session);
 // Configurar Socket.IO
 const io = require('socket.io')(server, {
   path: '/ssh/socket.io',
-  transports: ['websocket', 'polling']
+  transports: ['websocket', 'polling'],
+  allowEIO3: true,
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
 });
 
 // Middleware para debug
@@ -110,8 +116,7 @@ io.use((socket, next) => {
       }
       console.log('Socket session:', {
         id: socket.request.session?.id,
-        cookie: socket.request.session?.cookie,
-        headers: socket.request.headers
+        cookie: socket.request.session?.cookie
       });
       next();
     });
