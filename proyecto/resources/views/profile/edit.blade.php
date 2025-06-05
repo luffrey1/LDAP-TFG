@@ -6,17 +6,17 @@ body, .container {
     background: #181c24 !important;
 }
 .card {
-    background: #f4f7fb !important;
-    box-shadow: 0 4px 24px rgba(25,118,237,0.08), 0 1.5px 4px rgba(25,118,237,0.03);
+    background: #f6f8fa !important;
+    box-shadow: 0 4px 24px rgba(25,118,237,0.06), 0 1.5px 4px rgba(25,118,237,0.02);
     border-radius: 0.7rem;
     border: none;
 }
 .card-header {
-    background: #1976ed !important;
+    background: #3a6ea5 !important;
     color: #fff !important;
     border-radius: 0.7rem 0.7rem 0 0;
     border: none;
-    font-size: 1.18rem;
+    font-size: 1.15rem;
     font-weight: 800;
     letter-spacing: 0.01em;
 }
@@ -24,32 +24,32 @@ body, .container {
     background: transparent !important;
 }
 .form-label {
-    color: #1976ed !important;
-    font-size: 1.08rem;
+    color: #3a6ea5 !important;
+    font-size: 1.06rem;
     font-weight: 700 !important;
     letter-spacing: 0.01em;
 }
 .form-text, .invalid-feedback, .form-check-label, small {
-    color: #444 !important;
-    font-size: 1rem !important;
-    opacity: 0.92;
+    color: #555 !important;
+    font-size: 0.98rem !important;
+    opacity: 0.90;
 }
 input.form-control, select.form-control, .form-select {
-    background: #f4f7fb !important;
+    background: #eef2f6 !important;
     color: #222 !important;
-    border: 1.5px solid #b3c6e6 !important;
+    border: 1.2px solid #c3d0e6 !important;
     border-radius: 0.4rem !important;
-    font-size: 1.08rem !important;
+    font-size: 1.05rem !important;
     font-weight: 500;
     box-shadow: none !important;
     transition: border-color 0.2s;
 }
 input.form-control:focus, select.form-control:focus, .form-select:focus {
-    border-color: #1976ed !important;
-    box-shadow: 0 0 0 2px #1976ed22 !important;
+    border-color: #3a6ea5 !important;
+    box-shadow: 0 0 0 2px #3a6ea522 !important;
 }
 .form-control:disabled, .form-select:disabled {
-    background-color: #e3edfa !important;
+    background-color: #e3eaf3 !important;
     color: #888 !important;
     border-color: #dbeafe !important;
     cursor: not-allowed !important;
@@ -57,29 +57,31 @@ input.form-control:focus, select.form-control:focus, .form-select:focus {
 #grupos option {
     padding: 8px !important;
     margin: 2px !important;
-    border-left: 4px solid #1976ed !important;
-    background: #fafdff !important;
-    color: #1976ed !important;
+    border-left: 4px solid #3a6ea5 !important;
+    background: #f6f8fa !important;
+    color: #3a6ea5 !important;
     font-weight: 600;
     font-size: 1.01rem;
     transition: all 0.2s ease !important;
 }
 .btn-primary {
-    font-size: 1.08rem;
+    font-size: 1.06rem;
     font-weight: 700;
     border-radius: 0.4rem;
-    background: #1976ed !important;
+    background: #3a6ea5 !important;
     border: none;
     color: #fff !important;
     transition: background 0.2s;
 }
 .btn-primary:hover {
-    background: #1251a3 !important;
+    background: #27466a !important;
 }
 .alert {
-    font-size: 1.08rem;
+    font-size: 1.05rem;
     border-radius: 0.5rem;
     border: none;
+    background: #e3eaf3 !important;
+    color: #27466a !important;
 }
 </style>
 <div class="container">
