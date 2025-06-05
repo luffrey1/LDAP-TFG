@@ -123,6 +123,7 @@ services:
       dockerfile: Dockerfile
     container_name: webssh2
     restart: unless-stopped
+    user: root
     ports:
       - "2222:2222"
     environment:
@@ -130,9 +131,6 @@ services:
       - SSHPORT=22
       - SSHUSER=administrator
       - SSHKEY=/usr/src/app/config/administrator-id_ed25519
-    volumes:
-      - ../webssh2/app/config.json:/usr/src/config.json:ro
-      - ../webssh2/config/administrator-id_ed25519:/usr/src/app/config/administrator-id_ed25519:ro
     networks:
       - app-network
   macscanner:
