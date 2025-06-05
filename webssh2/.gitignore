@@ -7,6 +7,10 @@ bigip/*
 
 config.json
 
+# SSH Keys
+config/id_rsa
+config/id_rsa.pub
+
 # Logs
 logs
 *.log

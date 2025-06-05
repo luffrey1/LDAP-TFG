@@ -416,7 +416,7 @@ $(function() {
         $sshBtnHeader.on('click', function(e) {
             e.preventDefault();
             var ip = $('#info-ip_address').text().trim();
-            var url = `http://${webssh2Host}:${webssh2Port}/ssh/host/${ip}?username=root`;
+            var url = `http://${webssh2Host}:${webssh2Port}/ssh/host/${ip}`;
             var win = window.open(url, '_blank');
             if (!win) {
                 alert('El navegador ha bloqueado la nueva pestaña. Permite popups para este sitio.');
@@ -429,7 +429,7 @@ $(function() {
         $sshBtn.on('click', function(e) {
             e.preventDefault();
             var ip = $('#info-ip_address').text().trim();
-            var url = `http://${webssh2Host}:${webssh2Port}/ssh/host/${ip}?username=root`;
+            var url = `http://${webssh2Host}:${webssh2Port}/ssh/host/${ip}`;
             var win = window.open(url, '_blank');
             if (!win) {
                 alert('El navegador ha bloqueado la nueva pestaña. Permite popups para este sitio.');
