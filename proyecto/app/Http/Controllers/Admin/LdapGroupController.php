@@ -215,7 +215,7 @@ class LdapGroupController extends Controller
                     'objectclass' => ['top', 'posixGroup'],
                     'cn' => $request->cn,
                     'gidNumber' => strval($gidNumber),
-                    'memberUid' => ['nobody']
+                    'memberUid' => ['ldap-admin']
                 ];
                 
                 // Añadir descripción si se proporcionó
