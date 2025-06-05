@@ -129,8 +129,8 @@ services:
     ports:
       - "2222:2222"
     networks:
-      - app-network
-    ipv4_address: 172.20.0.6
+      app-network:
+        ipv4_address: 172.20.0.6
   macscanner:
     build:
       context: ../macscanner
