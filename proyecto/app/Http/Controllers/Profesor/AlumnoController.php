@@ -141,7 +141,7 @@ class AlumnoController extends Controller
                 $connection->connect();
                 
                 // Comprobar si el usuario ya existe
-                $baseOu = "ou=people,dc=test,dc=tierno,dc=es";
+                $baseOu = "ou=people,dc=tierno,dc=es";
                 $existente = $connection->query()
                     ->in($baseOu)
                     ->where('uid', '=', $nombreUsuario)
@@ -241,9 +241,9 @@ class AlumnoController extends Controller
                     }
                     
                     // Añadir usuario al grupo alumnos
-                    $alumnosGroupDn = "cn=alumnos,ou=groups,dc=test,dc=tierno,dc=es";
+                    $alumnosGroupDn = "cn=alumnos,ou=groups,dc=tierno,dc=es";
                     $alumnosGroup = $connection->query()
-                        ->in("ou=groups,dc=test,dc=tierno,dc=es")
+                        ->in("ou=groups,dc=tierno,dc=es")
                         ->where('cn', '=', 'alumnos')
                         ->first();
                     
@@ -795,7 +795,7 @@ class AlumnoController extends Controller
                         Log::info("Conexión LDAP establecida correctamente");
                         
                         // Intentar obtener usuarios del grupo alumnos
-                        $alumnosDn = 'cn=alumnos,ou=groups,dc=test,dc=tierno,dc=es';
+                        $alumnosDn = 'cn=alumnos,ou=groups,dc=tierno,dc=es';
                         
                         // Obtener miembros del grupo
                         try {
@@ -817,7 +817,7 @@ class AlumnoController extends Controller
                                         try {
                                             // Buscar el usuario en LDAP
                                             $ldapUser = $connection->query()
-                                                ->in('ou=people,dc=test,dc=tierno,dc=es')
+                                                ->in('ou=people,dc=tierno,dc=es')
                                                 ->where('uid', '=', $uid)
                                                 ->first();
                                             
@@ -869,7 +869,7 @@ class AlumnoController extends Controller
                             Log::info("Realizando búsqueda general en LDAP");
                             
                             $ldapUsers = $connection->query()
-                                ->in('ou=people,dc=test,dc=tierno,dc=es')
+                                ->in('ou=people,dc=tierno,dc=es')
                                 ->where('objectclass', '=', 'inetOrgPerson')
                                 ->whereContains('cn', $terminoBusqueda)
                                 ->orWhereContains('uid', $terminoBusqueda)
@@ -900,7 +900,7 @@ class AlumnoController extends Controller
                                         'nombre' => $nombre,
                                         'apellidos' => $apellidos,
                                         'email' => $email,
-                                        'dn' => "uid=$uid,ou=people,dc=test,dc=tierno,dc=es",
+                                        'dn' => "uid=$uid,ou=people,dc=tierno,dc=es",
                                         'ya_importado' => $existente ? true : false,
                                         'clase_actual' => $existente ? $existente->grupo->nombre : null
                                     ];
@@ -1002,7 +1002,7 @@ class AlumnoController extends Controller
                 
                 // Buscar el usuario en LDAP
                 $ldapUser = $connection->query()
-                    ->in('ou=people,dc=test,dc=tierno,dc=es')
+                    ->in('ou=people,dc=tierno,dc=es')
                     ->where('uid', '=', $uid)
                     ->first();
                 
@@ -1028,7 +1028,7 @@ class AlumnoController extends Controller
                 $alumno->email = $email;
                 $alumno->clase_grupo_id = $grupoId;
                 $alumno->usuario_ldap = $uid;
-                $alumno->ldap_dn = "uid=$uid,ou=people,dc=test,dc=tierno,dc=es";
+                $alumno->ldap_dn = "uid=$uid,ou=people,dc=tierno,dc=es";
                 $alumno->cuenta_creada = true;
                 $alumno->activo = true;
                 $alumno->save();
