@@ -131,7 +131,7 @@ services:
       - SSHUSER=root
       - SSHKEY=/usr/src/app/config/id_rsa
     volumes:
-      - ../webssh2/app/config.json:/usr/src/app/config.json:ro
+      - ../webssh2/app/config.json:/usr/src/config.json:ro
       - ../webssh2/config/id_rsa:/usr/src/app/config/id_rsa:ro
     networks:
       - app-network
