@@ -72,10 +72,18 @@
                             @csrf
                             <input type="hidden" name="_method" value="POST">
                             
+                            <div class="form-group mb-4">
+                                <label for="tipo_importacion" class="form-label fw-bold text-black fs-5">Tipo de importación</label>
+                                <select name="tipo_importacion" id="tipo_importacion" class="form-select shadow-sm bg-white border-2">
+                                    <option value="alumno" selected>Alumnos</option>
+                                    <option value="profesor">Profesores</option>
+                                </select>
+                            </div>
+                            
                             @if(!isset($grupo))
                             <div class="form-group mb-4">
                                 <label for="clase_grupo_id" class="form-label fw-bold text-black fs-5">Clase / Grupo</label>
-                                <select name="clase_grupo_id" id="clase_grupo_id" class="form-select select2 shadow-sm bg-white border-2" @if(!session('auth_user.is_admin')) required @endif>
+                                <select name="clase_grupo_id" id="clase_grupo_id" class="form-select shadow-sm bg-white border-2" @if(!session('auth_user.is_admin')) required @endif>
                                     <option value="" class="text-dark fw-medium">@if(session('auth_user.is_admin'))(Opcional) Sin grupo asignado@else Seleccione un grupo @endif</option>
                                     @foreach($grupos as $grupo_select)
                                     <option value="{{ $grupo_select->id }}" {{ isset($grupo) && $grupo->id == $grupo_select->id ? 'selected' : '' }}>
@@ -89,21 +97,13 @@
                             @endif
                             
                             <div class="form-group mb-4">
-                                <label for="tipo_importacion" class="text-white">Tipo de importación</label>
-                                <select name="tipo_importacion" id="tipo_importacion" class="form-control">
-                                    <option value="alumno" selected>Alumnos</option>
-                                    <option value="profesor">Profesores</option>
-                                </select>
-                            </div>
-                            
-                            <div class="form-group mb-4">
                                 <label class="form-label fw-bold text-black fs-5">Archivo de Usuarios</label>
                                 <div class="dropzone-area p-5 text-center border-2 border-dashed rounded-3 bg-light" id="dropzone">
                                     <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
                                     <h5 class="mb-3">Arrastre y suelte su archivo aquí</h5>
                                     <p class="text-muted mb-3">o</p>
                                     <div class="custom-file">
-                                        <input type="file" name="archivo_csv" class="custom-file-input" id="archivo_csv" accept=".csv, .xlsx, .xls" required>
+                                        <input type="file" name="archivo_csv" class="form-control" id="archivo_csv" accept=".csv, .xlsx, .xls" required>
                                         <label class="btn btn-outline-primary" for="archivo_csv">
                                             <i class="fas fa-folder-open me-2"></i>Seleccionar archivo
                                         </label>
@@ -125,14 +125,14 @@
                                 <input type="hidden" name="tiene_encabezados" value="0">
                                 <div class="form-check">
                                     <input type="checkbox" name="tiene_encabezados" id="tiene_encabezados" class="form-check-input" value="1" checked>
-                                    <label class="form-check-label text-white" for="tiene_encabezados">El archivo contiene fila de encabezados</label>
+                                    <label class="form-check-label text-black fw-bold" for="tiene_encabezados">El archivo contiene fila de encabezados</label>
                                 </div>
                             </div>
 
                             <div class="form-group mb-4">
                                 <div class="form-check">
                                     <input type="checkbox" name="crear_cuentas_ldap" id="crear_cuentas_ldap" class="form-check-input" value="1" {{ old('crear_cuentas_ldap', true) ? 'checked' : '' }}>
-                                    <label class="form-check-label text-white" for="crear_cuentas_ldap">Crear cuentas LDAP para los usuarios</label>
+                                    <label class="form-check-label text-black fw-bold" for="crear_cuentas_ldap">Crear cuentas LDAP para los usuarios</label>
                                 </div>
                             </div>
 
