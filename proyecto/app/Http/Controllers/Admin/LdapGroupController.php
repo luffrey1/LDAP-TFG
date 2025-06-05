@@ -214,7 +214,8 @@ class LdapGroupController extends Controller
                 $entry = [
                     'objectclass' => ['top', 'posixGroup'],
                     'cn' => $request->cn,
-                    'gidNumber' => $gidNumber
+                    'gidNumber' => $gidNumber,
+                    'memberUid' => [] // Para cumplir schema si es necesario
                 ];
                 
                 // Añadir descripción si se proporcionó
@@ -232,39 +233,9 @@ class LdapGroupController extends Controller
                 Log::info('Grupo creado exitosamente como posixGroup: ' . $request->cn);
             } catch (\Exception $e) {
                 $errorMessage = $e->getMessage();
-                Log::debug('Fallo la creacion como posixGroup: ' . $errorMessage);
-
-                // Si falla por Object class violation, intentamos con groupOfUniqueNames
-                if (strpos($errorMessage, 'Object class violation') !== false) {
-                    Log::debug('Intentando crear grupo como groupOfUniqueNames');
-                    try {
-                        $entry = [
-                            'objectclass' => ['top', 'groupOfUniqueNames'],
-                            'cn' => $request->cn,
-                            'uniqueMember' => 'cn=nobody,dc=tierno,dc=es'
-                        ];
-                        
-                        // Añadir descripción si se proporcionó
-                        if ($request->description) {
-                            $entry['description'] = $request->description;
-                        }
-                        
-                        $success = ldap_add($ldapConn, $dn, $entry);
-                        
-                        if (!$success) {
-                            throw new Exception(ldap_error($ldapConn));
-                        }
-                        
-                        $groupCreated = true;
-                        Log::info('Grupo creado exitosamente como groupOfUniqueNames: ' . $request->cn);
-                    } catch (\Exception $e2) {
-                        $errorMessage = "Fallo la creacion como posixGroup ('{$errorMessage}') y como groupOfUniqueNames ('{$e2->getMessage()}')";
-                        Log::error($errorMessage);
-                    }
-                } else {
-                    // Otro tipo de error, no es Object class violation con posixGroup
-                    Log::error('Error al crear grupo LDAP (posixGroup falló por otra razón): ' . $errorMessage);
-                }
+                Log::error('Error al crear grupo LDAP (posixGroup): ' . $errorMessage);
+                ldap_close($ldapConn);
+                return back()->with('error', 'Error al crear grupo como posixGroup: ' . $errorMessage);
             }
 
             ldap_close($ldapConn);
