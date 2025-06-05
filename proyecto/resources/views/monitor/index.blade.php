@@ -139,9 +139,14 @@
                                                                         <a href="{{ route('monitor.show', $host->id) }}" class="btn btn-sm btn-primary" title="Ver detalles">
                                                                             <i class="fas fa-eye"></i>
                                                                         </a>
-                                                                        <a href="{{ route('monitor.ping', $host->id) }}" class="btn btn-sm btn-info btn-ping" data-host-id="{{ $host->id }}" title="Ping">
+                                                                        <button type="button" class="btn btn-sm btn-info btn-ping" 
+                                                                                data-host-id="{{ $host->id }}"
+                                                                                data-hostname="{{ $host->hostname }}"
+                                                                                data-bs-toggle="modal" 
+                                                                                data-bs-target="#updateStatusModal"
+                                                                                title="Ping">
                                                                             <i class="fas fa-exchange-alt"></i>
-                                                                        </a>
+                                                                        </button>
                                                                         @if($host->mac_address)
                                                                             <a href="{{ route('monitor.wol', $host->id) }}" 
                                                                                class="btn btn-sm btn-dark" 
@@ -328,12 +333,22 @@
         const progressBar = $('.progress-bar');
         const startScanBtn = $('#startScanBtn');
         let currentGroupId = null;
+        let currentHostId = null;
+        let currentHostname = null;
 
         // Manejador del botón de escaneo por grupo
         $('[data-bs-target="#updateStatusModal"]').on('click', function() {
             currentGroupId = $(this).data('group-id');
-            if (!currentGroupId) {
-                alert('Este grupo no tiene un ID válido');
+            currentHostId = $(this).data('host-id');
+            currentHostname = $(this).data('hostname');
+            
+            // Configurar el modal según si es grupo o host individual
+            if (currentHostId) {
+                $('#updateStatusModal .modal-title').text('Escanear Host Individual: ' + currentHostname);
+            } else if (currentGroupId) {
+                $('#updateStatusModal .modal-title').text('Escanear Grupo');
+            } else {
+                alert('No se pudo determinar el tipo de escaneo');
                 return;
             }
         });
@@ -349,17 +364,30 @@
             startScanBtn.prop('disabled', true);
             scanInProgress = true;
             progressBar.css('width', '0%');
-            scanStatus.html('<i class="fas fa-spinner fa-spin me-2"></i>Detectando equipos...');
+            scanStatus.html('<i class="fas fa-spinner fa-spin me-2"></i>Detectando...');
             
-            // Realizar el escaneo
-            $.ajax({
-                url: "{{ route('monitor.ping-all') }}",
-                type: 'POST',
-                data: {
+            // Determinar la URL y datos según el tipo de escaneo
+            let url, data;
+            if (currentHostId) {
+                url = "{{ route('monitor.ping', ['id' => '__id__']) }}".replace('__id__', currentHostId);
+                data = {
+                    _token: '{{ csrf_token() }}',
+                    scan_type: scanType
+                };
+            } else {
+                url = "{{ route('monitor.ping-all') }}";
+                data = {
                     _token: '{{ csrf_token() }}',
                     scan_type: scanType,
                     group: currentGroupId
-                },
+                };
+            }
+            
+            // Realizar el escaneo
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: data,
                 success: function(response) {
                     progressBar.css('width', '100%');
                     scanStatus.html('<i class="fas fa-check-circle me-2 text-success"></i>Escaneo completado');
@@ -384,10 +412,12 @@
         // Resetear el modal cuando se cierra
         $('#updateStatusModal').on('hidden.bs.modal', function() {
             scanProgress.hide();
-            scanStatus.text('Detectando equipos...');
+            scanStatus.text('Detectando...');
             progressBar.css('width', '0%');
             startScanBtn.prop('disabled', false);
             currentGroupId = null;
+            currentHostId = null;
+            currentHostname = null;
         });
 
         // Definir eliminarHost en el scope global
