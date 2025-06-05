@@ -39,7 +39,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-group row">
+                            <div class="form-group row text-white">
                                 <label for="nivel" class="col-sm-3 col-form-label">Nivel <span class="text-danger">*</span></label>
                                 <div class="col-sm-9">
                                     <select name="nivel" id="nivel" class="form-control @error('nivel') is-invalid @enderror" required>
@@ -54,7 +54,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-group row">
+                            <div class="form-group row text-white">
                                 <label for="curso" class="col-sm-3 col-form-label">Curso <span class="text-danger">*</span></label>
                                 <div class="col-sm-9">
                                     <input type="text" name="curso" id="curso" class="form-control @error('curso') is-invalid @enderror" value="{{ old('curso') }}" required>
@@ -65,7 +65,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-group row">
+                            <div class="form-group row text-white">
                                 <label for="seccion" class="col-sm-3 col-form-label">Sección <span class="text-danger">*</span></label>
                                 <div class="col-sm-9">
                                     <input type="text" name="seccion" id="seccion" class="form-control @error('seccion') is-invalid @enderror" value="{{ old('seccion') }}" required>
@@ -76,7 +76,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-group row">
+                            <div class="form-group row text-white">
                                 <label for="descripcion" class="col-sm-3 col-form-label">Descripción</label>
                                 <div class="col-sm-9">
                                     <textarea name="descripcion" id="descripcion" class="form-control @error('descripcion') is-invalid @enderror" rows="3">{{ old('descripcion') }}</textarea>
@@ -86,7 +86,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-group row">
+                            <div class="form-group row text-white">
                                 <label for="profesor_id" class="col-sm-3 col-form-label">Profesor</label>
                                 <div class="col-sm-9">
                                     <select name="profesor_id" id="profesor_id" class="form-control @error('profesor_id') is-invalid @enderror" required>
