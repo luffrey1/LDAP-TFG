@@ -35,7 +35,7 @@ app.use(session);
 // Configurar Socket.IO
 const io = require('socket.io')(server, {
   path: '/ssh/socket.io',
-  transports: ['websocket']
+  transports: ['websocket', 'polling']
 });
 
 // Middleware para debug
