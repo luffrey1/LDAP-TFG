@@ -123,6 +123,16 @@ class AlumnoController extends Controller
                 
                 // Verificar si ya existe ese usuario en LDAP
                 $ldapConfig = config('ldap.connections.default');
+                // Forzar configuración robusta igual que en LdapGroupController
+                $ldapConfig['port'] = 636;
+                $ldapConfig['use_ssl'] = true;
+                $ldapConfig['use_tls'] = false;
+                $ldapConfig['options'] = [
+                    LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                    LDAP_OPT_REFERRALS => 0,
+                    LDAP_OPT_PROTOCOL_VERSION => 3,
+                    LDAP_OPT_NETWORK_TIMEOUT => 5,
+                ];
                 $connection = new \LdapRecord\Connection($ldapConfig);
                 $connection->connect();
                 
@@ -750,10 +760,19 @@ class AlumnoController extends Controller
                 
                 try {
                     // Crear una conexión LDAP usando la configuración
-                    $config = config('ldap.connections.default');
-                    $connection = new \LdapRecord\Connection($config);
+                    $ldapConfig = config('ldap.connections.default');
+                    // Forzar configuración robusta igual que en LdapGroupController
+                    $ldapConfig['port'] = 636;
+                    $ldapConfig['use_ssl'] = true;
+                    $ldapConfig['use_tls'] = false;
+                    $ldapConfig['options'] = [
+                        LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                        LDAP_OPT_REFERRALS => 0,
+                        LDAP_OPT_PROTOCOL_VERSION => 3,
+                        LDAP_OPT_NETWORK_TIMEOUT => 5,
+                    ];
+                    $connection = new \LdapRecord\Connection($ldapConfig);
                     $connection->connect();
-                    $connection->isConnected();
                     
                     if ($connection->isConnected()) {
                         Log::info("Conexión LDAP establecida correctamente");
@@ -921,8 +940,18 @@ class AlumnoController extends Controller
         
         try {
             // Crear conexión LDAP
-            $config = config('ldap.connections.default');
-            $connection = new \LdapRecord\Connection($config);
+            $ldapConfig = config('ldap.connections.default');
+            // Forzar configuración robusta igual que en LdapGroupController
+            $ldapConfig['port'] = 636;
+            $ldapConfig['use_ssl'] = true;
+            $ldapConfig['use_tls'] = false;
+            $ldapConfig['options'] = [
+                LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                LDAP_OPT_REFERRALS => 0,
+                LDAP_OPT_PROTOCOL_VERSION => 3,
+                LDAP_OPT_NETWORK_TIMEOUT => 5,
+            ];
+            $connection = new \LdapRecord\Connection($ldapConfig);
             $connection->connect();
             
             if (!$connection->isConnected()) {
