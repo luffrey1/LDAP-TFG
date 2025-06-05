@@ -406,7 +406,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-var webssh2Host = "172.20.99.6"; // IP oficial del servidor
+var webssh2Host = "172.20.0.6"; // IP oficial del servidor
 var webssh2Port = "2222"; // Puerto de WebSSH2
 $(function() {
     // Botón SSH en la cabecera
