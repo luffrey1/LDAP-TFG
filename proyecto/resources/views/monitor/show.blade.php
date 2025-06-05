@@ -421,8 +421,8 @@ $(function() {
                 return;
             }
             console.log('Conectando a hostname:', hostname);
-            // Construir la URL base para la autenticación
-            var url = `http://${webssh2Host}:${webssh2Port}/ssh/host/${hostname}?username=&password=&session=`;
+            // URL simple para la conexión SSH
+            var url = `http://${webssh2Host}:${webssh2Port}/ssh/host/${hostname}`;
             console.log('URL de conexión:', url);
             var win = window.open(url, '_blank', 'width=800,height=600,resizable=yes,scrollbars=yes');
             if (!win) {
@@ -441,8 +441,8 @@ $(function() {
                 return;
             }
             console.log('Conectando a hostname:', hostname);
-            // Construir la URL base para la autenticación
-            var url = `http://${webssh2Host}:${webssh2Port}/ssh/host/${hostname}?username=&password=&session=`;
+            // URL simple para la conexión SSH
+            var url = `http://${webssh2Host}:${webssh2Port}/ssh/host/${hostname}`;
             console.log('URL de conexión:', url);
             var win = window.open(url, '_blank', 'width=800,height=600,resizable=yes,scrollbars=yes');
             if (!win) {
