@@ -25,10 +25,10 @@
                     </div>
                     <form action="{{ route('profesor.alumnos.store') }}" method="POST">
                         @csrf
-                        <div class="card-body">
+                        <div class="card-body text-white">
                             @include('partials.session_messages')
 
-                            <div class="form-group row">
+                            <div class="form-group row text-white">
                                 <label for="nombre" class="col-sm-3 col-form-label">Nombre <span class="text-danger">*</span></label>
                                 <div class="col-sm-9">
                                     <input type="text" name="nombre" id="nombre" class="form-control @error('nombre') is-invalid @enderror" value="{{ old('nombre') }}" required autofocus>
@@ -38,7 +38,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-group row">
+                            <div class="form-group row text-white">
                                 <label for="apellidos" class="col-sm-3 col-form-label">Apellidos <span class="text-danger">*</span></label>
                                 <div class="col-sm-9">
                                     <input type="text" name="apellidos" id="apellidos" class="form-control @error('apellidos') is-invalid @enderror" value="{{ old('apellidos') }}" required>
@@ -48,7 +48,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-group row">
+                            <div class="form-group row text-white">
                                 <label for="email" class="col-sm-3 col-form-label">Email</label>
                                 <div class="col-sm-9">
                                     <input type="email" name="email" id="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email') }}">
@@ -59,7 +59,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-group row">
+                            <div class="form-group row text-white">
                                 <label for="password" class="col-sm-3 col-form-label">Contraseña <span class="text-danger">*</span></label>
                                 <div class="col-sm-9">
                                     <div class="input-group">
@@ -78,7 +78,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-group row">
+                            <div class="form-group row text-white">
                                 <label for="password_confirmation" class="col-sm-3 col-form-label">Confirmar Contraseña <span class="text-danger">*</span></label>
                                 <div class="col-sm-9">
                                     <div class="input-group">
@@ -90,7 +90,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-group row">
+                            <div class="form-group row text-white">
                                 <label for="dni" class="col-sm-3 col-form-label">DNI / Documento</label>
                                 <div class="col-sm-9">
                                     <input type="text" name="dni" id="dni" class="form-control @error('dni') is-invalid @enderror" value="{{ old('dni') }}">
@@ -100,7 +100,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-group row">
+                            <div class="form-group row text-white">
                                 <label for="numero_expediente" class="col-sm-3 col-form-label">Nº Expediente</label>
                                 <div class="col-sm-9">
                                     <input type="text" name="numero_expediente" id="numero_expediente" class="form-control @error('numero_expediente') is-invalid @enderror" value="{{ old('numero_expediente') }}">
@@ -110,7 +110,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-group row">
+                            <div class="form-group row text-white">
                                 <label for="fecha_nacimiento" class="col-sm-3 col-form-label">Fecha de Nacimiento</label>
                                 <div class="col-sm-9">
                                     <input type="date" name="fecha_nacimiento" id="fecha_nacimiento" class="form-control @error('fecha_nacimiento') is-invalid @enderror" value="{{ old('fecha_nacimiento') }}">
@@ -120,7 +120,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-group row">
+                            <div class="form-group row text-white">
                                 <label for="clase_grupo_id" class="col-sm-3 col-form-label">Grupo de Clase <span class="text-danger">*</span></label>
                                 <div class="col-sm-9">
                                     <select name="clase_grupo_id" id="clase_grupo_id" class="form-control @error('clase_grupo_id') is-invalid @enderror" required>
@@ -137,7 +137,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-group row">
+                            <div class="form-group row text-white">
                                 <div class="col-sm-3">Opciones</div>
                                 <div class="col-sm-9">
                                     <div class="custom-control custom-checkbox">
