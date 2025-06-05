@@ -194,7 +194,7 @@ class AlumnoController extends Controller
                     }
                     
                     // Guardar usuario LDAP
-                    $ldapConn = ldap_connect($ldapConfig['hosts'][0], $ldapConfig['port']);
+                    $ldapConn = ldap_connect('ldaps://' . $ldapConfig['hosts'][0], 636);
                     ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
                     ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
                     ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
