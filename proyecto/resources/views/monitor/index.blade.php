@@ -99,7 +99,7 @@
                                                         {{ $groupName }}
                                                         <span class="badge bg-secondary ms-2">{{ $groupHosts->count() }} equipos</span>
                                                     </div>
-                                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#updateStatusModal">
+                                                    <button type="button" class="btn btn-primary" id="startScanBtn">
                                                         <i class="fas fa-sync-alt me-1"></i> Actualizar Estado
                                                     </button>
                                                 </h5>
@@ -329,18 +329,14 @@
         const startScanBtn = $('#startScanBtn');
 
         // Manejador del botón de escaneo global
-        $('#startScanBtn').on('click', function() {
+        startScanBtn.on('click', function() {
             if (scanInProgress) return;
             
-            const scanType = $('input[name="scanType"]:checked').val();
-            const groupId = '{{ request()->query("group") }}';
+            // Deshabilitar botón y mostrar loading
+            startScanBtn.prop('disabled', true)
+                .html('<i class="fas fa-spinner fa-spin me-1"></i> Escaneando...');
             
-            // Mostrar progreso
-            scanProgress.show();
-            startScanBtn.prop('disabled', true);
             scanInProgress = true;
-            progressBar.css('width', '0%');
-            scanStatus.html('<i class="fas fa-spinner fa-spin me-2"></i>Detectando equipos...');
             
             // Realizar el escaneo
             $.ajax({
@@ -348,28 +344,47 @@
                 type: 'POST',
                 data: {
                     _token: '{{ csrf_token() }}',
-                    scan_type: scanType,
-                    group: groupId
+                    scan_type: 'hostname'  // Por defecto escaneamos por hostname
                 },
                 success: function(response) {
-                    progressBar.css('width', '100%');
-                    scanStatus.html('<i class="fas fa-check-circle me-2 text-success"></i>Escaneo completado');
-                    
-                    setTimeout(() => {
-                        updateStatusModal.hide();
-                        location.reload();
-                    }, 1000);
+                    if (response.success) {
+                        showToast('success', 'Escaneo completado: ' + response.message);
+                        setTimeout(() => {
+                            location.reload();
+                        }, 2000);
+                    } else {
+                        showToast('error', 'Error: ' + response.message);
+                    }
                 },
-                error: function(xhr) {
-                    scanStatus.html('<i class="fas fa-exclamation-circle me-2 text-danger"></i>Error en el escaneo');
-                    startScanBtn.prop('disabled', false);
+                error: function(xhr, status, error) {
+                    console.error('Error en ping-all:', xhr.responseText);
+                    showToast('error', 'Error al escanear los hosts: ' + error);
                 },
                 complete: function() {
                     scanInProgress = false;
-                    startScanBtn.prop('disabled', false);
+                    startScanBtn.prop('disabled', false)
+                        .html('<i class="fas fa-sync-alt me-1"></i> Actualizar Estado');
                 }
             });
         });
+
+        // Función auxiliar para mostrar notificaciones
+        function showToast(type, message) {
+            const toast = $('#debug-toast');
+            if (!toast.length) {
+                // Crear el toast si no existe
+                $('body').append('<div id="debug-toast" class="position-fixed top-0 end-0 p-3" style="z-index: 5"></div>');
+            }
+            
+            toast.removeClass('alert-success alert-danger')
+                 .addClass(type === 'success' ? 'alert-success' : 'alert-danger')
+                 .html(message)
+                 .fadeIn();
+            
+            setTimeout(() => {
+                toast.fadeOut();
+            }, 3000);
+        }
 
         // Manejador del botón de ping individual
         $('.btn-ping').on('click', function(e) {
