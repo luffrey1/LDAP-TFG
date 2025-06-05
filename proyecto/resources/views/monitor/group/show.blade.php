@@ -182,7 +182,12 @@
                                                     <a href="{{ route('monitor.show', $host->id) }}" class="btn btn-sm btn-primary">
                                                         <i class="fas fa-eye"></i>
                                                     </a>
-                                                    <button class="btn btn-sm btn-info ping-host" data-host-id="{{ $host->id }}" title="Ping">
+                                                    <button type="button" class="btn btn-sm btn-info btn-ping" 
+                                                            data-host-id="{{ $host->id }}"
+                                                            data-hostname="{{ $host->hostname }}"
+                                                            data-bs-toggle="modal" 
+                                                            data-bs-target="#updateStatusModal"
+                                                            title="Ping">
                                                         <i class="fas fa-exchange-alt"></i>
                                                     </button>
                                                     @if($host->mac_address)
@@ -221,49 +226,208 @@
         </div>
     </div>
 </div>
+
+<!-- Modal de actualización de estado -->
+<div class="modal fade" id="updateStatusModal" tabindex="-1" aria-labelledby="updateStatusModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="updateStatusModalLabel">Actualizar estado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- El contenido se actualizará dinámicamente -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
+@push('scripts')
 <script>
     $(document).ready(function() {
-        // Función para hacer ping a un host
-        $('.ping-host').click(function() {
-            var hostId = $(this).data('host-id');
-            var button = $(this);
-            button.html('<i class="fas fa-spinner fa-spin"></i>').prop('disabled', true);
+        // Configuración global de AJAX para incluir token CSRF
+        $.ajaxSetup({
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            }
+        });
+
+        // Inicializar el modal de Bootstrap
+        const updateStatusModal = new bootstrap.Modal(document.getElementById('updateStatusModal'));
+
+        let scanInProgress = false;
+        const scanProgress = $('#scanProgress');
+        const scanStatus = $('#scanStatus');
+        const progressBar = $('.progress-bar');
+        const startScanBtn = $('#startScanBtn');
+        let currentGroupId = null;
+        let currentHostId = null;
+        let currentHostname = null;
+
+        // Manejador del botón de escaneo por grupo
+        $('[data-bs-target="#updateStatusModal"]').on('click', function() {
+            currentGroupId = $(this).data('group-id');
+            currentHostId = $(this).data('host-id');
+            currentHostname = $(this).data('hostname');
+            
+            // Configurar el modal según si es grupo o host individual
+            if (currentHostId) {
+                $('#updateStatusModal .modal-title').text('Escanear Host Individual: ' + currentHostname);
+            } else if (currentGroupId) {
+                $('#updateStatusModal .modal-title').text('Escanear Grupo');
+            } else {
+                alert('No se pudo determinar el tipo de escaneo');
+                return;
+            }
+        });
+
+        // Manejador del botón de inicio de escaneo
+        $('#startScanBtn').on('click', function() {
+            if (scanInProgress) return;
+            
+            const scanType = $('input[name="scanType"]:checked').val();
+            
+            // Mostrar progreso
+            scanProgress.show();
+            startScanBtn.prop('disabled', true);
+            scanInProgress = true;
+            progressBar.css('width', '0%');
+            scanStatus.html('<i class="fas fa-spinner fa-spin me-2"></i>Detectando...');
+            
+            // Determinar la URL y datos según el tipo de escaneo
+            let url, data;
+            if (currentHostId) {
+                url = "{{ route('monitor.ping', ['id' => '__id__']) }}".replace('__id__', currentHostId);
+                data = {
+                    _token: '{{ csrf_token() }}',
+                    scan_type: scanType
+                };
+            } else {
+                url = "{{ route('monitor.ping-all') }}";
+                data = {
+                    _token: '{{ csrf_token() }}',
+                    scan_type: scanType,
+                    group: currentGroupId
+                };
+            }
+            
+            // Realizar el escaneo
             $.ajax({
-                url: '/monitor/ping/' + hostId,
-                type: 'GET',
-                dataType: 'json',
+                url: url,
+                type: 'POST',
+                data: data,
                 success: function(response) {
-                    // Recargar la página para mostrar el estado actualizado
-                    location.reload();
+                    progressBar.css('width', '100%');
+                    scanStatus.html('<i class="fas fa-check-circle me-2 text-success"></i>Escaneo completado');
+                    
+                    setTimeout(() => {
+                        updateStatusModal.hide();
+                        location.reload();
+                    }, 1000);
                 },
-                error: function() {
-                    button.html('<i class="fas fa-exchange-alt"></i>').prop('disabled', false);
-                    alert('Error al realizar ping');
+                error: function(xhr) {
+                    console.error('Error en la petición:', xhr);
+                    scanStatus.html('<i class="fas fa-exclamation-circle me-2 text-danger"></i>Error en el escaneo');
+                    startScanBtn.prop('disabled', false);
+                },
+                complete: function() {
+                    scanInProgress = false;
+                    startScanBtn.prop('disabled', false);
                 }
             });
         });
-        
-        // Actualizar estado de todos los hosts
-        $('#refresh-status').click(function() {
-            var button = $(this);
-            button.html('<i class="fas fa-spinner fa-spin me-1"></i> Actualizando...').prop('disabled', true);
-            
-            $('.ping-host').each(function() {
-                $(this).click();
-            });
-            
-            setTimeout(function() {
-                button.html('<i class="fas fa-sync-alt me-1"></i> Actualizar Estado').prop('disabled', false);
-            }, 2000);
+
+        // Resetear el modal cuando se cierra
+        $('#updateStatusModal').on('hidden.bs.modal', function() {
+            scanProgress.hide();
+            scanStatus.text('Detectando...');
+            progressBar.css('width', '0%');
+            startScanBtn.prop('disabled', false);
+            currentGroupId = null;
+            currentHostId = null;
+            currentHostname = null;
         });
-        
+
         // Cerrar alertas automáticamente después de 5 segundos
         setTimeout(function() {
             $('.alert').alert('close');
         }, 5000);
+
+        // Manejar el clic en el botón de ping
+        $('.btn-ping').on('click', function() {
+            const hostId = $(this).data('host-id');
+            const hostname = $(this).data('hostname');
+            
+            // Actualizar el contenido del modal
+            $('#updateStatusModal .modal-title').text(`Actualizar estado de ${hostname}`);
+            $('#updateStatusModal .modal-body').html(`
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <p class="mt-2">Enviando ping a ${hostname}...</p>
+                </div>
+            `);
+            
+            // Realizar la petición AJAX
+            $.ajax({
+                url: `/monitor/${hostId}/ping`,
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    $('#updateStatusModal .modal-body').html(`
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle"></i> ${response.message}
+                        </div>
+                    `);
+                    
+                    // Actualizar el estado en la tabla
+                    const statusCell = $(`#host-${hostId} .status-cell`);
+                    statusCell.html(`
+                        <span class="badge bg-success">
+                            <i class="fas fa-check-circle"></i> Online
+                        </span>
+                    `);
+                },
+                error: function(xhr) {
+                    let errorMessage = 'Error al actualizar el estado';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                    
+                    $('#updateStatusModal .modal-body').html(`
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle"></i> ${errorMessage}
+                        </div>
+                    `);
+                    
+                    // Actualizar el estado en la tabla
+                    const statusCell = $(`#host-${hostId} .status-cell`);
+                    statusCell.html(`
+                        <span class="badge bg-danger">
+                            <i class="fas fa-times-circle"></i> Offline
+                        </span>
+                    `);
+                }
+            });
+        });
+        
+        // Cerrar el modal después de 2 segundos si la operación fue exitosa
+        $('#updateStatusModal').on('show.bs.modal', function() {
+            setTimeout(function() {
+                if ($('#updateStatusModal .alert-success').length > 0) {
+                    $('#updateStatusModal').modal('hide');
+                }
+            }, 2000);
+        });
     });
 </script>
+@endpush
 @endsection 
