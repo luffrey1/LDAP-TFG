@@ -480,5 +480,19 @@ code {
     background-color: #0a58ca !important;
     color: #ffffff !important;
 }
+
+#importForm .form-control, 
+#importForm .form-select {
+    background-color: #fff !important;
+    color: #000 !important;
+    border: 2px solid #dee2e6 !important;
+    font-weight: 500 !important;
+}
+#importForm .form-label, 
+#importForm .form-check-label {
+    color: #000 !important;
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+}
 </style>
 @endsection 
