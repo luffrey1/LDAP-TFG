@@ -15,20 +15,8 @@ const logger = require('morgan');
 const app = express();
 const server = require('http').createServer(app);
 const favicon = require('serve-favicon');
-const io = require('socket.io')(server, {
-  ...config.socketio,
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST", "OPTIONS"],
-    credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
-  },
-  transports: ['websocket'],
-  allowEIO3: true,
-  path: '/ssh/socket.io'
-});
 
-// Configurar sesión
+// Configurar sesión primero
 const session = require('express-session')({
   secret: 'mysecret',
   name: 'WebSSH2',
@@ -43,15 +31,29 @@ const session = require('express-session')({
   }
 });
 
+// Usar sesión antes de Socket.IO
+app.use(session);
+
+// Configurar Socket.IO después de la sesión
+const io = require('socket.io')(server, {
+  path: '/ssh/socket.io',
+  serveClient: false,
+  pingInterval: 10000,
+  pingTimeout: 5000,
+  cookie: false,
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST", "OPTIONS"],
+    credentials: true
+  }
+});
+
 // Middleware para debug
 app.use((req, res, next) => {
   console.log('Request path:', req.path);
   console.log('Session ID:', req.sessionID);
   next();
 });
-
-// Usar sesión
-app.use(session);
 
 // Configurar CORS
 app.use((req, res, next) => {
