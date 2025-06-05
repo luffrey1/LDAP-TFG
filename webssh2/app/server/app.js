@@ -16,7 +16,17 @@ const app = express();
 const server = require('http').createServer(app);
 const favicon = require('serve-favicon');
 const io = require('socket.io')(server, config.socketio);
-const session = require('express-session')(config.express);
+const session = require('express-session')({
+  ...config.express,
+  cookie: {
+    ...config.express.cookie,
+    path: '/ssh',
+    httpOnly: true,
+    secure: false,
+    maxAge: 86400000,
+    sameSite: 'lax'
+  }
+});
 
 const appSocket = require('./socket');
 const { setDefaultCredentials, basicAuth } = require('./util');
@@ -66,7 +76,17 @@ io.on('connection', appSocket);
 // socket.io
 // expose express session with socket.request.session
 io.use((socket, next) => {
-  socket.request.res ? session(socket.request, socket.request.res, next) : next(next); // eslint disable-line
+  if (socket.request.res) {
+    session(socket.request, socket.request.res, (err) => {
+      if (err) {
+        console.error('Session middleware error:', err);
+        return next(new Error('Session error'));
+      }
+      next();
+    });
+  } else {
+    next();
+  }
 });
 
 function countdownTimer() {
