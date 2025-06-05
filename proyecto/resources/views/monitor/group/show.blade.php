@@ -353,11 +353,6 @@
             currentHostname = null;
         });
 
-        // Cerrar alertas automáticamente después de 5 segundos
-        setTimeout(function() {
-            $('.alert').alert('close');
-        }, 5000);
-
         // Manejar el clic en el botón de ping
         $('.btn-ping').on('click', function() {
             const hostId = $(this).data('host-id');
@@ -376,11 +371,8 @@
             
             // Realizar la petición AJAX
             $.ajax({
-                url: `/monitor/${hostId}/ping`,
+                url: `/monitor/ping/${hostId}`,
                 method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                },
                 success: function(response) {
                     $('#updateStatusModal .modal-body').html(`
                         <div class="alert alert-success">
@@ -389,11 +381,11 @@
                     `);
                     
                     // Actualizar el estado en la tabla
-                    const statusCell = $(`#host-${hostId} .status-cell`);
-                    statusCell.html(`
-                        <span class="badge bg-success">
-                            <i class="fas fa-check-circle"></i> Online
-                        </span>
+                    const statusBadge = $(`#host-row-${hostId} .host-status`);
+                    statusBadge.removeClass('bg-danger bg-warning').addClass('bg-success');
+                    statusBadge.html(`
+                        <i class="fas fa-check-circle me-1"></i>
+                        Online
                     `);
                 },
                 error: function(xhr) {
@@ -409,11 +401,11 @@
                     `);
                     
                     // Actualizar el estado en la tabla
-                    const statusCell = $(`#host-${hostId} .status-cell`);
-                    statusCell.html(`
-                        <span class="badge bg-danger">
-                            <i class="fas fa-times-circle"></i> Offline
-                        </span>
+                    const statusBadge = $(`#host-row-${hostId} .host-status`);
+                    statusBadge.removeClass('bg-success bg-warning').addClass('bg-danger');
+                    statusBadge.html(`
+                        <i class="fas fa-times-circle me-1"></i>
+                        Offline
                     `);
                 }
             });
@@ -427,6 +419,11 @@
                 }
             }, 2000);
         });
+
+        // Cerrar alertas automáticamente después de 5 segundos
+        setTimeout(function() {
+            $('.alert').alert('close');
+        }, 5000);
     });
 </script>
 @endpush
