@@ -2,18 +2,85 @@
 
 @section('content')
 <style>
-    #grupos option {
-        padding: 8px !important;
-        margin: 2px !important;
-        border-left: 4px solid transparent !important;
-        transition: all 0.2s ease !important;
-    }
-    .form-control:disabled {
-        background-color: #f8f9fa !important;
-        color: #495057 !important;
-        border-color: #ced4da !important;
-        cursor: not-allowed !important;
-    }
+body, .container {
+    background: #181c24 !important;
+}
+.card {
+    background: #f4f7fb !important;
+    box-shadow: 0 4px 24px rgba(25,118,237,0.08), 0 1.5px 4px rgba(25,118,237,0.03);
+    border-radius: 0.7rem;
+    border: none;
+}
+.card-header {
+    background: #1976ed !important;
+    color: #fff !important;
+    border-radius: 0.7rem 0.7rem 0 0;
+    border: none;
+    font-size: 1.18rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+}
+.card-body {
+    background: transparent !important;
+}
+.form-label {
+    color: #1976ed !important;
+    font-size: 1.08rem;
+    font-weight: 700 !important;
+    letter-spacing: 0.01em;
+}
+.form-text, .invalid-feedback, .form-check-label, small {
+    color: #444 !important;
+    font-size: 1rem !important;
+    opacity: 0.92;
+}
+input.form-control, select.form-control, .form-select {
+    background: #f4f7fb !important;
+    color: #222 !important;
+    border: 1.5px solid #b3c6e6 !important;
+    border-radius: 0.4rem !important;
+    font-size: 1.08rem !important;
+    font-weight: 500;
+    box-shadow: none !important;
+    transition: border-color 0.2s;
+}
+input.form-control:focus, select.form-control:focus, .form-select:focus {
+    border-color: #1976ed !important;
+    box-shadow: 0 0 0 2px #1976ed22 !important;
+}
+.form-control:disabled, .form-select:disabled {
+    background-color: #e3edfa !important;
+    color: #888 !important;
+    border-color: #dbeafe !important;
+    cursor: not-allowed !important;
+}
+#grupos option {
+    padding: 8px !important;
+    margin: 2px !important;
+    border-left: 4px solid #1976ed !important;
+    background: #fafdff !important;
+    color: #1976ed !important;
+    font-weight: 600;
+    font-size: 1.01rem;
+    transition: all 0.2s ease !important;
+}
+.btn-primary {
+    font-size: 1.08rem;
+    font-weight: 700;
+    border-radius: 0.4rem;
+    background: #1976ed !important;
+    border: none;
+    color: #fff !important;
+    transition: background 0.2s;
+}
+.btn-primary:hover {
+    background: #1251a3 !important;
+}
+.alert {
+    font-size: 1.08rem;
+    border-radius: 0.5rem;
+    border: none;
+}
 </style>
 <div class="container">
     <div class="row justify-content-center">
