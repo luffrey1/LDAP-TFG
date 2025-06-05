@@ -16,7 +16,7 @@ const app = express();
 const server = require('http').createServer(app);
 const favicon = require('serve-favicon');
 
-// Configurar sesión primero
+// Configurar sesión
 const session = require('express-session')({
   secret: 'mysecret',
   name: 'WebSSH2',
@@ -25,19 +25,17 @@ const session = require('express-session')({
   cookie: {
     path: '/ssh',
     httpOnly: true,
-    secure: false,
-    maxAge: 86400000
+    secure: false
   }
 });
 
-// Usar sesión antes de Socket.IO
+// Usar sesión
 app.use(session);
 
-// Configurar Socket.IO después de la sesión
+// Configurar Socket.IO
 const io = require('socket.io')(server, {
   path: '/ssh/socket.io',
-  serveClient: false,
-  transports: ['websocket', 'polling']
+  transports: ['websocket']
 });
 
 // Middleware para debug
