@@ -329,7 +329,9 @@
         const startScanBtn = $('#startScanBtn');
 
         // Manejador del botón de escaneo global
-        startScanBtn.on('click', function() {
+        startScanBtn.on('click', function(e) {
+            e.preventDefault(); // Prevenir comportamiento por defecto
+            
             if (scanInProgress) return;
             
             // Deshabilitar botón y mostrar loading
@@ -341,10 +343,11 @@
             // Realizar el escaneo
             $.ajax({
                 url: '{{ route("monitor.ping-all") }}',
-                type: 'POST',
+                method: 'POST', // Especificar explícitamente el método
+                dataType: 'json',
                 data: {
                     _token: '{{ csrf_token() }}',
-                    scan_type: 'hostname'  // Por defecto escaneamos por hostname
+                    scan_type: 'hostname'
                 },
                 success: function(response) {
                     if (response.success) {
