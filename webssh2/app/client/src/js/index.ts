@@ -51,7 +51,7 @@ const socket = io({
   path: '/ssh/socket.io',
   transports: ['websocket'],
   upgrade: false,
-  rememberUpgrade: true,
+  rememberUpgrade: false,
   timeout: 60000,
   reconnection: true,
   reconnectionAttempts: 5,
@@ -62,7 +62,21 @@ const socket = io({
   },
   forceNew: true,
   autoConnect: true,
-  rejectUnauthorized: false
+  rejectUnauthorized: false,
+  transportOptions: {
+    websocket: {
+      protocols: ['websocket']
+    }
+  }
+});
+
+// Asegurarse de que solo se use WebSocket
+socket.io.engine.on('upgrade', () => {
+  console.log('Upgraded to WebSocket');
+});
+
+socket.io.engine.on('upgradeError', (err) => {
+  console.error('WebSocket upgrade error:', err);
 });
 
 // reauthenticate
