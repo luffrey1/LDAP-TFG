@@ -80,6 +80,9 @@ ENV BROADCAST_DRIVER=reverb
 COPY docker/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
+# Copiar configuración de Apache
+COPY docker/apache-config.conf /var/www/html/apache-config.conf
+
 # Copia tu proyecto Laravel (ajusta si el path es otro)
 WORKDIR /var/www/html
 COPY proyecto/ .
