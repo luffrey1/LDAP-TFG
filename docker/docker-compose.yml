@@ -117,7 +117,7 @@ services:
       retries: 3
       start_period: 30s
     command: >
-      bash -c "echo '172.20.0.4 ldap.tierno.es' >> /etc/hosts && docker-php-entrypoint apache2-foreground"
+      bash -c "echo '172.20.0.6 ldap.tierno.es' >> /etc/hosts && docker-php-entrypoint apache2-foreground"
   webssh2:
     build:
       context: ../webssh2
