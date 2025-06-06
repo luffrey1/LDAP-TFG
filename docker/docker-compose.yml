@@ -108,8 +108,7 @@ services:
       - ldap
       - mysql
     networks:
-      app-network:
-        ipv4_address: 172.20.0.6
+      - app-network
     healthcheck:
       test: ["CMD", "curl", "-f", "https://ldap.tierno.es/"]
       interval: 10s
@@ -126,8 +125,7 @@ services:
     restart: unless-stopped
     user: root
     networks:
-      app-network:
-        ipv4_address: 172.20.0.5
+      - app-network
     environment:
       - TZ=Europe/Madrid
     ports:
