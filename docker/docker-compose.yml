@@ -108,15 +108,16 @@ services:
       - ldap
       - mysql
     networks:
-      - app-network
+      app-network:
+        ipv4_address: 172.20.0.6
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/"]
+      test: ["CMD", "curl", "-f", "-L", "http://localhost/"]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 30s
     command: >
-      bash -c "echo '127.0.0.1 ldap.tierno.es' >> /etc/hosts && docker-php-entrypoint apache2-foreground"
+      bash -c "echo '172.20.0.6 ldap.tierno.es' >> /etc/hosts && docker-php-entrypoint apache2-foreground"
   webssh2:
     build:
       context: ../webssh2
@@ -126,7 +127,7 @@ services:
     user: root
     networks:
       app-network:
-        ipv4_address: 172.20.0.6
+        ipv4_address: 172.20.0.5
     environment:
       - TZ=Europe/Madrid
     ports:
