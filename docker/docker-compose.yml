@@ -110,7 +110,7 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "https://localhost/"]
+      test: ["CMD", "curl", "-f", "-k", "https://ldap.tierno.es/"]
       interval: 10s
       timeout: 5s
       retries: 3
