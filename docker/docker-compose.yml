@@ -110,13 +110,13 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "-k", "https://ldap.tierno.es/"]
+      test: ["CMD", "curl", "-f", "-k", "https://localhost/"]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 30s
     command: >
-      bash -c "echo '172.20.0.6 ldap.tierno.es' >> /etc/hosts && docker-php-entrypoint apache2-foreground"
+      bash -c "echo '127.0.0.1 ldap.tierno.es' >> /etc/hosts && docker-php-entrypoint apache2-foreground"
   webssh2:
     build:
       context: ../webssh2
