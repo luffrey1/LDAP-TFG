@@ -126,11 +126,7 @@ services:
     user: root
     networks:
       app-network:
-        driver: bridge
-        ipam:
-          config:
-            - subnet: 172.20.0.0/16
-              gateway: 172.20.0.1
+        ipv4_address: 172.20.0.6
     environment:
       - TZ=Europe/Madrid
     ports:
