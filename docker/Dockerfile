@@ -19,7 +19,15 @@ RUN apt-get update && apt-get install -y \
     arp-scan \
     nmap \
     sudo \
+    libssl-dev \
     && docker-php-ext-install ldap zip pdo pdo_mysql
+
+# Instalar soporte ECDSA para Apache
+RUN apt-get install -y libapache2-mod-ssl && \
+    a2enmod ssl && \
+    echo "SSLProtocol all -SSLv2 -SSLv3 -TLSv1 -TLSv1.1" >> /etc/apache2/conf-available/ssl-params.conf && \
+    echo "SSLCipherSuite ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-ECDSA-AES256-SHA384" >> /etc/apache2/conf-available/ssl-params.conf && \
+    a2enconf ssl-params
 
 # Instalar extensión pcntl para Laravel Reverb (Websockets)
 RUN docker-php-ext-configure pcntl --enable-pcntl \
