@@ -109,7 +109,9 @@ services:
       - mysql
     networks:
       - app-network
-      ipv4_address: 172.20.0.6
+    networks:
+      app-network:
+        ipv4_address: 172.20.0.6
     healthcheck:
       test: ["CMD", "curl", "-f", "https://ldap.tierno.es/"]
       interval: 10s
