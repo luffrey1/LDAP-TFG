@@ -111,7 +111,7 @@ services:
       app-network:
         ipv4_address: 172.20.0.6
     healthcheck:
-      test: ["CMD", "curl", "-f", "-L", "http://localhost/"]
+      test: ["CMD", "curl", "-f", "-L", "https://localhost/"]
       interval: 10s
       timeout: 5s
       retries: 3
