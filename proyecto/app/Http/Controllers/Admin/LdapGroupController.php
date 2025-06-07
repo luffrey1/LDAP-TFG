@@ -75,75 +75,71 @@ class LdapGroupController extends Controller
         try {
             Log::debug('Iniciando búsqueda de grupos LDAP');
             
-            $config = config('ldap.connections.default');
-            Log::debug('Configuración LDAP: ' . json_encode($config));
+            // Obtener la conexión LDAP nativa
+            $ldapConn = $this->connection->getLdapConnection()->getConnection();
             
-            $connection = new Connection([
-                'hosts' => $config['hosts'],
-                'port' => $config['port'],
-                'base_dn' => $config['base_dn'],
-                'username' => $config['username'],
-                'password' => $config['password'],
-                'use_ssl' => $config['use_ssl'],
-                'use_tls' => $config['use_tls'],
-                'timeout' => $config['timeout'],
-                'options' => $config['options'] ?? [
-                    LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
-                    LDAP_OPT_REFERRALS => 0,
-                    LDAP_OPT_PROTOCOL_VERSION => 3,
-                    LDAP_OPT_NETWORK_TIMEOUT => 5,
-                ],
-            ]);
-
-            Log::debug('Intentando conectar al servidor LDAP');
-            $connection->connect();
-            Log::debug('Conexión LDAP establecida');
-
-            $query = $connection->query()->in('ou=groups,dc=tierno,dc=es');
-            Log::debug('Query LDAP creada: ' . json_encode($query));
+            // Realizar la búsqueda de grupos
+            $search = ldap_search(
+                $ldapConn,
+                $this->groupsOu,
+                '(objectClass=posixGroup)',
+                ['cn', 'gidNumber', 'description', 'memberUid', 'member', 'uniqueMember']
+            );
             
-            $groups = $query->get();
-            Log::debug('Grupos encontrados (raw): ' . json_encode($groups));
-
-            if (empty($groups)) {
-                Log::warning('No se encontraron grupos LDAP');
-                return view('admin.groups.index', ['groups' => []]);
+            if (!$search) {
+                throw new Exception("Error al buscar grupos: " . ldap_error($ldapConn));
             }
-
-            $groupData = [];
-            foreach ($groups as $group) {
-                $groupData[] = [
-                    'dn' => is_array($group) ? $group['dn'] : $group->getDn(),
-                    'cn' => is_array($group) ? ($group['cn'][0] ?? '') : $group->getFirstAttribute('cn'),
-                    'description' => is_array($group) ? ($group['description'][0] ?? '') : $group->getFirstAttribute('description'),
-                    'gidNumber' => is_array($group) ? ($group['gidnumber'][0] ?? '') : $group->getFirstAttribute('gidnumber'),
-                    'memberCount' => is_array($group) ? (isset($group['member']) ? count($group['member']) : 0) : count($group->getAttribute('member', [])),
+            
+            $entries = ldap_get_entries($ldapConn, $search);
+            
+            if (!$entries) {
+                throw new Exception("Error al obtener resultados: " . ldap_error($ldapConn));
+            }
+            
+            $groups = [];
+            for ($i = 0; $i < $entries['count']; $i++) {
+                $entry = $entries[$i];
+                $group = [
+                    'dn' => $entry['dn'],
+                    'cn' => $entry['cn'][0] ?? '',
+                    'gidNumber' => $entry['gidnumber'][0] ?? '',
+                    'description' => $entry['description'][0] ?? '',
+                    'type' => $this->determineGroupType($entry),
+                    'members' => []
                 ];
+                
+                // Procesar miembros según el tipo de grupo
+                if (isset($entry['memberuid'])) {
+                    for ($j = 0; $j < $entry['memberuid']['count']; $j++) {
+                        $group['members'][] = $entry['memberuid'][$j];
+                    }
+                }
+                
+                $groups[] = $group;
             }
-
-            Log::debug('Datos de grupos procesados:', ['groups' => $groupData]);
-
-            return view('admin.groups.index', ['groups' => $groupData]);
-
-        } catch (\Exception $e) {
+            
+            return view('admin.groups.index', compact('groups'));
+            
+        } catch (Exception $e) {
             Log::error('Error al obtener grupos LDAP: ' . $e->getMessage());
             Log::error('Stack trace: ' . $e->getTraceAsString());
-
-            return view('admin.groups.index', [
-                'groups' => [],
-                'error' => true,
-                'errorMessage' => 'Error al obtener los grupos LDAP: ' . $e->getMessage(),
-                'diagnostico' => [
-                    'error' => $e->getMessage(),
-                    'hosts' => config('ldap.connections.default.hosts'),
-                    'port' => $config['port'],
-                    'base_dn' => config('ldap.connections.default.base_dn'),
-                    'username' => config('ldap.connections.default.username'),
-                    'use_ssl' => $config['use_ssl'],
-                    'use_tls' => $config['use_tls']
-                ]
-            ]);
+            return back()->with('error', 'Error al obtener grupos: ' . $e->getMessage());
         }
+    }
+
+    protected function determineGroupType($entry)
+    {
+        if (isset($entry['objectclass'])) {
+            $classes = array_map('strtolower', $entry['objectclass']);
+            if (in_array('posixgroup', $classes) && in_array('groupofuniquenames', $classes)) {
+                return 'combined';
+            } elseif (in_array('posixgroup', $classes)) {
+                return 'posix';
+            } elseif (in_array('groupofuniquenames', $classes)) {
+                return 'unique';
+            }
+        }
+        return 'unknown';
     }
 
     public function create()
