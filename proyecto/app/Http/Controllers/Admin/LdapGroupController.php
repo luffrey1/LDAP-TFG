@@ -16,10 +16,11 @@ class LdapGroupController extends Controller
     
     public function __construct()
     {
-        // Usar la configuración del archivo config/ldap.php
         $config = config('ldap.connections.default');
+        $this->baseDn = $config['base_dn'];
+        $this->groupsOu = "ou=groups,{$this->baseDn}";
         
-        Log::debug("Configurando conexión LDAP con los siguientes parámetros:", [
+        Log::debug("Configurando conexión LDAP con los siguientes parámetros: " . json_encode([
             'hosts' => $config['hosts'],
             'port' => 636,
             'base_dn' => $config['base_dn'],
@@ -27,47 +28,57 @@ class LdapGroupController extends Controller
             'use_ssl' => true,
             'use_tls' => false,
             'timeout' => $config['timeout']
-        ]);
-        
-        try {
-            $this->connection = new Connection([
-                'hosts' => $config['hosts'],
-                'port' => 636,
-                'base_dn' => $config['base_dn'],
-                'username' => $config['username'],
-                'password' => $config['password'],
-                'use_ssl' => true,
-                'use_tls' => false,
-                'timeout' => $config['timeout']
-            ]);
+        ]));
 
-            // Forzar la conexión SSL
-            $this->connection->getLdapConnection()->setOption(LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
-            
-            // Intentar conectar
-            $this->connection->connect();
-            
-            // Verificar la conexión con una búsqueda simple
-            $search = $this->connection->query()->where('objectclass', '*')->limit(1)->get();
-            
-            if (empty($search)) {
-                Log::error("No se pudo realizar la búsqueda de prueba en LDAP");
-                throw new Exception("No se pudo verificar la conexión LDAP");
+        $maxRetries = 3;
+        $retryCount = 0;
+        $lastError = null;
+
+        while ($retryCount < $maxRetries) {
+            try {
+                $this->connection = new Connection([
+                    'hosts' => $config['hosts'],
+                    'port' => 636,
+                    'base_dn' => $config['base_dn'],
+                    'username' => $config['username'],
+                    'password' => $config['password'],
+                    'use_ssl' => true,
+                    'use_tls' => false,
+                    'timeout' => $config['timeout']
+                ]);
+
+                // Forzar la conexión SSL
+                $this->connection->getLdapConnection()->setOption(LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
+                
+                // Intentar conectar
+                $this->connection->connect();
+                
+                // Verificar la conexión con una búsqueda simple
+                $search = $this->connection->query()->where('objectclass', '*')->limit(1)->get();
+                
+                if (empty($search)) {
+                    throw new Exception("No se pudo realizar la búsqueda de prueba en LDAP");
+                }
+                
+                Log::debug("Conexión LDAP establecida correctamente");
+                Log::debug("Búsqueda de prueba exitosa");
+                return; // Si llegamos aquí, la conexión fue exitosa
+                
+            } catch (Exception $e) {
+                $lastError = $e;
+                $retryCount++;
+                Log::warning("Intento {$retryCount} de {$maxRetries} fallido al conectar con LDAP: " . $e->getMessage());
+                
+                if ($retryCount < $maxRetries) {
+                    // Esperar un poco antes de reintentar (1 segundo por intento)
+                    sleep(1);
+                }
             }
-            
-            Log::debug("Conexión LDAP establecida correctamente");
-            Log::debug("Búsqueda de prueba exitosa");
-            
-        } catch (Exception $e) {
-            Log::error("Error al conectar con LDAP: " . $e->getMessage());
-            Log::error("Detalles de la conexión: " . json_encode([
-                'hosts' => $config['hosts'],
-                'port' => 636,
-                'base_dn' => $config['base_dn'],
-                'username' => $config['username']
-            ]));
-            throw $e;
         }
+
+        // Si llegamos aquí, todos los intentos fallaron
+        Log::error("Error al conectar con LDAP después de {$maxRetries} intentos: " . $lastError->getMessage());
+        throw $lastError;
     }
 
     public function index()
