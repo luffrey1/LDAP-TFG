@@ -10,6 +10,65 @@ use Exception;
 
 class LdapGroupController extends Controller
 {
+    protected $connection;
+    protected $baseDn = 'dc=tierno,dc=es';
+    protected $groupsOu = 'ou=groups,dc=tierno,dc=es';
+    
+    public function __construct()
+    {
+        // Usar la configuración del archivo config/ldap.php
+        $config = config('ldap.connections.default');
+        
+        Log::debug("Configurando conexión LDAP con los siguientes parámetros:", [
+            'hosts' => $config['hosts'],
+            'port' => 636,
+            'base_dn' => $config['base_dn'],
+            'username' => $config['username'],
+            'use_ssl' => true,
+            'use_tls' => false,
+            'timeout' => $config['timeout']
+        ]);
+        
+        $this->connection = new Connection([
+            'hosts' => $config['hosts'],
+            'port' => 636, // Forzar puerto 636 para LDAPS
+            'base_dn' => $config['base_dn'],
+            'username' => $config['username'],
+            'password' => $config['password'],
+            'use_ssl' => true, // Forzar SSL
+            'use_tls' => false, // Deshabilitar TLS
+            'timeout' => $config['timeout'],
+            'options' => [
+                LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                LDAP_OPT_REFERRALS => 0,
+                LDAP_OPT_PROTOCOL_VERSION => 3,
+                LDAP_OPT_NETWORK_TIMEOUT => 5,
+            ],
+        ]);
+        
+        // Intentar conectar y verificar la conexión
+        try {
+            $this->connection->connect();
+            Log::debug("Conexión LDAP establecida correctamente");
+            
+            // Verificar que podemos hacer una búsqueda básica
+            $testSearch = $this->connection->query()
+                ->in($this->baseDn)
+                ->limit(1)
+                ->get();
+                
+            Log::debug("Búsqueda de prueba exitosa");
+        } catch (Exception $e) {
+            Log::error("Error al conectar con LDAP: " . $e->getMessage());
+            Log::error("Detalles de la conexión: " . json_encode([
+                'hosts' => $config['hosts'],
+                'port' => 636,
+                'base_dn' => $config['base_dn'],
+                'username' => $config['username']
+            ]));
+        }
+    }
+
     public function index()
     {
         try {
@@ -108,48 +167,10 @@ class LdapGroupController extends Controller
             Log::debug('Iniciando creación de grupo LDAP');
             Log::debug('Datos del grupo: ' . json_encode($request->all()));
 
-            $config = config('ldap.connections.default');
-            Log::debug('Configuración LDAP: ' . json_encode($config));
-
             // Crear el grupo
             try {
-                // Crear el grupo directamente con LDAP nativo para mayor control
-                $ldapConn = ldap_connect('ldaps://' . config('ldap.connections.default.hosts')[0], config('ldap.connections.default.port'));
-                if (!$ldapConn) {
-                    Log::error("Error al crear conexión LDAP");
-                    throw new Exception("No se pudo establecer la conexión LDAP");
-                }
-                
-                Log::debug("Conexión LDAP creada, configurando opciones...");
-                
-                ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
-                ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
-                
-                // Intentar conexión SSL primero
-                if (config('ldap.connections.default.use_ssl', false)) {
-                    Log::debug("Configurando SSL para conexión LDAP...");
-                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
-                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
-                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
-                }
-                
-                Log::debug("Intentando bind con credenciales LDAP...");
-                Log::debug("Username: " . config('ldap.connections.default.username'));
-                
-                // Intentar bind con credenciales
-                $bind = @ldap_bind(
-                    $ldapConn, 
-                    config('ldap.connections.default.username'), 
-                    config('ldap.connections.default.password')
-                );
-                
-                if (!$bind) {
-                    $error = ldap_error($ldapConn);
-                    Log::error("Error al conectar al servidor LDAP: " . $error);
-                    Log::error("Código de error LDAP: " . ldap_errno($ldapConn));
-                    throw new Exception("No se pudo conectar al servidor LDAP: " . $error);
-                }
+                // Obtener la conexión LDAP
+                $ldapConn = $this->connection->getLdapConnection();
                 
                 Log::debug("Conexión LDAP establecida correctamente");
 
@@ -207,7 +228,6 @@ class LdapGroupController extends Controller
                     }
                 }
 
-                ldap_close($ldapConn);
                 return redirect()->route('admin.groups.index')
                     ->with('success', 'Grupo creado exitosamente');
             } catch (Exception $e) {
