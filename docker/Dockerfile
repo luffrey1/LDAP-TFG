@@ -120,9 +120,8 @@ COPY proyecto/public/documentos/index.html /var/www/html/public/documentos/horar
 COPY proyecto/public/documentos/.htaccess /var/www/html/public/documentos/.htaccess
 
 # Instala Node.js y npm
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs
-
 # Instala dependencias de frontend y compila assets
 WORKDIR /var/www/html
 RUN npm install && npm run build
