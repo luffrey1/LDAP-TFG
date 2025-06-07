@@ -9,13 +9,13 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="search">Buscar grupo:</label>
+                                <label for="search" class="text-white">Buscar grupo:</label>
                                 <input type="text" class="form-control" id="search" placeholder="Escribe para buscar...">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="type">Filtrar por tipo:</label>
+                                <label for="type" class="text-white">Filtrar por tipo:</label>
                                 <select class="form-control" id="type">
                                     <option value="all">Todos los tipos</option>
                                     <option value="posix">Posix Group</option>
@@ -76,19 +76,32 @@
                                     <tr>
                                         <td class="text-black">{{ $cn }}</td>
                                         <td>
-                                            @if($group['type'] === 'posix')
-                                                <span class="badge badge-info text-black">Posix</span>
-                                            @elseif($group['type'] === 'unique')
-                                                <span class="badge badge-success text-black">Unique Names</span>
-                                            @elseif($group['type'] === 'combined')
-                                                <span class="badge badge-warning text-black">Combinado</span>
-                                            @endif
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-sm btn-outline-info filter-type" data-type="posix" 
+                                                    onclick="filterByType('posix')" 
+                                                    style="{{ $group['type'] === 'posix' ? 'background-color: #17a2b8; color: white;' : '' }}">
+                                                    Posix
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-success filter-type" data-type="unique" 
+                                                    onclick="filterByType('unique')"
+                                                    style="{{ $group['type'] === 'unique' ? 'background-color: #28a745; color: white;' : '' }}">
+                                                    Unique Names
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-warning filter-type" data-type="combined" 
+                                                    onclick="filterByType('combined')"
+                                                    style="{{ $group['type'] === 'combined' ? 'background-color: #ffc107; color: black;' : '' }}">
+                                                    Combinado
+                                                </button>
+                                            </div>
                                         </td>
                                         <td>{{ $gidNumber }}</td>
                                         <td>{{ $description }}</td>
                                         <td>{{ count($group['members']) }}</td>
                                         <td>
                                             <div class="btn-group" role="group">
+                                                <a href="{{ route('admin.groups.show', ['cn' => $cn]) }}" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-eye"></i> Ver
+                                                </a>
                                                 @if(!empty($cn))
                                                 <a href="{{ route('admin.groups.edit', ['cn' => $cn]) }}" class="btn btn-sm btn-info">
                                                     <i class="fas fa-edit"></i> Editar
@@ -152,6 +165,11 @@ function confirmDelete(cn) {
     modal.modal('show');
 }
 
+function filterByType(type) {
+    typeSelect.value = type;
+    updateGroups();
+}
+
 let searchTimeout;
 const searchInput = document.getElementById('search');
 const typeSelect = document.getElementById('type');
@@ -170,26 +188,45 @@ function updateGroups() {
     .then(data => {
         groupsTable.innerHTML = data.groups.map(group => `
             <tr>
-                <td>${group.cn}</td>
+                <td class="text-black">${group.cn}</td>
                 <td>
-                    ${group.type === 'posix' ? '<span class="badge badge-info">Posix</span>' : 
-                      group.type === 'unique' ? '<span class="badge badge-success">Unique Names</span>' : 
-                      '<span class="badge badge-warning">Combinado</span>'}
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm btn-outline-info filter-type" data-type="posix" 
+                            onclick="filterByType('posix')"
+                            style="${group.type === 'posix' ? 'background-color: #17a2b8; color: white;' : ''}">
+                            Posix
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-success filter-type" data-type="unique" 
+                            onclick="filterByType('unique')"
+                            style="${group.type === 'unique' ? 'background-color: #28a745; color: white;' : ''}">
+                            Unique Names
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-warning filter-type" data-type="combined" 
+                            onclick="filterByType('combined')"
+                            style="${group.type === 'combined' ? 'background-color: #ffc107; color: black;' : ''}">
+                            Combinado
+                        </button>
+                    </div>
                 </td>
                 <td>${group.gidNumber || ''}</td>
                 <td>${group.description || ''}</td>
                 <td>${group.members.length}</td>
                 <td>
-                    <a href="/admin/groups/${group.cn}/edit" class="btn btn-sm btn-info">
-                        <i class="fas fa-edit"></i>
-                    </a>
-                    <form action="/admin/groups/${group.cn}" method="POST" class="d-inline">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Estás seguro?')">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </form>
+                    <div class="btn-group" role="group">
+                        <a href="/admin/groups/${group.cn}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-eye"></i> Ver
+                        </a>
+                        <a href="/admin/groups/${group.cn}/edit" class="btn btn-sm btn-info">
+                            <i class="fas fa-edit"></i> Editar
+                        </a>
+                        <form action="/admin/groups/${group.cn}" method="POST" class="d-inline">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Estás seguro?')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
                 </td>
             </tr>
         `).join('');

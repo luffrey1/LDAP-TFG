@@ -599,4 +599,50 @@ class LdapGroupController extends Controller
             throw $e;
         }
     }
+
+    public function show($cn)
+    {
+        try {
+            // Obtener la conexión LDAP nativa
+            $ldapConn = $this->connection->getLdapConnection()->getConnection();
+            
+            // Buscar el grupo
+            $filter = "(cn=$cn)";
+            $search = ldap_search($ldapConn, $this->groupsOu, $filter, ['*']);
+            
+            if (!$search) {
+                throw new Exception("Error al buscar grupo: " . ldap_error($ldapConn));
+            }
+            
+            $entries = ldap_get_entries($ldapConn, $search);
+            if ($entries['count'] == 0) {
+                return redirect()->route('admin.groups.index')
+                    ->with('error', 'Grupo no encontrado');
+            }
+            
+            // Obtener los datos del grupo
+            $entry = $entries[0];
+            $group = [
+                'cn' => $entry['cn'][0] ?? $cn,
+                'gidNumber' => isset($entry['gidnumber']) ? $entry['gidnumber'][0] : '',
+                'description' => isset($entry['description']) ? $entry['description'][0] : '',
+                'type' => $this->determineGroupType($entry),
+                'members' => []
+            ];
+            
+            // Procesar miembros según el tipo de grupo
+            if (isset($entry['memberuid'])) {
+                for ($i = 0; $i < $entry['memberuid']['count']; $i++) {
+                    $group['members'][] = $entry['memberuid'][$i];
+                }
+            }
+            
+            return view('admin.groups.show', compact('group'));
+            
+        } catch (\Exception $e) {
+            Log::error('Error al obtener grupo LDAP: ' . $e->getMessage());
+            return redirect()->route('admin.groups.index')
+                ->with('error', 'Error al obtener el grupo: ' . $e->getMessage());
+        }
+    }
 } 
