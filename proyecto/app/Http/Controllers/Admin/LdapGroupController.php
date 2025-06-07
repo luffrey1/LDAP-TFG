@@ -29,35 +29,35 @@ class LdapGroupController extends Controller
             'timeout' => $config['timeout']
         ]);
         
-        $this->connection = new Connection([
-            'hosts' => $config['hosts'],
-            'port' => 636, // Forzar puerto 636 para LDAPS
-            'base_dn' => $config['base_dn'],
-            'username' => $config['username'],
-            'password' => $config['password'],
-            'use_ssl' => true, // Forzar SSL
-            'use_tls' => false, // Deshabilitar TLS
-            'timeout' => $config['timeout'],
-            'options' => [
-                LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
-                LDAP_OPT_REFERRALS => 0,
-                LDAP_OPT_PROTOCOL_VERSION => 3,
-                LDAP_OPT_NETWORK_TIMEOUT => 5,
-            ],
-        ]);
-        
-        // Intentar conectar y verificar la conexión
         try {
-            $this->connection->connect();
-            Log::debug("Conexión LDAP establecida correctamente");
+            $this->connection = new Connection([
+                'hosts' => $config['hosts'],
+                'port' => 636,
+                'base_dn' => $config['base_dn'],
+                'username' => $config['username'],
+                'password' => $config['password'],
+                'use_ssl' => true,
+                'use_tls' => false,
+                'timeout' => $config['timeout']
+            ]);
+
+            // Forzar la conexión SSL
+            $this->connection->getLdapConnection()->setOption(LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
             
-            // Verificar que podemos hacer una búsqueda básica
-            $testSearch = $this->connection->query()
-                ->in($this->baseDn)
-                ->limit(1)
-                ->get();
-                
+            // Intentar conectar
+            $this->connection->connect();
+            
+            // Verificar la conexión con una búsqueda simple
+            $search = $this->connection->query()->where('objectclass', '*')->limit(1)->get();
+            
+            if ($search->isEmpty()) {
+                Log::error("No se pudo realizar la búsqueda de prueba en LDAP");
+                throw new Exception("No se pudo verificar la conexión LDAP");
+            }
+            
+            Log::debug("Conexión LDAP establecida correctamente");
             Log::debug("Búsqueda de prueba exitosa");
+            
         } catch (Exception $e) {
             Log::error("Error al conectar con LDAP: " . $e->getMessage());
             Log::error("Detalles de la conexión: " . json_encode([
@@ -66,6 +66,7 @@ class LdapGroupController extends Controller
                 'base_dn' => $config['base_dn'],
                 'username' => $config['username']
             ]));
+            throw $e;
         }
     }
 
