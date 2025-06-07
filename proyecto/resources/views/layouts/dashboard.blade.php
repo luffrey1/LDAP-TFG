@@ -146,6 +146,28 @@
             width: 70px;
         }
 
+        .sidebar-toggle {
+            position: absolute;
+            right: -12px;
+            top: 20px;
+            background: var(--primary-color);
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 2;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-toggle:hover {
+            background: var(--primary-dark);
+        }
+
         .sidebar.collapsed .nav-link span,
         .sidebar.collapsed .nav-item-header {
             display: none;
@@ -154,38 +176,6 @@
         .sidebar.collapsed .nav-link {
             justify-content: center;
             padding: 0.8rem;
-        }
-
-        .sidebar.collapsed .nav-link i {
-            margin-right: 0;
-        }
-
-        .sidebar-toggle {
-            position: fixed;
-            left: 250px;
-            top: 70px;
-            z-index: 2;
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 0 4px 4px 0;
-            padding: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .sidebar-toggle.collapsed {
-            left: 70px;
-        }
-
-        .content-wrapper {
-            margin-left: 250px;
-            transition: all 0.3s ease-in-out;
-            padding: 1.5rem;
-        }
-
-        .content-wrapper.expanded {
-            margin-left: 70px;
         }
 
         .sidebar-brand {
@@ -488,9 +478,8 @@
         @media (max-width: 768px) {
             .sidebar {
                 transform: translateX(-100%);
-                width: 250px;
             }
-
+            
             .sidebar.show {
                 transform: translateX(0);
             }
@@ -499,13 +488,8 @@
                 margin-left: 0;
             }
 
-            .sidebar-toggle {
-                display: block;
-                left: 0;
-            }
-
-            .sidebar-toggle.collapsed {
-                left: 0;
+            .content-wrapper.expanded {
+                margin-left: 0;
             }
         }
         
@@ -917,6 +901,38 @@
                 toastElement.remove();
             });
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.querySelector('.sidebar');
+            const contentWrapper = document.getElementById('contentWrapper');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const toggleIcon = sidebarToggle.querySelector('i');
+
+            // Función para colapsar/expandir el sidebar
+            function toggleSidebar() {
+                sidebar.classList.toggle('collapsed');
+                contentWrapper.classList.toggle('expanded');
+                toggleIcon.classList.toggle('fa-chevron-left');
+                toggleIcon.classList.toggle('fa-chevron-right');
+            }
+
+            // Evento click para el botón de toggle
+            sidebarToggle.addEventListener('click', toggleSidebar);
+
+            // En móviles, colapsar automáticamente
+            function handleResize() {
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.add('collapsed');
+                    contentWrapper.classList.add('expanded');
+                    toggleIcon.classList.remove('fa-chevron-left');
+                    toggleIcon.classList.add('fa-chevron-right');
+                }
+            }
+
+            // Ejecutar al cargar y cuando cambie el tamaño de la ventana
+            handleResize();
+            window.addEventListener('resize', handleResize);
+        });
     </script>
     
     <!-- FullCalendar JS -->
