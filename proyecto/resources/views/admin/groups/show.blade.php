@@ -53,9 +53,7 @@
                                     <table class="table table-bordered table-striped">
                                         <thead class="sticky-top bg-white">
                                             <tr>
-                                                <th>Usuario</th>
-                                                <th>Nombre</th>
-                                                <th>Apellidos</th>
+                                                <th>Usuario (UID)</th>
                                                 <th>Email</th>
                                             </tr>
                                         </thead>
@@ -63,8 +61,6 @@
                                             @foreach($group['members'] as $member)
                                                 <tr>
                                                     <td>{{ $member['uid'] }}</td>
-                                                    <td>{{ $member['givenname'] ?? '' }}</td>
-                                                    <td>{{ $member['sn'] ?? '' }}</td>
                                                     <td>{{ $member['mail'] ?? '' }}</td>
                                                 </tr>
                                             @endforeach
