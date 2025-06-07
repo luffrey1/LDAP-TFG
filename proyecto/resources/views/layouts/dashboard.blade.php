@@ -140,10 +140,33 @@
             position: fixed;
             left: 0;
             top: 56px;
+            overflow-x: hidden;
         }
 
         .sidebar.collapsed {
             width: 70px;
+        }
+
+        .sidebar-toggle {
+            position: absolute;
+            right: -12px;
+            top: 20px;
+            background: var(--primary-color);
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 2;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-toggle:hover {
+            background: var(--primary-dark);
         }
 
         .sidebar.collapsed .nav-link span,
@@ -160,24 +183,7 @@
             margin-right: 0;
         }
 
-        .sidebar-toggle {
-            position: fixed;
-            left: 250px;
-            top: 70px;
-            z-index: 2;
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 0 4px 4px 0;
-            padding: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .sidebar-toggle.collapsed {
-            left: 70px;
-        }
-
+        /* Content Wrapper */
         .content-wrapper {
             margin-left: 250px;
             transition: all 0.3s ease-in-out;
@@ -488,9 +494,8 @@
         @media (max-width: 768px) {
             .sidebar {
                 transform: translateX(-100%);
-                width: 250px;
             }
-
+            
             .sidebar.show {
                 transform: translateX(0);
             }
@@ -499,13 +504,8 @@
                 margin-left: 0;
             }
 
-            .sidebar-toggle {
-                display: block;
-                left: 0;
-            }
-
-            .sidebar-toggle.collapsed {
-                left: 0;
+            .content-wrapper.expanded {
+                margin-left: 0;
             }
         }
         
