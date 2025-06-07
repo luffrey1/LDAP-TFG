@@ -917,36 +917,6 @@
                 toastElement.remove();
             });
         }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            const sidebar = document.querySelector('.sidebar');
-            const contentWrapper = document.getElementById('contentWrapper');
-            const sidebarToggle = document.getElementById('sidebarToggle');
-            const toggleIcon = sidebarToggle.querySelector('i');
-
-            // Función para colapsar/expandir el sidebar
-            function toggleSidebar() {
-                sidebar.classList.toggle('collapsed');
-                contentWrapper.classList.toggle('expanded');
-                sidebarToggle.classList.toggle('collapsed');
-            }
-
-            // Evento click para el botón de toggle
-            sidebarToggle.addEventListener('click', toggleSidebar);
-
-            // En móviles, colapsar automáticamente
-            function handleResize() {
-                if (window.innerWidth <= 768) {
-                    sidebar.classList.add('collapsed');
-                    contentWrapper.classList.add('expanded');
-                    sidebarToggle.classList.add('collapsed');
-                }
-            }
-
-            // Ejecutar al cargar y cuando cambie el tamaño de la ventana
-            handleResize();
-            window.addEventListener('resize', handleResize);
-        });
     </script>
     
     <!-- FullCalendar JS -->
