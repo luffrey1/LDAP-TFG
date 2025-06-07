@@ -184,55 +184,74 @@ function updateGroups() {
     const search = searchInput.value;
     const type = typeSelect.value;
     
-    fetch(`{{ route('admin.groups.index') }}?search=${search}&type=${type}`, {
+    fetch(`{{ route('admin.groups.index') }}?search=${encodeURIComponent(search)}&type=${encodeURIComponent(type)}`, {
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
         }
     })
     .then(response => response.json())
     .then(data => {
-        groupsTable.innerHTML = data.groups.map(group => `
-            <tr>
-                <td class="text-black">${group.cn}</td>
-                <td>
-                    ${group.type === 'posix' ? 
-                        `<button type="button" class="btn btn-sm btn-info filter-type" data-type="posix" 
-                            onclick="filterByType('posix')">
-                            Posix
-                        </button>` :
-                    group.type === 'unique' ?
-                        `<button type="button" class="btn btn-sm btn-success filter-type" data-type="unique" 
-                            onclick="filterByType('unique')">
-                            Unique Names
-                        </button>` :
-                        `<button type="button" class="btn btn-sm btn-warning filter-type" data-type="combined" 
-                            onclick="filterByType('combined')">
-                            Combinado
-                        </button>`
-                    }
-                </td>
-                <td>${group.gidNumber || ''}</td>
-                <td>${group.description || ''}</td>
-                <td>${group.members.length}</td>
-                <td>
-                    <div class="btn-group" role="group">
-                        <a href="${showUrl}" class="btn btn-sm btn-primary">
-                            <i class="fas fa-eye"></i> Ver
-                        </a>
-                        <a href="${editUrl}" class="btn btn-sm btn-info">
-                            <i class="fas fa-edit"></i> Editar
-                        </a>
-                        <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete('${group.cn}')">
-                            <i class="fas fa-trash"></i> Eliminar
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
+        if (!data.groups) {
+            console.error('No groups data received');
+            return;
+        }
+
+        const container = document.querySelector('.container');
+        const showUrl = container.dataset.showUrl;
+        const editUrl = container.dataset.editUrl;
+        const deleteUrl = container.dataset.deleteUrl;
+
+        groupsTable.innerHTML = data.groups.map(group => {
+            const showUrlWithCn = showUrl.replace(':cn', group.cn);
+            const editUrlWithCn = editUrl.replace(':cn', group.cn);
+            
+            return `
+                <tr>
+                    <td class="text-black">${group.cn}</td>
+                    <td>
+                        ${group.type === 'posix' ? 
+                            `<button type="button" class="btn btn-sm btn-info filter-type" data-type="posix" 
+                                onclick="filterByType('posix')">
+                                Posix
+                            </button>` :
+                        group.type === 'unique' ?
+                            `<button type="button" class="btn btn-sm btn-success filter-type" data-type="unique" 
+                                onclick="filterByType('unique')">
+                                Unique Names
+                            </button>` :
+                            `<button type="button" class="btn btn-sm btn-warning filter-type" data-type="combined" 
+                                onclick="filterByType('combined')">
+                                Combinado
+                            </button>`
+                        }
+                    </td>
+                    <td>${group.gidNumber || ''}</td>
+                    <td>${group.description || ''}</td>
+                    <td>${group.members ? group.members.length : 0}</td>
+                    <td>
+                        <div class="btn-group" role="group">
+                            <a href="${showUrlWithCn}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-eye"></i> Ver
+                            </a>
+                            <a href="${editUrlWithCn}" class="btn btn-sm btn-info">
+                                <i class="fas fa-edit"></i> Editar
+                            </a>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete('${group.cn}')">
+                                <i class="fas fa-trash"></i> Eliminar
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('') || '<tr><td colspan="6" class="text-center">No hay grupos disponibles</td></tr>';
     })
-    .catch(error => console.error('Error:', error));
+    .catch(error => {
+        console.error('Error:', error);
+        groupsTable.innerHTML = '<tr><td colspan="6" class="text-center">Error al cargar los grupos</td></tr>';
+    });
 }
 
+// Add event listeners for search and type filter
 searchInput.addEventListener('input', function() {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(updateGroups, 300);
