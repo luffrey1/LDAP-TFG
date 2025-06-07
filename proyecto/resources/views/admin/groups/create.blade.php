@@ -6,49 +6,205 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">Crear Nuevo Grupo LDAP</h3>
+                    <h4>Crear Nuevo Grupo</h4>
                 </div>
                 <div class="card-body">
-                    @if(session('error'))
-                        <div class="alert alert-danger">
-                            {{ session('error') }}
-                        </div>
-                    @endif
+                    <ul class="nav nav-tabs" id="groupTabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="posix-tab" data-bs-toggle="tab" href="#posix" role="tab" aria-controls="posix" aria-selected="true">
+                                PosixGroup
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="unique-tab" data-bs-toggle="tab" href="#unique" role="tab" aria-controls="unique" aria-selected="false">
+                                GroupOfUniqueNames
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="combined-tab" data-bs-toggle="tab" href="#combined" role="tab" aria-controls="combined" aria-selected="false">
+                                Combinado
+                            </a>
+                        </li>
+                    </ul>
 
-                    <form action="{{ route('admin.groups.store') }}" method="POST">
-                        @csrf
-                        <div class="form-group text-white">
-                            <label for="cn">Nombre del Grupo (CN)</label>
-                            <input type="text" class="form-control @error('cn') is-invalid @enderror" id="cn" name="cn" value="{{ old('cn') }}" required>
-                            @error('cn')
-                                <span class="invalid-feedback">{{ $message }}</span>
-                            @enderror
+                    <div class="tab-content mt-3" id="groupTabsContent">
+                        <!-- PosixGroup -->
+                        <div class="tab-pane fade show active" id="posix" role="tabpanel" aria-labelledby="posix-tab">
+                            <form id="posixForm" class="group-form">
+                                <input type="hidden" name="type" value="posix">
+                                <div class="form-group">
+                                    <label>Nombre del Grupo</label>
+                                    <input type="text" name="cn" class="form-control" required 
+                                           pattern="[a-zA-Z0-9\-_]+" 
+                                           title="Solo letras, números, guiones y guiones bajos">
+                                </div>
+                                <div class="form-group">
+                                    <label>GID Number (opcional)</label>
+                                    <input type="number" name="gidNumber" class="form-control" min="1000">
+                                </div>
+                                <div class="form-group">
+                                    <label>Descripción</label>
+                                    <input type="text" name="description" class="form-control">
+                                </div>
+                                <button type="submit" class="btn btn-primary">Crear Grupo</button>
+                            </form>
                         </div>
 
-                        <div class="form-group text-white">
-                            <label for="gidNumber">GID (opcional - se asignará automáticamente si se deja vacío)</label>
-                            <input type="number" class="form-control @error('gidNumber') is-invalid @enderror" id="gidNumber" name="gidNumber" value="{{ old('gidNumber') }}">
-                            @error('gidNumber')
-                                <span class="invalid-feedback">{{ $message }}</span>
-                            @enderror
+                        <!-- GroupOfUniqueNames -->
+                        <div class="tab-pane fade" id="unique" role="tabpanel" aria-labelledby="unique-tab">
+                            <form id="uniqueForm" class="group-form">
+                                <input type="hidden" name="type" value="unique">
+                                <div class="form-group">
+                                    <label>Nombre del Grupo</label>
+                                    <input type="text" name="cn" class="form-control" required 
+                                           pattern="[a-zA-Z0-9\-_]+" 
+                                           title="Solo letras, números, guiones y guiones bajos">
+                                </div>
+                                <div class="form-group">
+                                    <label>Descripción</label>
+                                    <input type="text" name="description" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Miembros</label>
+                                    <select name="members[]" class="form-control select2" multiple>
+                                        <!-- Se llenará vía AJAX -->
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Crear Grupo</button>
+                            </form>
                         </div>
 
-                        <div class="form-group text-white">
-                            <label for="description">Descripción (opcional)</label>
-                            <input type="text" class="form-control @error('description') is-invalid @enderror" id="description" name="description" value="{{ old('description') }}">
-                            @error('description')
-                                <span class="invalid-feedback">{{ $message }}</span>
-                            @enderror
+                        <!-- Combinado -->
+                        <div class="tab-pane fade" id="combined" role="tabpanel" aria-labelledby="combined-tab">
+                            <form id="combinedForm" class="group-form">
+                                <input type="hidden" name="type" value="combined">
+                                <div class="form-group">
+                                    <label>Nombre del Grupo</label>
+                                    <input type="text" name="cn" class="form-control" required 
+                                           pattern="[a-zA-Z0-9\-_]+" 
+                                           title="Solo letras, números, guiones y guiones bajos">
+                                </div>
+                                <div class="form-group">
+                                    <label>GID Number (opcional)</label>
+                                    <input type="number" name="gidNumber" class="form-control" min="1000">
+                                </div>
+                                <div class="form-group">
+                                    <label>Descripción</label>
+                                    <input type="text" name="description" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Miembros</label>
+                                    <select name="members[]" class="form-control select2" multiple>
+                                        <!-- Se llenará vía AJAX -->
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Crear Grupo</button>
+                            </form>
                         </div>
-
-                        <div class="form-group text-white">
-                            <button type="submit" class="btn btn-primary">Crear Grupo</button>
-                            <a href="{{ route('admin.groups.index') }}" class="btn btn-secondary">Cancelar</a>
-                        </div>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Inicializar Select2
+    $('.select2').select2({
+        placeholder: 'Selecciona los miembros',
+        allowClear: true
+    });
+
+    // Cargar usuarios vía AJAX
+    function loadUsers() {
+        $.ajax({
+            url: '{{ route("admin.users.list") }}',
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(users) {
+                const options = users.map(user => 
+                    `<option value="${user.dn}">${user.cn}</option>`
+                ).join('');
+                
+                $('.select2').html(options);
+            },
+            error: function(xhr) {
+                console.error('Error al cargar usuarios:', xhr);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'No se pudieron cargar los usuarios'
+                });
+            }
+        });
+    }
+
+    // Cargar usuarios al iniciar y al cambiar de pestaña
+    loadUsers();
+    $('a[data-bs-toggle="tab"]').on('shown.bs.tab', loadUsers);
+
+    // Manejar envío de formularios
+    $('.group-form').on('submit', function(e) {
+        e.preventDefault();
+        const form = $(this);
+        const submitBtn = form.find('button[type="submit"]');
+        
+        submitBtn.prop('disabled', true);
+        
+        $.ajax({
+            url: '/admin/groups',
+            method: 'POST',
+            data: form.serialize(),
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Éxito',
+                        text: response.message,
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => {
+                        window.location.href = '/admin/groups';
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message
+                    });
+                }
+            },
+            error: function(xhr) {
+                const response = xhr.responseJSON;
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: response?.message || 'Error al crear el grupo'
+                });
+            },
+            complete: function() {
+                submitBtn.prop('disabled', false);
+            }
+        });
+    });
+});
+</script>
+@endpush
+
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+.select2-container {
+    width: 100% !important;
+}
+</style>
+@endpush
 @endsection 

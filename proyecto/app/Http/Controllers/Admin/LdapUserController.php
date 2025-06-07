@@ -2829,4 +2829,63 @@ class LdapUserController extends Controller
             return $results;
         }
     }
+
+    public function list()
+    {
+        try {
+            $config = config('ldap.connections.default');
+            
+            // Crear conexión LDAP nativa con SSL
+            $ldapConn = ldap_connect('ldaps://' . $config['hosts'][0], 636);
+            if (!$ldapConn) {
+                throw new Exception("No se pudo establecer la conexión LDAP");
+            }
+            
+            ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
+            ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
+            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
+            
+            // Configurar SSL
+            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
+            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
+            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
+            
+            // Intentar bind con credenciales
+            $bind = @ldap_bind(
+                $ldapConn, 
+                $config['username'], 
+                $config['password']
+            );
+            
+            if (!$bind) {
+                throw new Exception("No se pudo conectar al servidor LDAP: " . ldap_error($ldapConn));
+            }
+
+            // Buscar usuarios
+            $filter = "(objectClass=inetOrgPerson)";
+            $search = ldap_search($ldapConn, "ou=people,dc=tierno,dc=es", $filter, ['cn', 'dn']);
+            
+            if (!$search) {
+                throw new Exception("Error al buscar usuarios: " . ldap_error($ldapConn));
+            }
+            
+            $entries = ldap_get_entries($ldapConn, $search);
+            $users = [];
+            
+            for ($i = 0; $i < $entries['count']; $i++) {
+                $users[] = [
+                    'dn' => $entries[$i]['dn'],
+                    'cn' => $entries[$i]['cn'][0] ?? 'Sin nombre'
+                ];
+            }
+            
+            ldap_close($ldapConn);
+            
+            return response()->json($users);
+            
+        } catch (\Exception $e) {
+            Log::error('Error al listar usuarios LDAP: ' . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
 } 

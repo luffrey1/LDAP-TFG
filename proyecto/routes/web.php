@@ -141,6 +141,7 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
         Route::put('/{dn}', [App\Http\Controllers\Admin\LdapUserController::class, 'update'])->name('update');
         Route::delete('/{dn}', [App\Http\Controllers\Admin\LdapUserController::class, 'destroy'])->name('destroy');
         Route::post('/{dn}/reset-password', [App\Http\Controllers\Admin\LdapUserController::class, 'resetPassword'])->name('reset-password');
+        Route::get('/list', [App\Http\Controllers\Admin\LdapUserController::class, 'list'])->name('list');
     });
 
     Route::prefix('admin/groups')->name('admin.groups.')->group(function () {
@@ -230,5 +231,7 @@ Route::post('/api/debug/log', function(\Illuminate\Http\Request $request) {
 // Route::post('/terminal/send', [App\Http\Controllers\MonitorController::class, 'terminalSend'])->name('terminal.send');
 
 Route::get('/monitor/estado-global', [App\Http\Controllers\MonitorController::class, 'healthStatus'])->name('monitor.health');
+
+Route::get('/admin/users/list', [LdapUserController::class, 'list'])->name('admin.users.list');
 
 
