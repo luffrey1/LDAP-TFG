@@ -1,9 +1,7 @@
-FROM php:8.2-apache-bullseye
-
+FROM php:8.2-apache
 # Habilitar repositorios contrib y non-free
 RUN sed -i 's/deb.debian.org/deb.debian.org/g' /etc/apt/sources.list && \
     sed -i 's/main/main contrib non-free/g' /etc/apt/sources.list
-
 # Instala dependencias necesarias
 RUN apt-get update && apt-get install -y \
     libldap2-dev \
