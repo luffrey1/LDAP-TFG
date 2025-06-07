@@ -7,9 +7,12 @@ use Illuminate\Http\Request;
 use LdapRecord\Connection;
 use Illuminate\Support\Facades\Log;
 use Exception;
+use Illuminate\Foundation\Validation\ValidatesRequests;
 
 class LdapGroupController extends Controller
 {
+    use ValidatesRequests;
+    
     protected $connection;
     protected $baseDn = 'dc=tierno,dc=es';
     protected $groupsOu = 'ou=groups,dc=tierno,dc=es';
