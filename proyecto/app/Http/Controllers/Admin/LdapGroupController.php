@@ -84,7 +84,7 @@ class LdapGroupController extends Controller
         throw $lastError;
     }
 
-    public function index()
+    public function index(Request $request)
     {
         try {
             Log::debug('Iniciando búsqueda de grupos LDAP');
@@ -92,12 +92,36 @@ class LdapGroupController extends Controller
             // Obtener la conexión LDAP nativa
             $ldapConn = $this->connection->getLdapConnection()->getConnection();
             
+            // Construir el filtro base
+            $filter = '(objectClass=*)';
+            
+            // Aplicar filtro por tipo si se especifica
+            if ($request->has('type') && $request->type !== 'all') {
+                switch ($request->type) {
+                    case 'posix':
+                        $filter = '(objectClass=posixGroup)';
+                        break;
+                    case 'unique':
+                        $filter = '(objectClass=groupOfUniqueNames)';
+                        break;
+                    case 'combined':
+                        $filter = '(&(objectClass=posixGroup)(objectClass=groupOfUniqueNames))';
+                        break;
+                }
+            }
+            
+            // Aplicar búsqueda por nombre si se especifica
+            if ($request->has('search') && !empty($request->search)) {
+                $searchTerm = $request->search;
+                $filter = "(&{$filter}(cn=*{$searchTerm}*))";
+            }
+            
             // Realizar la búsqueda de grupos
             $search = ldap_search(
                 $ldapConn,
                 $this->groupsOu,
-                '(objectClass=posixGroup)',
-                ['cn', 'gidNumber', 'description', 'memberUid', 'member', 'uniqueMember']
+                $filter,
+                ['cn', 'gidNumber', 'description', 'memberUid', 'member', 'uniqueMember', 'objectClass']
             );
             
             if (!$search) {
@@ -130,6 +154,11 @@ class LdapGroupController extends Controller
                 }
                 
                 $groups[] = $group;
+            }
+            
+            // Si es una petición AJAX, devolver JSON
+            if ($request->ajax()) {
+                return response()->json(['groups' => $groups]);
             }
             
             return view('admin.groups.index', compact('groups'));
