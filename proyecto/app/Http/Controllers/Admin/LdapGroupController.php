@@ -227,18 +227,16 @@ class LdapGroupController extends Controller
                 }
 
                 // Redirigir a la lista de grupos
-                return redirect()->route('admin.groups.index');
+                return redirect()->route('admin.groups.index')->with('success', 'Grupo creado exitosamente');
+
             } catch (Exception $e) {
                 Log::error("Error al crear grupo: " . $e->getMessage());
-                throw new Exception("Error al crear el grupo: " . $e->getMessage());
+                return back()->with('error', 'Error al crear el grupo: ' . $e->getMessage());
             }
 
         } catch (\Exception $e) {
             Log::error('Error al crear grupo LDAP: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al crear grupo: ' . $e->getMessage()
-            ], 500);
+            return back()->with('error', 'Error al crear el grupo: ' . $e->getMessage());
         }
     }
 
