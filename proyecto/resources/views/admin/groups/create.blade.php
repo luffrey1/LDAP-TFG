@@ -46,6 +46,13 @@
                                     <label>Descripción</label>
                                     <input type="text" name="description" class="form-control">
                                 </div>
+                                <div class="form-group text-white">
+                                    <label>Miembros</label>
+                                    <select name="members[]" class="form-control select2" multiple>
+                                        <option value="cn=nobody">nobody</option>
+                                    </select>
+                                    <small class="form-text text-muted">Se creará el grupo con un miembro inicial. Podrás añadir más miembros después.</small>
+                                </div>
                                 <button type="submit" class="btn btn-primary">Crear Grupo</button>
                             </form>
                         </div>
@@ -67,8 +74,9 @@
                                 <div class="form-group text-white">
                                     <label>Miembros</label>
                                     <select name="members[]" class="form-control select2" multiple>
-                                        <!-- Se llenará vía AJAX -->
+                                        <option value="cn=nobody">nobody</option>
                                     </select>
+                                    <small class="form-text text-muted">Se creará el grupo con un miembro inicial. Podrás añadir más miembros después.</small>
                                 </div>
                                 <button type="submit" class="btn btn-primary">Crear Grupo</button>
                             </form>
@@ -95,8 +103,9 @@
                                 <div class="form-group text-white">
                                     <label>Miembros</label>
                                     <select name="members[]" class="form-control select2" multiple>
-                                        <!-- Se llenará vía AJAX -->
+                                        <option value="cn=nobody">nobody</option>
                                     </select>
+                                    <small class="form-text text-muted">Se creará el grupo con un miembro inicial. Podrás añadir más miembros después.</small>
                                 </div>
                                 <button type="submit" class="btn btn-primary">Crear Grupo</button>
                             </form>
@@ -117,36 +126,6 @@ $(document).ready(function() {
         placeholder: 'Selecciona los miembros',
         allowClear: true
     });
-
-    // Cargar usuarios vía AJAX
-    function loadUsers() {
-        $.ajax({
-            url: '{{ route("admin.users.list") }}',
-            method: 'GET',
-            headers: {
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-            },
-            success: function(users) {
-                const options = users.map(user => 
-                    `<option value="${user.dn}">${user.cn}</option>`
-                ).join('');
-                
-                $('.select2').html(options);
-            },
-            error: function(xhr) {
-                console.error('Error al cargar usuarios:', xhr);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'No se pudieron cargar los usuarios'
-                });
-            }
-        });
-    }
-
-    // Cargar usuarios al iniciar y al cambiar de pestaña
-    loadUsers();
-    $('a[data-bs-toggle="tab"]').on('shown.bs.tab', loadUsers);
 
     // Manejar envío de formularios
     $('.group-form').on('submit', function(e) {
