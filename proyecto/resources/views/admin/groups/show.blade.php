@@ -26,11 +26,11 @@
                                     <th>Tipo:</th>
                                     <td>
                                         @if($group['type'] === 'posix')
-                                            <span class="badge badge-info">Posix</span>
+                                            <span class="badge badge-info text-black">Posix</span>
                                         @elseif($group['type'] === 'unique')
-                                            <span class="badge badge-success">Unique Names</span>
+                                            <span class="badge badge-success text-black">Unique Names</span>
                                         @elseif($group['type'] === 'combined')
-                                            <span class="badge badge-warning">Combinado</span>
+                                            <span class="badge badge-warning text-black">Combinado</span>
                                         @endif
                                     </td>
                                 </tr>
@@ -41,8 +41,8 @@
                                 </tr>
                                 @endif
                                 <tr>
-                                    <th>Descripción:</th>
-                                    <td>{{ $group['description'] ?? 'Sin descripción' }}</td>
+                                    <th class="text-black"> Descripción:</th>
+                                    <td class="text-black">{{ $group['description'] ?? 'Sin descripción' }}</td>
                                 </tr>
                             </table>
                         </div>
