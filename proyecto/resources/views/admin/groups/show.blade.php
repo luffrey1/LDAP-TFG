@@ -26,11 +26,11 @@
                                     <th>Tipo:</th>
                                     <td>
                                         @if($group['type'] === 'posix')
-                                            <span class="badge badge-info text-black">Posix</span>
+                                            <button class="btn btn-sm btn-info text-white">Posix</button>
                                         @elseif($group['type'] === 'unique')
-                                            <span class="badge badge-success text-black">Unique Names</span>
+                                            <button class="btn btn-sm btn-success text-white">Unique Names</button>
                                         @elseif($group['type'] === 'combined')
-                                            <span class="badge badge-warning text-black">Combinado</span>
+                                            <button class="btn btn-sm btn-warning text-white">Combinado</button>
                                         @endif
                                     </td>
                                 </tr>
