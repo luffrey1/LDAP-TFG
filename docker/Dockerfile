@@ -122,9 +122,15 @@ COPY proyecto/public/documentos/.htaccess /var/www/html/public/documentos/.htacc
 # Instala Node.js y npm
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs
+
 # Instala dependencias de frontend y compila assets
 WORKDIR /var/www/html
-RUN npm install && npm run build
+RUN npm install && \
+    npm install vite --save-dev && \
+    chown -R www-data:www-data /var/www/html && \
+    chmod -R 775 /var/www/html/node_modules && \
+    chmod -R 775 /var/www/html/vendor && \
+    npm run build
 
 # Puertos
 EXPOSE 80
