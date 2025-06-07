@@ -1,10 +1,15 @@
 @extends('layouts.dashboard')
 
 @section('content')
+@php
+    $showUrl = route('admin.groups.show', ['cn' => ':cn']);
+    $editUrl = route('admin.groups.edit', ['cn' => ':cn']);
+    $deleteUrl = route('admin.groups.destroy', ['cn' => ':cn']);
+@endphp
 <div class="container" 
-    data-show-url="{{ route('admin.groups.show', ['cn' => ':cn']) }}"
-    data-edit-url="{{ route('admin.groups.edit', ['cn' => ':cn']) }}"
-    data-delete-url="{{ route('admin.groups.destroy', ['cn' => ':cn']) }}">
+    data-show-url="{{ $showUrl }}"
+    data-edit-url="{{ $editUrl }}"
+    data-delete-url="{{ $deleteUrl }}">
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="card">
@@ -102,11 +107,11 @@
                                         <td>{{ count($group['members']) }}</td>
                                         <td>
                                             <div class="btn-group" role="group">
-                                                <a href="{{ route('admin.groups.show', ['cn' => $group['cn']]) }}" class="btn btn-sm btn-primary">
+                                                <a href="{{ str_replace(':cn', $group['cn'], $showUrl) }}" class="btn btn-sm btn-primary">
                                                     <i class="fas fa-eye"></i> Ver
                                                 </a>
                                                 @if(!empty($group['cn']))
-                                                <a href="{{ route('admin.groups.edit', ['cn' => $group['cn']]) }}" class="btn btn-sm btn-info">
+                                                <a href="{{ str_replace(':cn', $group['cn'], $editUrl) }}" class="btn btn-sm btn-info">
                                                     <i class="fas fa-edit"></i> Editar
                                                 </a>
                                                 @if (!in_array($group['cn'], ['admin', 'ldapadmins', 'sudo']))
