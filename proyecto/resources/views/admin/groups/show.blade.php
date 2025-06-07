@@ -62,7 +62,7 @@
                                                 <tr>
                                                     <td>{{ $member }}</td>
                                                     <td>
-                                                        <a href="{{ route('admin.users.show', ['uid' => $member]) }}" class="btn btn-sm btn-info">
+                                                        <a href="{{ route('admin.users.show', ['dn' => $member]) }}" class="btn btn-sm btn-info">
                                                             <i class="fas fa-eye"></i> Ver
                                                         </a>
                                                     </td>
