@@ -20,14 +20,14 @@ class LdapGroupController extends Controller
             
             $connection = new Connection([
                 'hosts' => $config['hosts'],
-                'port' => 636, // Forzar puerto 636 para LDAPS
+                'port' => $config['port'],
                 'base_dn' => $config['base_dn'],
                 'username' => $config['username'],
                 'password' => $config['password'],
-                'use_ssl' => true, // Forzar SSL
-                'use_tls' => false, // Deshabilitar TLS
+                'use_ssl' => $config['use_ssl'],
+                'use_tls' => $config['use_tls'],
                 'timeout' => $config['timeout'],
-                'options' => [
+                'options' => $config['options'] ?? [
                     LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
                     LDAP_OPT_REFERRALS => 0,
                     LDAP_OPT_PROTOCOL_VERSION => 3,
@@ -76,11 +76,11 @@ class LdapGroupController extends Controller
                 'diagnostico' => [
                     'error' => $e->getMessage(),
                     'hosts' => config('ldap.connections.default.hosts'),
-                    'port' => 636,
+                    'port' => $config['port'],
                     'base_dn' => config('ldap.connections.default.base_dn'),
                     'username' => config('ldap.connections.default.username'),
-                    'use_ssl' => true,
-                    'use_tls' => false
+                    'use_ssl' => $config['use_ssl'],
+                    'use_tls' => $config['use_tls']
                 ]
             ]);
         }
@@ -114,7 +114,7 @@ class LdapGroupController extends Controller
             // Crear el grupo
             try {
                 // Crear el grupo directamente con LDAP nativo para mayor control
-                $ldapConn = ldap_connect('ldaps://' . $config['hosts'][0], 636);
+                $ldapConn = ldap_connect('ldaps://' . $config['hosts'][0], $config['port']);
                 if (!$ldapConn) {
                     Log::error("Error al crear conexión LDAP");
                     throw new Exception("No se pudo establecer la conexión LDAP");
@@ -122,16 +122,17 @@ class LdapGroupController extends Controller
                 
                 Log::debug("Conexión LDAP creada, configurando opciones...");
                 
-                // Configurar opciones básicas
                 ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
                 ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
-                
-                // Forzar configuración SSL independientemente de la configuración del archivo
-                Log::debug("Configurando SSL para conexión LDAP...");
                 ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
+                
+                // Configurar SSL
+                if ($config['use_ssl']) {
+                    Log::debug("Configurando SSL para conexión LDAP...");
+                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
+                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
+                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
+                }
                 
                 // Intentar bind con credenciales
                 Log::debug("Intentando bind con credenciales LDAP...");
@@ -149,10 +150,10 @@ class LdapGroupController extends Controller
                     Log::error("Código de error LDAP: " . ldap_errno($ldapConn));
                     Log::error("Configuración usada: " . json_encode([
                         'host' => $config['hosts'][0],
-                        'port' => 636,
+                        'port' => $config['port'],
                         'username' => $config['username'],
-                        'use_ssl' => true,
-                        'use_tls' => false
+                        'use_ssl' => $config['use_ssl'],
+                        'use_tls' => $config['use_tls']
                     ]));
                     throw new Exception("No se pudo conectar al servidor LDAP: " . $error);
                 }
