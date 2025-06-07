@@ -636,16 +636,35 @@ class LdapGroupController extends Controller
             // Procesar miembros según el tipo de grupo
             if (isset($entry['memberuid'])) {
                 for ($i = 0; $i < $entry['memberuid']['count']; $i++) {
-                    $group['members'][] = $entry['memberuid'][$i];
+                    $uid = $entry['memberuid'][$i];
+                    // Buscar información adicional del usuario
+                    $userSearch = ldap_search($ldapConn, "ou=people,{$this->baseDn}", "(uid=$uid)", ['uid', 'cn', 'mail', 'givenname', 'sn']);
+                    if ($userSearch) {
+                        $userEntries = ldap_get_entries($ldapConn, $userSearch);
+                        if ($userEntries['count'] > 0) {
+                            $userEntry = $userEntries[0];
+                            $group['members'][] = [
+                                'uid' => $uid,
+                                'cn' => $userEntry['cn'][0] ?? $uid,
+                                'mail' => $userEntry['mail'][0] ?? '',
+                                'givenname' => $userEntry['givenname'][0] ?? '',
+                                'sn' => $userEntry['sn'][0] ?? ''
+                            ];
+                        } else {
+                            $group['members'][] = ['uid' => $uid];
+                        }
+                    } else {
+                        $group['members'][] = ['uid' => $uid];
+                    }
                 }
             }
             
             return view('admin.groups.show', compact('group'));
             
-        } catch (\Exception $e) {
-            Log::error('Error al obtener grupo LDAP: ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('Error al obtener detalles del grupo: ' . $e->getMessage());
             return redirect()->route('admin.groups.index')
-                ->with('error', 'Error al obtener el grupo: ' . $e->getMessage());
+                ->with('error', 'Error al obtener detalles del grupo: ' . $e->getMessage());
         }
     }
 } 

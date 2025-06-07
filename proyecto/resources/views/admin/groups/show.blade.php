@@ -49,17 +49,23 @@
                         <div class="col-md-6 text-white">
                             <h4>Miembros del Grupo</h4>
                             @if(count($group['members']) > 0)
-                                <div class="table-responsive">
-                                    <table class="table table-bordered">
-                                        <thead>
+                                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                    <table class="table table-bordered table-striped">
+                                        <thead class="sticky-top bg-white">
                                             <tr>
                                                 <th>Usuario</th>
+                                                <th>Nombre</th>
+                                                <th>Apellidos</th>
+                                                <th>Email</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             @foreach($group['members'] as $member)
                                                 <tr>
-                                                    <td>{{ $member }}</td>
+                                                    <td>{{ $member['uid'] }}</td>
+                                                    <td>{{ $member['givenname'] ?? '' }}</td>
+                                                    <td>{{ $member['sn'] ?? '' }}</td>
+                                                    <td>{{ $member['mail'] ?? '' }}</td>
                                                 </tr>
                                             @endforeach
                                         </tbody>
