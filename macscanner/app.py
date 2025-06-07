@@ -28,6 +28,7 @@ def get_mac_arp_scan(ip):
         if match:
             return match.group(1).lower()
     except Exception as e:
+        logger.error(f"Error en arp-scan: {str(e)}")
         pass
     return None
 
@@ -272,4 +273,15 @@ def scan_hostnames():
     return jsonify({'success': True, 'hosts': resultados})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True) 
+    # Obtener la IP del contenedor
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        container_ip = s.getsockname()[0]
+        s.close()
+        logger.info(f"MacScanner iniciado en IP: {container_ip}")
+    except Exception as e:
+        logger.error(f"Error obteniendo IP del contenedor: {str(e)}")
+        container_ip = "0.0.0.0"
+    
+    app.run(host=container_ip, port=5000, debug=True) 

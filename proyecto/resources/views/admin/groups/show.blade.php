@@ -6,7 +6,7 @@
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">Detalles del Grupo: {{ $group['cn'] }}</h3>
+                    <h3 class="card-title ">Detalles del Grupo: {{ $group['cn'] }}</h3>
                     <div class="card-tools">
                         <a href="{{ route('admin.groups.index') }}" class="btn btn-secondary">
                             <i class="fas fa-arrow-left"></i> Volver
@@ -15,7 +15,7 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-6 text-white">
                             <h4>Información General</h4>
                             <table class="table">
                                 <tr>
@@ -46,7 +46,7 @@
                                 </tr>
                             </table>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-6 text-white">
                             <h4>Miembros del Grupo</h4>
                             @if(count($group['members']) > 0)
                                 <div class="table-responsive">
@@ -54,18 +54,12 @@
                                         <thead>
                                             <tr>
                                                 <th>Usuario</th>
-                                                <th>Acciones</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             @foreach($group['members'] as $member)
                                                 <tr>
                                                     <td>{{ $member }}</td>
-                                                    <td>
-                                                        <a href="{{ route('admin.users.show', ['dn' => $member]) }}" class="btn btn-sm btn-info">
-                                                            <i class="fas fa-eye"></i> Ver
-                                                        </a>
-                                                    </td>
                                                 </tr>
                                             @endforeach
                                         </tbody>
