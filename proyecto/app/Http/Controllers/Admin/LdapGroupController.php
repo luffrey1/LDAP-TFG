@@ -184,8 +184,10 @@ class LdapGroupController extends Controller
                 switch ($request->type) {
                     case 'posix':
                         $attributes['objectclass'][] = 'posixGroup';
+                        $attributes['objectclass'][] = 'groupOfNames';
                         $attributes['gidNumber'] = $request->gidNumber ?? $this->getNextGidNumber();
                         $attributes['memberUid'] = ['nobody']; // Requerido por posixGroup
+                        $attributes['member'] = ['cn=nobody']; // Requerido por groupOfNames
                         break;
                     case 'unique':
                         $attributes['objectclass'][] = 'groupOfUniqueNames';
@@ -193,9 +195,11 @@ class LdapGroupController extends Controller
                         break;
                     case 'combined':
                         $attributes['objectclass'][] = 'posixGroup';
+                        $attributes['objectclass'][] = 'groupOfNames';
                         $attributes['objectclass'][] = 'groupOfUniqueNames';
                         $attributes['gidNumber'] = $request->gidNumber ?? $this->getNextGidNumber();
                         $attributes['memberUid'] = ['nobody']; // Requerido por posixGroup
+                        $attributes['member'] = ['cn=nobody']; // Requerido por groupOfNames
                         $attributes['uniqueMember'] = ['cn=nobody']; // Requerido por groupOfUniqueNames
                         break;
                 }
