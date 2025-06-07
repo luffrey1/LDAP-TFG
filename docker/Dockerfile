@@ -1,7 +1,10 @@
-FROM php:8.2-apache-bullseye
+FROM php:8.2-apache
+
 # Habilitar repositorios contrib y non-free
-RUN sed -i 's/deb.debian.org/deb.debian.org/g' /etc/apt/sources.list && \
-    sed -i 's/main/main contrib non-free/g' /etc/apt/sources.list
+RUN echo "deb http://deb.debian.org/debian bullseye main contrib non-free" > /etc/apt/sources.list && \
+    echo "deb http://deb.debian.org/debian bullseye-updates main contrib non-free" >> /etc/apt/sources.list && \
+    echo "deb http://security.debian.org/debian-security bullseye-security main contrib non-free" >> /etc/apt/sources.list
+
 # Instala dependencias necesarias
 RUN apt-get update && apt-get install -y \
     libldap2-dev \
@@ -22,7 +25,7 @@ RUN apt-get update && apt-get install -y \
     nmap \
     sudo \
     libssl-dev \
-    apache2-ssl \
+    libapache2-mod-ssl \
     && docker-php-ext-install ldap zip pdo pdo_mysql
 
 # Instalar soporte ECDSA para Apache
