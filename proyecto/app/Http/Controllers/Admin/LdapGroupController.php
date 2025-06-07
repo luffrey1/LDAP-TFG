@@ -226,8 +226,8 @@ class LdapGroupController extends Controller
                     }
                 }
 
-                return redirect()->route('admin.groups.index')
-                    ->with('success', 'Grupo creado exitosamente');
+                // Redirigir a la lista de grupos
+                return redirect()->route('admin.groups.index');
             } catch (Exception $e) {
                 Log::error("Error al crear grupo: " . $e->getMessage());
                 throw new Exception("Error al crear el grupo: " . $e->getMessage());
