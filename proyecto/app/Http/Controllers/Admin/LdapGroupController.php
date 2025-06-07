@@ -171,35 +171,32 @@ class LdapGroupController extends Controller
                 
                 Log::debug("Conexión LDAP establecida correctamente");
 
-                // Preparar los atributos del grupo según el tipo
-                $attributes = [
-                    'objectclass' => ['top'],
-                    'cn' => $request->cn,
-                ];
-
-                // Añadir atributos según el tipo de grupo
-                switch ($request->type) {
-                    case 'posix':
-                        $attributes['objectclass'][] = 'posixGroup';
-                        $attributes['gidNumber'] = $request->gidNumber ?? $this->getNextGidNumber();
-                        $attributes['memberUid'] = ['nobody']; // Requerido por posixGroup
-                        break;
-                    case 'unique':
-                        $attributes['objectclass'][] = 'groupOfUniqueNames';
-                        $attributes['uniqueMember'] = ['cn=nobody']; // Requerido por groupOfUniqueNames
-                        break;
-                    case 'combined':
-                        $attributes['objectclass'][] = 'posixGroup';
-                        $attributes['objectclass'][] = 'groupOfUniqueNames';
-                        $attributes['gidNumber'] = $request->gidNumber ?? $this->getNextGidNumber();
-                        $attributes['memberUid'] = ['nobody']; // Requerido por posixGroup
-                        $attributes['uniqueMember'] = ['cn=nobody']; // Requerido por groupOfUniqueNames
-                        break;
-                }
-
-                // Añadir descripción si se proporciona
-                if ($request->has('description')) {
-                    $attributes['description'] = $request->description;
+                // Configurar atributos según el tipo de grupo
+                $type = $request->type;
+                if ($type === 'posix') {
+                    $attributes = [
+                        'objectclass' => ['top', 'posixGroup', 'groupOfNames'],
+                        'cn' => $request->cn,
+                        'gidNumber' => $request->gidNumber,
+                        'member' => ['cn=nobody'],
+                        'description' => $request->description
+                    ];
+                } elseif ($type === 'unique') {
+                    $attributes = [
+                        'objectclass' => ['top', 'groupOfUniqueNames'],
+                        'cn' => $request->cn,
+                        'uniqueMember' => ['cn=nobody'],
+                        'description' => $request->description
+                    ];
+                } else { // combined
+                    $attributes = [
+                        'objectclass' => ['top', 'posixGroup', 'groupOfUniqueNames'],
+                        'cn' => $request->cn,
+                        'gidNumber' => $request->gidNumber,
+                        'memberUid' => ['nobody'],
+                        'uniqueMember' => ['cn=nobody'],
+                        'description' => $request->description
+                    ];
                 }
 
                 // Crear el DN del grupo
