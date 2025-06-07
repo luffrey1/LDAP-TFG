@@ -169,8 +169,8 @@ class LdapGroupController extends Controller
 
             // Crear el grupo
             try {
-                // Obtener la conexión LDAP
-                $ldapConn = $this->connection->getLdapConnection();
+                // Obtener la conexión LDAP nativa
+                $ldapConn = $this->connection->getLdapConnection()->getConnection();
                 
                 Log::debug("Conexión LDAP establecida correctamente");
 
