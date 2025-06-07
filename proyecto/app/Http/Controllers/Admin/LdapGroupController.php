@@ -30,50 +30,33 @@ class LdapGroupController extends Controller
         ]);
         
         try {
-            // Crear conexión LDAP nativa con SSL
-            $ldapConn = ldap_connect('ldaps://' . $config['hosts'][0], 636);
-            if (!$ldapConn) {
-                throw new Exception("No se pudo establecer la conexión LDAP");
-            }
+            $this->connection = new Connection([
+                'hosts' => $config['hosts'],
+                'port' => 636,
+                'base_dn' => $config['base_dn'],
+                'username' => $config['username'],
+                'password' => $config['password'],
+                'use_ssl' => true,
+                'use_tls' => false,
+                'timeout' => $config['timeout']
+            ]);
+
+            // Forzar la conexión SSL
+            $this->connection->getLdapConnection()->setOption(LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
             
-            Log::debug("Conexión LDAP creada, configurando opciones...");
+            // Intentar conectar
+            $this->connection->connect();
             
-            ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
-            ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
-            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
+            // Verificar la conexión con una búsqueda simple
+            $search = $this->connection->query()->where('objectclass', '*')->limit(1)->get();
             
-            // Configurar SSL
-            Log::debug("Configurando SSL para conexión LDAP...");
-            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
-            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
-            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
-            
-            // Intentar bind con credenciales
-            $bind = @ldap_bind(
-                $ldapConn, 
-                $config['username'], 
-                $config['password']
-            );
-            
-            if (!$bind) {
-                $error = ldap_error($ldapConn);
-                Log::error("Error al conectar al servidor LDAP: " . $error);
-                Log::error("Código de error LDAP: " . ldap_errno($ldapConn));
-                throw new Exception("No se pudo conectar al servidor LDAP: " . $error);
+            if (empty($search)) {
+                Log::error("No se pudo realizar la búsqueda de prueba en LDAP");
+                throw new Exception("No se pudo verificar la conexión LDAP");
             }
             
             Log::debug("Conexión LDAP establecida correctamente");
-            
-            // Verificar la conexión con una búsqueda simple
-            $search = ldap_search($ldapConn, $config['base_dn'], '(objectclass=*)', ['cn'], 1);
-            if (!$search) {
-                throw new Exception("No se pudo realizar la búsqueda de prueba: " . ldap_error($ldapConn));
-            }
-            
             Log::debug("Búsqueda de prueba exitosa");
-            
-            // Guardar la conexión
-            $this->connection = $ldapConn;
             
         } catch (Exception $e) {
             Log::error("Error al conectar con LDAP: " . $e->getMessage());
@@ -188,32 +171,35 @@ class LdapGroupController extends Controller
                 
                 Log::debug("Conexión LDAP establecida correctamente");
 
-                // Configurar atributos según el tipo de grupo
-                $type = $request->type;
-                if ($type === 'posix') {
-                    $attributes = [
-                        'objectclass' => ['top', 'posixGroup', 'groupOfNames'],
-                        'cn' => $request->cn,
-                        'gidNumber' => $request->gidNumber,
-                        'member' => ['cn=nobody'],
-                        'description' => $request->description
-                    ];
-                } elseif ($type === 'unique') {
-                    $attributes = [
-                        'objectclass' => ['top', 'groupOfUniqueNames'],
-                        'cn' => $request->cn,
-                        'uniqueMember' => ['cn=nobody'],
-                        'description' => $request->description
-                    ];
-                } else { // combined
-                    $attributes = [
-                        'objectclass' => ['top', 'posixGroup', 'groupOfUniqueNames'],
-                        'cn' => $request->cn,
-                        'gidNumber' => $request->gidNumber,
-                        'memberUid' => ['nobody'],
-                        'uniqueMember' => ['cn=nobody'],
-                        'description' => $request->description
-                    ];
+                // Preparar los atributos del grupo según el tipo
+                $attributes = [
+                    'objectclass' => ['top'],
+                    'cn' => $request->cn,
+                ];
+
+                // Añadir atributos según el tipo de grupo
+                switch ($request->type) {
+                    case 'posix':
+                        $attributes['objectclass'][] = 'posixGroup';
+                        $attributes['gidNumber'] = $request->gidNumber ?? $this->getNextGidNumber();
+                        $attributes['memberUid'] = ['nobody']; // Requerido por posixGroup
+                        break;
+                    case 'unique':
+                        $attributes['objectclass'][] = 'groupOfUniqueNames';
+                        $attributes['uniqueMember'] = ['cn=nobody']; // Requerido por groupOfUniqueNames
+                        break;
+                    case 'combined':
+                        $attributes['objectclass'][] = 'posixGroup';
+                        $attributes['objectclass'][] = 'groupOfUniqueNames';
+                        $attributes['gidNumber'] = $request->gidNumber ?? $this->getNextGidNumber();
+                        $attributes['memberUid'] = ['nobody']; // Requerido por posixGroup
+                        $attributes['uniqueMember'] = ['cn=nobody']; // Requerido por groupOfUniqueNames
+                        break;
+                }
+
+                // Añadir descripción si se proporciona
+                if ($request->has('description')) {
+                    $attributes['description'] = $request->description;
                 }
 
                 // Crear el DN del grupo
