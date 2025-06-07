@@ -50,7 +50,7 @@ class LdapGroupController extends Controller
             // Verificar la conexión con una búsqueda simple
             $search = $this->connection->query()->where('objectclass', '*')->limit(1)->get();
             
-            if ($search->isEmpty()) {
+            if (empty($search)) {
                 Log::error("No se pudo realizar la búsqueda de prueba en LDAP");
                 throw new Exception("No se pudo verificar la conexión LDAP");
             }
