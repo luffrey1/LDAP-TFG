@@ -1,7 +1,10 @@
 @extends('layouts.dashboard')
 
 @section('content')
-<div class="container">
+<div class="container" 
+    data-show-url="{{ route('admin.groups.show', ['cn' => '']) }}"
+    data-edit-url="{{ route('admin.groups.edit', ['cn' => '']) }}"
+    data-delete-url="{{ route('admin.groups.destroy', ['cn' => '']) }}">
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="card">
@@ -184,6 +187,11 @@ function updateGroups() {
     })
     .then(response => response.json())
     .then(data => {
+        const container = document.querySelector('.container');
+        const showUrl = container.dataset.showUrl;
+        const editUrl = container.dataset.editUrl;
+        const deleteUrl = container.dataset.deleteUrl;
+
         groupsTable.innerHTML = data.groups.map(group => `
             <tr>
                 <td class="text-black">${group.cn}</td>
@@ -211,10 +219,10 @@ function updateGroups() {
                 <td>${group.members.length}</td>
                 <td>
                     <div class="btn-group" role="group">
-                        <a href="{{ route('admin.groups.show', ['cn' => '']) }}${group.cn}" class="btn btn-sm btn-primary">
+                        <a href="${showUrl}${group.cn}" class="btn btn-sm btn-primary">
                             <i class="fas fa-eye"></i> Ver
                         </a>
-                        <a href="{{ route('admin.groups.edit', ['cn' => '']) }}${group.cn}" class="btn btn-sm btn-info">
+                        <a href="${editUrl}${group.cn}" class="btn btn-sm btn-info">
                             <i class="fas fa-edit"></i> Editar
                         </a>
                         <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete('${group.cn}')">
