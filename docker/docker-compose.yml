@@ -110,26 +110,28 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "https://ldap.tierno.es/"]
+      test: ["CMD", "curl", "-f", "https://localhost/"]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 30s
     command: >
-      bash -c "echo '172.20.0.6 ldap.tierno.es' >> /etc/hosts && docker-php-entrypoint apache2-foreground"
+      bash -c "echo '172.18.0.3 ldap.tierno.es' >> /etc/hosts && docker-php-entrypoint apache2-foreground"
   webssh2:
     build:
       context: ../webssh2
       dockerfile: Dockerfile
     container_name: webssh2
     restart: unless-stopped
-    user: root
-    networks:
-      - app-network
-    environment:
-      - TZ=Europe/Madrid
     ports:
       - "2222:2222"
+    environment:
+      - SSHKEY=/usr/src/app/config/administrator-id_ed25519
+    volumes:
+      - ../webssh2/app/config.json:/usr/src/config.json:ro
+      - ../webssh2/config/administrator-id_ed25519:/usr/src/app/config/administrator-id_ed25519:ro
+    networks:
+      - app-network
   macscanner:
     build:
       context: ../macscanner
@@ -146,11 +148,6 @@ services:
 networks:
   app-network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
-          gateway: 172.20.0.1
-
 volumes:
   mysql_data:
   document_data:
