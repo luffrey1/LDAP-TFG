@@ -1,4 +1,4 @@
-FROM php:8.2-apache
+FROM php:8.2-apache-bullseye
 # Habilitar repositorios contrib y non-free
 RUN sed -i 's/deb.debian.org/deb.debian.org/g' /etc/apt/sources.list && \
     sed -i 's/main/main contrib non-free/g' /etc/apt/sources.list
@@ -22,7 +22,7 @@ RUN apt-get update && apt-get install -y \
     nmap \
     sudo \
     libssl-dev \
-    libapache2-mod-ssl \
+    apache2-ssl \
     && docker-php-ext-install ldap zip pdo pdo_mysql
 
 # Instalar soporte ECDSA para Apache
