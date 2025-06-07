@@ -46,13 +46,6 @@
                                     <label>Descripción</label>
                                     <input type="text" name="description" class="form-control">
                                 </div>
-                                <div class="form-group text-white">
-                                    <label>Miembros</label>
-                                    <select name="members[]" class="form-control select2" multiple>
-                                        <option value="cn=nobody">nobody</option>
-                                    </select>
-                                    <small class="form-text text-muted">Se creará el grupo con un miembro inicial. Podrás añadir más miembros después.</small>
-                                </div>
                                 <button type="submit" class="btn btn-primary">Crear Grupo</button>
                             </form>
                         </div>
@@ -70,13 +63,6 @@
                                 <div class="form-group text-white">
                                     <label>Descripción</label>
                                     <input type="text" name="description" class="form-control">
-                                </div>
-                                <div class="form-group text-white">
-                                    <label>Miembros</label>
-                                    <select name="members[]" class="form-control select2" multiple>
-                                        <option value="cn=nobody">nobody</option>
-                                    </select>
-                                    <small class="form-text text-muted">Se creará el grupo con un miembro inicial. Podrás añadir más miembros después.</small>
                                 </div>
                                 <button type="submit" class="btn btn-primary">Crear Grupo</button>
                             </form>
@@ -99,13 +85,6 @@
                                 <div class="form-group text-white">
                                     <label>Descripción</label>
                                     <input type="text" name="description" class="form-control">
-                                </div>
-                                <div class="form-group text-white">
-                                    <label>Miembros</label>
-                                    <select name="members[]" class="form-control select2" multiple>
-                                        <option value="cn=nobody">nobody</option>
-                                    </select>
-                                    <small class="form-text text-muted">Se creará el grupo con un miembro inicial. Podrás añadir más miembros después.</small>
                                 </div>
                                 <button type="submit" class="btn btn-primary">Crear Grupo</button>
                             </form>
