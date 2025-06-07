@@ -127,7 +127,7 @@ class LdapGroupController extends Controller
                 ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
                 
                 // Configurar SSL
-                if ($config['use_ssl']) {
+                if (config('ldap.connections.default.use_ssl', false)) {
                     Log::debug("Configurando SSL para conexión LDAP...");
                     ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
                     ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
