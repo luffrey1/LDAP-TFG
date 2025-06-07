@@ -1,9 +1,4 @@
-FROM php:8.2-apache
-
-# Habilitar repositorios contrib y non-free
-RUN echo "deb http://deb.debian.org/debian bookworm main contrib non-free" > /etc/apt/sources.list && \
-    echo "deb http://deb.debian.org/debian bookworm-updates main contrib non-free" >> /etc/apt/sources.list && \
-    echo "deb http://security.debian.org/debian-security bookworm-security main contrib non-free" >> /etc/apt/sources.list
+ROM php:8.2-apache
 
 # Instala dependencias necesarias
 RUN apt-get update && apt-get install -y \
@@ -25,7 +20,6 @@ RUN apt-get update && apt-get install -y \
     nmap \
     sudo \
     libssl-dev \
-    libapache2-mod-ssl \
     && docker-php-ext-install ldap zip pdo pdo_mysql
 
 # Instalar soporte ECDSA para Apache
