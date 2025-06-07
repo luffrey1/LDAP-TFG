@@ -14,7 +14,7 @@ use App\Http\Middleware\CheckModuleAccess;
 use App\Http\Controllers\MonitorController;
 use App\Events\TestBroadcast;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\LdapGroupController;
+use App\Http\Controllers\Admin\LdapGroupController;
 use Illuminate\Support\Facades\Http;
 
 // Ruta principal redirige al login
@@ -178,6 +178,12 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware', 'App\Http\Mi
     Route::get('/groups/{cn}/edit', [LdapGroupController::class, 'edit'])->name('groups.edit');
     Route::put('/groups/{cn}', [LdapGroupController::class, 'update'])->name('groups.update');
     Route::delete('/groups/{cn}', [LdapGroupController::class, 'destroy'])->name('groups.destroy');
+
+    // Rutas de administración de grupos LDAP
+    Route::get('/admin/groups', [LdapGroupController::class, 'index'])->name('admin.groups.index');
+    Route::get('/admin/groups/create', [LdapGroupController::class, 'create'])->name('admin.groups.create');
+    Route::post('/admin/groups', [LdapGroupController::class, 'store'])->name('admin.groups.store');
+    Route::get('/admin/groups/{cn}', [LdapGroupController::class, 'show'])->name('admin.groups.show');
 });
 
 // Rutas para la gestión de alumnos
