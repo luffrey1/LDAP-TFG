@@ -169,6 +169,15 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware', 'App\Http\Mi
         ->name('configuracion.index');
     Route::post('/configuracion', [App\Http\Controllers\Admin\ConfiguracionController::class, 'guardar'])
         ->name('configuracion.guardar');
+
+    // Rutas de grupos
+    Route::get('/groups', [LdapGroupController::class, 'index'])->name('groups.index');
+    Route::get('/groups/create', [LdapGroupController::class, 'create'])->name('groups.create');
+    Route::post('/groups', [LdapGroupController::class, 'store'])->name('groups.store');
+    Route::get('/groups/{cn}', [LdapGroupController::class, 'show'])->name('groups.show');
+    Route::get('/groups/{cn}/edit', [LdapGroupController::class, 'edit'])->name('groups.edit');
+    Route::put('/groups/{cn}', [LdapGroupController::class, 'update'])->name('groups.update');
+    Route::delete('/groups/{cn}', [LdapGroupController::class, 'destroy'])->name('groups.destroy');
 });
 
 // Rutas para la gestión de alumnos
