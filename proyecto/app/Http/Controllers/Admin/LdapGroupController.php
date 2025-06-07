@@ -30,33 +30,50 @@ class LdapGroupController extends Controller
         ]);
         
         try {
-            $this->connection = new Connection([
-                'hosts' => $config['hosts'],
-                'port' => 636,
-                'base_dn' => $config['base_dn'],
-                'username' => $config['username'],
-                'password' => $config['password'],
-                'use_ssl' => true,
-                'use_tls' => false,
-                'timeout' => $config['timeout']
-            ]);
-
-            // Forzar la conexión SSL
-            $this->connection->getLdapConnection()->setOption(LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
+            // Crear conexión LDAP nativa con SSL
+            $ldapConn = ldap_connect('ldaps://' . $config['hosts'][0], 636);
+            if (!$ldapConn) {
+                throw new Exception("No se pudo establecer la conexión LDAP");
+            }
             
-            // Intentar conectar
-            $this->connection->connect();
+            Log::debug("Conexión LDAP creada, configurando opciones...");
             
-            // Verificar la conexión con una búsqueda simple
-            $search = $this->connection->query()->where('objectclass', '*')->limit(1)->get();
+            ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
+            ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
+            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
             
-            if (empty($search)) {
-                Log::error("No se pudo realizar la búsqueda de prueba en LDAP");
-                throw new Exception("No se pudo verificar la conexión LDAP");
+            // Configurar SSL
+            Log::debug("Configurando SSL para conexión LDAP...");
+            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
+            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
+            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
+            
+            // Intentar bind con credenciales
+            $bind = @ldap_bind(
+                $ldapConn, 
+                $config['username'], 
+                $config['password']
+            );
+            
+            if (!$bind) {
+                $error = ldap_error($ldapConn);
+                Log::error("Error al conectar al servidor LDAP: " . $error);
+                Log::error("Código de error LDAP: " . ldap_errno($ldapConn));
+                throw new Exception("No se pudo conectar al servidor LDAP: " . $error);
             }
             
             Log::debug("Conexión LDAP establecida correctamente");
+            
+            // Verificar la conexión con una búsqueda simple
+            $search = ldap_search($ldapConn, $config['base_dn'], '(objectclass=*)', ['cn'], 1);
+            if (!$search) {
+                throw new Exception("No se pudo realizar la búsqueda de prueba: " . ldap_error($ldapConn));
+            }
+            
             Log::debug("Búsqueda de prueba exitosa");
+            
+            // Guardar la conexión
+            $this->connection = $ldapConn;
             
         } catch (Exception $e) {
             Log::error("Error al conectar con LDAP: " . $e->getMessage());
