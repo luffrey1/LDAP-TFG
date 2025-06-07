@@ -74,7 +74,7 @@
                                         $description = $group['description'] ?? 'Sin descripción';
                                     @endphp
                                     <tr>
-                                        <td>{{ $cn }}</td>
+                                        <td class="text-white">{{ $cn }}</td>
                                         <td>
                                             @if($group['type'] === 'posix')
                                                 <span class="badge badge-info">Posix</span>
