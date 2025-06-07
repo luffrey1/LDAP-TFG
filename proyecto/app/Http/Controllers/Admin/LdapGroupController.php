@@ -181,10 +181,8 @@ class LdapGroupController extends Controller
                 switch ($request->type) {
                     case 'posix':
                         $attributes['objectclass'][] = 'posixGroup';
-                        $attributes['objectclass'][] = 'groupOfNames';
                         $attributes['gidNumber'] = $request->gidNumber ?? $this->getNextGidNumber();
                         $attributes['memberUid'] = ['nobody']; // Requerido por posixGroup
-                        $attributes['member'] = ['cn=nobody']; // Requerido por groupOfNames
                         break;
                     case 'unique':
                         $attributes['objectclass'][] = 'groupOfUniqueNames';
@@ -192,11 +190,9 @@ class LdapGroupController extends Controller
                         break;
                     case 'combined':
                         $attributes['objectclass'][] = 'posixGroup';
-                        $attributes['objectclass'][] = 'groupOfNames';
                         $attributes['objectclass'][] = 'groupOfUniqueNames';
                         $attributes['gidNumber'] = $request->gidNumber ?? $this->getNextGidNumber();
                         $attributes['memberUid'] = ['nobody']; // Requerido por posixGroup
-                        $attributes['member'] = ['cn=nobody']; // Requerido por groupOfNames
                         $attributes['uniqueMember'] = ['cn=nobody']; // Requerido por groupOfUniqueNames
                         break;
                 }
@@ -522,6 +518,70 @@ class LdapGroupController extends Controller
                 'group' => $cn
             ]);
             return back()->with('error', 'Error al eliminar grupo: ' . $e->getMessage());
+        }
+    }
+
+    protected function addUserToGroup($userDn, $groupDn)
+    {
+        try {
+            // Obtener la conexión LDAP nativa
+            $ldapConn = $this->connection->getLdapConnection()->getConnection();
+            
+            // Obtener información del grupo
+            $search = ldap_read($ldapConn, $groupDn, '(objectClass=*)', ['objectClass']);
+            if (!$search) {
+                throw new Exception("Error al leer grupo: " . ldap_error($ldapConn));
+            }
+            
+            $entries = ldap_get_entries($ldapConn, $search);
+            if ($entries['count'] == 0) {
+                throw new Exception("Grupo no encontrado");
+            }
+            
+            $group = $entries[0];
+            $objectClasses = array_map('strtolower', $group['objectclass']);
+            
+            // Obtener el UID del usuario
+            $userSearch = ldap_read($ldapConn, $userDn, '(objectClass=*)', ['uid']);
+            if (!$userSearch) {
+                throw new Exception("Error al leer usuario: " . ldap_error($ldapConn));
+            }
+            
+            $userEntries = ldap_get_entries($ldapConn, $userSearch);
+            if ($userEntries['count'] == 0) {
+                throw new Exception("Usuario no encontrado");
+            }
+            
+            $userUid = $userEntries[0]['uid'][0];
+            
+            // Modificar el grupo según su tipo
+            $modifications = [];
+            
+            if (in_array('posixgroup', $objectClasses)) {
+                $modifications['memberUid'] = $userUid;
+            }
+            
+            if (in_array('groupofuniquenames', $objectClasses)) {
+                $modifications['uniqueMember'] = $userDn;
+            }
+            
+            if (!empty($modifications)) {
+                $result = ldap_mod_add($ldapConn, $groupDn, $modifications);
+                if (!$result) {
+                    throw new Exception("Error al añadir usuario al grupo: " . ldap_error($ldapConn));
+                }
+            }
+            
+            Log::info("Usuario añadido al grupo exitosamente", [
+                'user' => $userDn,
+                'group' => $groupDn
+            ]);
+            
+            return true;
+            
+        } catch (Exception $e) {
+            Log::error("Error al añadir usuario al grupo: " . $e->getMessage());
+            throw $e;
         }
     }
 } 

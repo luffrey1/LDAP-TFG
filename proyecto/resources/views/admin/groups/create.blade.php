@@ -32,17 +32,17 @@
                         <div class="tab-pane fade show active" id="posix" role="tabpanel" aria-labelledby="posix-tab">
                             <form id="posixForm" class="group-form">
                                 <input type="hidden" name="type" value="posix">
-                                <div class="form-group">
+                                <div class="form-group text-white">
                                     <label>Nombre del Grupo</label>
                                     <input type="text" name="cn" class="form-control" required 
                                            pattern="[a-zA-Z0-9\-_]+" 
                                            title="Solo letras, números, guiones y guiones bajos">
                                 </div>
-                                <div class="form-group">
+                                <div class="form-group text-white">
                                     <label>GID Number (opcional)</label>
                                     <input type="number" name="gidNumber" class="form-control" min="1000">
                                 </div>
-                                <div class="form-group">
+                                <div class="form-group text-white">
                                     <label>Descripción</label>
                                     <input type="text" name="description" class="form-control">
                                 </div>
@@ -54,17 +54,17 @@
                         <div class="tab-pane fade" id="unique" role="tabpanel" aria-labelledby="unique-tab">
                             <form id="uniqueForm" class="group-form">
                                 <input type="hidden" name="type" value="unique">
-                                <div class="form-group">
+                                <div class="form-group text-white">
                                     <label>Nombre del Grupo</label>
                                     <input type="text" name="cn" class="form-control" required 
                                            pattern="[a-zA-Z0-9\-_]+" 
                                            title="Solo letras, números, guiones y guiones bajos">
                                 </div>
-                                <div class="form-group">
+                                <div class="form-group text-white">
                                     <label>Descripción</label>
                                     <input type="text" name="description" class="form-control">
                                 </div>
-                                <div class="form-group">
+                                <div class="form-group text-white">
                                     <label>Miembros</label>
                                     <select name="members[]" class="form-control select2" multiple>
                                         <!-- Se llenará vía AJAX -->
@@ -78,21 +78,21 @@
                         <div class="tab-pane fade" id="combined" role="tabpanel" aria-labelledby="combined-tab">
                             <form id="combinedForm" class="group-form">
                                 <input type="hidden" name="type" value="combined">
-                                <div class="form-group">
+                                <div class="form-group text-white">
                                     <label>Nombre del Grupo</label>
                                     <input type="text" name="cn" class="form-control" required 
                                            pattern="[a-zA-Z0-9\-_]+" 
                                            title="Solo letras, números, guiones y guiones bajos">
                                 </div>
-                                <div class="form-group">
+                                <div class="form-group text-white">
                                     <label>GID Number (opcional)</label>
                                     <input type="number" name="gidNumber" class="form-control" min="1000">
                                 </div>
-                                <div class="form-group">
+                                <div class="form-group text-white">
                                     <label>Descripción</label>
                                     <input type="text" name="description" class="form-control">
                                 </div>
-                                <div class="form-group">
+                                <div class="form-group text-white">
                                     <label>Miembros</label>
                                     <select name="members[]" class="form-control select2" multiple>
                                         <!-- Se llenará vía AJAX -->
