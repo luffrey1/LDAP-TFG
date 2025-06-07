@@ -54,14 +54,14 @@
                                         <thead class="sticky-top bg-white">
                                             <tr>
                                                 <th>Usuario (UID)</th>
-                                                <th>Email</th>
+                                                <th>UID Number</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             @foreach($group['members'] as $member)
                                                 <tr>
                                                     <td>{{ $member['uid'] }}</td>
-                                                    <td>{{ $member['mail'] ?? '' }}</td>
+                                                    <td>{{ $member['uidNumber'] ?? '' }}</td>
                                                 </tr>
                                             @endforeach
                                         </tbody>

@@ -638,17 +638,14 @@ class LdapGroupController extends Controller
                 for ($i = 0; $i < $entry['memberuid']['count']; $i++) {
                     $uid = $entry['memberuid'][$i];
                     // Buscar información adicional del usuario
-                    $userSearch = ldap_search($ldapConn, "ou=people,{$this->baseDn}", "(uid=$uid)", ['uid', 'cn', 'mail', 'givenname', 'sn']);
+                    $userSearch = ldap_search($ldapConn, "ou=people,{$this->baseDn}", "(uid=$uid)", ['uid', 'uidNumber']);
                     if ($userSearch) {
                         $userEntries = ldap_get_entries($ldapConn, $userSearch);
                         if ($userEntries['count'] > 0) {
                             $userEntry = $userEntries[0];
                             $group['members'][] = [
                                 'uid' => $uid,
-                                'cn' => $userEntry['cn'][0] ?? $uid,
-                                'mail' => $userEntry['mail'][0] ?? '',
-                                'givenname' => $userEntry['givenname'][0] ?? '',
-                                'sn' => $userEntry['sn'][0] ?? ''
+                                'uidNumber' => $userEntry['uidnumber'][0] ?? ''
                             ];
                         } else {
                             $group['members'][] = ['uid' => $uid];
