@@ -99,21 +99,19 @@
                                         <td>{{ count($group['members']) }}</td>
                                         <td>
                                             <div class="btn-group" role="group">
-                                                <a href="{{ route('admin.groups.show', ['cn' => $cn]) }}" class="btn btn-sm btn-primary">
+                                                <a href="{{ route('admin.groups.show', $group['cn']) }}" class="btn btn-sm btn-primary">
                                                     <i class="fas fa-eye"></i> Ver
                                                 </a>
-                                                @if(!empty($cn))
-                                                <a href="{{ route('admin.groups.edit', ['cn' => $cn]) }}" class="btn btn-sm btn-info">
+                                                @if(!empty($group['cn']))
+                                                <a href="{{ route('admin.groups.edit', $group['cn']) }}" class="btn btn-sm btn-info">
                                                     <i class="fas fa-edit"></i> Editar
                                                 </a>
-                                                @if (!in_array($cn, ['admin', 'ldapadmins', 'sudo']))
+                                                @if (!in_array($group['cn'], ['admin', 'ldapadmins', 'sudo']))
                                                     <button type="button" class="btn btn-sm btn-danger" 
-                                                            onclick="confirmDelete('{{ $cn }}')">
+                                                            onclick="confirmDelete('{{ $group['cn'] }}')">
                                                         <i class="fas fa-trash"></i> Eliminar
                                                     </button>
                                                 @endif
-                                                @else
-                                                <span class="text-muted">No se puede editar</span>
                                                 @endif
                                             </div>
                                         </td>
