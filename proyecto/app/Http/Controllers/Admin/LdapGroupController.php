@@ -199,6 +199,7 @@ class LdapGroupController extends Controller
             $this->validate($request, [
                 'type' => 'required|in:posix,unique,combined',
                 'cn' => 'required|string|max:255',
+                'gidNumber' => 'required_if:type,posix,combined|nullable|numeric',
                 'description' => 'nullable|string|max:255'
             ]);
 
@@ -206,11 +207,11 @@ class LdapGroupController extends Controller
             $ldapConn = $this->connection->getLdapConnection()->getConnection();
             Log::debug('Conexión LDAP establecida correctamente');
 
-            $groupDn = "cn={$request->cn},ou=groups," . config('ldap.connections.default.base_dn');
+            $groupDn = "cn={$request->cn},{$this->groupsOu}";
             Log::debug('Intentando crear grupo con DN: ' . $groupDn);
 
             // Verificar si el grupo ya existe
-            $search = ldap_search($ldapConn, $groupDn, '(objectClass=*)');
+            $search = ldap_search($ldapConn, $this->groupsOu, "(cn={$request->cn})");
             if ($search && ldap_count_entries($ldapConn, $search) > 0) {
                 Log::warning('El grupo ya existe: ' . $groupDn);
                 return redirect()->back()->with('error', 'Ya existe un grupo con ese nombre.');
@@ -218,25 +219,27 @@ class LdapGroupController extends Controller
 
             $attributes = [
                 'objectclass' => ['top'],
-                'cn' => $request->cn,
-                'description' => $request->description
+                'cn' => $request->cn
             ];
+
+            if ($request->description) {
+                $attributes['description'] = $request->description;
+            }
 
             // Configurar atributos según el tipo de grupo
             if ($request->type === 'posix') {
                 $attributes['objectclass'][] = 'posixGroup';
-                $attributes['objectclass'][] = 'groupOfNames';
-                $attributes['gidNumber'] = $this->getNextGidNumber();
-                $attributes['member'] = ['cn=nobody'];
+                $attributes['gidNumber'] = $request->gidNumber;
+                $attributes['memberUid'] = ['nobody'];
             } elseif ($request->type === 'unique') {
                 $attributes['objectclass'][] = 'groupOfUniqueNames';
-                $attributes['uniqueMember'] = ['cn=nobody'];
+                $attributes['uniqueMember'] = ['cn=nobody,dc=tierno,dc=es'];
             } else { // combined
                 $attributes['objectclass'][] = 'posixGroup';
                 $attributes['objectclass'][] = 'groupOfUniqueNames';
-                $attributes['gidNumber'] = $this->getNextGidNumber();
+                $attributes['gidNumber'] = $request->gidNumber;
                 $attributes['memberUid'] = ['nobody'];
-                $attributes['uniqueMember'] = ['cn=nobody'];
+                $attributes['uniqueMember'] = ['cn=nobody,dc=tierno,dc=es'];
             }
 
             Log::debug('Atributos del grupo: ' . json_encode($attributes));
@@ -252,7 +255,7 @@ class LdapGroupController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Error al crear grupo: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Error al crear grupo: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Error al crear grupo: ' . $e->getMessage())->withInput();
         }
     }
 
