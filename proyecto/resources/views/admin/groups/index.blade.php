@@ -99,11 +99,11 @@
                                         <td>{{ count($group['members']) }}</td>
                                         <td>
                                             <div class="btn-group" role="group">
-                                                <a href="{{ route('admin.groups.show', $group['cn']) }}" class="btn btn-sm btn-primary">
+                                                <a href="{{ route('admin.groups.show', ['cn' => $group['cn']]) }}" class="btn btn-sm btn-primary">
                                                     <i class="fas fa-eye"></i> Ver
                                                 </a>
                                                 @if(!empty($group['cn']))
-                                                <a href="{{ route('admin.groups.edit', $group['cn']) }}" class="btn btn-sm btn-info">
+                                                <a href="{{ route('admin.groups.edit', ['cn' => $group['cn']]) }}" class="btn btn-sm btn-info">
                                                     <i class="fas fa-edit"></i> Editar
                                                 </a>
                                                 @if (!in_array($group['cn'], ['admin', 'ldapadmins', 'sudo']))
@@ -211,19 +211,15 @@ function updateGroups() {
                 <td>${group.members.length}</td>
                 <td>
                     <div class="btn-group" role="group">
-                        <a href="/admin/groups/${group.cn}" class="btn btn-sm btn-primary">
+                        <a href="{{ route('admin.groups.show', ['cn' => '']) }}${group.cn}" class="btn btn-sm btn-primary">
                             <i class="fas fa-eye"></i> Ver
                         </a>
-                        <a href="/admin/groups/${group.cn}/edit" class="btn btn-sm btn-info">
+                        <a href="{{ route('admin.groups.edit', ['cn' => '']) }}${group.cn}" class="btn btn-sm btn-info">
                             <i class="fas fa-edit"></i> Editar
                         </a>
-                        <form action="/admin/groups/${group.cn}" method="POST" class="d-inline">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Estás seguro?')">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </form>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete('${group.cn}')">
+                            <i class="fas fa-trash"></i> Eliminar
+                        </button>
                     </div>
                 </td>
             </tr>
