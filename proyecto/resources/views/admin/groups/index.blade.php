@@ -84,23 +84,22 @@
                                     <tr>
                                         <td class="text-black">{{ $cn }}</td>
                                         <td>
-                                            <div class="btn-group" role="group">
-                                                <button type="button" class="btn btn-sm btn-outline-info filter-type" data-type="posix" 
-                                                    onclick="filterByType('posix')" 
-                                                    style="{{ $group['type'] === 'posix' ? 'background-color: #17a2b8; color: white;' : '' }}">
+                                            @if($group['type'] === 'posix')
+                                                <button type="button" class="btn btn-sm btn-info filter-type" data-type="posix" 
+                                                    onclick="filterByType('posix')">
                                                     Posix
                                                 </button>
-                                                <button type="button" class="btn btn-sm btn-outline-success filter-type" data-type="unique" 
-                                                    onclick="filterByType('unique')"
-                                                    style="{{ $group['type'] === 'unique' ? 'background-color: #28a745; color: white;' : '' }}">
+                                            @elseif($group['type'] === 'unique')
+                                                <button type="button" class="btn btn-sm btn-success filter-type" data-type="unique" 
+                                                    onclick="filterByType('unique')">
                                                     Unique Names
                                                 </button>
-                                                <button type="button" class="btn btn-sm btn-outline-warning filter-type" data-type="combined" 
-                                                    onclick="filterByType('combined')"
-                                                    style="{{ $group['type'] === 'combined' ? 'background-color: #ffc107; color: black;' : '' }}">
+                                            @elseif($group['type'] === 'combined')
+                                                <button type="button" class="btn btn-sm btn-warning filter-type" data-type="combined" 
+                                                    onclick="filterByType('combined')">
                                                     Combinado
                                                 </button>
-                                            </div>
+                                            @endif
                                         </td>
                                         <td>{{ $gidNumber }}</td>
                                         <td>{{ $description }}</td>
@@ -192,32 +191,25 @@ function updateGroups() {
     })
     .then(response => response.json())
     .then(data => {
-        const container = document.querySelector('.container');
-        const showUrl = container.dataset.showUrl.replace(':cn', group.cn);
-        const editUrl = container.dataset.editUrl.replace(':cn', group.cn);
-        const deleteUrl = container.dataset.deleteUrl.replace(':cn', group.cn);
-
         groupsTable.innerHTML = data.groups.map(group => `
             <tr>
                 <td class="text-black">${group.cn}</td>
                 <td>
-                    <div class="btn-group" role="group">
-                        <button type="button" class="btn btn-sm btn-outline-info filter-type" data-type="posix" 
-                            onclick="filterByType('posix')"
-                            style="${group.type === 'posix' ? 'background-color: #17a2b8; color: white;' : ''}">
+                    ${group.type === 'posix' ? 
+                        `<button type="button" class="btn btn-sm btn-info filter-type" data-type="posix" 
+                            onclick="filterByType('posix')">
                             Posix
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-success filter-type" data-type="unique" 
-                            onclick="filterByType('unique')"
-                            style="${group.type === 'unique' ? 'background-color: #28a745; color: white;' : ''}">
+                        </button>` :
+                    group.type === 'unique' ?
+                        `<button type="button" class="btn btn-sm btn-success filter-type" data-type="unique" 
+                            onclick="filterByType('unique')">
                             Unique Names
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-warning filter-type" data-type="combined" 
-                            onclick="filterByType('combined')"
-                            style="${group.type === 'combined' ? 'background-color: #ffc107; color: black;' : ''}">
+                        </button>` :
+                        `<button type="button" class="btn btn-sm btn-warning filter-type" data-type="combined" 
+                            onclick="filterByType('combined')">
                             Combinado
-                        </button>
-                    </div>
+                        </button>`
+                    }
                 </td>
                 <td>${group.gidNumber || ''}</td>
                 <td>${group.description || ''}</td>
@@ -247,5 +239,10 @@ searchInput.addEventListener('input', function() {
 });
 
 typeSelect.addEventListener('change', updateGroups);
+
+// Initial load
+document.addEventListener('DOMContentLoaded', function() {
+    updateGroups();
+});
 </script>
 @endsection 
