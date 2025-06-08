@@ -278,32 +278,40 @@ class AlumnoClase extends Model
     /**
      * Obtener el siguiente UID disponible
      */
-    private function getNextUidNumber($connection)
+    private function getNextUidNumber($ldapConn)
     {
         try {
             // Obtener el máximo UID actual
             $maxUid = 10000; // UID mínimo para usuarios
             
-            $users = $connection->query()
-                ->in('ou=people,dc=test,dc=tierno,dc=es')
-                ->where('objectclass', '=', 'posixAccount')
-                ->get();
-                
-            foreach ($users as $user) {
-                if (isset($user['uidnumber']) && is_array($user['uidnumber'])) {
-                    $uid = (int)$user['uidnumber'][0];
+            // Buscar todos los usuarios posixAccount
+            $filter = "(objectClass=posixAccount)";
+            $baseDn = "ou=people," . config('ldap.connections.default.base_dn');
+            $result = ldap_search($ldapConn, $baseDn, $filter, ['uidNumber']);
+            
+            if (!$result) {
+                throw new \Exception("Error al buscar usuarios: " . ldap_error($ldapConn));
+            }
+            
+            $entries = ldap_get_entries($ldapConn, $result);
+            
+            // Encontrar el UID más alto
+            for ($i = 0; $i < $entries['count']; $i++) {
+                if (isset($entries[$i]['uidnumber'][0])) {
+                    $uid = (int)$entries[$i]['uidnumber'][0];
                     if ($uid > $maxUid) {
                         $maxUid = $uid;
                     }
                 }
             }
             
+            // Incrementar el UID más alto encontrado
             return $maxUid + 1;
             
         } catch (\Exception $e) {
-            Log::warning("Error al obtener próximo UID: " . $e->getMessage());
-            // En caso de error, generar un número aleatorio
-            return rand(10000, 20000);
+            Log::error("Error al obtener siguiente UID: " . $e->getMessage());
+            // En caso de error, devolver un UID por defecto
+            return 10001;
         }
     }
 
