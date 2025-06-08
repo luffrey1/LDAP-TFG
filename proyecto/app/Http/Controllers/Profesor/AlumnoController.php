@@ -138,42 +138,35 @@ class AlumnoController extends Controller
                 $config = config('ldap.connections.default');
                 Log::info("Configuración LDAP:", $config);
                 
-                // Crear conexión LDAP usando SSL directo
-                $ldapConn = ldap_connect('ldaps://' . $config['hosts'][0], 636);
-                if (!$ldapConn) {
-                    Log::error("Error al crear conexión LDAP");
-                    throw new \Exception("No se pudo establecer la conexión LDAP");
-                }
+                // Crear conexión LDAP usando LdapRecord como en LdapGroupController
+                $connection = new \LdapRecord\Connection([
+                    'hosts' => $config['hosts'],
+                    'port' => 636,
+                    'base_dn' => $config['base_dn'],
+                    'username' => $config['username'],
+                    'password' => $config['password'],
+                    'use_ssl' => true,
+                    'use_tls' => false,
+                    'timeout' => $config['timeout']
+                ]);
+
+                // Forzar la conexión SSL
+                $connection->getLdapConnection()->setOption(LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
                 
-                Log::debug("Conexión LDAP creada, configurando opciones...");
+                // Intentar conectar
+                $connection->connect();
                 
-                // Configuración básica
-                ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
-                ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
+                // Verificar la conexión con una búsqueda simple
+                $search = $connection->query()->where('objectclass', '*')->limit(1)->get();
                 
-                // Configuración SSL
-                Log::debug("Configurando SSL para conexión LDAP...");
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
-                
-                // Intentar bind con credenciales
-                Log::debug("Intentando bind con credenciales LDAP...");
-                $bind = @ldap_bind(
-                    $ldapConn, 
-                    $config['username'], 
-                    $config['password']
-                );
-                
-                if (!$bind) {
-                    $error = ldap_error($ldapConn);
-                    Log::error("Error al conectar al servidor LDAP: " . $error);
-                    Log::error("Código de error LDAP: " . ldap_errno($ldapConn));
-                    throw new \Exception("No se pudo conectar al servidor LDAP: " . $error);
+                if (empty($search)) {
+                    throw new \Exception("No se pudo realizar la búsqueda de prueba en LDAP");
                 }
                 
                 Log::info("Conexión LDAP establecida correctamente");
+                
+                // Obtener la conexión LDAP nativa
+                $ldapConn = $connection->getLdapConnection()->getConnection();
                 
                 // Preparar datos del usuario
                 $userDn = "uid={$nombreUsuario},ou=people,{$config['base_dn']}";
@@ -211,29 +204,19 @@ class AlumnoController extends Controller
                 $grupoLdap = $tipoImportacion === 'profesor' ? 'profesores' : 'alumnos';
                 $grupoDn = "cn={$grupoLdap},ou=groups,{$config['base_dn']}";
                 
-                // Buscar el grupo
-                $search = ldap_search($ldapConn, "ou=groups,{$config['base_dn']}", "(cn={$grupoLdap})");
-                if ($search) {
-                    $entries = ldap_get_entries($ldapConn, $search);
-                    if ($entries['count'] > 0) {
-                        $grupo = $entries[0];
-                        $memberUids = [];
-                        if (isset($grupo['memberuid'])) {
-                            $memberUids = is_array($grupo['memberuid']) ? $grupo['memberuid'] : [$grupo['memberuid']];
-                        }
-                        if (!in_array($nombreUsuario, $memberUids)) {
-                            $memberUids[] = $nombreUsuario;
-                            $result = ldap_modify($ldapConn, $grupoDn, ['memberuid' => $memberUids]);
-                            if (!$result) {
-                                Log::warning("Error al añadir usuario al grupo {$grupoLdap}: " . ldap_error($ldapConn));
-                            } else {
-                                Log::info("Usuario {$nombreUsuario} añadido al grupo {$grupoLdap}");
-                            }
-                        }
-                    }
+                $groupMod = [
+                    'member' => [$userDn]
+                ];
+                
+                $result = ldap_mod_add($ldapConn, $grupoDn, $groupMod);
+                
+                if (!$result) {
+                    $error = ldap_error($ldapConn);
+                    Log::error("Error al añadir usuario al grupo: " . $error);
+                    // No lanzamos excepción aquí para no revertir la creación del usuario
                 }
                 
-                ldap_close($ldapConn);
+                Log::info("Usuario añadido al grupo: {$grupoDn}");
                 
                 // Actualizar datos del alumno
                 $alumno->ldap_dn = $userDn;
