@@ -128,13 +128,13 @@ class AlumnoController extends Controller
                     'port' => 636,
                     'base_dn' => $config['base_dn'],
                     'username' => $config['username'],
-                    'use_ssl' => true,
-                    'use_tls' => false,
+                    'use_ssl' => false,
+                    'use_tls' => true,
                     'timeout' => $config['timeout']
                 ]);
                 
                 // Intentar conexión directa con ldap_connect
-                $ldapConn = ldap_connect("ldaps://{$config['hosts'][0]}:636");
+                $ldapConn = ldap_connect("ldap://{$config['hosts'][0]}:389");
                 if (!$ldapConn) {
                     throw new \Exception("No se pudo conectar al servidor LDAP");
                 }
@@ -145,6 +145,13 @@ class AlumnoController extends Controller
                 ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
                 ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
                 ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
+                
+                Log::debug("Intentando iniciar TLS...");
+                if (!ldap_start_tls($ldapConn)) {
+                    throw new \Exception("Error al iniciar TLS: " . ldap_error($ldapConn));
+                }
+                
+                Log::debug("TLS iniciado correctamente");
                 
                 Log::debug("Intentando bind con credenciales...");
                 
@@ -718,13 +725,13 @@ class AlumnoController extends Controller
                         'port' => 636,
                         'base_dn' => $config['base_dn'],
                         'username' => $config['username'],
-                        'use_ssl' => true,
-                        'use_tls' => false,
+                        'use_ssl' => false,
+                        'use_tls' => true,
                         'timeout' => $config['timeout']
                     ]);
                     
                     // Intentar conexión directa con ldap_connect
-                    $ldapConn = ldap_connect("ldaps://{$config['hosts'][0]}:636");
+                    $ldapConn = ldap_connect("ldap://{$config['hosts'][0]}:389");
                     if (!$ldapConn) {
                         throw new \Exception("No se pudo conectar al servidor LDAP");
                     }
@@ -735,6 +742,13 @@ class AlumnoController extends Controller
                     ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
                     ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
                     ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
+                    
+                    Log::debug("Intentando iniciar TLS...");
+                    if (!ldap_start_tls($ldapConn)) {
+                        throw new \Exception("Error al iniciar TLS: " . ldap_error($ldapConn));
+                    }
+                    
+                    Log::debug("TLS iniciado correctamente");
                     
                     Log::debug("Intentando bind con credenciales...");
                     
