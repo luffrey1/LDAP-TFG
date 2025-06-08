@@ -483,15 +483,45 @@ class AlumnoController extends Controller
             // Si tiene encabezados, los leemos
             if ($request->boolean('tiene_encabezados')) {
                 $header = fgetcsv($handle, 0, $request->separador);
+                if (!$header) {
+                    throw new \Exception("No se pudieron leer los encabezados del archivo CSV");
+                }
                 
-                // Validar encabezados
-                $requiredHeaders = ['nombre', 'apellidos', 'email', 'dni'];
-                $headerMap = array_flip(array_map('strtolower', $header));
+                // Normalizar encabezados (eliminar espacios y convertir a minúsculas)
+                $header = array_map(function($h) {
+                    return strtolower(trim($h));
+                }, $header);
                 
-                foreach ($requiredHeaders as $required) {
-                    if (!isset($headerMap[$required])) {
-                        throw new \Exception("El archivo CSV debe contener la columna: {$required}");
+                // Mapeo de posibles nombres de columnas
+                $columnMappings = [
+                    'nombre' => ['nombre', 'name', 'nombres'],
+                    'apellidos' => ['apellidos', 'apellido', 'surname', 'lastname'],
+                    'email' => ['email', 'correo', 'mail'],
+                    'dni' => ['dni', 'nif', 'identificacion', 'id']
+                ];
+                
+                // Buscar las columnas requeridas
+                $headerMap = [];
+                $missingColumns = [];
+                
+                foreach ($columnMappings as $required => $possibleNames) {
+                    $found = false;
+                    foreach ($possibleNames as $name) {
+                        $index = array_search($name, $header);
+                        if ($index !== false) {
+                            $headerMap[$required] = $index;
+                            $found = true;
+                            break;
+                        }
                     }
+                    if (!$found) {
+                        $missingColumns[] = $required;
+                    }
+                }
+                
+                if (!empty($missingColumns)) {
+                    throw new \Exception("Faltan las siguientes columnas en el CSV: " . implode(', ', $missingColumns) . 
+                        "\nEncabezados encontrados: " . implode(', ', $header));
                 }
             } else {
                 // Si no tiene encabezados, usamos índices fijos
@@ -510,22 +540,38 @@ class AlumnoController extends Controller
             
             while (($data = fgetcsv($handle, 0, $request->separador)) !== false) {
                 try {
+                    // Verificar que la línea tenga suficientes columnas
+                    if (count($data) < 2) {
+                        $errors[] = "Línea {$line}: La línea no tiene suficientes columnas";
+                        $line++;
+                        continue;
+                    }
+                    
                     // Mapear datos
                     $alumnoData = [
-                        'nombre' => $data[$headerMap['nombre']],
-                        'apellidos' => $data[$headerMap['apellidos']],
-                        'email' => $data[$headerMap['email']] ?? null,
-                        'dni' => $data[$headerMap['dni']] ?? null,
-                        'nombre_completo' => $data[$headerMap['nombre']] . ' ' . $data[$headerMap['apellidos']],
+                        'nombre' => trim($data[$headerMap['nombre']]),
+                        'apellidos' => trim($data[$headerMap['apellidos']]),
+                        'email' => isset($data[$headerMap['email']]) ? trim($data[$headerMap['email']]) : null,
+                        'dni' => isset($data[$headerMap['dni']]) ? trim($data[$headerMap['dni']]) : null,
+                        'nombre_completo' => trim($data[$headerMap['nombre']]) . ' ' . trim($data[$headerMap['apellidos']]),
                         'clase_grupo_id' => $request->clase_grupo_id
                     ];
                     
-                    // Verificar si ya existe
-                    $exists = AlumnoClase::where('dni', $alumnoData['dni'])->first();
-                    if ($exists) {
-                        $errors[] = "Línea {$line}: El alumno con DNI {$alumnoData['dni']} ya existe";
+                    // Verificar campos obligatorios
+                    if (empty($alumnoData['nombre']) || empty($alumnoData['apellidos'])) {
+                        $errors[] = "Línea {$line}: Nombre y apellidos son obligatorios";
                         $line++;
                         continue;
+                    }
+                    
+                    // Verificar si ya existe
+                    if (!empty($alumnoData['dni'])) {
+                        $exists = AlumnoClase::where('dni', $alumnoData['dni'])->first();
+                        if ($exists) {
+                            $errors[] = "Línea {$line}: El alumno con DNI {$alumnoData['dni']} ya existe";
+                            $line++;
+                            continue;
+                        }
                     }
                     
                     // Crear nuevo alumno
