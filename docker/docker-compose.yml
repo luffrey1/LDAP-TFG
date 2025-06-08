@@ -128,7 +128,7 @@ services:
     environment:
       - SSHKEY=/usr/src/app/config/administrator-id_ed25519
     volumes:
-      - ../webssh2/app/config.json:/usr/src/config.json:ro
+      - ../webssh2/app/config.json:/usr/src/app/config.json
       - ../webssh2/config/administrator-id_ed25519:/usr/src/app/config/administrator-id_ed25519:ro
     networks:
       - app-network

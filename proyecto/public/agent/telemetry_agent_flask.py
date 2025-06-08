@@ -19,7 +19,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 app = Flask(__name__)
 
 # URL base de Laravel - Usar IP directa en lugar de DNS
-LARAVEL_URL = "https://172.20.0.6"  # Cambiado a HTTPS
+LARAVEL_URL = "https://172.20.0.7"  # Cambiado a HTTPS
 
 # --- Utilidades ---
 def get_ip():

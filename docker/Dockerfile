@@ -23,8 +23,7 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install ldap zip pdo pdo_mysql
 
 # Instalar soporte ECDSA para Apache
-RUN apt-get install -y libapache2-mod-ssl && \
-    a2enmod ssl && \
+RUN a2enmod ssl && \
     echo "SSLProtocol all -SSLv2 -SSLv3 -TLSv1 -TLSv1.1" >> /etc/apache2/conf-available/ssl-params.conf && \
     echo "SSLCipherSuite ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-ECDSA-AES256-SHA384" >> /etc/apache2/conf-available/ssl-params.conf && \
     a2enconf ssl-params
@@ -121,12 +120,25 @@ COPY proyecto/public/documentos/index.html /var/www/html/public/documentos/horar
 COPY proyecto/public/documentos/.htaccess /var/www/html/public/documentos/.htaccess
 
 # Instala Node.js y npm
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs
 
 # Instala dependencias de frontend y compila assets
 WORKDIR /var/www/html
-RUN npm install && npm run build
+RUN npm install && \
+    npm install vite --save-dev && \
+    chown -R www-data:www-data /var/www/html && \
+    chmod -R 775 /var/www/html/node_modules && \
+    chmod -R 775 /var/www/html/vendor && \
+    chmod -R 775 /var/www/html/storage && \
+    chmod -R 775 /var/www/html/bootstrap/cache && \
+    mkdir -p /var/www/html/storage/logs && \
+    mkdir -p /var/www/html/storage/framework/sessions && \
+    mkdir -p /var/www/html/storage/framework/views && \
+    mkdir -p /var/www/html/storage/framework/cache && \
+    chown -R www-data:www-data /var/www/html/storage && \
+    chown -R www-data:www-data /var/www/html/bootstrap/cache && \
+    npm run build
 
 # Puertos
 EXPOSE 80

@@ -30,7 +30,41 @@ class LdapAuthMiddleware
             return redirect()->route('login');
         }
 
-        // Si hay sesión, permitir el acceso
-        return $next($request);
+        try {
+            // Intentar verificar la conexión LDAP
+            $config = config('ldap.connections.default');
+            $connection = new Connection([
+                'hosts' => $config['hosts'],
+                'port' => 636,
+                'base_dn' => $config['base_dn'],
+                'username' => $config['username'],
+                'password' => $config['password'],
+                'use_ssl' => true,
+                'use_tls' => false,
+                'timeout' => 5
+            ]);
+
+            // Forzar la conexión SSL
+            $connection->getLdapConnection()->setOption(LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
+            
+            // Intentar conectar
+            $connection->connect();
+            
+            // Si llegamos aquí, la conexión fue exitosa
+            return $next($request);
+            
+        } catch (\Exception $e) {
+            Log::error('LdapAuthMiddleware: Error de conexión LDAP - ' . $e->getMessage());
+            
+            // Si es un error de conexión, redirigir a una página de error
+            if (str_contains($e->getMessage(), 'Can\'t contact LDAP server')) {
+                return response()->view('errors.ldap', [
+                    'message' => 'No se pudo conectar al servidor LDAP. Por favor, intente de nuevo en unos momentos.'
+                ], 503);
+            }
+            
+            // Para otros errores, redirigir al login
+            return redirect()->route('login')->with('error', 'Error de autenticación. Por favor, vuelva a iniciar sesión.');
+        }
     }
 } 

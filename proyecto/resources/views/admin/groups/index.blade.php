@@ -1,19 +1,54 @@
 @extends('layouts.dashboard')
 
 @section('content')
-<div class="container-fluid">
+@php
+    $showUrl = route('admin.groups.show', ['cn' => ':cn']);
+    $editUrl = route('admin.groups.edit', ['cn' => ':cn']);
+    $deleteUrl = route('admin.groups.destroy', ['cn' => ':cn']);
+@endphp
+<div class="container" 
+    data-show-url="{{ $showUrl }}"
+    data-edit-url="{{ $editUrl }}"
+    data-delete-url="{{ $deleteUrl }}">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="search" class="text-white">Buscar grupo:</label>
+                                <input type="text" class="form-control" id="search" placeholder="Escribe para buscar...">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="type" class="text-white">Filtrar por tipo:</label>
+                                <select class="form-control" id="type">
+                                    <option value="all">Todos los tipos</option>
+                                    <option value="posix">Posix Group</option>
+                                    <option value="unique">Group of Unique Names</option>
+                                    <option value="combined">Combinado</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
-        <div class="col-12">
+        <div class="col-md-12">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">Gestión de Grupos LDAP</h3>
+                    <h3 class="card-title">Grupos LDAP</h3>
                     <div class="card-tools">
                         <a href="{{ route('admin.groups.create') }}" class="btn btn-primary">
                             <i class="fas fa-plus"></i> Nuevo Grupo
                         </a>
                     </div>
                 </div>
-
                 <div class="card-body">
                     @if (session('success'))
                         <div class="alert alert-success">
@@ -31,13 +66,15 @@
                         <table class="table table-bordered table-striped">
                             <thead>
                                 <tr>
-                                    <th>Nombre (CN)</th>
+                                    <th>Nombre</th>
+                                    <th>Tipo</th>
                                     <th>GID</th>
                                     <th>Descripción</th>
+                                    <th>Miembros</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="groupsTable">
                                 @forelse ($groups as $group)
                                     @php
                                         $cn = $group['cn'] ?? '';
@@ -45,23 +82,43 @@
                                         $description = $group['description'] ?? 'Sin descripción';
                                     @endphp
                                     <tr>
-                                        <td>{{ $cn }}</td>
+                                        <td class="text-black">{{ $cn }}</td>
+                                        <td>
+                                            @if($group['type'] === 'posix')
+                                                <button type="button" class="btn btn-sm btn-info filter-type" data-type="posix" 
+                                                    onclick="filterByType('posix')">
+                                                    Posix
+                                                </button>
+                                            @elseif($group['type'] === 'unique')
+                                                <button type="button" class="btn btn-sm btn-success filter-type" data-type="unique" 
+                                                    onclick="filterByType('unique')">
+                                                    Unique Names
+                                                </button>
+                                            @elseif($group['type'] === 'combined')
+                                                <button type="button" class="btn btn-sm btn-warning filter-type" data-type="combined" 
+                                                    onclick="filterByType('combined')">
+                                                    Combinado
+                                                </button>
+                                            @endif
+                                        </td>
                                         <td>{{ $gidNumber }}</td>
                                         <td>{{ $description }}</td>
+                                        <td>{{ count($group['members']) }}</td>
                                         <td>
                                             <div class="btn-group" role="group">
-                                                @if(!empty($cn))
-                                                <a href="{{ route('admin.groups.edit', ['cn' => $cn]) }}" class="btn btn-sm btn-info">
+                                                <a href="{{ str_replace(':cn', $group['cn'], $showUrl) }}" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-eye"></i> Ver
+                                                </a>
+                                                @if(!empty($group['cn']))
+                                                <a href="{{ str_replace(':cn', $group['cn'], $editUrl) }}" class="btn btn-sm btn-info">
                                                     <i class="fas fa-edit"></i> Editar
                                                 </a>
-                                                @if (!in_array($cn, ['admin', 'ldapadmins', 'sudo']))
+                                                @if (!in_array($group['cn'], ['admin', 'ldapadmins', 'sudo']))
                                                     <button type="button" class="btn btn-sm btn-danger" 
-                                                            onclick="confirmDelete('{{ $cn }}')">
+                                                            onclick="confirmDelete('{{ $group['cn'] }}')">
                                                         <i class="fas fa-trash"></i> Eliminar
                                                     </button>
                                                 @endif
-                                                @else
-                                                <span class="text-muted">No se puede editar</span>
                                                 @endif
                                             </div>
                                         </td>
@@ -112,5 +169,99 @@ function confirmDelete(cn) {
     form.attr('action', "{{ route('admin.groups.destroy', ':cn') }}".replace(':cn', cn));
     modal.modal('show');
 }
+
+function filterByType(type) {
+    typeSelect.value = type;
+    updateGroups();
+}
+
+let searchTimeout;
+const searchInput = document.getElementById('search');
+const typeSelect = document.getElementById('type');
+const groupsTable = document.getElementById('groupsTable');
+
+function updateGroups() {
+    const search = searchInput.value;
+    const type = typeSelect.value;
+    
+    fetch(`{{ route('admin.groups.index') }}?search=${encodeURIComponent(search)}&type=${encodeURIComponent(type)}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.groups) {
+            console.error('No groups data received');
+            return;
+        }
+
+        const container = document.querySelector('.container');
+        const showUrl = container.dataset.showUrl;
+        const editUrl = container.dataset.editUrl;
+        const deleteUrl = container.dataset.deleteUrl;
+
+        groupsTable.innerHTML = data.groups.map(group => {
+            const showUrlWithCn = showUrl.replace(':cn', group.cn);
+            const editUrlWithCn = editUrl.replace(':cn', group.cn);
+            
+            return `
+                <tr>
+                    <td class="text-black">${group.cn}</td>
+                    <td>
+                        ${group.type === 'posix' ? 
+                            `<button type="button" class="btn btn-sm btn-info filter-type" data-type="posix" 
+                                onclick="filterByType('posix')">
+                                Posix
+                            </button>` :
+                        group.type === 'unique' ?
+                            `<button type="button" class="btn btn-sm btn-success filter-type" data-type="unique" 
+                                onclick="filterByType('unique')">
+                                Unique Names
+                            </button>` :
+                            `<button type="button" class="btn btn-sm btn-warning filter-type" data-type="combined" 
+                                onclick="filterByType('combined')">
+                                Combinado
+                            </button>`
+                        }
+                    </td>
+                    <td>${group.gidNumber || ''}</td>
+                    <td>${group.description || ''}</td>
+                    <td>${group.members ? group.members.length : 0}</td>
+                    <td>
+                        <div class="btn-group" role="group">
+                            <a href="${showUrlWithCn}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-eye"></i> Ver
+                            </a>
+                            <a href="${editUrlWithCn}" class="btn btn-sm btn-info">
+                                <i class="fas fa-edit"></i> Editar
+                            </a>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete('${group.cn}')">
+                                <i class="fas fa-trash"></i> Eliminar
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('') || '<tr><td colspan="6" class="text-center">No hay grupos disponibles</td></tr>';
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        groupsTable.innerHTML = '<tr><td colspan="6" class="text-center">Error al cargar los grupos</td></tr>';
+    });
+}
+
+// Add event listeners for search and type filter
+searchInput.addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(updateGroups, 300);
+});
+
+typeSelect.addEventListener('change', updateGroups);
+
+// Initial load
+document.addEventListener('DOMContentLoaded', function() {
+    updateGroups();
+});
 </script>
 @endsection 
