@@ -144,8 +144,8 @@ class AlumnoController extends Controller
                 $config = config('ldap.connections.default');
                 Log::info("Configuración LDAP:", $config);
                 
-                // Crear conexión LDAP usando TLS
-                $ldapConn = ldap_connect($config['hosts'][0], 389);
+                // Crear conexión LDAP usando la configuración que funciona en otros controladores
+                $ldapConn = ldap_connect('ldaps://' . $config['hosts'][0], $config['port']);
                 if (!$ldapConn) {
                     Log::error("Error al crear conexión LDAP");
                     throw new \Exception("No se pudo establecer la conexión LDAP");
@@ -156,15 +156,14 @@ class AlumnoController extends Controller
                 // Configuración básica
                 ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
                 ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
-                
-                // Configuración para TLS
                 ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
                 
-                // Iniciar TLS
-                if (!ldap_start_tls($ldapConn)) {
-                    $error = ldap_error($ldapConn);
-                    Log::error("Error al iniciar TLS: " . $error);
-                    throw new \Exception("Error al iniciar TLS: " . $error);
+                // Configuración SSL
+                if ($config['use_ssl']) {
+                    Log::debug("Configurando SSL para conexión LDAP...");
+                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
+                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
+                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
                 }
                 
                 // Intentar bind con credenciales
@@ -192,7 +191,7 @@ class AlumnoController extends Controller
                     'sn' => $alumno->apellidos,
                     'givenname' => $alumno->nombre,
                     'uid' => $nombreUsuario,
-                    'uidnumber' => 1000,
+                    'uidnumber' => $this->getNextUidNumber($ldapConn),
                     'gidnumber' => 500,
                     'homedirectory' => "/home/{$nombreUsuario}",
                     'loginshell' => '/bin/bash',
@@ -1052,5 +1051,35 @@ class AlumnoController extends Controller
         ];
         
         return response($csv, 200, $headers);
+    }
+
+    /**
+     * Obtener el siguiente UID disponible
+     */
+    private function getNextUidNumber($ldapConn)
+    {
+        try {
+            // Obtener el máximo UID actual
+            $maxUid = 10000; // UID mínimo para usuarios
+            
+            $result = ldap_search($ldapConn, 'ou=people,' . config('ldap.connections.default.base_dn'), '(objectclass=posixAccount)');
+            $entries = ldap_get_entries($ldapConn, $result);
+            
+            for ($i = 0; $i < $entries['count']; $i++) {
+                if (isset($entries[$i]['uidnumber'][0])) {
+                    $uid = (int)$entries[$i]['uidnumber'][0];
+                    if ($uid > $maxUid) {
+                        $maxUid = $uid;
+                    }
+                }
+            }
+            
+            return $maxUid + 1;
+            
+        } catch (\Exception $e) {
+            Log::warning("Error al obtener próximo UID: " . $e->getMessage());
+            // En caso de error, generar un número aleatorio
+            return rand(10000, 20000);
+        }
     }
 } 
