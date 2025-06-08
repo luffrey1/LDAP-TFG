@@ -547,6 +547,9 @@ class AlumnoController extends Controller
                     'separador' => 'required|string|size:1',
                     'tiene_encabezados' => 'boolean',
                     'tipo_importacion' => 'required|in:alumno,profesor'
+                ], [
+                    'clase_grupo_id.required' => 'Debes seleccionar una clase o grupo',
+                    'clase_grupo_id.exists' => 'La clase o grupo seleccionado no existe'
                 ]);
 
                 if ($validator->fails()) {
