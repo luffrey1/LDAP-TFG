@@ -124,7 +124,7 @@
                             <div class="form-group mb-4">
                                 <input type="hidden" name="tiene_encabezados" value="0">
                                 <div class="form-check">
-                                    <input type="checkbox" name="tiene_encabezados" id="tiene_encabezados" class="form-check-input" value="1" {{ old('tiene_encabezados', true) ? 'checked' : '' }}>
+                                    <input type="checkbox" name="tiene_encabezados" id="tiene_encabezados" class="form-check-input" value="1" checked>
                                     <label class="form-check-label text-black fw-bold" for="tiene_encabezados">El archivo contiene fila de encabezados</label>
                                 </div>
                             </div>
@@ -132,7 +132,7 @@
                             <div class="form-group mb-4">
                                 <input type="hidden" name="crear_cuentas_ldap" value="0">
                                 <div class="form-check">
-                                    <input type="checkbox" name="crear_cuentas_ldap" id="crear_cuentas_ldap" class="form-check-input" value="1" {{ old('crear_cuentas_ldap', true) ? 'checked' : '' }}>
+                                    <input type="checkbox" name="crear_cuentas_ldap" id="crear_cuentas_ldap" class="form-check-input" value="1" checked>
                                     <label class="form-check-label text-black fw-bold" for="crear_cuentas_ldap">Crear cuentas LDAP para los usuarios</label>
                                 </div>
                             </div>
@@ -184,6 +184,7 @@
 @endsection
 
 @section('scripts')
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
     $(document).ready(function() {
         // Función para generar contraseña aleatoria
@@ -315,6 +316,17 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+        });
+
+        // Manejar el envío del formulario
+        $('#importForm').on('submit', function(e) {
+            // Asegurarse de que los checkboxes tengan un valor
+            if (!$('#tiene_encabezados').is(':checked')) {
+                $('input[name="tiene_encabezados"]').val('0');
+            }
+            if (!$('#crear_cuentas_ldap').is(':checked')) {
+                $('input[name="crear_cuentas_ldap"]').val('0');
+            }
         });
 
         // Inicializar select2 con estilo mejorado
