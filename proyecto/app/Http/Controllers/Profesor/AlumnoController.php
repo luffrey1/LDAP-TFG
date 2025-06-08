@@ -125,16 +125,10 @@ class AlumnoController extends Controller
                 $ldapConfig = config('ldap.connections.default');
                 // LOG de configuración antes de conectar
                 Log::info('Configuración LDAP usada en store:', $ldapConfig);
-                // Forzar configuración robusta igual que en LdapGroupController
-                $ldapConfig['port'] = 636;
+                // Forzar configuración SSL y deshabilitar TLS
                 $ldapConfig['use_ssl'] = true;
                 $ldapConfig['use_tls'] = false;
-                $ldapConfig['options'] = [
-                    LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
-                    LDAP_OPT_REFERRALS => 0,
-                    LDAP_OPT_PROTOCOL_VERSION => 3,
-                    LDAP_OPT_NETWORK_TIMEOUT => 5,
-                ];
+                $ldapConfig['port'] = 636;
                 Log::info('Configuración LDAP FORZADA en store:', $ldapConfig);
 
                 // Guardar usuario LDAP
@@ -144,7 +138,7 @@ class AlumnoController extends Controller
                 $config = config('ldap.connections.default');
                 Log::info("Configuración LDAP:", $config);
                 
-                // Crear conexión LDAP usando la configuración que funciona en LdapGroupController
+                // Crear conexión LDAP usando SSL directo
                 $ldapConn = ldap_connect('ldaps://' . $config['hosts'][0], 636);
                 if (!$ldapConn) {
                     Log::error("Error al crear conexión LDAP");
@@ -739,16 +733,10 @@ class AlumnoController extends Controller
                     $ldapConfig = config('ldap.connections.default');
                     // LOG de configuración antes de conectar
                     Log::info('Configuración LDAP usada en buscarAlumnosLdap:', $ldapConfig);
-                    // Forzar configuración robusta igual que en LdapGroupController
-                    $ldapConfig['port'] = 636;
+                    // Forzar configuración SSL y deshabilitar TLS
                     $ldapConfig['use_ssl'] = true;
                     $ldapConfig['use_tls'] = false;
-                    $ldapConfig['options'] = [
-                        LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
-                        LDAP_OPT_REFERRALS => 0,
-                        LDAP_OPT_PROTOCOL_VERSION => 3,
-                        LDAP_OPT_NETWORK_TIMEOUT => 5,
-                    ];
+                    $ldapConfig['port'] = 636;
                     Log::info('Configuración LDAP FORZADA en buscarAlumnosLdap:', $ldapConfig);
 
                     $connection = new \LdapRecord\Connection($ldapConfig);
@@ -923,16 +911,10 @@ class AlumnoController extends Controller
             $ldapConfig = config('ldap.connections.default');
             // LOG de configuración antes de conectar
             Log::info('Configuración LDAP usada en importarAlumnosLdap:', $ldapConfig);
-            // Forzar configuración robusta igual que en LdapGroupController
-            $ldapConfig['port'] = 636;
+            // Forzar configuración SSL y deshabilitar TLS
             $ldapConfig['use_ssl'] = true;
             $ldapConfig['use_tls'] = false;
-            $ldapConfig['options'] = [
-                LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
-                LDAP_OPT_REFERRALS => 0,
-                LDAP_OPT_PROTOCOL_VERSION => 3,
-                LDAP_OPT_NETWORK_TIMEOUT => 5,
-            ];
+            $ldapConfig['port'] = 636;
             Log::info('Configuración LDAP FORZADA en importarAlumnosLdap:', $ldapConfig);
 
             $connection = new \LdapRecord\Connection($ldapConfig);
