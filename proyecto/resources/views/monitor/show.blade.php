@@ -415,13 +415,13 @@ $(function() {
         $sshBtnHeader.addClass('ssh-btn-long').html('<i class="fas fa-terminal"></i> Conectar SSH');
         $sshBtnHeader.on('click', function(e) {
             e.preventDefault();
-            var hostname = '{{ $host->hostname }}';
-            if (!hostname) {
-                alert('No se pudo obtener el hostname del host');
+            var hostIp = '{{ $host->ip_address }}';
+            if (!hostIp) {
+                alert('No se pudo obtener la IP del host');
                 return;
             }
-            console.log('Conectando a hostname:', hostname);
-            var url = `http://${webssh2Host}:${webssh2Port}/ssh/host/${hostname}`;
+            console.log('Conectando a IP:', hostIp);
+            var url = `http://${webssh2Host}:${webssh2Port}/ssh/host/${hostIp}`;
             console.log('URL de conexión:', url);
             window.location.href = url;
         });
