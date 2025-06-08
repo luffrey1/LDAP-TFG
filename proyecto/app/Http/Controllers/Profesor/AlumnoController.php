@@ -138,35 +138,76 @@ class AlumnoController extends Controller
                 Log::info('Configuración LDAP FORZADA en store:', $ldapConfig);
 
                 // Guardar usuario LDAP
-                Log::info("Intentando conectar al servidor LDAP en: " . $ldapConfig['hosts'][0]);
+                Log::info("Intentando conectar al servidor LDAP");
                 
-                // Crear conexión LDAP básica
-                $ldapConn = ldap_connect($ldapConfig['hosts'][0], 389);
+                // Intentar conexión con diferentes configuraciones
+                $ldapConn = null;
+                $ldapError = null;
+                
+                // Lista de hosts a intentar
+                $hosts = [
+                    'openldap-osixia',  // Primero intentamos el host local
+                    $ldapConfig['hosts'][0],
+                    'ldap.tierno.es'
+                ];
+                
+                // Lista de puertos a intentar
+                $ports = [389, 636];
+                
+                // Intentar cada combinación de host y puerto
+                foreach ($hosts as $host) {
+                    foreach ($ports as $port) {
+                        Log::info("Intentando conexión LDAP a {$host}:{$port}");
+                        
+                        try {
+                            $ldapConn = ldap_connect($host, $port);
+                            if (!$ldapConn) {
+                                continue;
+                            }
+                            
+                            // Configuración básica
+                            ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
+                            ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
+                            
+                            // Configuración para certificados no seguros
+                            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
+                            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_PROTOCOL_MIN, 3.1);
+                            
+                            // Si es puerto 636, configurar SSL
+                            if ($port === 636) {
+                                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CIPHER_SUITE, 'HIGH:!aNULL:!eNULL:!EXPORT:!SSLv2:!SSLv3:!TLSv1');
+                            }
+                            
+                            // Intentar bind
+                            $bind = @ldap_bind(
+                                $ldapConn,
+                                $ldapConfig['username'],
+                                $ldapConfig['password']
+                            );
+                            
+                            if ($bind) {
+                                Log::info("Conexión LDAP exitosa a {$host}:{$port}");
+                                break 2; // Salir de ambos bucles
+                            }
+                            
+                            $ldapError = ldap_error($ldapConn);
+                            ldap_close($ldapConn);
+                            $ldapConn = null;
+                            
+                        } catch (\Exception $e) {
+                            Log::warning("Error al intentar conexión a {$host}:{$port}: " . $e->getMessage());
+                            if ($ldapConn) {
+                                ldap_close($ldapConn);
+                                $ldapConn = null;
+                            }
+                        }
+                    }
+                }
+                
                 if (!$ldapConn) {
-                    Log::error("No se pudo establecer la conexión LDAP básica");
-                    throw new \Exception("No se pudo establecer la conexión LDAP");
+                    Log::error("No se pudo establecer conexión LDAP con ningún host/port");
+                    throw new \Exception("No se pudo conectar al servidor LDAP. Último error: " . ($ldapError ?? 'Desconocido'));
                 }
-                
-                // Configuración mínima de LDAP
-                ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
-                ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
-                
-                // Intentar bind con credenciales
-                Log::info("Intentando bind con credenciales LDAP");
-                $bind = @ldap_bind(
-                    $ldapConn, 
-                    $ldapConfig['username'], 
-                    $ldapConfig['password']
-                );
-                
-                if (!$bind) {
-                    $error = ldap_error($ldapConn);
-                    Log::error("Error al conectar al servidor LDAP: " . $error);
-                    Log::error("Código de error LDAP: " . ldap_errno($ldapConn));
-                    throw new \Exception("No se pudo conectar al servidor LDAP: " . $error);
-                }
-                
-                Log::info("Conexión LDAP establecida correctamente");
                 
                 // Preparar datos del usuario
                 $userDn = "uid={$nombreUsuario},ou=people,{$ldapConfig['base_dn']}";
