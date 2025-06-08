@@ -611,6 +611,7 @@ class AlumnoController extends Controller
                     $alumno->fecha_nacimiento = $alumnoData['fecha_nacimiento'];
                     $alumno->clase_grupo_id = $importData['grupo_id'];
                     $alumno->activo = true;
+                    $alumno->tipo = $request->input('tipo_importacion', 'alumno');
                     
                     // Si se solicita crear cuentas LDAP
                     if ($importData['crear_ldap']) {
