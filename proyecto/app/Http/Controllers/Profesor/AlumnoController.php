@@ -138,45 +138,41 @@ class AlumnoController extends Controller
                 $config = config('ldap.connections.default');
                 Log::info("Configuración LDAP:", $config);
                 
-                // Crear el usuario directamente con LDAP nativo para mayor control
-                $ldapConn = ldap_connect('ldaps://' . $config['hosts'][0], $config['port']);
-                if (!$ldapConn) {
-                    Log::error("Error al crear conexión LDAP");
-                    throw new \Exception("No se pudo establecer la conexión LDAP");
+                // Crear conexión LDAP usando la configuración del constructor de LdapUserController
+                $connection = new \LdapRecord\Connection([
+                    'hosts' => $config['hosts'],
+                    'port' => 636, // Forzar puerto 636 para LDAPS
+                    'base_dn' => $config['base_dn'],
+                    'username' => $config['username'],
+                    'password' => $config['password'],
+                    'use_ssl' => true, // Forzar SSL
+                    'use_tls' => false, // Deshabilitar TLS
+                    'timeout' => $config['timeout'],
+                    'options' => [
+                        LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                        LDAP_OPT_REFERRALS => 0,
+                        LDAP_OPT_PROTOCOL_VERSION => 3,
+                        LDAP_OPT_NETWORK_TIMEOUT => 5
+                    ]
+                ]);
+                
+                // Conectar al servidor LDAP
+                $connection->connect();
+                
+                // Verificar la conexión con una búsqueda simple
+                $search = $connection->query()
+                    ->in($config['base_dn'])
+                    ->limit(1)
+                    ->get();
+                
+                if (empty($search)) {
+                    throw new \Exception("No se pudo realizar la búsqueda de prueba en LDAP");
                 }
                 
-                Log::debug("Conexión LDAP creada, configurando opciones...");
+                Log::info("Conexión LDAP establecida correctamente");
                 
-                ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
-                ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
-                
-                // Intentar conexión SSL primero
-                if ($config['use_ssl']) {
-                    Log::debug("Configurando SSL para conexión LDAP...");
-                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
-                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
-                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
-                }
-                
-                Log::debug("Intentando bind con credenciales LDAP...");
-                Log::debug("Username: " . $config['username']);
-                
-                // Intentar bind con credenciales
-                $bind = @ldap_bind(
-                    $ldapConn, 
-                    $config['username'], 
-                    $config['password']
-                );
-                
-                if (!$bind) {
-                    $error = ldap_error($ldapConn);
-                    Log::error("Error al conectar al servidor LDAP: " . $error);
-                    Log::error("Código de error LDAP: " . ldap_errno($ldapConn));
-                    throw new \Exception("No se pudo conectar al servidor LDAP: " . $error);
-                }
-                
-                Log::debug("Conexión LDAP establecida correctamente");
+                // Obtener la conexión LDAP nativa
+                $ldapConn = $connection->getLdapConnection()->getConnection();
                 
                 // Preparar datos del usuario
                 $userDn = "uid={$nombreUsuario},ou=people,{$config['base_dn']}";
