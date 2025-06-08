@@ -198,85 +198,68 @@ class AlumnoClase extends Model
             $peopleOu = "ou=people,{$config['base_dn']}";
             
             // Determinar el grupo según el tipo de importación
-            $isProfesor = $tipoImportacion === 'profesor';
-            $groupDn = $isProfesor ? 
-                "cn=profesores,ou=groups,{$config['base_dn']}" : 
-                "cn=alumnos,ou=groups,{$config['base_dn']}";
+            $groupDn = $tipoImportacion === 'profesor' 
+                ? "cn=profesores,ou=groups,{$config['base_dn']}"
+                : "cn=alumnos,ou=groups,{$config['base_dn']}";
+
+            // Crear DN del usuario
+            $userDn = "uid={$username},{$peopleOu}";
             
-            // Datos del usuario LDAP
-            $userData = [
+            // Preparar atributos del usuario
+            $userAttrs = [
                 'objectClass' => ['inetOrgPerson', 'posixAccount', 'top'],
+                'uid' => $username,
                 'cn' => $this->nombre_completo,
                 'sn' => $this->apellidos,
                 'givenName' => $this->nombre,
-                'uid' => $username,
+                'mail' => $this->email,
+                'userPassword' => $this->hashPassword($password),
                 'uidNumber' => $this->getNextUidNumber($ldapConn),
-                'gidNumber' => $isProfesor ? 501 : 500, // 501 para profesores, 500 para alumnos
+                'gidNumber' => 10000,
                 'homeDirectory' => "/home/{$username}",
-                'loginShell' => '/bin/bash',
-                'mail' => $this->email ?: "{$username}@centro.local",
-                'userPassword' => $this->hashPassword($password)
+                'loginShell' => '/bin/bash'
             ];
 
-            // DN del usuario
-            $userDn = "uid={$username},{$peopleOu}";
-            
-            Log::debug("Intentando crear usuario LDAP: {$userDn}");
-            
-            // Crear el usuario
-            if (!ldap_add($ldapConn, $userDn, $userData)) {
-                throw new \Exception("Error al crear usuario LDAP: " . ldap_error($ldapConn));
+            // Añadir el usuario al grupo correspondiente
+            $groupAttrs = [
+                'member' => $userDn
+            ];
+
+            // Crear el usuario en LDAP
+            if (!ldap_add($ldapConn, $userDn, $userAttrs)) {
+                throw new \Exception("Error al crear usuario en LDAP: " . ldap_error($ldapConn));
             }
-            
-            Log::debug("Usuario LDAP creado exitosamente");
-            
-            // Añadir al grupo correspondiente
-            $groupInfo = ldap_read($ldapConn, $groupDn, "(objectClass=*)", ['objectClass']);
-            if (!$groupInfo) {
-                throw new \Exception("Error al leer información del grupo: " . ldap_error($ldapConn));
+
+            // Añadir el usuario al grupo
+            if (!ldap_mod_add($ldapConn, $groupDn, $groupAttrs)) {
+                // Si falla al añadir al grupo, eliminar el usuario
+                ldap_delete($ldapConn, $userDn);
+                throw new \Exception("Error al añadir usuario al grupo: " . ldap_error($ldapConn));
             }
-            
-            $groupEntry = ldap_first_entry($ldapConn, $groupInfo);
-            $groupAttrs = ldap_get_attributes($ldapConn, $groupEntry);
-            
-            if (in_array('posixGroup', $groupAttrs['objectClass'])) {
-                // Grupo POSIX
-                $modify = ['memberUid' => $username];
-            } else {
-                // Grupo estándar
-                $modify = ['member' => $userDn];
-            }
-            
-            if (!ldap_mod_add($ldapConn, $groupDn, $modify)) {
-                Log::warning("Error al añadir usuario al grupo: " . ldap_error($ldapConn));
-            }
-            
-            Log::debug("Usuario añadido al grupo " . ($isProfesor ? "profesores" : "alumnos"));
-            
-            // Cerrar conexión LDAP
-            ldap_close($ldapConn);
-            
-            // Actualizar datos del alumno
+
+            // Actualizar el modelo con la información de LDAP
             $this->ldap_dn = $userDn;
             $this->usuario_ldap = $username;
             $this->cuenta_creada = true;
             $this->save();
-            
+
             return [
                 'success' => true,
                 'message' => 'Cuenta LDAP creada correctamente',
                 'username' => $username,
                 'password' => $password
             ];
-            
+
         } catch (\Exception $e) {
-            Log::error("Error al crear cuenta LDAP: " . $e->getMessage());
-            Log::error("Stack trace: " . $e->getTraceAsString());
-            
+            Log::error('Error al crear cuenta LDAP: ' . $e->getMessage());
             return [
                 'success' => false,
-                'message' => 'Error al crear cuenta LDAP: ' . $e->getMessage()
+                'message' => $e->getMessage()
             ];
+        } finally {
+            if (isset($ldapConn)) {
+                ldap_close($ldapConn);
+            }
         }
     }
 
