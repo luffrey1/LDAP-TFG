@@ -148,8 +148,8 @@ class AlumnoController extends Controller
                     'username' => $ldapUsername
                 ]);
                 
-                // Crear conexión LDAP
-                $ldapConn = ldap_connect('ldaps://' . $ldapHost, $ldapPort);
+                // Crear conexión LDAP con LDAPS explícito
+                $ldapConn = ldap_connect('ldaps://' . $ldapHost . ':' . $ldapPort);
                 if (!$ldapConn) {
                     Log::error("Error al crear conexión LDAP");
                     throw new \Exception("No se pudo establecer la conexión LDAP");
@@ -157,7 +157,7 @@ class AlumnoController extends Controller
                 
                 Log::debug("Conexión LDAP creada, configurando opciones...");
                 
-                // Configurar opciones LDAP
+                // Configurar opciones LDAP básicas
                 ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
                 ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
                 ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
