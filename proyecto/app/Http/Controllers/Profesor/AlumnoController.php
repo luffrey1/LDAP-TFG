@@ -466,41 +466,58 @@ class AlumnoController extends Controller
     {
         try {
             $request->validate([
-                'file' => 'required|file|mimes:csv,txt',
-                'tipo_importacion' => 'required|in:alumno,profesor'
+                'archivo_csv' => 'required|file|mimes:csv,txt',
+                'tipo_importacion' => 'required|in:alumno,profesor',
+                'clase_grupo_id' => 'required|exists:clase_grupos,id',
+                'crear_cuentas_ldap' => 'boolean',
+                'separador' => 'required|string|size:1',
+                'tiene_encabezados' => 'boolean'
             ]);
 
-            $file = $request->file('file');
+            $file = $request->file('archivo_csv');
             $tipoImportacion = $request->input('tipo_importacion', 'alumno');
             
             // Leer el archivo CSV
             $handle = fopen($file->getPathname(), 'r');
-            $header = fgetcsv($handle);
             
-            // Validar encabezados
-            $requiredHeaders = ['nombre', 'apellidos', 'email', 'dni'];
-            $headerMap = array_flip(array_map('strtolower', $header));
-            
-            foreach ($requiredHeaders as $required) {
-                if (!isset($headerMap[$required])) {
-                    throw new \Exception("El archivo CSV debe contener la columna: {$required}");
+            // Si tiene encabezados, los leemos
+            if ($request->boolean('tiene_encabezados')) {
+                $header = fgetcsv($handle, 0, $request->separador);
+                
+                // Validar encabezados
+                $requiredHeaders = ['nombre', 'apellidos', 'email', 'dni'];
+                $headerMap = array_flip(array_map('strtolower', $header));
+                
+                foreach ($requiredHeaders as $required) {
+                    if (!isset($headerMap[$required])) {
+                        throw new \Exception("El archivo CSV debe contener la columna: {$required}");
+                    }
                 }
+            } else {
+                // Si no tiene encabezados, usamos índices fijos
+                $headerMap = [
+                    'nombre' => 0,
+                    'apellidos' => 1,
+                    'email' => 2,
+                    'dni' => 3
+                ];
             }
             
             // Procesar cada línea
             $imported = 0;
             $errors = [];
-            $line = 2; // Comenzar en línea 2 (después del encabezado)
+            $line = $request->boolean('tiene_encabezados') ? 2 : 1; // Comenzar en línea 2 si hay encabezados
             
-            while (($data = fgetcsv($handle)) !== false) {
+            while (($data = fgetcsv($handle, 0, $request->separador)) !== false) {
                 try {
                     // Mapear datos
                     $alumnoData = [
                         'nombre' => $data[$headerMap['nombre']],
                         'apellidos' => $data[$headerMap['apellidos']],
-                        'email' => $data[$headerMap['email']],
-                        'dni' => $data[$headerMap['dni']],
-                        'nombre_completo' => $data[$headerMap['nombre']] . ' ' . $data[$headerMap['apellidos']]
+                        'email' => $data[$headerMap['email']] ?? null,
+                        'dni' => $data[$headerMap['dni']] ?? null,
+                        'nombre_completo' => $data[$headerMap['nombre']] . ' ' . $data[$headerMap['apellidos']],
+                        'clase_grupo_id' => $request->clase_grupo_id
                     ];
                     
                     // Verificar si ya existe
@@ -515,10 +532,12 @@ class AlumnoController extends Controller
                     $alumno = new AlumnoClase($alumnoData);
                     $alumno->save();
                     
-                    // Crear cuenta LDAP
-                    $result = $alumno->crearCuentaLdap(null, $tipoImportacion);
-                    if (!$result['success']) {
-                        $errors[] = "Línea {$line}: Error al crear cuenta LDAP - {$result['message']}";
+                    // Crear cuenta LDAP si está marcado
+                    if ($request->boolean('crear_cuentas_ldap')) {
+                        $result = $alumno->crearCuentaLdap(null, $tipoImportacion);
+                        if (!$result['success']) {
+                            $errors[] = "Línea {$line}: Error al crear cuenta LDAP - {$result['message']}";
+                        }
                     }
                     
                     $imported++;
