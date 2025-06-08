@@ -214,17 +214,59 @@ class AlumnoController extends Controller
                 $grupoLdap = $tipoImportacion === 'profesor' ? 'profesores' : 'alumnos';
                 $grupoDn = "cn={$grupoLdap},ou=groups,{$config['base_dn']}";
                 
-                $groupMod = [
-                    'member' => [$userDn]
-                ];
-                
-                $result = ldap_mod_add($ldapConn, $grupoDn, $groupMod);
-                
-                if (!$result) {
-                    $error = ldap_error($ldapConn);
-                    Log::error("Error al añadir usuario al grupo: " . $error);
-                    // No lanzamos excepción aquí para no revertir la creación del usuario
+                // Verificar el tipo de grupo y añadir el usuario según corresponda
+                $groupInfo = ldap_read($ldapConn, $grupoDn, "(objectclass=*)", ["objectClass"]);
+                if ($groupInfo) {
+                    $groupEntry = ldap_get_entries($ldapConn, $groupInfo);
+                    
+                    // Verificar si tiene objectClass groupOfUniqueNames
+                    $isUniqueGroup = false;
+                    if (isset($groupEntry[0]['objectclass'])) {
+                        for ($i = 0; $i < $groupEntry[0]['objectclass']['count']; $i++) {
+                            if (strtolower($groupEntry[0]['objectclass'][$i]) === 'groupofuniquenames') {
+                                $isUniqueGroup = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if ($isUniqueGroup) {
+                        try {
+                            $modInfo = [
+                                'uniqueMember' => $userDn
+                            ];
+                            ldap_mod_add($ldapConn, $grupoDn, $modInfo);
+                            Log::debug("Usuario añadido como uniqueMember al grupo");
+                        } catch (\Exception $e) {
+                            Log::error("Error al añadir uniqueMember al grupo: " . $e->getMessage());
+                        }
+                    }
+                    
+                    // También añadir como memberUid para posixGroup
+                    $isPosixGroup = false;
+                    if (isset($groupEntry[0]['objectclass'])) {
+                        for ($i = 0; $i < $groupEntry[0]['objectclass']['count']; $i++) {
+                            if (strtolower($groupEntry[0]['objectclass'][$i]) === 'posixgroup') {
+                                $isPosixGroup = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if ($isPosixGroup) {
+                        try {
+                            $modInfo = [
+                                'memberUid' => $nombreUsuario
+                            ];
+                            ldap_mod_add($ldapConn, $grupoDn, $modInfo);
+                            Log::debug("Usuario añadido como memberUid al grupo");
+                        } catch (\Exception $e) {
+                            Log::error("Error al añadir memberUid al grupo: " . $e->getMessage());
+                        }
+                    }
                 }
+                
+                ldap_close($ldapConn);
                 
                 Log::info("Usuario añadido al grupo: {$grupoDn}");
                 
