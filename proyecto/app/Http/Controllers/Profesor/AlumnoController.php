@@ -139,7 +139,7 @@ class AlumnoController extends Controller
                 Log::info("Configuración LDAP:", $config);
                 
                 // Crear el usuario directamente con LDAP nativo para mayor control
-                $ldapConn = ldap_connect('ldaps://' . $config['hosts'][0], 636);
+                $ldapConn = ldap_connect('ldaps://' . $config['hosts'][0], $config['port']);
                 if (!$ldapConn) {
                     Log::error("Error al crear conexión LDAP");
                     throw new \Exception("No se pudo establecer la conexión LDAP");
