@@ -639,7 +639,8 @@ class AlumnoController extends Controller
                                 'dni' => isset($data[$headerMap['dni']]) ? trim($data[$headerMap['dni']]) : null,
                                 'nombre_completo' => trim($data[$headerMap['nombre']]) . ' ' . trim($data[$headerMap['apellidos']]),
                                 'numero_expediente' => isset($headerMap['expediente']) && isset($data[$headerMap['expediente']]) ? trim($data[$headerMap['expediente']]) : '-',
-                                'fecha_nacimiento' => isset($headerMap['fecha_nacimiento']) && isset($data[$headerMap['fecha_nacimiento']]) ? trim($data[$headerMap['fecha_nacimiento']]) : '-',
+                                'fecha_nacimiento' => isset($headerMap['fecha_nacimiento']) && isset($data[$headerMap['fecha_nacimiento']]) ? 
+                                    $this->parseFechaNacimiento(trim($data[$headerMap['fecha_nacimiento']])) : '-',
                                 'password' => AlumnoClase::generarPassword(),
                                 'tipo_importacion' => $request->tipo_importacion
                             ];
@@ -1112,6 +1113,35 @@ class AlumnoController extends Controller
             Log::warning("Error al obtener próximo UID: " . $e->getMessage());
             // En caso de error, generar un número aleatorio
             return rand(10000, 20000);
+        }
+    }
+
+    /**
+     * Parsea la fecha de nacimiento del formato dd/mm/yyyy a yyyy-mm-dd
+     */
+    private function parseFechaNacimiento($fecha)
+    {
+        if (empty($fecha) || $fecha === '-') {
+            return null;
+        }
+
+        try {
+            // Intentar parsear la fecha en formato dd/mm/yyyy
+            $fechaObj = \DateTime::createFromFormat('d/m/Y', $fecha);
+            if ($fechaObj) {
+                return $fechaObj->format('Y-m-d');
+            }
+
+            // Si falla, intentar con el formato yyyy-mm-dd
+            $fechaObj = \DateTime::createFromFormat('Y-m-d', $fecha);
+            if ($fechaObj) {
+                return $fechaObj->format('Y-m-d');
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            Log::error('Error al parsear fecha: ' . $e->getMessage());
+            return null;
         }
     }
 } 
