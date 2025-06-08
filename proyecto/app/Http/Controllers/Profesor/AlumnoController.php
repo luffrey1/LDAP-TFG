@@ -156,13 +156,11 @@ class AlumnoController extends Controller
                 // Configuración básica
                 ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
                 ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
                 
-                // Configurar SSL
-                Log::debug("Configurando SSL para conexión LDAP...");
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
+                // Configuración para aceptar certificados no válidos
+                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
+                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_PROTOCOL_MIN, 3.1);
+                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CIPHER_SUITE, 'HIGH:!aNULL:!eNULL:!EXPORT:!SSLv2:!SSLv3:!TLSv1');
                 
                 // Intentar bind con credenciales
                 Log::debug("Intentando bind con credenciales LDAP...");
