@@ -125,16 +125,16 @@ class AlumnoController extends Controller
                 $config = config('ldap.connections.default');
                 Log::debug("Configurando conexión LDAP con los siguientes parámetros:", [
                     'hosts' => $config['hosts'],
-                    'port' => 636,
+                    'port' => 389,
                     'base_dn' => $config['base_dn'],
                     'username' => $config['username'],
-                    'use_ssl' => true,
-                    'use_tls' => false,
+                    'use_ssl' => false,
+                    'use_tls' => true,
                     'timeout' => $config['timeout']
                 ]);
                 
-                // Intentar conexión directa con ldap_connect usando SSL
-                $ldapConn = ldap_connect("ldaps://{$config['hosts'][0]}:636");
+                // Intentar conexión directa con ldap_connect
+                $ldapConn = ldap_connect("ldap://{$config['hosts'][0]}:389");
                 if (!$ldapConn) {
                     throw new \Exception("No se pudo conectar al servidor LDAP");
                 }
@@ -145,6 +145,16 @@ class AlumnoController extends Controller
                 ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
                 ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
                 ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
+                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/fullchain.pem');
+                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
+                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
+                
+                Log::debug("Intentando iniciar TLS...");
+                if (!ldap_start_tls($ldapConn)) {
+                    throw new \Exception("Error al iniciar TLS: " . ldap_error($ldapConn));
+                }
+                
+                Log::debug("TLS iniciado correctamente");
                 
                 Log::debug("Intentando bind con credenciales...");
                 
@@ -715,16 +725,16 @@ class AlumnoController extends Controller
                     
                     Log::debug("Configurando conexión LDAP con los siguientes parámetros:", [
                         'hosts' => $config['hosts'],
-                        'port' => 636,
+                        'port' => 389,
                         'base_dn' => $config['base_dn'],
                         'username' => $config['username'],
-                        'use_ssl' => true,
-                        'use_tls' => false,
+                        'use_ssl' => false,
+                        'use_tls' => true,
                         'timeout' => $config['timeout']
                     ]);
                     
-                    // Intentar conexión directa con ldap_connect usando SSL
-                    $ldapConn = ldap_connect("ldaps://{$config['hosts'][0]}:636");
+                    // Intentar conexión directa con ldap_connect
+                    $ldapConn = ldap_connect("ldap://{$config['hosts'][0]}:389");
                     if (!$ldapConn) {
                         throw new \Exception("No se pudo conectar al servidor LDAP");
                     }
@@ -735,6 +745,16 @@ class AlumnoController extends Controller
                     ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
                     ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
                     ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
+                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/fullchain.pem');
+                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
+                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
+                    
+                    Log::debug("Intentando iniciar TLS...");
+                    if (!ldap_start_tls($ldapConn)) {
+                        throw new \Exception("Error al iniciar TLS: " . ldap_error($ldapConn));
+                    }
+                    
+                    Log::debug("TLS iniciado correctamente");
                     
                     Log::debug("Intentando bind con credenciales...");
                     
