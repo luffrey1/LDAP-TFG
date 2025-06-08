@@ -611,11 +611,12 @@ class AlumnoController extends Controller
                     $alumno->fecha_nacimiento = $alumnoData['fecha_nacimiento'];
                     $alumno->clase_grupo_id = $importData['grupo_id'];
                     $alumno->activo = true;
-                    $alumno->tipo = $request->input('tipo_importacion', 'alumno');
                     
                     // Si se solicita crear cuentas LDAP
                     if ($importData['crear_ldap']) {
-                        $resultado = $alumno->crearCuentaLdap($alumnoData['password']);
+                        // Pasar el tipo de importación al método crearCuentaLdap
+                        $tipoImportacion = $request->input('tipo_importacion', 'alumno');
+                        $resultado = $alumno->crearCuentaLdap($alumnoData['password'], $tipoImportacion);
                         
                         if (!$resultado['success']) {
                             $errores[] = "Error al crear cuenta LDAP para {$alumno->nombre_completo}: " . $resultado['message'];

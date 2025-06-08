@@ -142,7 +142,7 @@ class AlumnoClase extends Model
     /**
      * Crear cuenta LDAP para el alumno
      */
-    public function crearCuentaLdap($password = null)
+    public function crearCuentaLdap($password = null, $tipoImportacion = 'alumno')
     {
         // Si ya tiene cuenta, no crear otra
         if ($this->cuenta_creada) {
@@ -196,7 +196,12 @@ class AlumnoClase extends Model
 
             // Crear el usuario en LDAP
             $peopleOu = "ou=people,{$config['base_dn']}";
-            $alumnosGroupDn = "cn=alumnos,ou=groups,{$config['base_dn']}";
+            
+            // Determinar el grupo según el tipo de importación
+            $isProfesor = $tipoImportacion === 'profesor';
+            $groupDn = $isProfesor ? 
+                "cn=profesores,ou=groups,{$config['base_dn']}" : 
+                "cn=alumnos,ou=groups,{$config['base_dn']}";
             
             // Datos del usuario LDAP
             $userData = [
@@ -206,7 +211,7 @@ class AlumnoClase extends Model
                 'givenName' => $this->nombre,
                 'uid' => $username,
                 'uidNumber' => $this->getNextUidNumber($ldapConn),
-                'gidNumber' => 500, // GID de alumnos
+                'gidNumber' => $isProfesor ? 501 : 500, // 501 para profesores, 500 para alumnos
                 'homeDirectory' => "/home/{$username}",
                 'loginShell' => '/bin/bash',
                 'mail' => $this->email ?: "{$username}@centro.local",
@@ -225,8 +230,8 @@ class AlumnoClase extends Model
             
             Log::debug("Usuario LDAP creado exitosamente");
             
-            // Añadir al grupo de alumnos
-            $groupInfo = ldap_read($ldapConn, $alumnosGroupDn, "(objectClass=*)", ['objectClass']);
+            // Añadir al grupo correspondiente
+            $groupInfo = ldap_read($ldapConn, $groupDn, "(objectClass=*)", ['objectClass']);
             if (!$groupInfo) {
                 throw new \Exception("Error al leer información del grupo: " . ldap_error($ldapConn));
             }
@@ -242,11 +247,11 @@ class AlumnoClase extends Model
                 $modify = ['member' => $userDn];
             }
             
-            if (!ldap_mod_add($ldapConn, $alumnosGroupDn, $modify)) {
+            if (!ldap_mod_add($ldapConn, $groupDn, $modify)) {
                 Log::warning("Error al añadir usuario al grupo: " . ldap_error($ldapConn));
             }
             
-            Log::debug("Usuario añadido al grupo de alumnos");
+            Log::debug("Usuario añadido al grupo " . ($isProfesor ? "profesores" : "alumnos"));
             
             // Cerrar conexión LDAP
             ldap_close($ldapConn);
