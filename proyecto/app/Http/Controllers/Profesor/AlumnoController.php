@@ -210,7 +210,7 @@ class AlumnoController extends Controller
                     // Guardar usuario LDAP
                     Log::info("Intentando conectar al servidor LDAP en: " . $ldapConfig['hosts'][0]);
                     
-                    // Intentar primero sin SSL para diagnóstico
+                    // Intentar conexión directa sin SSL/TLS
                     $ldapConn = ldap_connect($ldapConfig['hosts'][0], 389);
                     if (!$ldapConn) {
                         Log::error("No se pudo establecer la conexión LDAP básica");
@@ -220,7 +220,6 @@ class AlumnoController extends Controller
                     // Configuración básica de LDAP
                     ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
                     ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
-                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
                     
                     // Intentar bind con credenciales
                     Log::info("Intentando bind con credenciales LDAP");
