@@ -582,7 +582,10 @@ class AlumnoController extends Controller
                                 'apellidos' => trim($data[$headerMap['apellidos']]),
                                 'email' => isset($data[$headerMap['email']]) ? trim($data[$headerMap['email']]) : null,
                                 'dni' => isset($data[$headerMap['dni']]) ? trim($data[$headerMap['dni']]) : null,
-                                'nombre_completo' => trim($data[$headerMap['nombre']]) . ' ' . trim($data[$headerMap['apellidos']])
+                                'nombre_completo' => trim($data[$headerMap['nombre']]) . ' ' . trim($data[$headerMap['apellidos']]),
+                                'numero_expediente' => null,
+                                'fecha_nacimiento' => null,
+                                'password' => AlumnoClase::generarPassword()
                             ];
                             
                             // Verificar campos obligatorios
