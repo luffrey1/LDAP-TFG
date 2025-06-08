@@ -213,14 +213,10 @@ class AlumnoController extends Controller
                         throw new \Exception("No se pudo establecer la conexión LDAP");
                     }
                     
+                    // Configuración básica de LDAP
                     ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
                     ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
                     ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
-                    
-                    // Configurar SSL
-                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
-                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
-                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
                     
                     // Intentar bind con credenciales
                     $bind = @ldap_bind(
@@ -231,6 +227,8 @@ class AlumnoController extends Controller
                     
                     if (!$bind) {
                         $error = ldap_error($ldapConn);
+                        Log::error("Error al conectar al servidor LDAP: " . $error);
+                        Log::error("Código de error LDAP: " . ldap_errno($ldapConn));
                         throw new \Exception("No se pudo conectar al servidor LDAP: " . $error);
                     }
                     
