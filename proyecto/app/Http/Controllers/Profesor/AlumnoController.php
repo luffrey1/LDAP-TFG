@@ -154,6 +154,15 @@ class AlumnoController extends Controller
                 
                 Log::debug("Bind LDAP exitoso");
                 
+                // Verificar la conexión con una búsqueda simple
+                $search = ldap_search($ldapConn, $config['base_dn'], "(objectclass=*)", ["dn"]);
+                if (!$search) {
+                    throw new \Exception("Error al realizar búsqueda LDAP: " . ldap_error($ldapConn));
+                }
+                
+                $entries = ldap_get_entries($ldapConn, $search);
+                Log::debug("Búsqueda LDAP exitosa, encontrados " . $entries['count'] . " resultados");
+                
                 // Preparar datos del usuario
                 $userDn = "uid={$nombreUsuario},ou=people,{$config['base_dn']}";
                 $userData = [
