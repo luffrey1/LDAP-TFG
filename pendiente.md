@@ -1,5 +1,8 @@
 # Pendiente
-
+- Al importar csv y crear cuentas en la tabla de gestion de alumnos sale cuenta no creada pero si se crea
+- Arreglar al importar csv si se elige alumno que solo se ponga grupo alumnos y igual con profesor
+- Estilo para que en mensajeria si se sube un archivo se vea subido en el mensaje
+- Cambiar estilos de todo (hacer una revision)
 
 
 
