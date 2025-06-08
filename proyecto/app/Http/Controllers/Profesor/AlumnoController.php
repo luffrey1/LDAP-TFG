@@ -148,6 +148,8 @@ class AlumnoController extends Controller
                 ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/fullchain.pem');
                 ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
                 ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
+                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CIPHER_SUITE, 'SECURE256:-VERS-SSL3.0');
+                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_PROTOCOL_MIN, 3.1);
                 
                 Log::debug("Intentando iniciar TLS...");
                 if (!ldap_start_tls($ldapConn)) {
@@ -748,6 +750,8 @@ class AlumnoController extends Controller
                     ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/fullchain.pem');
                     ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
                     ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
+                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CIPHER_SUITE, 'SECURE256:-VERS-SSL3.0');
+                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_PROTOCOL_MIN, 3.1);
                     
                     Log::debug("Intentando iniciar TLS...");
                     if (!ldap_start_tls($ldapConn)) {
