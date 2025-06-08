@@ -131,7 +131,7 @@
         
         /* Sidebar */
         .sidebar {
-            min-height: calc(100vh - 56px);
+            height: calc(100vh - 56px);
             background-color: var(--darker-color);
             box-shadow: 0 0.15rem 1.75rem 0 rgba(0, 0, 0, 0.3);
             z-index: 1;
@@ -140,6 +140,8 @@
             position: fixed;
             left: 0;
             top: 56px;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
 
         .sidebar.collapsed {
@@ -182,6 +184,8 @@
             margin-left: 250px;
             transition: all 0.3s ease-in-out;
             padding: 1.5rem;
+            min-height: calc(100vh - 56px);
+            position: relative;
         }
 
         .content-wrapper.expanded {
