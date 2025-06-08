@@ -582,6 +582,7 @@ class AlumnoController extends Controller
                     
                     // Crear cuenta LDAP si está marcado
                     if ($request->boolean('crear_cuentas_ldap')) {
+                        Log::debug("Creando cuenta LDAP con tipo: " . $tipoImportacion);
                         $result = $alumno->crearCuentaLdap(null, $tipoImportacion);
                         if (!$result['success']) {
                             $errors[] = "Línea {$line}: Error al crear cuenta LDAP - {$result['message']}";
