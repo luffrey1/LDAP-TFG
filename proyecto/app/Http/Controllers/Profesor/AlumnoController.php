@@ -140,77 +140,49 @@ class AlumnoController extends Controller
                 // Guardar usuario LDAP
                 Log::info("Intentando conectar al servidor LDAP");
                 
-                // Intentar conexión con diferentes configuraciones
-                $ldapConn = null;
-                $ldapError = null;
+                // Obtener la configuración LDAP
+                $config = config('ldap.connections.default');
+                Log::info("Configuración LDAP:", $config);
                 
-                // Lista de hosts a intentar
-                $hosts = [
-                    'openldap-osixia',  // Primero intentamos el host local
-                    $ldapConfig['hosts'][0],
-                    'ldap.tierno.es'
-                ];
-                
-                // Lista de puertos a intentar
-                $ports = [389, 636];
-                
-                // Intentar cada combinación de host y puerto
-                foreach ($hosts as $host) {
-                    foreach ($ports as $port) {
-                        Log::info("Intentando conexión LDAP a {$host}:{$port}");
-                        
-                        try {
-                            $ldapConn = ldap_connect($host, $port);
-                            if (!$ldapConn) {
-                                continue;
-                            }
-                            
-                            // Configuración básica
-                            ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
-                            ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
-                            
-                            // Configuración para certificados no seguros
-                            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
-                            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_PROTOCOL_MIN, 3.1);
-                            
-                            // Si es puerto 636, configurar SSL
-                            if ($port === 636) {
-                                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CIPHER_SUITE, 'HIGH:!aNULL:!eNULL:!EXPORT:!SSLv2:!SSLv3:!TLSv1');
-                            }
-                            
-                            // Intentar bind
-                            $bind = @ldap_bind(
-                                $ldapConn,
-                                $ldapConfig['username'],
-                                $ldapConfig['password']
-                            );
-                            
-                            if ($bind) {
-                                Log::info("Conexión LDAP exitosa a {$host}:{$port}");
-                                break 2; // Salir de ambos bucles
-                            }
-                            
-                            $ldapError = ldap_error($ldapConn);
-                            ldap_close($ldapConn);
-                            $ldapConn = null;
-                            
-                        } catch (\Exception $e) {
-                            Log::warning("Error al intentar conexión a {$host}:{$port}: " . $e->getMessage());
-                            if ($ldapConn) {
-                                ldap_close($ldapConn);
-                                $ldapConn = null;
-                            }
-                        }
-                    }
-                }
-                
+                // Crear conexión LDAP usando la configuración que funciona en otros controladores
+                $ldapConn = ldap_connect('ldaps://' . $config['hosts'][0], 636);
                 if (!$ldapConn) {
-                    Log::error("No se pudo establecer conexión LDAP con ningún host/port");
-                    throw new \Exception("No se pudo conectar al servidor LDAP. Último error: " . ($ldapError ?? 'Desconocido'));
+                    Log::error("Error al crear conexión LDAP");
+                    throw new \Exception("No se pudo establecer la conexión LDAP");
                 }
+                
+                Log::debug("Conexión LDAP creada, configurando opciones...");
+                
+                // Configuración básica
+                ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
+                ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
+                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
+                
+                // Configurar SSL
+                Log::debug("Configurando SSL para conexión LDAP...");
+                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
+                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
+                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
+                
+                // Intentar bind con credenciales
+                Log::debug("Intentando bind con credenciales LDAP...");
+                $bind = @ldap_bind(
+                    $ldapConn, 
+                    $config['username'], 
+                    $config['password']
+                );
+                
+                if (!$bind) {
+                    $error = ldap_error($ldapConn);
+                    Log::error("Error al conectar al servidor LDAP: " . $error);
+                    Log::error("Código de error LDAP: " . ldap_errno($ldapConn));
+                    throw new \Exception("No se pudo conectar al servidor LDAP: " . $error);
+                }
+                
+                Log::info("Conexión LDAP establecida correctamente");
                 
                 // Preparar datos del usuario
-                $userDn = "uid={$nombreUsuario},ou=people,{$ldapConfig['base_dn']}";
+                $userDn = "uid={$nombreUsuario},ou=people,{$config['base_dn']}";
                 $userData = [
                     'objectclass' => ['top', 'person', 'organizationalPerson', 'inetOrgPerson', 'posixAccount', 'shadowAccount'],
                     'cn' => $alumno->nombre . ' ' . $alumno->apellidos,
@@ -243,10 +215,10 @@ class AlumnoController extends Controller
                 // Añadir usuario al grupo adecuado
                 $tipoImportacion = $request->input('tipo_importacion', 'alumno');
                 $grupoLdap = $tipoImportacion === 'profesor' ? 'profesores' : 'alumnos';
-                $grupoDn = "cn={$grupoLdap},ou=groups,{$ldapConfig['base_dn']}";
+                $grupoDn = "cn={$grupoLdap},ou=groups,{$config['base_dn']}";
                 
                 // Buscar el grupo
-                $search = ldap_search($ldapConn, "ou=groups,{$ldapConfig['base_dn']}", "(cn={$grupoLdap})");
+                $search = ldap_search($ldapConn, "ou=groups,{$config['base_dn']}", "(cn={$grupoLdap})");
                 if ($search) {
                     $entries = ldap_get_entries($ldapConn, $search);
                     if ($entries['count'] > 0) {
