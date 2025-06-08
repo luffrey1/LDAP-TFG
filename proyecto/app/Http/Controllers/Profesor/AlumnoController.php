@@ -480,8 +480,6 @@ class AlumnoController extends Controller
             if ($request->has('confirmar_importacion')) {
                 $validator = Validator::make($request->all(), [
                     'clase_grupo_id' => 'required|exists:clase_grupos,id',
-                    'alumnos_data' => 'required|array',
-                    'confirmar_importacion' => 'boolean',
                     'tipo_importacion' => 'required|in:alumno,profesor'
                 ]);
             } else {
