@@ -151,10 +151,12 @@ class AlumnoController extends Controller
                 ]);
                 
                 try {
+                    Log::debug("Intentando conectar a LDAP...");
                     $connection->connect();
                     Log::debug("Conexión LDAP establecida correctamente");
                     
                     // Verificar que podemos hacer una búsqueda básica
+                    Log::debug("Realizando búsqueda de prueba...");
                     $testSearch = $connection->query()
                         ->in($config['base_dn'])
                         ->limit(1)
@@ -778,10 +780,12 @@ class AlumnoController extends Controller
                     ]);
                     
                     try {
+                        Log::debug("Intentando conectar a LDAP...");
                         $connection->connect();
                         Log::debug("Conexión LDAP establecida correctamente");
                         
                         // Verificar que podemos hacer una búsqueda básica
+                        Log::debug("Realizando búsqueda de prueba...");
                         $testSearch = $connection->query()
                             ->in($config['base_dn'])
                             ->limit(1)
