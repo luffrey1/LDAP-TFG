@@ -525,7 +525,9 @@ class AlumnoController extends Controller
                             'nombre' => ['nombre', 'name', 'nombres'],
                             'apellidos' => ['apellidos', 'apellido', 'surname', 'lastname'],
                             'email' => ['email', 'correo', 'mail'],
-                            'dni' => ['dni', 'nif', 'identificacion', 'id', 'dni/documento', 'documento', 'dni_documento']
+                            'dni' => ['dni', 'nif', 'identificacion', 'id', 'dni/documento', 'documento', 'dni_documento'],
+                            'expediente' => ['expediente', 'numero_expediente', 'nº_expediente', 'num_expediente'],
+                            'fecha_nacimiento' => ['fecha_nacimiento', 'fecha', 'nacimiento', 'birthdate', 'birth_date']
                         ];
                         
                         // Buscar las columnas requeridas
@@ -583,9 +585,10 @@ class AlumnoController extends Controller
                                 'email' => isset($data[$headerMap['email']]) ? trim($data[$headerMap['email']]) : null,
                                 'dni' => isset($data[$headerMap['dni']]) ? trim($data[$headerMap['dni']]) : null,
                                 'nombre_completo' => trim($data[$headerMap['nombre']]) . ' ' . trim($data[$headerMap['apellidos']]),
-                                'numero_expediente' => null,
-                                'fecha_nacimiento' => null,
-                                'password' => AlumnoClase::generarPassword()
+                                'numero_expediente' => isset($headerMap['expediente']) && isset($data[$headerMap['expediente']]) ? trim($data[$headerMap['expediente']]) : '-',
+                                'fecha_nacimiento' => isset($headerMap['fecha_nacimiento']) && isset($data[$headerMap['fecha_nacimiento']]) ? trim($data[$headerMap['fecha_nacimiento']]) : '-',
+                                'password' => AlumnoClase::generarPassword(),
+                                'tipo_importacion' => $request->tipo_importacion
                             ];
                             
                             // Verificar campos obligatorios
