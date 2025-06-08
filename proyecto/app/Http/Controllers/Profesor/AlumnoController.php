@@ -139,7 +139,7 @@ class AlumnoController extends Controller
                 Log::info("Configuración LDAP:", $config);
                 
                 // Crear el usuario directamente con LDAP nativo para mayor control
-                $ldapConn = ldap_connect('ldaps://' . $config['hosts'][0], $config['port']);
+                $ldapConn = ldap_connect('ldaps://' . $config['hosts'][0], 636);
                 if (!$ldapConn) {
                     Log::error("Error al crear conexión LDAP");
                     throw new \Exception("No se pudo establecer la conexión LDAP");
@@ -151,13 +151,10 @@ class AlumnoController extends Controller
                 ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
                 ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
                 
-                // Intentar conexión SSL primero
-                if ($config['use_ssl']) {
-                    Log::debug("Configurando SSL para conexión LDAP...");
-                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
-                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
-                    ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
-                }
+                // Configurar SSL
+                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
+                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
+                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
                 
                 Log::debug("Intentando bind con credenciales LDAP...");
                 Log::debug("Username: " . $config['username']);
