@@ -138,15 +138,15 @@ class AlumnoController extends Controller
                 $config = config('ldap.connections.default');
                 Log::info("Configuración LDAP:", $config);
                 
-                // Crear conexión LDAP usando la configuración de LdapUserController
+                // Crear conexión LDAP usando la configuración del constructor de LdapUserController
                 $connection = new \LdapRecord\Connection([
                     'hosts' => $config['hosts'],
+                    'port' => 636, // Forzar puerto 636 para LDAPS
                     'base_dn' => $config['base_dn'],
                     'username' => $config['username'],
                     'password' => $config['password'],
-                    'port' => $config['port'],
-                    'use_ssl' => $config['use_ssl'],
-                    'use_tls' => $config['use_tls'],
+                    'use_ssl' => true, // Forzar SSL
+                    'use_tls' => false, // Deshabilitar TLS
                     'timeout' => $config['timeout'],
                     'options' => [
                         LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
@@ -162,7 +162,6 @@ class AlumnoController extends Controller
                 // Verificar la conexión con una búsqueda simple
                 $search = $connection->query()
                     ->in($config['base_dn'])
-                    ->where('objectclass', '*')
                     ->limit(1)
                     ->get();
                 
