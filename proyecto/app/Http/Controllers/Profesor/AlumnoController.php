@@ -136,7 +136,7 @@ class AlumnoController extends Controller
                 
                 // Usar LdapRecord para la conexión
                 $config = [
-                    'hosts' => ['ldap'],
+                    'hosts' => ['openldap-osixia'],
                     'port' => 636,
                     'base_dn' => 'dc=tierno,dc=es',
                     'username' => 'cn=admin,dc=tierno,dc=es',
