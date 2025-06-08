@@ -665,7 +665,8 @@ class AlumnoController extends Controller
                             'email' => $alumnoData['email'],
                             'dni' => $alumnoData['dni'],
                             'nombre_completo' => $alumnoData['nombre_completo'],
-                            'clase_grupo_id' => $importData['grupo_id']
+                            'numero_expediente' => $alumnoData['numero_expediente'],
+                            'fecha_nacimiento' => $alumnoData['fecha_nacimiento']
                         ]);
                         $alumno->save();
                         
