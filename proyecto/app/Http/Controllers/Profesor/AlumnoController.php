@@ -144,8 +144,8 @@ class AlumnoController extends Controller
                 $config = config('ldap.connections.default');
                 Log::info("Configuración LDAP:", $config);
                 
-                // Crear conexión LDAP usando la configuración que funciona en otros controladores
-                $ldapConn = ldap_connect('ldaps://' . $config['hosts'][0], 636);
+                // Crear conexión LDAP usando TLS
+                $ldapConn = ldap_connect($config['hosts'][0], 389);
                 if (!$ldapConn) {
                     Log::error("Error al crear conexión LDAP");
                     throw new \Exception("No se pudo establecer la conexión LDAP");
@@ -157,10 +157,15 @@ class AlumnoController extends Controller
                 ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
                 ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
                 
-                // Configuración para aceptar certificados no válidos
+                // Configuración para TLS
                 ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_PROTOCOL_MIN, 3.1);
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CIPHER_SUITE, 'HIGH:!aNULL:!eNULL:!EXPORT:!SSLv2:!SSLv3:!TLSv1');
+                
+                // Iniciar TLS
+                if (!ldap_start_tls($ldapConn)) {
+                    $error = ldap_error($ldapConn);
+                    Log::error("Error al iniciar TLS: " . $error);
+                    throw new \Exception("Error al iniciar TLS: " . $error);
+                }
                 
                 // Intentar bind con credenciales
                 Log::debug("Intentando bind con credenciales LDAP...");
