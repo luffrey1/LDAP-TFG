@@ -904,21 +904,37 @@ class AlumnoController extends Controller
         
         try {
             // Crear una conexión LDAP usando la configuración
-            $ldapConfig = config('ldap.connections.default');
-            // LOG de configuración antes de conectar
-            Log::info('Configuración LDAP usada en importarAlumnosLdap:', $ldapConfig);
-            // Forzar configuración SSL y deshabilitar TLS
-            $ldapConfig['use_ssl'] = true;
-            $ldapConfig['use_tls'] = false;
-            $ldapConfig['port'] = 636;
-            Log::info('Configuración LDAP FORZADA en importarAlumnosLdap:', $ldapConfig);
-
-            $connection = new \LdapRecord\Connection($ldapConfig);
-            $connection->connect();
+            $config = config('ldap.connections.default');
+            Log::debug("Configurando conexión LDAP con los siguientes parámetros:", [
+                'hosts' => $config['hosts'],
+                'port' => 389,
+                'base_dn' => $config['base_dn'],
+                'username' => $config['username'],
+                'use_ssl' => false,
+                'use_tls' => false,
+                'timeout' => $config['timeout']
+            ]);
             
-            if (!$connection->isConnected()) {
-                throw new \Exception("No se pudo conectar a LDAP");
+            // Conexión simple sin TLS/SSL
+            $ldapConn = ldap_connect("ldap://{$config['hosts'][0]}:389");
+            if (!$ldapConn) {
+                throw new \Exception("No se pudo conectar al servidor LDAP");
             }
+            
+            Log::debug("Conexión LDAP establecida, configurando opciones...");
+            
+            // Configurar opciones básicas
+            ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
+            ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
+            
+            Log::debug("Intentando bind con credenciales...");
+            
+            // Intentar bind
+            if (!ldap_bind($ldapConn, $config['username'], $config['password'])) {
+                throw new \Exception("Error en bind LDAP: " . ldap_error($ldapConn));
+            }
+            
+            Log::debug("Bind LDAP exitoso");
             
             DB::beginTransaction();
             
@@ -942,25 +958,24 @@ class AlumnoController extends Controller
                 }
                 
                 // Buscar el usuario en LDAP
-                $ldapUser = $connection->query()
-                    ->in('ou=people,dc=tierno,dc=es')
-                    ->where('uid', '=', $uid)
-                    ->first();
+                $search = ldap_search($ldapConn, "ou=people,{$config['base_dn']}", "(uid=$uid)");
+                if (!$search) {
+                    $errores[] = "Error al buscar usuario LDAP con UID: $uid - " . ldap_error($ldapConn);
+                    continue;
+                }
                 
-                if (!$ldapUser) {
+                $entries = ldap_get_entries($ldapConn, $search);
+                if ($entries['count'] === 0) {
                     $errores[] = "No se encontró el usuario LDAP con UID: $uid";
                     continue;
                 }
                 
+                $ldapUser = $entries[0];
+                
                 // Extraer información
-                $nombre = isset($ldapUser['givenname']) ? 
-                    (is_array($ldapUser['givenname']) ? $ldapUser['givenname'][0] : $ldapUser['givenname']) : '';
-                
-                $apellidos = isset($ldapUser['sn']) ? 
-                    (is_array($ldapUser['sn']) ? $ldapUser['sn'][0] : $ldapUser['sn']) : '';
-                
-                $email = isset($ldapUser['mail']) ? 
-                    (is_array($ldapUser['mail']) ? $ldapUser['mail'][0] : $ldapUser['mail']) : '';
+                $nombre = isset($ldapUser['givenname'][0]) ? $ldapUser['givenname'][0] : '';
+                $apellidos = isset($ldapUser['sn'][0]) ? $ldapUser['sn'][0] : '';
+                $email = isset($ldapUser['mail'][0]) ? $ldapUser['mail'][0] : '';
                 
                 // Crear nuevo alumno
                 $alumno = new AlumnoClase();
@@ -969,7 +984,7 @@ class AlumnoController extends Controller
                 $alumno->email = $email;
                 $alumno->clase_grupo_id = $grupoId;
                 $alumno->usuario_ldap = $uid;
-                $alumno->ldap_dn = "uid=$uid,ou=people,dc=tierno,dc=es";
+                $alumno->ldap_dn = "uid=$uid,ou=people,{$config['base_dn']}";
                 $alumno->cuenta_creada = true;
                 $alumno->activo = true;
                 $alumno->save();
@@ -978,6 +993,7 @@ class AlumnoController extends Controller
                 $importados++;
             }
             
+            ldap_close($ldapConn);
             DB::commit();
             
             if (count($errores) > 0) {
