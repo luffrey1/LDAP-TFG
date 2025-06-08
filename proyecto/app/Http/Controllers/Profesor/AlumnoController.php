@@ -138,26 +138,33 @@ class AlumnoController extends Controller
                 $config = config('ldap.connections.default');
                 Log::info("Configuración LDAP:", $config);
                 
-                // Crear conexión LDAP usando LdapRecord como en LdapGroupController
+                // Crear conexión LDAP usando la configuración de LdapUserController
                 $connection = new \LdapRecord\Connection([
                     'hosts' => $config['hosts'],
-                    'port' => 636,
                     'base_dn' => $config['base_dn'],
                     'username' => $config['username'],
                     'password' => $config['password'],
-                    'use_ssl' => true,
-                    'use_tls' => false,
-                    'timeout' => $config['timeout']
+                    'port' => $config['port'],
+                    'use_ssl' => $config['use_ssl'],
+                    'use_tls' => $config['use_tls'],
+                    'timeout' => $config['timeout'],
+                    'options' => [
+                        LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                        LDAP_OPT_REFERRALS => 0,
+                        LDAP_OPT_PROTOCOL_VERSION => 3,
+                        LDAP_OPT_NETWORK_TIMEOUT => 5
+                    ]
                 ]);
 
-                // Forzar la conexión SSL
-                $connection->getLdapConnection()->setOption(LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
-                
-                // Intentar conectar
+                // Conectar al servidor LDAP
                 $connection->connect();
                 
                 // Verificar la conexión con una búsqueda simple
-                $search = $connection->query()->where('objectclass', '*')->limit(1)->get();
+                $search = $connection->query()
+                    ->in($config['base_dn'])
+                    ->where('objectclass', '*')
+                    ->limit(1)
+                    ->get();
                 
                 if (empty($search)) {
                     throw new \Exception("No se pudo realizar la búsqueda de prueba en LDAP");
