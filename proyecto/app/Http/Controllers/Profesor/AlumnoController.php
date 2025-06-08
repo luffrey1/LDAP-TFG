@@ -497,7 +497,7 @@ class AlumnoController extends Controller
                     'nombre' => ['nombre', 'name', 'nombres'],
                     'apellidos' => ['apellidos', 'apellido', 'surname', 'lastname'],
                     'email' => ['email', 'correo', 'mail'],
-                    'dni' => ['dni', 'nif', 'identificacion', 'id']
+                    'dni' => ['dni', 'nif', 'identificacion', 'id', 'dni/documento', 'documento', 'dni_documento']
                 ];
                 
                 // Buscar las columnas requeridas
@@ -507,11 +507,13 @@ class AlumnoController extends Controller
                 foreach ($columnMappings as $required => $possibleNames) {
                     $found = false;
                     foreach ($possibleNames as $name) {
-                        $index = array_search($name, $header);
-                        if ($index !== false) {
-                            $headerMap[$required] = $index;
-                            $found = true;
-                            break;
+                        // Buscar coincidencias parciales
+                        foreach ($header as $index => $headerName) {
+                            if (stripos($headerName, $name) !== false) {
+                                $headerMap[$required] = $index;
+                                $found = true;
+                                break 2;
+                            }
                         }
                     }
                     if (!$found) {
