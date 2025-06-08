@@ -134,147 +134,124 @@ class AlumnoController extends Controller
                 // Guardar usuario LDAP
                 Log::info("Intentando conectar al servidor LDAP");
                 
-                // Configuración directa para LDAP
-                $ldapHost = 'ldap';
-                $ldapPort = 636;
-                $ldapBaseDn = 'dc=tierno,dc=es';
-                $ldapUsername = 'cn=admin,dc=tierno,dc=es';
-                $ldapPassword = 'admin';
-                
-                Log::debug("Conectando a LDAP con configuración:", [
-                    'host' => $ldapHost,
-                    'port' => $ldapPort,
-                    'base_dn' => $ldapBaseDn,
-                    'username' => $ldapUsername
-                ]);
-                
-                // Crear conexión LDAP con LDAPS explícito
-                $ldapConn = ldap_connect('ldaps://' . $ldapHost . ':' . $ldapPort);
-                if (!$ldapConn) {
-                    Log::error("Error al crear conexión LDAP");
-                    throw new \Exception("No se pudo establecer la conexión LDAP");
-                }
-                
-                Log::debug("Conexión LDAP creada, configurando opciones...");
-                
-                // Configurar opciones LDAP básicas
-                ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
-                ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
-                
-                // Configurar SSL
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CACERTFILE, '/etc/ssl/certs/ldap/ca.crt');
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_CERTFILE, '/etc/ssl/certs/ldap/cert.pem');
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
-                
-                Log::debug("Intentando bind con credenciales LDAP...");
-                
-                // Intentar bind con credenciales
-                $bind = @ldap_bind($ldapConn, $ldapUsername, $ldapPassword);
-                
-                if (!$bind) {
-                    $error = ldap_error($ldapConn);
-                    $errno = ldap_errno($ldapConn);
-                    Log::error("Error al conectar al servidor LDAP: " . $error);
-                    Log::error("Código de error LDAP: " . $errno);
-                    throw new \Exception("No se pudo conectar al servidor LDAP: " . $error . " (código: " . $errno . ")");
-                }
-                
-                Log::debug("Conexión LDAP establecida correctamente");
-                
-                // Preparar datos del usuario
-                $userDn = "uid={$nombreUsuario},ou=people,{$ldapBaseDn}";
-                $userData = [
-                    'objectclass' => ['top', 'person', 'organizationalPerson', 'inetOrgPerson', 'posixAccount', 'shadowAccount'],
-                    'cn' => $alumno->nombre . ' ' . $alumno->apellidos,
-                    'sn' => $alumno->apellidos,
-                    'givenname' => $alumno->nombre,
-                    'uid' => $nombreUsuario,
-                    'uidnumber' => $this->getNextUidNumber($ldapConn),
-                    'gidnumber' => 500,
-                    'homedirectory' => "/home/{$nombreUsuario}",
-                    'loginshell' => '/bin/bash',
-                    'userpassword' => $this->hashLdapPassword(Str::random(10)),
-                    'shadowLastChange' => floor(time() / 86400)
+                // Usar LdapRecord para la conexión
+                $config = [
+                    'hosts' => ['ldap'],
+                    'port' => 636,
+                    'base_dn' => 'dc=tierno,dc=es',
+                    'username' => 'cn=admin,dc=tierno,dc=es',
+                    'password' => 'admin',
+                    'use_ssl' => true,
+                    'use_tls' => false,
+                    'timeout' => 5,
+                    'options' => [
+                        LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                        LDAP_OPT_REFERRALS => 0,
+                        LDAP_OPT_PROTOCOL_VERSION => 3,
+                        LDAP_OPT_NETWORK_TIMEOUT => 5,
+                    ],
                 ];
                 
-                if ($alumno->email) {
-                    $userData['mail'] = $alumno->email;
-                }
+                Log::debug("Configuración LDAP:", $config);
                 
-                // Crear el usuario
-                $result = ldap_add($ldapConn, $userDn, $userData);
+                $connection = new \LdapRecord\Connection($config);
                 
-                if (!$result) {
-                    $error = ldap_error($ldapConn);
-                    $errno = ldap_errno($ldapConn);
-                    Log::error("Error al crear usuario LDAP: " . $error);
-                    Log::error("Código de error LDAP: " . $errno);
-                    throw new \Exception("Error al crear usuario LDAP: " . $error . " (código: " . $errno . ")");
-                }
-                
-                Log::info("Usuario LDAP creado con éxito: {$nombreUsuario}");
-                
-                // Añadir usuario al grupo adecuado
-                $tipoImportacion = $request->input('tipo_importacion', 'alumno');
-                $grupoLdap = $tipoImportacion === 'profesor' ? 'profesores' : 'alumnos';
-                $grupoDn = "cn={$grupoLdap},ou=groups,{$ldapBaseDn}";
-                
-                // Verificar el tipo de grupo y añadir el usuario según corresponda
-                $groupInfo = ldap_read($ldapConn, $grupoDn, "(objectclass=*)", ["objectClass"]);
-                if ($groupInfo) {
-                    $groupEntry = ldap_get_entries($ldapConn, $groupInfo);
+                try {
+                    $connection->connect();
+                    Log::debug("Conexión LDAP establecida correctamente");
                     
-                    // Verificar si tiene objectClass groupOfUniqueNames
-                    $isUniqueGroup = false;
-                    if (isset($groupEntry[0]['objectclass'])) {
-                        for ($i = 0; $i < $groupEntry[0]['objectclass']['count']; $i++) {
-                            if (strtolower($groupEntry[0]['objectclass'][$i]) === 'groupofuniquenames') {
-                                $isUniqueGroup = true;
-                                break;
+                    // Preparar datos del usuario
+                    $userDn = "uid={$nombreUsuario},ou=people,{$config['base_dn']}";
+                    $userData = [
+                        'objectclass' => ['top', 'person', 'organizationalPerson', 'inetOrgPerson', 'posixAccount', 'shadowAccount'],
+                        'cn' => $alumno->nombre . ' ' . $alumno->apellidos,
+                        'sn' => $alumno->apellidos,
+                        'givenname' => $alumno->nombre,
+                        'uid' => $nombreUsuario,
+                        'uidnumber' => $this->getNextUidNumber($connection),
+                        'gidnumber' => 500,
+                        'homedirectory' => "/home/{$nombreUsuario}",
+                        'loginshell' => '/bin/bash',
+                        'userpassword' => $this->hashLdapPassword(Str::random(10)),
+                        'shadowLastChange' => floor(time() / 86400)
+                    ];
+                    
+                    if ($alumno->email) {
+                        $userData['mail'] = $alumno->email;
+                    }
+                    
+                    // Crear el usuario
+                    $result = $connection->query()->add($userDn, $userData);
+                    
+                    if (!$result) {
+                        throw new \Exception("Error al crear usuario LDAP");
+                    }
+                    
+                    Log::info("Usuario LDAP creado con éxito: {$nombreUsuario}");
+                    
+                    // Añadir usuario al grupo adecuado
+                    $tipoImportacion = $request->input('tipo_importacion', 'alumno');
+                    $grupoLdap = $tipoImportacion === 'profesor' ? 'profesores' : 'alumnos';
+                    $grupoDn = "cn={$grupoLdap},ou=groups,{$config['base_dn']}";
+                    
+                    // Verificar el tipo de grupo y añadir el usuario según corresponda
+                    $groupInfo = $connection->query()->in($grupoDn)->get();
+                    if ($groupInfo) {
+                        $groupEntry = $groupInfo->first();
+                        
+                        // Verificar si tiene objectClass groupOfUniqueNames
+                        $isUniqueGroup = false;
+                        if ($groupEntry->hasAttribute('objectclass')) {
+                            $objectClasses = $groupEntry->getAttribute('objectclass');
+                            foreach ($objectClasses as $objectClass) {
+                                if (strtolower($objectClass) === 'groupofuniquenames') {
+                                    $isUniqueGroup = true;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        if ($isUniqueGroup) {
+                            try {
+                                $connection->query()->in($grupoDn)->modify([
+                                    'uniqueMember' => [$userDn]
+                                ]);
+                                Log::debug("Usuario añadido como uniqueMember al grupo");
+                            } catch (\Exception $e) {
+                                Log::error("Error al añadir uniqueMember al grupo: " . $e->getMessage());
+                            }
+                        }
+                        
+                        // También añadir como memberUid para posixGroup
+                        $isPosixGroup = false;
+                        if ($groupEntry->hasAttribute('objectclass')) {
+                            $objectClasses = $groupEntry->getAttribute('objectclass');
+                            foreach ($objectClasses as $objectClass) {
+                                if (strtolower($objectClass) === 'posixgroup') {
+                                    $isPosixGroup = true;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        if ($isPosixGroup) {
+                            try {
+                                $connection->query()->in($grupoDn)->modify([
+                                    'memberUid' => [$nombreUsuario]
+                                ]);
+                                Log::debug("Usuario añadido como memberUid al grupo");
+                            } catch (\Exception $e) {
+                                Log::error("Error al añadir memberUid al grupo: " . $e->getMessage());
                             }
                         }
                     }
                     
-                    if ($isUniqueGroup) {
-                        try {
-                            $modInfo = [
-                                'uniqueMember' => $userDn
-                            ];
-                            ldap_mod_add($ldapConn, $grupoDn, $modInfo);
-                            Log::debug("Usuario añadido como uniqueMember al grupo");
-                        } catch (\Exception $e) {
-                            Log::error("Error al añadir uniqueMember al grupo: " . $e->getMessage());
-                        }
-                    }
+                    Log::info("Usuario añadido al grupo: {$grupoDn}");
                     
-                    // También añadir como memberUid para posixGroup
-                    $isPosixGroup = false;
-                    if (isset($groupEntry[0]['objectclass'])) {
-                        for ($i = 0; $i < $groupEntry[0]['objectclass']['count']; $i++) {
-                            if (strtolower($groupEntry[0]['objectclass'][$i]) === 'posixgroup') {
-                                $isPosixGroup = true;
-                                break;
-                            }
-                        }
-                    }
-                    
-                    if ($isPosixGroup) {
-                        try {
-                            $modInfo = [
-                                'memberUid' => $nombreUsuario
-                            ];
-                            ldap_mod_add($ldapConn, $grupoDn, $modInfo);
-                            Log::debug("Usuario añadido como memberUid al grupo");
-                        } catch (\Exception $e) {
-                            Log::error("Error al añadir memberUid al grupo: " . $e->getMessage());
-                        }
-                    }
+                } catch (\Exception $e) {
+                    Log::error("Error en operación LDAP: " . $e->getMessage());
+                    throw new \Exception("Error al crear cuenta LDAP: " . $e->getMessage());
                 }
-                
-                ldap_close($ldapConn);
-                
-                Log::info("Usuario añadido al grupo: {$grupoDn}");
                 
                 // Actualizar datos del alumno
                 $alumno->ldap_dn = $userDn;
