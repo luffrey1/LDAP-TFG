@@ -134,12 +134,22 @@ class AlumnoController extends Controller
                 // Guardar usuario LDAP
                 Log::info("Intentando conectar al servidor LDAP");
                 
-                // Obtener la configuración LDAP
-                $config = config('ldap.connections.default');
-                Log::info("Configuración LDAP:", $config);
+                // Configuración directa para LDAP
+                $ldapHost = 'ldap';
+                $ldapPort = 636;
+                $ldapBaseDn = 'dc=tierno,dc=es';
+                $ldapUsername = 'cn=admin,dc=tierno,dc=es';
+                $ldapPassword = 'admin';
                 
-                // Crear el usuario directamente con LDAP nativo para mayor control
-                $ldapConn = ldap_connect('ldaps://' . $config['hosts'][0], $config['port']);
+                Log::debug("Conectando a LDAP con configuración:", [
+                    'host' => $ldapHost,
+                    'port' => $ldapPort,
+                    'base_dn' => $ldapBaseDn,
+                    'username' => $ldapUsername
+                ]);
+                
+                // Crear conexión LDAP
+                $ldapConn = ldap_connect('ldaps://' . $ldapHost, $ldapPort);
                 if (!$ldapConn) {
                     Log::error("Error al crear conexión LDAP");
                     throw new \Exception("No se pudo establecer la conexión LDAP");
@@ -147,6 +157,7 @@ class AlumnoController extends Controller
                 
                 Log::debug("Conexión LDAP creada, configurando opciones...");
                 
+                // Configurar opciones LDAP
                 ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
                 ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
                 ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
@@ -157,26 +168,22 @@ class AlumnoController extends Controller
                 ldap_set_option($ldapConn, LDAP_OPT_X_TLS_KEYFILE, '/etc/ssl/certs/ldap/privkey.pem');
                 
                 Log::debug("Intentando bind con credenciales LDAP...");
-                Log::debug("Username: " . $config['username']);
                 
                 // Intentar bind con credenciales
-                $bind = @ldap_bind(
-                    $ldapConn, 
-                    $config['username'], 
-                    $config['password']
-                );
+                $bind = @ldap_bind($ldapConn, $ldapUsername, $ldapPassword);
                 
                 if (!$bind) {
                     $error = ldap_error($ldapConn);
+                    $errno = ldap_errno($ldapConn);
                     Log::error("Error al conectar al servidor LDAP: " . $error);
-                    Log::error("Código de error LDAP: " . ldap_errno($ldapConn));
-                    throw new \Exception("No se pudo conectar al servidor LDAP: " . $error);
+                    Log::error("Código de error LDAP: " . $errno);
+                    throw new \Exception("No se pudo conectar al servidor LDAP: " . $error . " (código: " . $errno . ")");
                 }
                 
                 Log::debug("Conexión LDAP establecida correctamente");
                 
                 // Preparar datos del usuario
-                $userDn = "uid={$nombreUsuario},ou=people,{$config['base_dn']}";
+                $userDn = "uid={$nombreUsuario},ou=people,{$ldapBaseDn}";
                 $userData = [
                     'objectclass' => ['top', 'person', 'organizationalPerson', 'inetOrgPerson', 'posixAccount', 'shadowAccount'],
                     'cn' => $alumno->nombre . ' ' . $alumno->apellidos,
@@ -200,8 +207,10 @@ class AlumnoController extends Controller
                 
                 if (!$result) {
                     $error = ldap_error($ldapConn);
+                    $errno = ldap_errno($ldapConn);
                     Log::error("Error al crear usuario LDAP: " . $error);
-                    throw new \Exception("Error al crear usuario LDAP: " . $error);
+                    Log::error("Código de error LDAP: " . $errno);
+                    throw new \Exception("Error al crear usuario LDAP: " . $error . " (código: " . $errno . ")");
                 }
                 
                 Log::info("Usuario LDAP creado con éxito: {$nombreUsuario}");
@@ -209,7 +218,7 @@ class AlumnoController extends Controller
                 // Añadir usuario al grupo adecuado
                 $tipoImportacion = $request->input('tipo_importacion', 'alumno');
                 $grupoLdap = $tipoImportacion === 'profesor' ? 'profesores' : 'alumnos';
-                $grupoDn = "cn={$grupoLdap},ou=groups,{$config['base_dn']}";
+                $grupoDn = "cn={$grupoLdap},ou=groups,{$ldapBaseDn}";
                 
                 // Verificar el tipo de grupo y añadir el usuario según corresponda
                 $groupInfo = ldap_read($ldapConn, $grupoDn, "(objectclass=*)", ["objectClass"]);
