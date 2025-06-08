@@ -83,11 +83,11 @@
                             @if(!isset($grupo))
                             <div class="form-group mb-4">
                                 <label for="clase_grupo_id" class="form-label fw-bold text-black fs-5">Clase / Grupo</label>
-                                <select name="clase_grupo_id" id="clase_grupo_id" class="form-control" required>
-                                    <option value="">Selecciona una clase o grupo</option>
-                                    @foreach($claseGrupos as $claseGrupo)
-                                        <option value="{{ $claseGrupo->id }}">
-                                            {{ $claseGrupo->nombre }} ({{ $claseGrupo->tipo }})
+                                <select name="clase_grupo_id" id="clase_grupo_id" class="form-select shadow-sm bg-white border-2" required>
+                                    <option value="" class="text-dark fw-medium">Selecciona una clase o grupo</option>
+                                    @foreach($grupos as $grupo_select)
+                                        <option value="{{ $grupo_select->id }}" {{ isset($grupo) && $grupo->id == $grupo_select->id ? 'selected' : '' }}>
+                                            {{ $grupo_select->nombre }} ({{ $grupo_select->curso }}º {{ $grupo_select->seccion }})
                                         </option>
                                     @endforeach
                                 </select>
