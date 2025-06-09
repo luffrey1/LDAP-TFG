@@ -203,7 +203,22 @@ class ProfileController extends Controller
                 }
 
                 // Actualizar el usuario en LDAP
-                $ldapUser->update($updateData);
+                if (is_array($ldapUser)) {
+                    // Si es un array, usar la conexión LDAP directamente
+                    $dn = $ldapUser['dn'];
+                    foreach ($updateData as $attribute => $value) {
+                        $ldap->modify($dn, [
+                            [
+                                'attrib'  => $attribute,
+                                'modtype' => LDAP_MODIFY_BATCH_REPLACE,
+                                'values'  => [$value],
+                            ],
+                        ]);
+                    }
+                } else {
+                    // Si es un objeto, usar el método update
+                    $ldapUser->update($updateData);
+                }
 
                 // Actualizar el usuario local
                 $user->name = $request->name;
