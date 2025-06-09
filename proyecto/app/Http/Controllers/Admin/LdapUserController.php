@@ -718,7 +718,8 @@ class LdapUserController extends Controller
             'homeDirectory' => 'nullable|string',
             'loginShell' => 'nullable|string',
             'uidNumber' => 'nullable|numeric',
-            'gidNumber' => 'nullable|numeric'
+            'gidNumber' => 'nullable|numeric',
+            'password' => 'nullable|string|min:8|confirmed'
         ]);
         
         try {

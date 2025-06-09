@@ -22,12 +22,10 @@ class ProfileController extends Controller
     {
         $user = $request->user();
         $groups = [];
-        $ldapUid = $user->username; // Default to local username
-        $ldapGuid = $user->guid; // Default to local guid
-        $ldapCn = ''; // Default empty DN
-        $fullName = $user->name; // Default to local name
-
-        Log::info('ProfileController@edit: User authenticated', ['user_id' => $user->id, 'username' => $user->username]);
+        $ldapUid = $user->username;
+        $ldapGuid = $user->guid;
+        $ldapCn = '';
+        $fullName = $user->name;
 
         try {
             $ldap = new \LdapRecord\Connection([
@@ -46,7 +44,6 @@ class ProfileController extends Controller
             ]);
 
             $ldap->connect();
-            Log::info('ProfileController@edit: LDAP connected.');
 
             // Buscar el usuario por su nombre de usuario
             $ldapUser = $ldap->query()
@@ -55,33 +52,15 @@ class ProfileController extends Controller
                 ->first();
 
             if ($ldapUser) {
-                Log::info('ProfileController@edit: LDAP user found', ['dn' => $ldapUser['dn'] ?? '']);
-                
-                // Obtener todos los atributos para debug
-                $allAttributes = $ldapUser;
-                Log::info('ProfileController@edit: All LDAP attributes', ['attributes' => $allAttributes]);
-
-                // Obtener UID numérico
                 $ldapUid = $ldapUser['uidnumber'][0] ?? $ldapUser['uid'][0] ?? $user->username;
-                Log::info('ProfileController@edit: Found uidNumber', ['uidNumber' => $ldapUid]);
-                
-                // Obtener GID numérico
                 $ldapGuid = $ldapUser['gidnumber'][0] ?? $ldapUser['gid'][0] ?? $user->guid;
-                Log::info('ProfileController@edit: Found gidNumber', ['gidNumber' => $ldapGuid]);
-                
-                // Obtener DN completo para CN
                 $ldapCn = $ldapUser['dn'] ?? '';
-                Log::info('ProfileController@edit: Found dn', ['dn' => $ldapCn]);
-
-                // Obtener nombre completo
                 $fullName = $ldapUser['cn'][0] ?? $user->name;
-                Log::info('ProfileController@edit: Found full name', ['name' => $fullName]);
 
                 // Update the local user model's guid
                 if ($user->guid !== $ldapGuid) {
                      $user->guid = $ldapGuid;
                      $user->save();
-                     Log::info('ProfileController@edit: Updated local user guid', ['new_guid' => $user->guid]);
                 }
 
                 // Obtener todos los grupos disponibles
@@ -89,8 +68,6 @@ class ProfileController extends Controller
                     ->in(config('ldap.connections.default.base_dn'))
                     ->rawFilter('(|(objectclass=groupOfUniqueNames)(objectclass=posixGroup))')
                     ->get();
-
-                Log::info('ProfileController@edit: Found ' . count($allGroups) . ' groups in LDAP.');
 
                 foreach ($allGroups as $group) {
                     $isMember = false;
@@ -126,15 +103,10 @@ class ProfileController extends Controller
                         ];
                     }
                 }
-                Log::info('ProfileController@edit: User belongs to ' . count($groups) . ' LDAP groups.');
-
-            } else {
-                Log::warning('ProfileController@edit: LDAP user not found for username', ['username' => $user->username]);
             }
 
         } catch (\Exception $e) {
             Log::error('Error al obtener información de LDAP en ProfileController@edit: ' . $e->getMessage());
-            Log::error('Trace: ' . $e->getTraceAsString());
         }
 
         return view('profile.edit', [
@@ -153,22 +125,88 @@ class ProfileController extends Controller
     public function update(Request $request)
     {
         $user = $request->user();
+        
+        // Validar los datos del formulario
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
-            'current_password' => ['nullable', 'required_with:new_password', 'current_password'],
+            'current_password' => ['required_with:new_password'],
             'new_password' => ['nullable', 'min:8', 'confirmed'],
         ]);
 
-        $user->name = $validated['name'];
-        $user->email = $validated['email'];
+        try {
+            // Conectar a LDAP
+            $ldap = new \LdapRecord\Connection([
+                'hosts' => config('ldap.connections.default.hosts'),
+                'port' => config('ldap.connections.default.port'),
+                'base_dn' => config('ldap.connections.default.base_dn'),
+                'username' => config('ldap.connections.default.username'),
+                'password' => config('ldap.connections.default.password'),
+                'use_ssl' => config('ldap.connections.default.use_ssl'),
+                'use_tls' => config('ldap.connections.default.use_tls'),
+                'timeout' => config('ldap.connections.default.timeout'),
+                'options' => [
+                    LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                    LDAP_OPT_REFERRALS => 0,
+                ],
+            ]);
 
-        if (isset($validated['new_password'])) {
-            $user->password = Hash::make($validated['new_password']);
+            $ldap->connect();
+
+            // Buscar el usuario en LDAP
+            $ldapUser = $ldap->query()
+                ->in(config('ldap.connections.default.base_dn'))
+                ->rawFilter('(&(objectClass=posixAccount)(uid=' . $user->username . '))')
+                ->first();
+
+            if (!$ldapUser) {
+                throw new \Exception('Usuario no encontrado en LDAP');
+            }
+
+            // Si se está cambiando la contraseña
+            if (!empty($validated['new_password'])) {
+                // Verificar la contraseña actual
+                $authLdap = new \LdapRecord\Connection([
+                    'hosts' => config('ldap.connections.default.hosts'),
+                    'port' => config('ldap.connections.default.port'),
+                    'base_dn' => config('ldap.connections.default.base_dn'),
+                    'username' => $ldapUser['dn'],
+                    'password' => $validated['current_password'],
+                    'use_ssl' => config('ldap.connections.default.use_ssl'),
+                    'use_tls' => config('ldap.connections.default.use_tls'),
+                ]);
+
+                try {
+                    $authLdap->connect();
+                } catch (\Exception $e) {
+                    return back()->withErrors(['current_password' => 'La contraseña actual es incorrecta']);
+                }
+
+                // Cambiar la contraseña en LDAP
+                $ldapUser->userPassword = $validated['new_password'];
+                $ldapUser->save();
+
+                // Actualizar la contraseña en la base de datos local
+                $user->password = Hash::make($validated['new_password']);
+            }
+
+            // Actualizar el nombre y email en LDAP si es necesario
+            if ($ldapUser['cn'][0] !== $validated['name']) {
+                $ldapUser->cn = $validated['name'];
+                $ldapUser->save();
+            }
+
+            // Actualizar el usuario local
+            $user->name = $validated['name'];
+            $user->email = $validated['email'];
+            $user->save();
+
+            return redirect()->route('profile.edit')
+                ->with('status', 'Perfil actualizado correctamente');
+
+        } catch (\Exception $e) {
+            Log::error('Error al actualizar perfil en LDAP: ' . $e->getMessage());
+            return back()->withErrors(['error' => 'Error al actualizar el perfil: ' . $e->getMessage()]);
         }
-
-        $user->save();
-
-        return redirect()->route('profile.edit')->with('status', 'profile-updated');
     }
 } 
