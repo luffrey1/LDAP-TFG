@@ -55,6 +55,8 @@
                                             <tr>
                                                 <th>Usuario (UID)</th>
                                                 <th>UID Number</th>
+                                                <th>Nombre</th>
+                                                <th>Apellidos</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -62,6 +64,8 @@
                                                 <tr>
                                                     <td>{{ $member['uid'] }}</td>
                                                     <td>{{ $member['uidNumber'] ?? '' }}</td>
+                                                    <td>{{ $member['givenname'] ?? '' }}</td>
+                                                    <td>{{ $member['sn'] ?? '' }}</td>
                                                 </tr>
                                             @endforeach
                                         </tbody>
