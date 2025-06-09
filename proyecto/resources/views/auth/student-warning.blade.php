@@ -112,11 +112,6 @@
             <p>• ID de sesión: {{ session()->getId() }}</p>
         </div>
 
-        <div class="contact-info">
-            <p>Si crees que esto es un error, por favor contacta con el departamento de informática:</p>
-            <p>• Email: informatica@tierno.es</p>
-            <p>• Teléfono: 91 123 45 67</p>
-        </div>
 
         <div class="footer">
             <p>© {{ date('Y') }} IES Tierno Galván - Todos los derechos reservados</p>
