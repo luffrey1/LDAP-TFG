@@ -197,25 +197,49 @@ document.addEventListener('DOMContentLoaded', function() {
         pageLength: 25,
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip',
         processing: true,
-        serverSide: false, // Desactivamos serverSide porque usamos la paginación de Laravel
+        serverSide: false,
         searching: true,
         info: true,
         lengthChange: true,
-        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]]
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+        columnDefs: [
+            {
+                targets: 0,
+                visible: false // Ocultar la columna de ID
+            }
+        ]
     });
 
     // Función para filtrar por tipo de log
     function filterByType(type) {
+        table.column(0).search('').draw(); // Limpiar búsqueda anterior
+        
         if (type === 'all') {
             table.column(0).search('').draw();
         } else {
-            table.column(0).search(type).draw();
+            // Buscar en la columna de tipo (data-type)
+            table.rows().every(function() {
+                const rowData = this.data();
+                const rowType = $(this.node()).data('type');
+                if (type === rowType) {
+                    $(this.node()).show();
+                } else {
+                    $(this.node()).hide();
+                }
+            });
         }
     }
 
     // Eventos de las pestañas
     document.querySelectorAll('#logTabs button').forEach(button => {
         button.addEventListener('click', function() {
+            // Remover clase active de todas las pestañas
+            document.querySelectorAll('#logTabs button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            // Añadir clase active a la pestaña actual
+            this.classList.add('active');
+            
             const type = this.id.split('-')[0];
             filterByType(type);
         });
@@ -262,12 +286,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Evento de clic en filas de la tabla
-    document.querySelectorAll('.log-row').forEach(row => {
-        row.addEventListener('click', function() {
-            const id = this.dataset.id;
-            showLogDetails(id);
-        });
+    // Evento de clic en filas de la tabla usando delegación de eventos
+    $('#logsTable tbody').on('click', 'tr.log-row', function() {
+        const id = $(this).data('id');
+        showLogDetails(id);
     });
 
     // Ocultar la paginación de Laravel ya que usamos DataTables
