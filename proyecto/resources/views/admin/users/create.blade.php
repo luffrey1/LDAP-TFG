@@ -194,7 +194,8 @@
             if (nombreInput.value && apellidosInput.value && !uidInput.value) {
                 const nombre = nombreInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
                 const apellidos = apellidosInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
-                uidInput.value = nombre + apellidos;
+                // Usar solo la primera letra del apellido
+                uidInput.value = nombre + apellidos.charAt(0);
                 
                 // Actualizar también el DN
                 updateDn();
@@ -209,7 +210,8 @@
             if (nombreInput.value && apellidosInput.value && !emailInput.value) {
                 const nombre = nombreInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
                 const apellidos = apellidosInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
-                emailInput.value = nombre + apellidos + '@tierno.es';
+                // Usar solo la primera letra del apellido
+                emailInput.value = nombre + apellidos.charAt(0) + '@tierno.es';
             }
         }
 
