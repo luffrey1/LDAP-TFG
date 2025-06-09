@@ -4,14 +4,16 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Logs del Sistema</h3>
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-history mr-2"></i>Logs del Sistema
+                    </h3>
                     <div class="card-tools">
                         <div class="input-group input-group-sm" style="width: 250px;">
                             <input type="text" id="userSearch" class="form-control float-right" placeholder="Buscar usuario...">
                             <div class="input-group-append">
-                                <button type="button" class="btn btn-default" id="clearSearch">
+                                <button type="button" class="btn btn-light" id="clearSearch">
                                     <i class="fas fa-times"></i>
                                 </button>
                             </div>
@@ -20,27 +22,35 @@
                 </div>
                 <div class="card-body">
                     <!-- Pestañas de filtro -->
-                    <ul class="nav nav-tabs" id="logTabs" role="tablist">
+                    <ul class="nav nav-tabs nav-fill mb-4" id="logTabs" role="tablist">
                         <li class="nav-item">
-                            <a class="nav-link active" id="all-tab" data-toggle="tab" href="#all" role="tab">Todos</a>
+                            <a class="nav-link active" id="all-tab" data-toggle="tab" href="#all" role="tab">
+                                <i class="fas fa-list mr-1"></i> Todos
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="users-tab" data-toggle="tab" href="#users" role="tab">Usuarios</a>
+                            <a class="nav-link" id="users-tab" data-toggle="tab" href="#users" role="tab">
+                                <i class="fas fa-users mr-1"></i> Usuarios
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="groups-tab" data-toggle="tab" href="#groups" role="tab">Grupos</a>
+                            <a class="nav-link" id="groups-tab" data-toggle="tab" href="#groups" role="tab">
+                                <i class="fas fa-user-friends mr-1"></i> Grupos
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="access-tab" data-toggle="tab" href="#access" role="tab">Accesos</a>
+                            <a class="nav-link" id="access-tab" data-toggle="tab" href="#access" role="tab">
+                                <i class="fas fa-sign-in-alt mr-1"></i> Accesos
+                            </a>
                         </li>
                     </ul>
 
                     <!-- Contenido de las pestañas -->
-                    <div class="tab-content mt-3" id="logTabsContent">
+                    <div class="tab-content" id="logTabsContent">
                         <div class="tab-pane fade show active" id="all" role="tabpanel">
                             <div class="table-responsive">
                                 <table class="table table-hover" id="logsTable">
-                                    <thead>
+                                    <thead class="thead-light">
                                         <tr>
                                             <th>Usuario</th>
                                             <th>Acción</th>
@@ -51,16 +61,29 @@
                                     <tbody>
                                         @foreach($logs as $log)
                                         <tr class="log-row" data-id="{{ $log->id }}" data-type="{{ $log->type }}">
-                                            <td>{{ $log->user }}</td>
-                                            <td>{{ $log->action }}</td>
+                                            <td>
+                                                <span class="badge badge-info">
+                                                    <i class="fas fa-user mr-1"></i>{{ $log->user }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge badge-{{ $log->level === 'WARNING' ? 'warning' : 'success' }}">
+                                                    {{ $log->action }}
+                                                </span>
+                                            </td>
                                             <td>{{ $log->description }}</td>
-                                            <td>{{ \Carbon\Carbon::parse($log->created_at)->format('d/m/Y H:i:s') }}</td>
+                                            <td>
+                                                <span class="text-muted">
+                                                    <i class="far fa-clock mr-1"></i>
+                                                    {{ \Carbon\Carbon::parse($log->created_at)->format('d/m/Y H:i:s') }}
+                                                </span>
+                                            </td>
                                         </tr>
                                         @endforeach
                                     </tbody>
                                 </table>
                             </div>
-                            <div class="mt-3">
+                            <div class="mt-4">
                                 {{ $logs->links() }}
                             </div>
                         </div>
@@ -75,32 +98,34 @@
 <div class="modal fade" id="logDetailsModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Detalles del Log</h5>
-                <button type="button" class="close" data-dismiss="modal">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-info-circle mr-2"></i>Detalles del Log
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal">
                     <span>&times;</span>
                 </button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label>ID:</label>
-                    <p id="logId"></p>
+                    <label class="font-weight-bold">ID:</label>
+                    <p id="logId" class="text-muted"></p>
                 </div>
                 <div class="form-group">
-                    <label>Fecha:</label>
-                    <p id="logDate"></p>
+                    <label class="font-weight-bold">Fecha:</label>
+                    <p id="logDate" class="text-muted"></p>
                 </div>
                 <div class="form-group">
-                    <label>Usuario:</label>
-                    <p id="logUser"></p>
+                    <label class="font-weight-bold">Usuario:</label>
+                    <p id="logUser" class="text-muted"></p>
                 </div>
                 <div class="form-group">
-                    <label>Acción:</label>
-                    <p id="logAction"></p>
+                    <label class="font-weight-bold">Acción:</label>
+                    <p id="logAction" class="text-muted"></p>
                 </div>
                 <div class="form-group">
-                    <label>Descripción:</label>
-                    <p id="logDescription"></p>
+                    <label class="font-weight-bold">Descripción:</label>
+                    <p id="logDescription" class="text-muted"></p>
                 </div>
             </div>
         </div>
@@ -168,7 +193,7 @@ $(document).ready(function() {
         $.get('/admin/logs/' + id, function(data) {
             $('#logId').text(data.id);
             $('#logDate').text(new Date(data.created_at).toLocaleString());
-            $('#logUser').text(data.performed_by);
+            $('#logUser').text(data.user);
             $('#logAction').text(data.action);
             $('#logDescription').text(data.description);
             $('#logDetailsModal').modal('show');
@@ -182,16 +207,57 @@ $(document).ready(function() {
 <style>
 .log-row {
     cursor: pointer;
+    transition: all 0.2s ease;
 }
 .log-row:hover {
     background-color: #f8f9fa;
+    transform: translateX(5px);
 }
 .nav-tabs .nav-link {
     color: #495057;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 0.75rem 1rem;
+    transition: all 0.2s ease;
+}
+.nav-tabs .nav-link:hover {
+    border-bottom-color: #007bff;
+    color: #007bff;
 }
 .nav-tabs .nav-link.active {
     color: #007bff;
     font-weight: bold;
+    border-bottom: 2px solid #007bff;
+    background: none;
+}
+.badge {
+    padding: 0.5em 0.75em;
+    font-weight: 500;
+}
+.card {
+    border: none;
+    border-radius: 0.5rem;
+}
+.card-header {
+    border-radius: 0.5rem 0.5rem 0 0 !important;
+}
+.table th {
+    border-top: none;
+    font-weight: 600;
+}
+.pagination {
+    justify-content: center;
+}
+.page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+.modal-content {
+    border-radius: 0.5rem;
+    border: none;
+}
+.modal-header {
+    border-radius: 0.5rem 0.5rem 0 0;
 }
 </style>
 @endpush 
