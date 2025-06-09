@@ -345,59 +345,60 @@
 
 @section('styles')
 <style>
-    /* Estilo para la lista de adjuntos */
-    .adjunto-item {
-        display: flex;
-        align-items: center;
-        padding: 8px;
-        background-color: #f8f9fc;
-        border-radius: 4px;
-        margin-bottom: 8px;
-    }
-    
-    .adjunto-item .adjunto-icon {
-        margin-right: 10px;
-    }
-    
-    .adjunto-item .adjunto-nombre {
-        flex-grow: 1;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    
-    .adjunto-item .adjunto-tamano {
-        margin: 0 10px;
-        color: #6c757d;
-    }
-    
-    .adjunto-item .adjunto-remove {
-        color: #e74a3b;
-        cursor: pointer;
-    }
-    
-    /* Estilo para textarea del mensaje */
-    #contenido {
-        color: #333 !important;
+    /* Fondo y texto general más contrastados */
+    .card-body, .form-control, .custom-file-label, .custom-file-input, #contenido {
         background-color: #fff !important;
-        min-height: 200px;
+        color: #222 !important;
     }
-    
-    /* Estilo para selects nativos */
+    .form-group label, .custom-file-label {
+        color: #222 !important;
+        font-weight: 600;
+    }
+    .form-control:focus, .custom-file-input:focus {
+        border-color: #4e73df;
+        box-shadow: 0 0 0 0.2rem rgba(78,115,223,.25);
+    }
+    .custom-file-label {
+        background: #f8f9fc !important;
+        border: 1px solid #4e73df;
+        color: #222 !important;
+    }
+    .custom-file-input:focus ~ .custom-file-label {
+        border-color: #4e73df;
+        box-shadow: 0 0 0 0.2rem rgba(78,115,223,.25);
+    }
+    .adjunto-item {
+        background-color: #f1f3fa !important;
+        color: #222 !important;
+    }
+    /* Mejorar contraste de select múltiple */
     select[multiple] {
-        height: 150px !important;
+        background: #fff !important;
+        color: #222 !important;
+        border: 1px solid #4e73df;
     }
-    
-    /* Mejorar la apariencia de los option groups */
+    /* Mejorar contraste de optgroup */
     optgroup {
-        font-weight: bold;
-        color: #4e73df;
+        color: #2e59d9 !important;
     }
-    
     optgroup option {
-        font-weight: normal;
-        color: #333;
-        padding-left: 15px;
+        color: #222 !important;
+    }
+    /* Botones */
+    .btn-primary {
+        background: #4e73df;
+        border-color: #4e73df;
+    }
+    .btn-primary:hover {
+        background: #224abe;
+        border-color: #224abe;
+    }
+    /* Mensajes de error de adjuntos */
+    #error-adjuntos {
+        color: #e74a3b;
+        font-weight: bold;
+        margin-top: 5px;
+        display: none;
     }
 </style>
 @endsection
@@ -536,6 +537,34 @@
             }
             
             return true;
+        });
+        
+        // Validación de adjuntos (tipo y tamaño)
+        const allowedTypes = [
+            'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'image/jpeg', 'image/png', 'image/gif', 'application/zip', 'application/x-rar-compressed'
+        ];
+        const maxFileSize = 10 * 1024 * 1024; // 10MB
+        $('#adjuntos').on('change', function() {
+            const files = Array.from(this.files);
+            let errorMsg = '';
+            files.forEach(function(file) {
+                if (file.size > maxFileSize) {
+                    errorMsg = 'El archivo ' + file.name + ' supera el tamaño máximo de 10MB.';
+                } else if (!allowedTypes.includes(file.type) && !file.type.startsWith('image/')) {
+                    errorMsg = 'El archivo ' + file.name + ' no es de un tipo permitido.';
+                }
+            });
+            if (errorMsg) {
+                $('#error-adjuntos').text(errorMsg).show();
+                $('#adjuntos').val('');
+                $('#lista-adjuntos').empty();
+                $('.custom-file-label').text('Seleccionar archivos');
+            } else {
+                $('#error-adjuntos').hide();
+            }
         });
     });
 </script>

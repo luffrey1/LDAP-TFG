@@ -256,16 +256,52 @@
         font-weight: bold;
         font-size: 1.5rem;
     }
-    
+    .list-group-item-action {
+        background: #fff !important;
+        color: #222 !important;
+        border-bottom: 1px solid #e3e6f0;
+    }
+    .list-group-item-action.active {
+        background-color: #4e73df !important;
+        color: #fff !important;
+        border-color: #4e73df !important;
+    }
+    .list-group-item-action.font-weight-bold.bg-light {
+        background: #eaf0fb !important;
+        color: #222 !important;
+        font-weight: bold;
+    }
     .list-group-item-action:hover {
         transform: translateY(-1px);
         box-shadow: 0 .125rem .25rem rgba(0,0,0,.075);
         transition: all .2s ease-in-out;
+        background: #f1f3fa !important;
     }
-    
-    .list-group-item-action.active {
-        background-color: #4e73df;
+    .badge-primary, .badge-info, .badge-danger {
+        color: #fff !important;
+        font-weight: bold;
+        background: #4e73df !important;
+    }
+    .badge-danger {
+        background: #e74a3b !important;
+    }
+    .badge-info {
+        background: #36b9cc !important;
+    }
+    .card-header, .card-body, .card-footer {
+        background: #fff !important;
+        color: #222 !important;
+    }
+    .text-gray-500, .text-white {
+        color: #222 !important;
+    }
+    .btn-primary {
+        background: #4e73df;
         border-color: #4e73df;
+    }
+    .btn-primary:hover {
+        background: #224abe;
+        border-color: #224abe;
     }
 </style>
 @endsection 

@@ -101,7 +101,11 @@ class MensajeController extends Controller
         $request->validate([
             'destinatario' => 'required',
             'asunto' => 'required|string|max:255',
-            'contenido' => 'required|string'
+            'contenido' => 'required|string',
+            'adjuntos.*' => 'file|max:10240|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,jpeg,jpg,png,gif,zip,rar',
+        ], [
+            'adjuntos.*.max' => 'Cada archivo adjunto debe ser menor a 10MB.',
+            'adjuntos.*.mimes' => 'Solo se permiten archivos PDF, Word, Excel, PowerPoint, imágenes y ZIP/RAR.',
         ]);
 
         try {
