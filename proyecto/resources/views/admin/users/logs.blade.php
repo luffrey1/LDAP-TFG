@@ -62,16 +62,16 @@
                                         @foreach($logs as $log)
                                         <tr class="log-row" data-id="{{ $log->id }}" data-type="{{ $log->type }}">
                                             <td>
-                                                <span class="badge badge-info">
+                                                <span class="badge badge-info text-black">
                                                     <i class="fas fa-user mr-1"></i>{{ $log->user }}
                                                 </span>
                                             </td>
                                             <td>
-                                                <span class="badge badge-{{ $log->level === 'WARNING' ? 'warning' : 'success' }}">
+                                                <span class="badge badge-{{ $log->level === 'WARNING' ? 'warning' : 'success' }} text-black">
                                                     {{ $log->action }}
                                                 </span>
                                             </td>
-                                            <td>{{ $log->description }}</td>
+                                            <td class="text-black">{{ $log->description }}</td>
                                             <td>
                                                 <span class="text-muted">
                                                     <i class="far fa-clock mr-1"></i>
@@ -233,6 +233,17 @@ $(document).ready(function() {
 .badge {
     padding: 0.5em 0.75em;
     font-weight: 500;
+    background-color: #e9ecef;
+    color: #000 !important;
+}
+.badge-info {
+    background-color: #e9ecef !important;
+}
+.badge-warning {
+    background-color: #ffeeba !important;
+}
+.badge-success {
+    background-color: #d4edda !important;
 }
 .card {
     border: none;
