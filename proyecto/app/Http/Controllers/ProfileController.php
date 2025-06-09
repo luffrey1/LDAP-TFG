@@ -172,12 +172,15 @@ class ProfileController extends Controller
                     $currentPassword = $request->current_password;
                     $newPassword = $request->new_password;
 
+                    // Obtener el DN del usuario
+                    $userDn = is_array($ldapUser) ? $ldapUser['dn'] : $ldapUser->getDn();
+
                     // Intentar autenticar con la contraseña actual
                     $authLdap = new \LdapRecord\Connection([
                         'hosts' => $config['hosts'],
                         'port' => 636,
                         'base_dn' => $config['base_dn'],
-                        'username' => $ldapUser->getDn(),
+                        'username' => $userDn,
                         'password' => $currentPassword,
                         'use_ssl' => true,
                         'use_tls' => false,
