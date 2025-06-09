@@ -149,7 +149,6 @@ class ProfileController extends Controller
             if ($ldapUser) {
                 // Preparar datos para actualizar
                 $updateData = [
-                    'cn' => $request->name,
                     'displayName' => $request->name,
                     'mail' => $request->email
                 ];
