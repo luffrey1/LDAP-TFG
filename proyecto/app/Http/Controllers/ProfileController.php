@@ -59,10 +59,10 @@ class ProfileController extends Controller
 
             if ($ldapUser) {
                 // Obtener UID, GID y CN
-                $ldapUid = $ldapUser->getFirstAttribute('uid');
-                $ldapGuid = $ldapUser->getFirstAttribute('gidNumber');
-                $ldapCn = $ldapUser->getFirstAttribute('cn');
-                $fullName = $ldapUser->getFirstAttribute('displayName') ?? $ldapUser->getFirstAttribute('cn');
+                $ldapUid = is_array($ldapUser) ? ($ldapUser['uid'][0] ?? '') : $ldapUser->getFirstAttribute('uid');
+                $ldapGuid = is_array($ldapUser) ? ($ldapUser['gidnumber'][0] ?? '') : $ldapUser->getFirstAttribute('gidNumber');
+                $ldapCn = is_array($ldapUser) ? ($ldapUser['cn'][0] ?? '') : $ldapUser->getFirstAttribute('cn');
+                $fullName = is_array($ldapUser) ? ($ldapUser['displayname'][0] ?? $ldapUser['cn'][0] ?? '') : ($ldapUser->getFirstAttribute('displayName') ?? $ldapUser->getFirstAttribute('cn'));
 
                 // Obtener grupos del usuario
                 $allGroups = $ldap->query()
@@ -80,7 +80,8 @@ class ProfileController extends Controller
                             : [$group['uniquemember']];
                         
                         // Validar si el usuario está en este grupo
-                        if (in_array($ldapUser->getDn(), $members)) {
+                        $userDn = is_array($ldapUser) ? $ldapUser['dn'] : $ldapUser->getDn();
+                        if (in_array($userDn, $members)) {
                             $isMember = true;
                         }
                     }
@@ -99,9 +100,9 @@ class ProfileController extends Controller
                     // Si el usuario es miembro por cualquier método, añadir el grupo
                     if ($isMember) {
                         $groups[] = [
-                            'cn' => $group->getFirstAttribute('cn'),
-                            'description' => $group->getFirstAttribute('description'),
-                            'nombre_completo' => $group->getFirstAttribute('cn')
+                            'cn' => is_array($group) ? ($group['cn'][0] ?? '') : $group->getFirstAttribute('cn'),
+                            'description' => is_array($group) ? ($group['description'][0] ?? '') : $group->getFirstAttribute('description'),
+                            'nombre_completo' => is_array($group) ? ($group['cn'][0] ?? '') : $group->getFirstAttribute('cn')
                         ];
                     }
                 }
