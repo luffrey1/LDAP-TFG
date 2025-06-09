@@ -284,11 +284,11 @@
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
                     <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-history me-2 text-white"></i>Actividad Reciente
+                        <i class="fas fa-history me-2"></i>Actividad Reciente
                     </h6>
                 </div>
-                <div class="card-body text-white">
-                    <div class="timeline text-white">
+                <div class="card-body">
+                    <div class="timeline">
                         @if(isset($userActivity) && count($userActivity) > 0)
                             @foreach($userActivity as $activity)
                             <div class="timeline-item {{ isset($activity['is_access_attempt']) && $activity['is_access_attempt'] ? 'access-attempt' : '' }}">
@@ -375,10 +375,48 @@
     
     .access-details p {
         margin: 4px 0;
+        color: #333;
     }
     
     .access-details strong {
         color: #e74c3c;
+    }
+
+    .timeline {
+        position: relative;
+        padding: 20px 0;
+    }
+
+    .timeline-item {
+        position: relative;
+        padding: 15px 0;
+        border-bottom: 1px solid #e3e6f0;
+    }
+
+    .timeline-marker {
+        position: absolute;
+        left: -1.5rem;
+        top: 1.5rem;
+        width: 1rem;
+        height: 1rem;
+        border-radius: 50%;
+        background-color: #4e73df;
+    }
+
+    .timeline-content {
+        padding-left: 1rem;
+    }
+
+    .timeline-title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #2e59d9;
+    }
+
+    .timeline-time {
+        font-size: 0.85rem;
+        color: #858796;
     }
 </style>
 @endsection
