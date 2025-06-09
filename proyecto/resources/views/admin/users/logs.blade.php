@@ -170,17 +170,27 @@ $(document).ready(function() {
         description = description.toLowerCase();
         console.log('Analyzing description:', description);
         
-        if (description.includes('usuario ldap')) {
+        // Detección de acciones de usuario
+        if (description.includes('usuario ldap creado') || 
+            description.includes('usuario ldap actualizado') || 
+            description.includes('usuario ldap eliminado')) {
             console.log('Detected as users type');
             return 'users';
         }
         
-        if (description.includes('grupo ldap')) {
+        // Detección de acciones de grupo
+        if (description.includes('grupo ldap creado') || 
+            description.includes('grupo ldap actualizado') || 
+            description.includes('grupo ldap eliminado')) {
             console.log('Detected as groups type');
             return 'groups';
         }
         
-        if (description.includes('desde') || description.includes('intento de acceso')) {
+        // Detección de intentos de acceso
+        if (description.includes('intento de acceso') || 
+            description.includes('acceso exitoso') || 
+            description.includes('acceso fallido') || 
+            description.includes('desde')) {
             console.log('Detected as access type');
             return 'access';
         }
@@ -189,35 +199,35 @@ $(document).ready(function() {
         return 'all';
     }
 
-    // Asignar tipos a las filas
-    $('.log-row').each(function() {
-        var $row = $(this);
-        var description = $row.find('td:eq(2)').text().trim();
+    // Asignar tipos a las filas y mostrar información de depuración
+    console.log('Starting to assign types to rows...');
+    table.rows().every(function() {
+        var data = this.data();
+        var description = data[2]; // La descripción está en la tercera columna
         var type = getLogType(description);
-        $row.attr('data-type', type);
-        console.log('Row assigned type:', type, 'Description:', description);
+        $(this.node()).attr('data-type', type);
+        console.log('Row assigned type:', {
+            description: description,
+            type: type
+        });
     });
 
     // Función para filtrar por tipo de log
     function filterLogs(type) {
         console.log('Starting filter for type:', type);
-        var visibleCount = 0;
         
-        // Primero ocultar todas las filas
-        $('.log-row').hide();
+        // Usar la API de DataTables para filtrar
+        $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+            var rowType = $(table.row(dataIndex).node()).attr('data-type');
+            return type === 'all' || rowType === type;
+        });
         
-        // Luego mostrar solo las filas del tipo seleccionado
-        if (type === 'all') {
-            $('.log-row').show();
-            visibleCount = $('.log-row').length;
-        } else {
-            $('.log-row[data-type="' + type + '"]').each(function() {
-                $(this).show();
-                visibleCount++;
-            });
-        }
+        table.draw();
         
-        console.log('Filter complete. Visible rows:', visibleCount);
+        // Limpiar el filtro después de aplicarlo
+        $.fn.dataTable.ext.search.pop();
+        
+        console.log('Filter applied. Visible rows:', table.rows({search: 'applied'}).count());
     }
 
     // Manejar cambios de pestaña
@@ -233,20 +243,17 @@ $(document).ready(function() {
     // Búsqueda de usuario
     $('#userSearch').on('keyup', function() {
         var searchText = $(this).val().toLowerCase();
-        $('.log-row').each(function() {
-            var userText = $(this).find('td:first').text().toLowerCase();
-            $(this).toggle(userText.indexOf(searchText) > -1);
-        });
+        table.search(searchText).draw();
     });
 
     // Limpiar búsqueda
     $('#clearSearch').on('click', function() {
         $('#userSearch').val('');
-        $('.log-row').show();
+        table.search('').draw();
     });
 
     // Mostrar detalles del log al hacer clic
-    $('.log-row').on('click', function() {
+    $('#logsTable tbody').on('click', 'tr', function() {
         var id = $(this).data('id');
         showLogDetails(id);
     });
