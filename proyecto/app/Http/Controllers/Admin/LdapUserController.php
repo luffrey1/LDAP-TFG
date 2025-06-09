@@ -2955,23 +2955,49 @@ class LdapUserController extends Controller
                 throw new \Exception('No se puede modificar el estado de administrador del usuario ldap-admin');
             }
 
-            $userGroups = $this->getUserGroups($userDn);
-            Log::debug("Grupos del usuario:", $userGroups);
-            
-            $isAdmin = in_array('ldapadmins', $userGroups);
+            // Verificar si el usuario está en el grupo ldapadmins
+            $adminGroupDn = 'cn=ldapadmins,ou=groups,dc=tierno,dc=es';
+            $groupSearch = ldap_read($connection->getConnection(), $adminGroupDn, '(objectClass=*)', ['uniqueMember']);
+            if (!$groupSearch) {
+                throw new \Exception('Error al buscar grupo ldapadmins: ' . ldap_error($connection->getConnection()));
+            }
+
+            $groupEntries = ldap_get_entries($connection->getConnection(), $groupSearch);
+            $isAdmin = false;
+
+            if ($groupEntries['count'] > 0 && isset($groupEntries[0]['uniquemember'])) {
+                for ($i = 0; $i < $groupEntries[0]['uniquemember']['count']; $i++) {
+                    if ($groupEntries[0]['uniquemember'][$i] === $userDn) {
+                        $isAdmin = true;
+                        break;
+                    }
+                }
+            }
+
             Log::debug("Es admin: " . ($isAdmin ? 'true' : 'false'));
 
             if ($isAdmin) {
-                $this->removeUserFromGroup($userDn, $this->adminGroupDn);
+                // Remover del grupo
+                $mod = ['uniqueMember' => $userDn];
+                if (!ldap_mod_del($connection->getConnection(), $adminGroupDn, $mod)) {
+                    throw new \Exception('Error al remover usuario del grupo: ' . ldap_error($connection->getConnection()));
+                }
                 Log::info("Usuario {$uid} removido del grupo ldapadmins");
+                $message = 'Usuario removido de administradores';
             } else {
-                $this->addUserToGroup($userDn, $this->adminGroupDn);
+                // Añadir al grupo
+                $mod = ['uniqueMember' => $userDn];
+                if (!ldap_mod_add($connection->getConnection(), $adminGroupDn, $mod)) {
+                    throw new \Exception('Error al añadir usuario al grupo: ' . ldap_error($connection->getConnection()));
+                }
                 Log::info("Usuario {$uid} agregado al grupo ldapadmins");
+                $message = 'Usuario agregado como administrador';
             }
 
             return response()->json([
                 'success' => true,
-                'message' => $isAdmin ? 'Usuario removido de administradores' : 'Usuario agregado como administrador'
+                'message' => $message,
+                'isAdmin' => !$isAdmin // Devolvemos el nuevo estado
             ]);
 
         } catch (\Exception $e) {
