@@ -1,277 +1,134 @@
 # 📋 Documentación de Configuración
 
-![Laravel Logo](https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg)
-
 ## 📌 Requisitos
 
-- 🐳 Docker y Docker Compose
-- 🧰 PHP 8.0 o superior
-- 💾 MySQL 8.0 o superior
-- 🔐 Servidor LDAP (OpenLDAP)
+- Ubuntu 20.04 o superior
+- Docker y Docker Compose
+- Git
 
-## 🚀 Configuración Rápida
+## 🚀 Despliegue
 
-1. Clonar el repositorio
-2. Ejecutar `docker-compose up -d`
-3. Acceder a http://localhost:8000
-
----
-
-## ⚠️ IMPORTANTE: Configuración del Entorno Docker
-
-CAMBIAR ESTA LINEA POR LA IP DE TU LDAP HOST IMPORTANTE:
-LDAP_DEFAULT_HOSTS=172.19.0.4
-
-### 🔐 Servidor LDAP (OpenLDAP)
-
-Para configurar el servidor LDAP de forma rápida, se proporcionan scripts de automatización:
-
-
-**En Windows:**
-```powershell
-# Ejecutar el script de configuración LDAP para Windows(DENTRO DE /PROYECTO)
-.\setup-ldap.ps1
-```
-
-**En Linux/macOS:**
+1. Iniciar los contenedores:
 ```bash
-# Ejecutar el script de configuración LDAP para sistemas Unix(DENTRO DE /PROYECTO)
-chmod +x ./setup-ldap.sh
-./setup-ldap.sh
+cd docker
+docker compose up -d
 ```
 
-**Configuración Manual (No crea usuarios, el script si, y en cuyo caso no cree los grupos, proceder con lo de abajo y luego el script.):**
+2. Acceder a la aplicación:
+- Web: https://localhost
+- SSH: localhost:2222
 
+## 🔧 Comandos Manuales si no funciona APACHE
+
+### Configuración de Apache
 ```bash
-# Crear el contenedor de LDAP
-docker-compose up -d openldap-osixia
-
-# Importar los archivos LDIF al servidor LDAP
-docker exec -it openldap-osixia ldapadd -x -D "cn=admin,dc=test,dc=tierno,dc=es" -w admin -f /tmp/01-ou.ldif
-docker exec -it openldap-osixia ldapadd -x -D "cn=admin,dc=test,dc=tierno,dc=es" -w admin -f /tmp/02-ldap-admin-user.ldif
-docker exec -it openldap-osixia ldapadd -x -D "cn=admin,dc=test,dc=tierno,dc=es" -w admin -f /tmp/03-ldapadmins-group.ldif
-docker exec -it openldap-osixia ldapadd -x -D "cn=admin,dc=test,dc=tierno,dc=es" -w admin -f /tmp/04-everybody-group.ldif
-docker exec -it openldap-osixia ldapadd -x -D "cn=admin,dc=test,dc=tierno,dc=es" -w admin -f /tmp/05-alumnos-users.ldif
-docker exec -it openldap-osixia ldapadd -x -D "cn=admin,dc=test,dc=tierno,dc=es" -w admin -f /tmp/06-alumnos-groups.ldif
-docker exec -it openldap-osixia ldapadd -x -D "cn=admin,dc=test,dc=tierno,dc=es" -w admin -f /tmp/07-profesor-users.ldif
-docker exec -it openldap-osixia ldapadd -x -D "cn=admin,dc=test,dc=tierno,dc=es" -w admin -f /tmp/08-profesores-group.ldif
-docker exec -it openldap-osixia ldapadd -x -D "cn=admin,dc=test,dc=tierno,dc=es" -w admin -f /tmp/09-docker-group.ldif
-docker exec -it openldap-osixia ldapadd -x -D "cn=admin,dc=test,dc=tierno,dc=es" -w admin -f /tmp/10-lastUID-GID.ldif
-docker exec -it openldap-osixia ldapadd -x -Y EXTERNAL -H ldapi:/// -f /tmp/11-sudo-schema.ldif
-docker exec -it openldap-osixia ldapadd -x -D "cn=admin,dc=test,dc=tierno,dc=es" -w admin -f /tmp/12-sudo-profesores.ldif
-docker exec -it openldap-osixia ldapmodify -x -Y EXTERNAL -H ldapi:/// -f /tmp/13-uniqueMember-index.ldif
-docker exec -it openldap-osixia ldapmodify -x -Y EXTERNAL -H ldapi:/// -f /tmp/20_acl.ldif
-
-# Verificar la configuración LDAP
-docker exec -it openldap-osixia ldapsearch -x -b dc=test,dc=tierno,dc=es -D "cn=admin,dc=test,dc=tierno,dc=es" -w admin
+docker exec laravel-app cp /var/www/html/apache-config.conf /etc/apache2/sites-available/000-default.conf
+docker exec laravel-app a2enmod ssl
+docker exec laravel-app a2enmod rewrite
+docker exec laravel-app service apache2 reload
 ```
 
-### 🌐 Configuración de la Red Docker
-
-Es necesario asegurarse de que todos los contenedores estén en la misma red para que puedan comunicarse entre sí:
-
+### Permisos y Migraciones
 ```bash
-# Asegurarse de que todos los contenedores estén en la misma red
-docker network connect docker_app-network openldap-osixia
+# Establecer permisos
+docker exec laravel-app chown -R www-data:www-data /var/www/html
+docker exec laravel-app chmod -R 755 /var/www/html
+docker exec laravel-app chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+docker exec laravel-app chmod -R 775 /var/www/html/public/documentos
+
+# Ejecutar migraciones
+docker exec laravel-app php artisan migrate --force
+
+# Limpiar caché
+docker exec laravel-app php artisan config:clear
+docker exec laravel-app php artisan cache:clear
+docker exec laravel-app php artisan route:clear
+docker exec laravel-app php artisan view:clear
 ```
 
-### 🖥️ Servidor Apache
-
-Para iniciar o reiniciar el servidor Apache en el contenedor de Laravel:
-
+### Directorios de Documentos
 ```bash
-# Iniciar Apache
-docker exec -it laravel-app service apache2 start
-
-# Reiniciar Apache
-docker exec -it laravel-app service apache2 restart
-
-# Verificar el estado de Apache
-docker exec -it laravel-app service apache2 status
+docker exec laravel-app mkdir -p /var/www/html/public/documentos/{general,programaciones,actas,horarios}
+docker exec laravel-app chmod -R 777 /var/www/html/public/documentos
+docker exec laravel-app chown -R www-data:www-data /var/www/html/public/documentos
 ```
 
-### 📁 Directorios de Documentos
+## ⚠️ Solución de Problemas Comunes
 
-Configurar los directorios para los documentos en el contenedor Laravel:
-
+### 1. Error de Permisos
+Si encuentras errores de permisos, ejecuta:
 ```bash
-# Crear directorios de documentos
-docker exec -it laravel-app bash -c "mkdir -p /var/www/html/public/documentos/{general,programaciones,actas,horarios}"
-
-# Asignar permisos a los directorios
-docker exec -it laravel-app chmod -R 777 /var/www/html/public/documentos
+docker exec laravel-app chown -R www-data:www-data /var/www/html
+docker exec laravel-app chmod -R 755 /var/www/html
+docker exec laravel-app chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 ```
 
----
-
-## 🔑 Configuración LDAP con LdapRecord
-
-Para asegurar una integración correcta con LDAP, la aplicación utiliza [LdapRecord](https://ldaprecord.com), una biblioteca moderna y robusta para trabajar con LDAP en Laravel.
-
-### Variables de Entorno `.env`
-
-Es importante configurar correctamente las variables de entorno con el prefijo `LDAP_DEFAULT_` para que LdapRecord funcione adecuadamente:
-
-```env
-# Variables con prefijo LDAP_DEFAULT recomendadas por LdapRecord
-LDAP_DEFAULT_HOSTS=172.19.0.4
-LDAP_DEFAULT_PORT=389
-LDAP_DEFAULT_BASE_DN=dc=test,dc=tierno,dc=es
-LDAP_DEFAULT_USERNAME=cn=admin,dc=test,dc=tierno,dc=es
-LDAP_DEFAULT_PASSWORD=admin
-LDAP_DEFAULT_SSL=false
-LDAP_DEFAULT_TLS=false
-LDAP_DEFAULT_TIMEOUT=5
-```
-
-### Configuración LdapRecord (config/ldap.php)
-
-La aplicación utiliza el archivo `config/ldap.php` para definir las conexiones LDAP. Asegúrese de que esté correctamente configurado:
-
-```php
-'connections' => [
-    'default' => [
-        'hosts' => [env('LDAP_DEFAULT_HOSTS', env('LDAP_HOST', '172.19.0.4'))],
-        'username' => env('LDAP_DEFAULT_USERNAME', env('LDAP_USERNAME', 'cn=admin,dc=test,dc=tierno,dc=es')),
-        'password' => env('LDAP_DEFAULT_PASSWORD', env('LDAP_PASSWORD', 'admin')),
-        'port' => env('LDAP_DEFAULT_PORT', env('LDAP_PORT', 389)),
-        'base_dn' => env('LDAP_DEFAULT_BASE_DN', env('LDAP_BASE_DN', 'dc=tierno,dc=es')),
-        'timeout' => env('LDAP_DEFAULT_TIMEOUT', env('LDAP_TIMEOUT', 5)),
-        'use_ssl' => env('LDAP_DEFAULT_SSL', env('LDAP_SSL', false)),
-        'use_tls' => env('LDAP_DEFAULT_TLS', env('LDAP_TLS', false)),
-        // ...
-    ],
-],
-```
-
-### 🧪 Probar Conexión LDAP
-
-Para verificar que la configuración LDAP esté funcionando correctamente:
-
+### 2. Error en Migraciones
+Si las migraciones fallan:
 ```bash
-# Limpiar cachés
-docker exec -it laravel-app php artisan config:clear
-docker exec -it laravel-app php artisan cache:clear
-
-# Probar conexión LDAP con LdapRecord
-docker exec -it laravel-app php artisan ldap:test
+# Esperar a que MySQL esté listo
+sleep 10
+docker exec laravel-app php artisan migrate --force
 ```
 
----
-
-## 📂 Estructura del Proyecto
-
-```
-proyecto/
-├── app/                    # Código de la aplicación
-│   ├── Console/            # Comandos de consola
-│   ├── Exceptions/         # Manejadores de excepciones
-│   ├── Http/               # Controladores, Middleware, Requests
-│   │   ├── Controllers/    # Controladores de la aplicación
-│   │   └── Middleware/     # Middleware
-│   ├── Models/             # Modelos de la aplicación
-│   └── Providers/          # Proveedores de servicios
-├── bootstrap/              # Archivos de bootstrap
-├── config/                 # Archivos de configuración
-│   ├── app.php             # Configuración general
-│   ├── auth.php            # Configuración de autenticación
-│   ├── ldap.php            # Configuración de LDAP
-│   └── ...
-├── database/               # Migraciones y seeders
-├── ldap/                   # Archivos de configuración LDAP
-│   └── ldif/              # Archivos LDIF para OpenLDAP
-├── public/                 # Archivos públicos
-│   ├── documentos/         # Directorio para almacenar documentos físicos
-│   └── ...
-├── resources/              # Vistas, assets, etc.
-│   ├── views/              # Vistas Blade
-│   └── ...
-├── routes/                 # Definición de rutas
-│   ├── api.php             # Rutas API
-│   └── web.php             # Rutas web
-├── storage/                # Archivos generados por la aplicación
-├── docker-compose.yml      # Configuración de Docker Compose
-├── Dockerfile              # Configuración del contenedor Laravel
-└── README.md              # Este archivo
-```
-
-## 👥 Usuarios LDAP
-
-El sistema incluye los siguientes usuarios LDAP preconfigurados:
-
-| Usuario | Contraseña | Rol |
-|---------|------------|-----|
-| `ldap-admin` | `admin` | Administrador |
-| `profesor` | `password` | Profesor |
-| `alumno` | `password` | Alumno |
-
-## 🔄 Rutas de la Aplicación
-
-La aplicación utiliza las siguientes rutas principales:
-
-| Ruta | Descripción |
-|------|-------------|
-| `/dashboard` | Panel principal de la aplicación |
-| `/gestion-documental` | Gestión de documentos (anteriormente en `/documentos`) |
-| `/mensajes` | Sistema de mensajería interna |
-| `/calendario` | Calendario de eventos |
-| `/admin/usuarios` | Administración de usuarios LDAP (solo para administradores) |
-
-## 🛠️ Scripts de Utilidad
-
-Para facilitar la administración, depuración y configuración, se incluyen varios scripts:
-
-| Script | Descripción |
-|--------|-------------|
-| `test-ldap.php` | Prueba la conexión al servidor LDAP |
-| `check-apache.php` | Verifica la configuración de Apache |
-| `ldap_admin_check.php` | Comprueba los permisos del usuario administrador LDAP |
-| `update-env.php` | Actualiza las variables de entorno en el archivo .env |
-
----
-
-## ⚠️ Problemas Conocidos y Soluciones
-
-### Variables de Entorno en Docker
-
-Las variables de entorno dentro de los contenedores pueden no coincidir con las definidas en el archivo `.env`. Para solucionarlo, se recomienda lo siguiente en el Dockerfile:
-
-```dockerfile
-# Actualizar el archivo .env dentro del contenedor
-COPY .env /var/www/html/.env
-RUN chmod 644 /var/www/html/.env
-
-# Asegurar que las variables de entorno estén correctamente configuradas
-ENV LDAP_HOST=openldap-osixia
-ENV LDAP_PORT=389
-ENV LDAP_BASE_DN=dc=test,dc=tierno,dc=es
-ENV LDAP_USERNAME=cn=admin,dc=test,dc=tierno,dc=es
-ENV LDAP_PASSWORD=admin
-
-# Variables LdapRecord
-ENV LDAP_DEFAULT_HOSTS=172.19.0.4
-ENV LDAP_DEFAULT_PORT=389
-ENV LDAP_DEFAULT_BASE_DN=dc=test,dc=tierno,dc=es
-ENV LDAP_DEFAULT_USERNAME=cn=admin,dc=test,dc=tierno,dc=es
-ENV LDAP_DEFAULT_PASSWORD=admin
-```
-
-### 🧹 Limpieza de Caché
-
-Si modifica configuraciones o rutas, es recomendable limpiar las cachés de Laravel:
-
+### 3. Error de SSL en Apache
+Si hay problemas con SSL:
 ```bash
-docker exec -it laravel-app php artisan cache:clear
-docker exec -it laravel-app php artisan config:clear
-docker exec -it laravel-app php artisan route:clear
-docker exec -it laravel-app php artisan view:clear
+docker exec laravel-app a2enmod ssl
+docker exec laravel-app a2enmod rewrite
+docker exec laravel-app service apache2 reload
+```
+
+### 4. Limpieza de Docker
+Si hay problemas de espacio o contenedores huérfanos:
+```bash
+# Limpiar contenedores, redes e imágenes no utilizadas
+docker system prune -f
+
+# Limpiar volúmenes no utilizados
+docker volume prune -f
+```
+
+### 5. Reinicio de Servicios
+Si algún servicio no responde:
+```bash
+# Reiniciar todos los servicios
+docker compose restart
+
+# Reiniciar un servicio específico
+docker compose restart laravel
+```
+
+## 📝 Notas Importantes
+
+1. Siempre ejecutar los comandos desde el directorio `/docker`
+2. Usar `docker compose` en lugar de `docker-compose`
+3. Si se modifica el archivo `.env`, reiniciar los contenedores
+4. Mantener los certificados SSL actualizados
+5. Realizar copias de seguridad periódicas de la base de datos
+
+## 🔄 Mantenimiento
+
+### Backup de Base de Datos
+```bash
+docker exec laravel-mysql mysqldump -u root -p laravel > backup.sql
+```
+
+### Actualización de Certificados
+```bash
+# Copiar nuevos certificados
+docker cp /ruta/certificados/cert.pem laravel-app:/etc/ssl/certs/site/certificate.crt
+docker cp /ruta/certificados/privkey.pem laravel-app:/etc/ssl/certs/site/private.key
+docker cp /ruta/certificados/chain.pem laravel-app:/etc/ssl/certs/site/ca_bundle.crt
+
+# Recargar Apache
+docker exec laravel-app service apache2 reload
 ```
 
 ---
 
 <div align="center">
-    <p>🚀 <b>Desarrollado con Laravel, Docker y LdapRecord</b> 🚀</p>
-    <p>Para cualquier consulta o problema, por favor abra un <i>issue</i> en el repositorio.</p>
+    <p>🚀 <b>Desarrollado con Laravel y Docker</b> 🚀</p>
 </div>
 
 
