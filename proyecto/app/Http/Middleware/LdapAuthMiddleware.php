@@ -49,8 +49,38 @@ class LdapAuthMiddleware
             
             // Intentar conectar
             $connection->connect();
+
+            // Verificar si el usuario pertenece al grupo alumnos
+            $user = session('auth_user');
             
-            // Si llegamos aquí, la conexión fue exitosa
+            // Primero buscar el usuario en LDAP para obtener su uid
+            $ldapUser = $connection->query()
+                ->in('ou=people,' . $config['base_dn'])
+                ->where('uid', '=', $user['username'])
+                ->first();
+            
+            if ($ldapUser) {
+                // Obtener el uid del usuario
+                $uid = is_array($ldapUser) ? $ldapUser['uid'][0] : $ldapUser->getFirstAttribute('uid');
+                
+                // Buscar el grupo alumnos
+                $alumnosGroup = $connection->query()
+                    ->in('ou=groups,' . $config['base_dn'])
+                    ->where('objectClass', '=', 'posixGroup')
+                    ->where('cn', '=', 'alumnos')
+                    ->first();
+                
+                if ($alumnosGroup) {
+                    // Acceder a memberUid como array
+                    $memberUids = isset($alumnosGroup['memberuid']) ? $alumnosGroup['memberuid'] : [];
+                    if (is_array($memberUids) && in_array($uid, $memberUids)) {
+                        // El usuario es un alumno, mostrar la pantalla de advertencia
+                        return response()->view('auth.student-warning');
+                    }
+                }
+            }
+            
+            // Si llegamos aquí, la conexión fue exitosa y el usuario no es alumno
             return $next($request);
             
         } catch (\Exception $e) {
