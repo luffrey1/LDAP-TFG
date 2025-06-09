@@ -3016,11 +3016,11 @@ class LdapUserController extends Controller
     {
         try {
             Log::info('Intentando conectar a LDAP');
-            $this->ldap->connect();
+            $this->connection->connect();
             Log::info('Conexión LDAP establecida correctamente');
 
             Log::info('Buscando grupo con GID: ' . $gid);
-            $query = $this->ldap->query();
+            $query = $this->connection->query();
             $groups = $query->where('objectclass', '=', 'posixGroup')
                            ->where('gidNumber', '=', $gid)
                            ->get();
