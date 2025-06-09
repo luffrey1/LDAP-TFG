@@ -8,17 +8,10 @@ body, .container-fluid {
     background: #181c24 !important;
 }
 .card-configuracion {
-    background: #f4f7fb !important;
     box-shadow: 0 4px 24px rgba(25,118,237,0.08), 0 1.5px 4px rgba(25,118,237,0.03);
     border-radius: 0.7rem;
     margin-bottom: 30px;
     transition: all 0.3s;
-    border: none;
-}
-.card-header {
-    background: #1976ed !important;
-    color: #fff !important;
-    border-radius: 0.7rem 0.7rem 0 0;
     border: none;
 }
 .card-header h6 {
@@ -39,16 +32,7 @@ body, .container-fluid {
     transition: all 0.2s;
     box-shadow: 0 1px 4px rgba(25,118,237,0.04);
 }
-.modulo-card:hover, .seguridad-item:hover {
-    background: #e3edfa !important;
-    border-color: #1976ed;
-}
-.modulo-titulo, .form-label, h6.text-gray-800 {
-    color: #1976ed !important;
-    font-size: 1.13rem;
-    font-weight: 700 !important;
-    letter-spacing: 0.01em;
-}
+
 .panel-descripcion, .modulo-descripcion, .form-text, .form-check-label, small {
     color: #444 !important;
     font-size: 1rem !important;
@@ -64,35 +48,11 @@ input.form-control, select.form-control, .form-check-input {
     box-shadow: none !important;
     transition: border-color 0.2s;
 }
-input.form-control:focus, select.form-control:focus {
-    border-color: #1976ed !important;
-    box-shadow: 0 0 0 2px #1976ed22 !important;
-}
-.form-check-input:checked {
-    background-color: #1976ed !important;
-    border-color: #1976ed !important;
-}
-.btn-primary, .btn-secondary {
-    font-size: 1.08rem;
-    font-weight: 700;
-    border-radius: 0.4rem;
-    background: #1976ed !important;
-    border: none;
-    color: #fff !important;
-    transition: background 0.2s;
-}
-.btn-primary:hover, .btn-secondary:hover {
-    background: #1251a3 !important;
-}
+
 .alert {
     font-size: 1.08rem;
     border-radius: 0.5rem;
     border: none;
-}
-.badge-vpn {
-    background: #e3edfa !important;
-    color: #1976ed !important;
-    border: 1.5px dashed #1976ed !important;
 }
 </style>
 @endsection
