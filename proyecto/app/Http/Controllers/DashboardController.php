@@ -965,7 +965,7 @@ class DashboardController extends Controller
                         'action' => $activity->action,
                         'description' => $activity->description,
                         'time' => \Carbon\Carbon::parse($activity->created_at)->diffForHumans(),
-                        'performed_by' => $activity->performed_by ?? 'Sistema'
+                        'performed_by' => $activity->user // Usar el campo user directamente
                     ];
                 }));
             } catch (\Exception $e) {
@@ -991,7 +991,7 @@ class DashboardController extends Controller
                                 'hostname' => $attempt->hostname,
                                 'ip' => $attempt->ip
                             ],
-                            'performed_by' => $attempt->username
+                            'performed_by' => $attempt->username // Usar el username del intento
                         ];
                     }));
                 } catch (\Exception $e) {
@@ -1001,13 +1001,14 @@ class DashboardController extends Controller
             
             // Si no hay actividades, devolver actividad por defecto
             if ($activities->isEmpty()) {
+                $currentUser = session('auth_user.username') ?? 'Usuario';
                 return [
                     [
-                        'user' => 'Sistema',
+                        'user' => $currentUser,
                         'action' => 'Inició',
                         'description' => 'la aplicación',
                         'time' => now()->diffForHumans(),
-                        'performed_by' => 'Sistema'
+                        'performed_by' => $currentUser
                     ]
                 ];
             }
@@ -1017,13 +1018,14 @@ class DashboardController extends Controller
         } catch (\Exception $e) {
             Log::error('Error al obtener actividad de usuarios: ' . $e->getMessage());
             
+            $currentUser = session('auth_user.username') ?? 'Usuario';
             return [
                 [
-                    'user' => 'Sistema',
+                    'user' => $currentUser,
                     'action' => 'Inició',
                     'description' => 'la aplicación',
                     'time' => now()->diffForHumans(),
-                    'performed_by' => 'Sistema'
+                    'performed_by' => $currentUser
                 ]
             ];
         }
