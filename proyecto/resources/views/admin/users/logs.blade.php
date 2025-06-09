@@ -195,7 +195,13 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         order: [[1, 'desc']], // Ordenar por fecha descendente
         pageLength: 25,
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip'
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip',
+        processing: true,
+        serverSide: false, // Desactivamos serverSide porque usamos la paginación de Laravel
+        searching: true,
+        info: true,
+        lengthChange: true,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]]
     });
 
     // Función para filtrar por tipo de log
@@ -263,6 +269,9 @@ document.addEventListener('DOMContentLoaded', function() {
             showLogDetails(id);
         });
     });
+
+    // Ocultar la paginación de Laravel ya que usamos DataTables
+    document.querySelector('.pagination').style.display = 'none';
 });
 </script>
 @endsection 
