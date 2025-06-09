@@ -59,9 +59,9 @@ class ProfileController extends Controller
 
             if ($ldapUser) {
                 // Obtener UID, GID y CN
-                $ldapUid = is_array($ldapUser) ? ($ldapUser['uid'][0] ?? '') : $ldapUser->getFirstAttribute('uid');
+                $ldapUid = is_array($ldapUser) ? ($ldapUser['uidnumber'][0] ?? '') : $ldapUser->getFirstAttribute('uidNumber');
                 $ldapGuid = is_array($ldapUser) ? ($ldapUser['gidnumber'][0] ?? '') : $ldapUser->getFirstAttribute('gidNumber');
-                $ldapCn = is_array($ldapUser) ? ($ldapUser['cn'][0] ?? '') : $ldapUser->getFirstAttribute('cn');
+                $ldapCn = is_array($ldapUser) ? ($ldapUser['uid'][0] ?? '') : $ldapUser->getFirstAttribute('uid');
                 $fullName = is_array($ldapUser) ? ($ldapUser['displayname'][0] ?? $ldapUser['cn'][0] ?? '') : ($ldapUser->getFirstAttribute('displayName') ?? $ldapUser->getFirstAttribute('cn'));
 
                 // Obtener grupos del usuario
