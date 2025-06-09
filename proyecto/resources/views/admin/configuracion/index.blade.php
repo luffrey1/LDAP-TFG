@@ -200,8 +200,8 @@ input.form-control, select.form-control {
                         <h6 class="m-0 font-weight-bold text-primary">Telemetría de Equipos</h6>
                         <p class="panel-descripcion mb-0">Configura cada cuánto tiempo los agentes deben enviar datos automáticamente (en minutos). Si usas modo bajo demanda, este valor es solo informativo.</p>
                     </div>
-                    <div class="card-body">
-                        <div class="modulo-card">
+                    <div class="card-body text-white">
+                        <div class="modulo-card text-white">
                             <label for="telemetria_intervalo_minutos" class="form-label text-white">Intervalo de telemetría (minutos)</label>
                             <input type="number" class="form-control text-white" id="telemetria_intervalo_minutos" name="telemetria_intervalo_minutos" min="1" max="1440" 
                                 value="{{ isset($configuraciones['general']) && $configuraciones['general']->where('clave', 'telemetria_intervalo_minutos')->first() ? $configuraciones['general']->where('clave', 'telemetria_intervalo_minutos')->first()->valor : 60 }}">
