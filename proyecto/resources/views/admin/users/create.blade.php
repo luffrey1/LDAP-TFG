@@ -189,38 +189,116 @@
         const btnRoleProfesor = document.getElementById('btn-role-profesor');
         const btnRoleAlumno = document.getElementById('btn-role-alumno');
 
-        // Función para actualizar el nombre de usuario basado en nombre y apellidos
-        function updateUsername() {
-            if (nombreInput.value && apellidosInput.value && !uidInput.value) {
-                const nombre = nombreInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
-                const apellidos = apellidosInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
-                // Usar solo la primera letra del apellido
-                uidInput.value = nombre + apellidos.charAt(0);
+        // Función para normalizar texto (eliminar acentos y espacios)
+        function normalizeText(text) {
+            return text.toLowerCase()
+                      .normalize("NFD")
+                      .replace(/[\u0300-\u036f]/g, "")
+                      .replace(/\s+/g, "");
+        }
+
+        // Función para generar el nombre de usuario
+        function generateUsername(nombre, apellidos) {
+            if (!nombre || !apellidos) return '';
+            const nombreNorm = normalizeText(nombre);
+            const apellidosNorm = normalizeText(apellidos);
+            return nombreNorm + apellidosNorm.charAt(0);
+        }
+
+        // Función para actualizar todos los campos relacionados
+        function updateAllFields() {
+            const nombre = nombreInput.value;
+            const apellidos = apellidosInput.value;
+            
+            if (nombre && apellidos) {
+                const username = generateUsername(nombre, apellidos);
                 
-                // Actualizar también el DN
-                updateDn();
+                // Actualizar UID
+                uidInput.value = username;
                 
-                // Actualizar el home directory
-                homeDirectory.value = '/home/' + uidInput.value;
+                // Actualizar email
+                emailInput.value = username + '@tierno.es';
+                
+                // Actualizar DN
+                dnPreviewText.textContent = 'uid=' + username + ',ou=people,dc=tierno,dc=es';
+                
+                // Actualizar home directory
+                homeDirectory.value = '/home/' + username;
+            } else {
+                // Si falta nombre o apellidos, limpiar los campos
+                uidInput.value = '';
+                emailInput.value = '';
+                dnPreviewText.textContent = 'uid=,ou=people,dc=tierno,dc=es';
+                homeDirectory.value = '/home/';
             }
         }
 
-        // Función para actualizar el email basado en nombre y apellidos
-        function updateEmail() {
-            if (nombreInput.value && apellidosInput.value && !emailInput.value) {
-                const nombre = nombreInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
-                const apellidos = apellidosInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
-                // Usar solo la primera letra del apellido
-                emailInput.value = nombre + apellidos.charAt(0) + '@tierno.es';
+        // Función para verificar si el usuario ya existe
+        async function checkUserExists(username) {
+            if (!username) return false;
+            
+            try {
+                const response = await fetch(`/api/ldap/users/check/${username}`);
+                const data = await response.json();
+                return data.exists;
+            } catch (error) {
+                console.error('Error al verificar usuario:', error);
+                return false;
             }
         }
 
-        // Función para actualizar el DN
-        function updateDn() {
-            if (uidInput.value) {
-                dnPreviewText.textContent = 'uid=' + uidInput.value + ',ou=people,dc=tierno,dc=es';
+        // Función para actualizar con verificación
+        async function updateWithVerification() {
+            const username = generateUsername(nombreInput.value, apellidosInput.value);
+            
+            if (username) {
+                const exists = await checkUserExists(username);
+                if (exists) {
+                    // Mostrar advertencia si el usuario ya existe
+                    const warningDiv = document.createElement('div');
+                    warningDiv.className = 'alert alert-warning mt-2';
+                    warningDiv.textContent = 'Este nombre de usuario ya existe. Por favor, modifica el nombre o apellidos.';
+                    
+                    // Eliminar advertencia anterior si existe
+                    const oldWarning = document.querySelector('.alert-warning');
+                    if (oldWarning) oldWarning.remove();
+                    
+                    // Insertar nueva advertencia
+                    uidInput.parentNode.appendChild(warningDiv);
+                    
+                    // Deshabilitar el botón de envío
+                    document.querySelector('button[type="submit"]').disabled = true;
+                } else {
+                    // Eliminar advertencia si existe
+                    const warning = document.querySelector('.alert-warning');
+                    if (warning) warning.remove();
+                    
+                    // Habilitar el botón de envío
+                    document.querySelector('button[type="submit"]').disabled = false;
+                }
             }
+            
+            updateAllFields();
         }
+
+        // Eventos para actualización en tiempo real
+        let updateTimeout;
+        function debouncedUpdate() {
+            clearTimeout(updateTimeout);
+            updateTimeout = setTimeout(updateWithVerification, 300);
+        }
+
+        nombreInput.addEventListener('input', debouncedUpdate);
+        apellidosInput.addEventListener('input', debouncedUpdate);
+
+        // Evento para actualizar DN cuando cambia el username manualmente
+        uidInput.addEventListener('input', function() {
+            if (this.value) {
+                dnPreviewText.textContent = 'uid=' + this.value + ',ou=people,dc=tierno,dc=es';
+                homeDirectory.value = '/home/' + this.value;
+                emailInput.value = this.value + '@tierno.es';
+            }
+        });
 
         // Función para buscar y seleccionar el grupo por GID
         async function findGroupByGid(gid) {
@@ -341,20 +419,6 @@
             }
         }
 
-        // Eventos para actualizar el nombre de usuario y email
-        nombreInput.addEventListener('input', function() {
-            updateUsername();
-            updateEmail();
-        });
-        
-        apellidosInput.addEventListener('input', function() {
-            updateUsername();
-            updateEmail();
-        });
-
-        // Evento para actualizar DN cuando cambia el username
-        uidInput.addEventListener('input', updateDn);
-
         // Eventos para los botones de rol
         if (btnRoleProfesor) {
             btnRoleProfesor.addEventListener('click', () => selectGroupsByRole('profesor'));
@@ -378,10 +442,7 @@
         });
 
         // Inicializar
-        updateUsername();
-        updateEmail();
-        updateDn();
-        // Quitamos la selección por defecto de alumno
+        updateAllFields();
     });
 </script>
 @endpush
