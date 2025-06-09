@@ -143,7 +143,8 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
         Route::post('/{dn}/reset-password', [App\Http\Controllers\Admin\LdapUserController::class, 'resetPassword'])->name('reset-password');
     });
 
-    Route::prefix('gestion/grupos')->name('gestion.grupos.')->middleware(['auth', 'role:admin,profesor'])->group(function () {
+    // Gestión de grupos LDAP - Accesible para todos los usuarios
+    Route::prefix('gestion/grupos')->name('gestion.grupos.')->group(function () {
         Route::get('/', [LdapGroupController::class, 'index'])->name('index');
         Route::get('/create', [LdapGroupController::class, 'create'])->name('create');
         Route::post('/', [LdapGroupController::class, 'store'])->name('store');
