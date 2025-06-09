@@ -54,13 +54,25 @@ body, .container-fluid {
     border-color: #4e73df !important;
 }
 input.form-control, select.form-control {
-    color: #222 !important;
-    border: 1.5px solid #b3c6e6 !important;
+    color: #fff !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.2) !important;
     border-radius: 0.4rem !important;
     font-size: 1rem !important;
     font-weight: 500;
     box-shadow: none !important;
     transition: border-color 0.2s;
+}
+
+input.form-control:focus, select.form-control:focus {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    color: #fff !important;
+    box-shadow: none !important;
+}
+
+input.form-control::placeholder {
+    color: rgba(255, 255, 255, 0.5) !important;
 }
 .alert {
     font-size: 1.08rem;
