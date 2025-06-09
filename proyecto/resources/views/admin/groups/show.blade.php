@@ -8,7 +8,7 @@
                 <div class="card-header">
                     <h3 class="card-title ">Detalles del Grupo: {{ $group['cn'] }}</h3>
                     <div class="card-tools">
-                        <a href="{{ route('admin.groups.index') }}" class="btn btn-secondary">
+                        <a href="{{ route('gestion.grupos.index') }}" class="btn btn-secondary">
                             <i class="fas fa-arrow-left"></i> Volver
                         </a>
                     </div>

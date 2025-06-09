@@ -56,7 +56,7 @@
 
                         <div class="form-group text-white mt-3">
                             <button type="submit" class="btn btn-primary">Crear Grupo</button>
-                            <a href="{{ route('admin.groups.index') }}" class="btn btn-secondary">Cancelar</a>
+                            <a href="{{ route('gestion.grupos.index') }}" class="btn btn-secondary">Cancelar</a>
                         </div>
                     </form>
                 </div>
@@ -109,14 +109,14 @@ $(document).ready(function() {
         formData.set('type', types.join(','));
 
         $.ajax({
-            url: '{{ route("admin.groups.store") }}',
+            url: '{{ route("gestion.grupos.store") }}',
             type: 'POST',
             data: formData,
             processData: false,
             contentType: false,
             success: function(response) {
                 if (response.success) {
-                    window.location.href = '{{ route("admin.groups.index") }}';
+                    window.location.href = '{{ route("gestion.grupos.index") }}';
                 } else {
                     alert(response.message || 'Error al crear el grupo');
                 }
