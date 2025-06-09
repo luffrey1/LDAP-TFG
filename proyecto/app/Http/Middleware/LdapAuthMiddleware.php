@@ -61,7 +61,8 @@ class LdapAuthMiddleware
                 ->first();
             
             if ($alumnosGroup) {
-                $memberUids = $alumnosGroup->getAttribute('memberUid');
+                // Acceder a memberUid como array
+                $memberUids = isset($alumnosGroup['memberuid']) ? $alumnosGroup['memberuid'] : [];
                 if (is_array($memberUids) && in_array($user['uid'], $memberUids)) {
                     // El usuario es un alumno, mostrar la pantalla de advertencia
                     return response()->view('auth.student-warning');
