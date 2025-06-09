@@ -207,9 +207,8 @@ class AlumnoClase extends Model
             if (!$groupInfo) {
                 // Si el grupo no existe, crearlo con la estructura correcta
                 $groupAttrs = [
-                    'objectClass' => ['top', 'posixGroup', 'groupOfNames'],
+                    'objectClass' => ['top', 'groupOfNames'],
                     'cn' => $tipoImportacion === 'profesor' ? 'profesores' : 'alumnos',
-                    'gidNumber' => $tipoImportacion === 'profesor' ? '10000' : '10001',
                     'member' => ['cn=nobody']
                 ];
                 
@@ -221,7 +220,7 @@ class AlumnoClase extends Model
                 $groupEntry = ldap_first_entry($ldapConn, $groupInfo);
                 $groupAttrs = ldap_get_attributes($ldapConn, $groupEntry);
                 
-                $requiredClasses = ['top', 'posixGroup', 'groupOfNames'];
+                $requiredClasses = ['top', 'groupOfNames'];
                 $missingClasses = array_values(array_diff($requiredClasses, $groupAttrs['objectClass']));
                 
                 if (!empty($missingClasses)) {
@@ -265,7 +264,7 @@ class AlumnoClase extends Model
                 }
 
                 // Añadir el usuario al grupo
-                $modify = ['member' => [$userDn]];  // Asegurar que member sea un array
+                $modify = ['member' => [$userDn]];
                 if (!ldap_mod_add($ldapConn, $groupDn, $modify)) {
                     // Si falla al añadir al grupo, eliminar el usuario
                     ldap_delete($ldapConn, $userDn);
