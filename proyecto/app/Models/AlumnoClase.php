@@ -142,7 +142,7 @@ class AlumnoClase extends Model
     /**
      * Crear cuenta LDAP para el alumno
      */
-    public function crearCuentaLdap($password = null)
+    public function crearCuentaLdap($password = null, $tipoImportacion = 'alumno')
     {
         // Si ya tiene cuenta, no crear otra
         if ($this->cuenta_creada) {
@@ -155,23 +155,36 @@ class AlumnoClase extends Model
         try {
             // Usar la configuración LDAP desde el archivo config
             $config = config('ldap.connections.default');
-            $connection = new Connection([
+            Log::debug("Configurando conexión LDAP con los siguientes parámetros:", [
                 'hosts' => $config['hosts'],
-                'port' => $config['port'],
+                'port' => 389,
                 'base_dn' => $config['base_dn'],
                 'username' => $config['username'],
-                'password' => $config['password'],
-                'use_ssl' => $config['use_ssl'],
-                'use_tls' => $config['use_tls'],
-                'timeout' => $config['timeout'],
-                'options' => [
-                    LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
-                    LDAP_OPT_REFERRALS => 0,
-                ],
+                'use_ssl' => false,
+                'use_tls' => false,
+                'timeout' => $config['timeout']
             ]);
 
-            // Conectar al servidor LDAP
-            $connection->connect();
+            // Conexión simple sin TLS/SSL
+            $ldapConn = ldap_connect("ldap://{$config['hosts'][0]}:389");
+            if (!$ldapConn) {
+                throw new \Exception("No se pudo conectar al servidor LDAP");
+            }
+            
+            Log::debug("Conexión LDAP establecida, configurando opciones...");
+            
+            // Configurar opciones básicas
+            ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
+            ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
+            
+            Log::debug("Intentando bind con credenciales...");
+            
+            // Intentar bind
+            if (!ldap_bind($ldapConn, $config['username'], $config['password'])) {
+                throw new \Exception("Error en bind LDAP: " . ldap_error($ldapConn));
+            }
+            
+            Log::debug("Bind LDAP exitoso");
 
             // Generar usuario LDAP si no existe
             $username = $this->generarUsuarioLdap();
@@ -182,126 +195,111 @@ class AlumnoClase extends Model
             }
 
             // Crear el usuario en LDAP
-            $peopleOu = 'ou=people,dc=test,dc=tierno,dc=es';
-            $alumnosGroupDn = 'cn=alumnos,ou=groups,dc=test,dc=tierno,dc=es';
+            $peopleOu = "ou=people,{$config['base_dn']}";
             
-            // Datos del usuario LDAP
-            $userData = [
+            // Determinar el grupo según el tipo de importación
+            $groupDn = $tipoImportacion === 'profesor' 
+                ? "cn=profesores,ou=groups,{$config['base_dn']}"
+                : "cn=alumnos,ou=groups,{$config['base_dn']}";
+
+            // Crear DN del usuario
+            $userDn = "uid={$username},{$peopleOu}";
+            
+            // Preparar atributos del usuario
+            $userAttrs = [
                 'objectClass' => ['inetOrgPerson', 'posixAccount', 'top'],
+                'uid' => $username,
                 'cn' => $this->nombre_completo,
                 'sn' => $this->apellidos,
                 'givenName' => $this->nombre,
-                'uid' => $username,
-                'uidNumber' => $this->getNextUidNumber($connection),
-                'gidNumber' => 500, // GID de alumnos
+                'mail' => $this->email,
+                'userPassword' => $this->hashPassword($password),
+                'uidNumber' => $this->getNextUidNumber($ldapConn),
+                'gidNumber' => 10000,
                 'homeDirectory' => "/home/{$username}",
-                'loginShell' => '/bin/bash',
-                'mail' => $this->email ?: "{$username}@centro.local",
-                'userPassword' => $this->hashPassword($password)
+                'loginShell' => '/bin/bash'
             ];
 
-            // DN del usuario
-            $userDn = "uid={$username},{$peopleOu}";
-            
-            // Crear el usuario
-            $ldap = ldap_connect($config['hosts'][0], $config['port']);
-            ldap_set_option($ldap, LDAP_OPT_PROTOCOL_VERSION, 3);
-            ldap_set_option($ldap, LDAP_OPT_REFERRALS, 0);
-            ldap_set_option($ldap, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
-            
-            // Autenticar con el servidor LDAP
-            $bind = ldap_bind($ldap, $config['username'], $config['password']);
-            if (!$bind) {
-                throw new \Exception("No se pudo autenticar con el servidor LDAP: " . ldap_error($ldap));
+            // Añadir el usuario al grupo correspondiente
+            $groupAttrs = [
+                'member' => $userDn
+            ];
+
+            // Crear el usuario en LDAP
+            if (!ldap_add($ldapConn, $userDn, $userAttrs)) {
+                throw new \Exception("Error al crear usuario en LDAP: " . ldap_error($ldapConn));
             }
-            
-            // Crear el usuario usando la función nativa de PHP
-            $add = ldap_add($ldap, $userDn, $userData);
-            if (!$add) {
-                throw new \Exception("Error al crear usuario LDAP: " . ldap_error($ldap));
+
+            // Añadir el usuario al grupo
+            if (!ldap_mod_add($ldapConn, $groupDn, $groupAttrs)) {
+                // Si falla al añadir al grupo, eliminar el usuario
+                ldap_delete($ldapConn, $userDn);
+                throw new \Exception("Error al añadir usuario al grupo: " . ldap_error($ldapConn));
             }
-            
-            // Añadir al grupo de alumnos
-            $alumnosGroup = $connection->query()->find($alumnosGroupDn);
-            if ($alumnosGroup) {
-                $members = isset($alumnosGroup['uniquemember']) ? $alumnosGroup['uniquemember'] : [];
-                if (!is_array($members)) {
-                    $members = [$members];
-                }
-                $members[] = $userDn;
-                
-                // Usar ldap_modify en lugar de $connection->modify
-                $ldapConn = ldap_connect($config['hosts'][0], $config['port']);
-                ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
-                ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
-                ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
-                
-                // Autenticar con el servidor LDAP
-                $bind = ldap_bind($ldapConn, $config['username'], $config['password']);
-                if (!$bind) {
-                    throw new \Exception("No se pudo autenticar con el servidor LDAP para modificar grupo: " . ldap_error($ldapConn));
-                }
-                
-                // Modificar el grupo para añadir al usuario
-                $result = ldap_modify($ldapConn, $alumnosGroupDn, ['uniquemember' => $members]);
-                if (!$result) {
-                    Log::warning("Error al añadir usuario al grupo de alumnos: " . ldap_error($ldapConn));
-                }
-                
-                ldap_close($ldapConn);
-            }
-            
-            // Actualizar el modelo
+
+            // Actualizar el modelo con la información de LDAP
             $this->ldap_dn = $userDn;
+            $this->usuario_ldap = $username;
             $this->cuenta_creada = true;
             $this->save();
-            
+
             return [
                 'success' => true,
                 'message' => 'Cuenta LDAP creada correctamente',
                 'username' => $username,
-                'password' => $password,
-                'dn' => $userDn
+                'password' => $password
             ];
-            
+
         } catch (\Exception $e) {
-            Log::error("Error al crear cuenta LDAP: " . $e->getMessage());
+            Log::error('Error al crear cuenta LDAP: ' . $e->getMessage());
             return [
                 'success' => false,
-                'message' => 'Error al crear cuenta LDAP: ' . $e->getMessage()
+                'message' => $e->getMessage()
             ];
+        } finally {
+            if (isset($ldapConn)) {
+                ldap_close($ldapConn);
+            }
         }
     }
 
     /**
      * Obtener el siguiente UID disponible
      */
-    private function getNextUidNumber($connection)
+    private function getNextUidNumber($ldapConn)
     {
         try {
             // Obtener el máximo UID actual
             $maxUid = 10000; // UID mínimo para usuarios
             
-            $users = $connection->query()
-                ->in('ou=people,dc=test,dc=tierno,dc=es')
-                ->where('objectclass', '=', 'posixAccount')
-                ->get();
-                
-            foreach ($users as $user) {
-                if (isset($user['uidnumber']) && is_array($user['uidnumber'])) {
-                    $uid = (int)$user['uidnumber'][0];
+            // Buscar todos los usuarios posixAccount
+            $filter = "(objectClass=posixAccount)";
+            $baseDn = "ou=people," . config('ldap.connections.default.base_dn');
+            $result = ldap_search($ldapConn, $baseDn, $filter, ['uidNumber']);
+            
+            if (!$result) {
+                throw new \Exception("Error al buscar usuarios: " . ldap_error($ldapConn));
+            }
+            
+            $entries = ldap_get_entries($ldapConn, $result);
+            
+            // Encontrar el UID más alto
+            for ($i = 0; $i < $entries['count']; $i++) {
+                if (isset($entries[$i]['uidnumber'][0])) {
+                    $uid = (int)$entries[$i]['uidnumber'][0];
                     if ($uid > $maxUid) {
                         $maxUid = $uid;
                     }
                 }
             }
             
+            // Incrementar el UID más alto encontrado
             return $maxUid + 1;
             
         } catch (\Exception $e) {
-            Log::warning("Error al obtener próximo UID: " . $e->getMessage());
-            // En caso de error, generar un número aleatorio
-            return rand(10000, 20000);
+            Log::error("Error al obtener siguiente UID: " . $e->getMessage());
+            // En caso de error, devolver un UID por defecto
+            return 10001;
         }
     }
 

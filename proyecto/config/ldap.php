@@ -27,21 +27,17 @@ return [
 
     'connections' => [
         'default' => [
-            'hosts' => [env('LDAP_DEFAULT_HOSTS', env('LDAP_HOST', 'ldap'))],
+            'hosts' => [env('LDAP_DEFAULT_HOSTS', env('LDAP_HOST', 'openldap-osixia'))],
             'username' => env('LDAP_DEFAULT_USERNAME', env('LDAP_USERNAME', 'cn=admin,dc=tierno,dc=es')),
             'password' => env('LDAP_DEFAULT_PASSWORD', env('LDAP_PASSWORD', 'admin')),
-            'port' => env('LDAP_DEFAULT_PORT', env('LDAP_PORT', 636)),
+            'port' => 389,
             'base_dn' => env('LDAP_DEFAULT_BASE_DN', env('LDAP_BASE_DN', 'dc=tierno,dc=es')),
             'timeout' => env('LDAP_DEFAULT_TIMEOUT', env('LDAP_TIMEOUT', 5)),
-            'use_ssl' => env('LDAP_DEFAULT_SSL', env('LDAP_SSL', true)),
-            'use_tls' => env('LDAP_DEFAULT_TLS', env('LDAP_TLS', false)),
-            'use_sasl' => env('LDAP_SASL', false),
-            'version' => env('LDAP_VERSION', 3),
+            'use_ssl' => false,
+            'use_tls' => false,
+            'use_sasl' => false,
+            'version' => 3,
             'options' => [
-                LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
-                LDAP_OPT_X_TLS_CACERTFILE => '/etc/ssl/certs/ldap/ca.crt',
-                LDAP_OPT_X_TLS_CERTFILE => '/etc/ssl/certs/ldap/cert.pem',
-                LDAP_OPT_X_TLS_KEYFILE => '/etc/ssl/certs/ldap/privkey.pem',
                 LDAP_OPT_REFERRALS => 0,
                 LDAP_OPT_PROTOCOL_VERSION => 3,
                 LDAP_OPT_NETWORK_TIMEOUT => 5,
