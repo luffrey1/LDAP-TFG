@@ -151,6 +151,10 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
         Route::get('/{cn}/edit', [LdapGroupController::class, 'edit'])->name('edit');
         Route::put('/{cn}', [LdapGroupController::class, 'update'])->name('update');
         Route::delete('/{cn}', [LdapGroupController::class, 'destroy'])->name('destroy');
+        Route::post('/{cn}/toggle-admin', [LdapGroupController::class, 'toggleAdmin'])->name('toggle-admin');
+        Route::post('/{cn}/add-member', [LdapGroupController::class, 'addMember'])->name('add-member');
+        Route::post('/{cn}/remove-member', [LdapGroupController::class, 'removeMember'])->name('remove-member');
+        Route::get('/{cn}/members', [LdapGroupController::class, 'getMembers'])->name('members');
     });
 });
 
@@ -170,21 +174,6 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware', 'App\Http\Mi
         ->name('configuracion.index');
     Route::post('/configuracion', [App\Http\Controllers\Admin\ConfiguracionController::class, 'guardar'])
         ->name('configuracion.guardar');
-
-    // Rutas de grupos
-    Route::get('/groups', [LdapGroupController::class, 'index'])->name('groups.index');
-    Route::get('/groups/create', [LdapGroupController::class, 'create'])->name('groups.create');
-    Route::post('/groups', [LdapGroupController::class, 'store'])->name('groups.store');
-    Route::get('/groups/{cn}', [LdapGroupController::class, 'show'])->name('groups.show');
-    Route::get('/groups/{cn}/edit', [LdapGroupController::class, 'edit'])->name('groups.edit');
-    Route::put('/groups/{cn}', [LdapGroupController::class, 'update'])->name('groups.update');
-    Route::delete('/groups/{cn}', [LdapGroupController::class, 'destroy'])->name('groups.destroy');
-
-    // Rutas de administración de grupos LDAP
-    Route::get('/admin/groups', [LdapGroupController::class, 'index'])->name('admin.groups.index');
-    Route::get('/admin/groups/create', [LdapGroupController::class, 'create'])->name('admin.groups.create');
-    Route::post('/admin/groups', [LdapGroupController::class, 'store'])->name('admin.groups.store');
-    Route::get('/admin/groups/{cn}', [LdapGroupController::class, 'show'])->name('admin.groups.show');
 });
 
 // Rutas para la gestión de alumnos
