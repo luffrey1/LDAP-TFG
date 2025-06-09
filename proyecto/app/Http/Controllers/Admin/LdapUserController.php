@@ -2896,7 +2896,27 @@ class LdapUserController extends Controller
     public function toggleAdmin(Request $request)
     {
         try {
-            $this->connection->connect();
+            // Obtener la configuración LDAP
+            $config = config('ldap.connections.default');
+            
+            // Crear conexión LDAP usando la configuración
+            $connection = new Connection([
+                'hosts' => $config['hosts'],
+                'port' => 636, // Forzar puerto 636 para LDAPS
+                'base_dn' => $config['base_dn'],
+                'username' => $config['username'],
+                'password' => $config['password'],
+                'use_ssl' => true, // Forzar SSL
+                'use_tls' => false, // Deshabilitar TLS
+                'timeout' => $config['timeout'],
+                'options' => [
+                    LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                    LDAP_OPT_REFERRALS => 0,
+                    LDAP_OPT_PROTOCOL_VERSION => 3,
+                ]
+            ]);
+
+            $connection->connect();
             Log::debug("Conexión LDAP establecida");
 
             $userDn = base64_decode($request->dn);
@@ -2915,7 +2935,7 @@ class LdapUserController extends Controller
             }
 
             // Buscar el usuario por UID en la OU people
-            $user = $this->connection->query()
+            $user = $connection->query()
                 ->in($this->peopleOu)
                 ->where('uid', '=', $uid)
                 ->first();
