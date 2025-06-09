@@ -12,9 +12,17 @@ class LogController extends Controller
 {
     public function index(Request $request)
     {
+        $type = $request->get('type', 'all');
+        $search = $request->get('search', '');
+
         // Obtener logs de activity_logs
         $activityLogs = DB::table('activity_logs')
             ->select('id', 'user', 'action', 'description', 'created_at', 'level', 'details')
+            ->when($search, function($query) use ($search) {
+                return $query->where('user', 'like', "%{$search}%")
+                           ->orWhere('action', 'like', "%{$search}%")
+                           ->orWhere('description', 'like', "%{$search}%");
+            })
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($log) {
@@ -36,6 +44,11 @@ class LogController extends Controller
                     DB::raw("CONCAT('Desde ', hostname, ' (', ip, ')') as description"), 
                     'created_at', DB::raw("'WARNING' as level"),
                     DB::raw("JSON_OBJECT('hostname', hostname, 'ip', ip) as details"))
+            ->when($search, function($query) use ($search) {
+                return $query->where('username', 'like', "%{$search}%")
+                           ->orWhere('hostname', 'like', "%{$search}%")
+                           ->orWhere('ip', 'like', "%{$search}%");
+            })
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($log) {
@@ -51,8 +64,13 @@ class LogController extends Controller
                 ];
             });
 
-        // Combinar y ordenar todos los logs
+        // Combinar y filtrar por tipo
         $allLogs = $activityLogs->concat($accessLogs)
+            ->when($type !== 'all', function($collection) use ($type) {
+                return $collection->filter(function($log) use ($type) {
+                    return $log->type === $type;
+                });
+            })
             ->sortByDesc('created_at')
             ->values();
 
@@ -66,6 +84,13 @@ class LogController extends Controller
             $page,
             ['path' => $request->url(), 'query' => $request->query()]
         );
+
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('admin.users.logs_table', ['logs' => $paginatedLogs])->render(),
+                'total' => $allLogs->count()
+            ]);
+        }
 
         return view('admin.users.logs', ['logs' => $paginatedLogs]);
     }
