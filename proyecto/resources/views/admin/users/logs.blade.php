@@ -220,21 +220,33 @@ $(document).ready(function() {
         
         // Primero ocultar todas las filas
         $('.log-row').hide();
+        console.log('All rows hidden');
         
         // Luego mostrar solo las filas del tipo seleccionado
         if (type === 'all') {
             $('.log-row').show();
             visibleCount = $('.log-row').length;
+            console.log('Showing all rows:', visibleCount);
         } else {
             var matchingRows = $('.log-row[data-type="' + type + '"]');
             console.log('Found ' + matchingRows.length + ' rows of type ' + type);
-            matchingRows.each(function() {
-                $(this).show();
+            
+            matchingRows.each(function(index) {
+                var $row = $(this);
+                $row.show();
                 visibleCount++;
+                console.log('Showing row ' + index + ':', {
+                    type: $row.attr('data-type'),
+                    description: $row.find('td:eq(2)').text().trim()
+                });
             });
         }
         
         console.log('Filter complete. Visible rows:', visibleCount);
+        
+        // Verificar el estado final
+        var finalVisibleCount = $('.log-row:visible').length;
+        console.log('Final visible count:', finalVisibleCount);
     }
 
     // Manejar cambios de pestaña
