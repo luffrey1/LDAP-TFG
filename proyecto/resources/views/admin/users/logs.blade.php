@@ -137,7 +137,7 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    // Inicializar DataTables con traducción manual
+    // Inicializar DataTables con configuración básica
     var table = $('#logsTable').DataTable({
         "paging": false,
         "ordering": true,
@@ -165,100 +165,218 @@ $(document).ready(function() {
         }
     });
 
-    // Función para determinar el tipo de log basado en la descripción
+    // Función mejorada para determinar el tipo de log
     function getLogType(description) {
-        description = description.toLowerCase();
-        console.log('Analyzing description:', description);
-        
-        // Detección de acciones de usuario
-        if (description.includes('usuario ldap creado') || 
-            description.includes('usuario ldap actualizado') || 
-            description.includes('usuario ldap eliminado')) {
-            console.log('Detected as users type');
-            return 'users';
+        if (!description) {
+            console.log('Descripción vacía o nula');
+            return 'all';
         }
         
-        // Detección de acciones de grupo
-        if (description.includes('grupo ldap creado') || 
-            description.includes('grupo ldap actualizado') || 
-            description.includes('grupo ldap eliminado')) {
-            console.log('Detected as groups type');
+        description = description.toLowerCase();
+        console.log('Analizando descripción:', description);
+        
+        // Patrones de detección mejorados
+        const patterns = {
+            users: [
+                'usuario ldap creado',
+                'usuario ldap actualizado',
+                'usuario ldap eliminado',
+                'usuario actualizado',
+                'usuario creado',
+                'usuario eliminado',
+                'nuevo usuario',
+                'modificación de usuario'
+            ],
+            groups: [
+                'grupo ldap creado',
+                'grupo ldap actualizado',
+                'grupo ldap eliminado',
+                'grupo actualizado',
+                'grupo creado',
+                'grupo eliminado',
+                'nuevo grupo',
+                'modificación de grupo',
+                'miembro añadido al grupo',
+                'miembro eliminado del grupo',
+                'grupo modificado'
+            ],
+            access: [
+                'intento de acceso',
+                'acceso exitoso',
+                'acceso fallido',
+                'desde',
+                'ip:',
+                'user agent',
+                'login',
+                'logout',
+                'sesión'
+            ]
+        };
+
+        // Verificar cada patrón
+        for (const [type, patternList] of Object.entries(patterns)) {
+            const matches = patternList.filter(pattern => description.includes(pattern));
+            if (matches.length > 0) {
+                console.log('Tipo detectado:', type, 'para descripción:', description);
+                console.log('Patrones coincidentes:', matches);
+                return type;
+            }
+        }
+
+        // Si no coincide con ningún patrón, intentar determinar por contexto
+        if (description.includes('grupo') || description.includes('group')) {
+            console.log('Tipo detectado por contexto: groups');
             return 'groups';
         }
-        
-        // Detección de intentos de acceso
-        if (description.includes('intento de acceso') || 
-            description.includes('acceso exitoso') || 
-            description.includes('acceso fallido') || 
-            description.includes('desde')) {
-            console.log('Detected as access type');
-            return 'access';
-        }
-        
-        console.log('Detected as all type');
+
+        console.log('No se detectó tipo específico, usando "all"');
         return 'all';
     }
 
-    // Asignar tipos a las filas y mostrar información de depuración
-    console.log('Starting to assign types to rows...');
-    table.rows().every(function() {
-        var data = this.data();
-        var description = data[2]; // La descripción está en la tercera columna
-        var type = getLogType(description);
-        $(this.node()).attr('data-type', type);
-        console.log('Row assigned type:', {
-            description: description,
-            type: type
-        });
-    });
+    // Función para asignar tipos a las filas
+    function assignTypesToRows() {
+        console.log('Iniciando asignación de tipos a filas...');
+        let typeCount = { users: 0, groups: 0, access: 0, all: 0 };
+        let rowDetails = [];
 
-    // Función para filtrar por tipo de log
-    function filterLogs(type) {
-        console.log('Starting filter for type:', type);
-        
-        // Usar la API de DataTables para filtrar
-        $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
-            var rowType = $(table.row(dataIndex).node()).attr('data-type');
-            return type === 'all' || rowType === type;
+        table.rows().every(function() {
+            const data = this.data();
+            console.log('Datos de la fila:', data);
+            
+            const description = data[2]; // Descripción en la tercera columna
+            console.log('Descripción encontrada:', description);
+            
+            const type = getLogType(description);
+            
+            // Asignar tipo a la fila
+            const $row = $(this.node());
+            $row.attr('data-type', type);
+            typeCount[type]++;
+
+            const rowDetail = {
+                description: description,
+                type: type,
+                rowIndex: this.index(),
+                dataType: $row.attr('data-type')
+            };
+            rowDetails.push(rowDetail);
+
+            console.log('Fila asignada:', rowDetail);
         });
-        
-        table.draw();
-        
-        // Limpiar el filtro después de aplicarlo
-        $.fn.dataTable.ext.search.pop();
-        
-        console.log('Filter applied. Visible rows:', table.rows({search: 'applied'}).count());
+
+        console.log('Conteo de tipos:', typeCount);
+        console.log('Detalles de todas las filas:', rowDetails);
+        return typeCount;
     }
+
+    // Función mejorada para filtrar logs
+    function filterLogs(type) {
+        console.log('Iniciando filtrado para tipo:', type);
+        
+        // Obtener todas las filas
+        const $rows = $('#logsTable tbody tr');
+        let visibleCount = 0;
+        let rowDetails = [];
+
+        $rows.each(function(index) {
+            const $row = $(this);
+            const rowType = $row.attr('data-type');
+            const description = $row.find('td:eq(2)').text();
+            
+            const rowDetail = {
+                index: index,
+                tipo: rowType,
+                esperado: type,
+                descripcion: description,
+                visible: type === 'all' || rowType === type
+            };
+            rowDetails.push(rowDetail);
+            
+            console.log(`Fila ${index}:`, rowDetail);
+            
+            // Aplicar visibilidad
+            $row.toggle(rowDetail.visible);
+            if (rowDetail.visible) visibleCount++;
+        });
+
+        console.log('Filtrado completado:', {
+            tipo: type,
+            filasVisibles: visibleCount,
+            totalFilas: $rows.length,
+            filasPorTipo: {
+                users: $rows.filter('[data-type="users"]').length,
+                groups: $rows.filter('[data-type="groups"]').length,
+                access: $rows.filter('[data-type="access"]').length,
+                all: $rows.filter('[data-type="all"]').length
+            },
+            detalles: rowDetails
+        });
+
+        // Actualizar contador en la interfaz
+        updateVisibleCount(visibleCount);
+    }
+
+    // Función para actualizar el contador de filas visibles
+    function updateVisibleCount(count) {
+        const $counter = $('#visibleCount');
+        if ($counter.length === 0) {
+            $('.card-header').append('<span id="visibleCount" class="ml-3 badge badge-info">Filas visibles: ' + count + '</span>');
+        } else {
+            $counter.text('Filas visibles: ' + count);
+        }
+    }
+
+    // Asignar tipos iniciales
+    const typeCount = assignTypesToRows();
+    console.log('Tipos asignados inicialmente:', typeCount);
 
     // Manejar cambios de pestaña
     $('#logTabs a').on('click', function(e) {
         e.preventDefault();
         $(this).tab('show');
         
-        var type = $(this).attr('id').replace('-tab', '');
-        console.log('Tab clicked:', type);
+        const type = $(this).attr('id').replace('-tab', '');
+        console.log('Pestaña clickeada:', type);
         filterLogs(type);
     });
 
-    // Búsqueda de usuario
+    // Búsqueda de usuario mejorada
     $('#userSearch').on('keyup', function() {
-        var searchText = $(this).val().toLowerCase();
-        table.search(searchText).draw();
+        const searchText = $(this).val().toLowerCase();
+        console.log('Buscando:', searchText);
+
+        const $rows = $('#logsTable tbody tr');
+        let visibleCount = 0;
+
+        $rows.each(function() {
+            const $row = $(this);
+            const userText = $row.find('td:first').text().toLowerCase();
+            const type = $row.attr('data-type');
+            const currentTab = $('#logTabs .active').attr('id').replace('-tab', '');
+            
+            const matchesSearch = userText.includes(searchText);
+            const matchesType = currentTab === 'all' || type === currentTab;
+            
+            $row.toggle(matchesSearch && matchesType);
+            if (matchesSearch && matchesType) visibleCount++;
+        });
+
+        updateVisibleCount(visibleCount);
     });
 
     // Limpiar búsqueda
     $('#clearSearch').on('click', function() {
         $('#userSearch').val('');
-        table.search('').draw();
+        const currentTab = $('#logTabs .active').attr('id').replace('-tab', '');
+        filterLogs(currentTab);
     });
 
-    // Mostrar detalles del log al hacer clic
+    // Mostrar detalles del log
     $('#logsTable tbody').on('click', 'tr', function() {
-        var id = $(this).data('id');
+        const id = $(this).data('id');
         showLogDetails(id);
     });
 
-    // Función para mostrar detalles del log
     function showLogDetails(id) {
         $.get('/admin/logs/' + id, function(data) {
             $('#logId').text(data.id);
