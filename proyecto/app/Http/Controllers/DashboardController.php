@@ -984,7 +984,12 @@ class DashboardController extends Controller
                             'user' => $attempt->username,
                             'action' => 'Intento de acceso',
                             'description' => "Desde {$attempt->hostname} ({$attempt->ip})",
-                            'time' => \Carbon\Carbon::parse($attempt->created_at)->diffForHumans()
+                            'time' => \Carbon\Carbon::parse($attempt->created_at)->diffForHumans(),
+                            'is_access_attempt' => true,
+                            'details' => [
+                                'hostname' => $attempt->hostname,
+                                'ip' => $attempt->ip
+                            ]
                         ];
                     }));
                 } catch (\Exception $e) {

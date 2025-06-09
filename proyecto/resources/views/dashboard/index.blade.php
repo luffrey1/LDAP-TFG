@@ -291,17 +291,18 @@
                     <div class="timeline text-white">
                         @if(isset($userActivity) && count($userActivity) > 0)
                             @foreach($userActivity as $activity)
-                            <div class="text-white timeline-item {{ $activity['action'] === 'Intento de acceso' ? 'access-attempt' : '' }}">
-                                <div class="text-white timeline-marker {{ $activity['action'] === 'Intento de acceso' ? 'bg-danger' : '' }}"></div>
-                                <div class="text-white timeline-content">
-                                    <h5 class="text-white timeline-title">
-                                        @if($activity['action'] === 'Intento de acceso')
-                                            <i class="fas fa-exclamation-triangle text-danger me-2"></i>
-                                        @endif
-                                        {{ $activity['user'] }} {{ $activity['action'] }}
-                                    </h5>
-                                    <p class="mb-1">{{ $activity['description'] }}</p>
-                                    <small class="text-muted">{{ $activity['time'] }}</small>
+                            <div class="timeline-item {{ isset($activity['is_access_attempt']) && $activity['is_access_attempt'] ? 'access-attempt' : '' }}">
+                                <div class="timeline-marker"></div>
+                                <div class="timeline-content">
+                                    <h3 class="timeline-title">{{ $activity['action'] }}</h3>
+                                    <p>{{ $activity['description'] }}</p>
+                                    @if(isset($activity['is_access_attempt']) && $activity['is_access_attempt'])
+                                        <div class="access-details">
+                                            <p><strong>Hostname:</strong> {{ $activity['details']['hostname'] }}</p>
+                                            <p><strong>IP:</strong> {{ $activity['details']['ip'] }}</p>
+                                        </div>
+                                    @endif
+                                    <span class="timeline-time">{{ $activity['time'] }}</span>
                                 </div>
                             </div>
                             @endforeach
@@ -358,30 +359,26 @@
     }
     
     .access-attempt {
-        background-color: rgba(220, 53, 69, 0.05);
-        border-left: 3px solid #dc3545;
-        margin-left: -1rem;
-        padding-left: 1rem;
+        background-color: #fff5f5;
+        border-left: 4px solid #e74c3c;
+        padding: 10px;
+        margin-bottom: 10px;
     }
     
-    .timeline-item {
-        position: relative;
-        padding: 1rem 0;
-        border-bottom: 1px solid rgba(0,0,0,0.1);
+    .access-details {
+        background-color: #f8f9fa;
+        padding: 8px;
+        border-radius: 4px;
+        margin-top: 8px;
+        font-size: 0.9em;
     }
     
-    .timeline-marker {
-        position: absolute;
-        left: -1.5rem;
-        top: 1.5rem;
-        width: 1rem;
-        height: 1rem;
-        border-radius: 50%;
-        background-color: #4e73df;
+    .access-details p {
+        margin: 4px 0;
     }
     
-    .timeline-content {
-        padding-left: 1rem;
+    .access-details strong {
+        color: #e74c3c;
     }
 </style>
 @endsection
