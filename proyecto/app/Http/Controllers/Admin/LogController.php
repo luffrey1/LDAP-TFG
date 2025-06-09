@@ -17,7 +17,6 @@ class LogController extends Controller
             $activityLogs = DB::table('activity_logs')
                 ->select([
                     'id',
-                    'log_name',
                     'description',
                     'subject_type',
                     'subject_id',
