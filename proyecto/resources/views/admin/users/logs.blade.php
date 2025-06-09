@@ -137,64 +137,87 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    // Inicializar DataTables
+    // Inicializar DataTables con traducción manual
     var table = $('#logsTable').DataTable({
         "paging": false,
         "ordering": true,
         "info": false,
         "searching": false,
         "language": {
-            "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Spanish.json"
+            "sProcessing": "Procesando...",
+            "sLengthMenu": "Mostrar _MENU_ registros",
+            "sZeroRecords": "No se encontraron resultados",
+            "sEmptyTable": "Ningún dato disponible en esta tabla",
+            "sInfo": "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
+            "sInfoEmpty": "Mostrando registros del 0 al 0 de un total de 0 registros",
+            "sInfoFiltered": "(filtrado de un total de _MAX_ registros)",
+            "sInfoPostFix": "",
+            "sSearch": "Buscar:",
+            "sUrl": "",
+            "sInfoThousands": ",",
+            "sLoadingRecords": "Cargando...",
+            "oPaginate": {
+                "sFirst": "Primero",
+                "sLast": "Último",
+                "sNext": "Siguiente",
+                "sPrevious": "Anterior"
+            }
         }
     });
 
-    // Función para determinar el tipo de log basado en la acción
-    function getLogType(action, description) {
-        action = action.toLowerCase();
+    // Función para determinar el tipo de log basado en la descripción
+    function getLogType(description) {
         description = description.toLowerCase();
-
-        // Detección de acciones de usuario
-        if (action.includes('usuario') || 
-            action.includes('user') || 
-            description.includes('usuario ldap')) {
-            return 'user';
+        console.log('Analyzing description:', description);
+        
+        if (description.includes('usuario ldap')) {
+            console.log('Detected as users type');
+            return 'users';
         }
         
-        // Detección de acciones de grupo
-        if (action.includes('grupo') || 
-            action.includes('group') || 
-            description.includes('grupo ldap')) {
-            return 'group';
+        if (description.includes('grupo ldap')) {
+            console.log('Detected as groups type');
+            return 'groups';
         }
         
-        // Detección de intentos de acceso
-        if (action.includes('acceso') || 
-            action.includes('access') || 
-            action.includes('intento') || 
-            description.includes('desde')) {
+        if (description.includes('desde') || description.includes('intento de acceso')) {
+            console.log('Detected as access type');
             return 'access';
         }
         
-        return 'other';
+        console.log('Detected as all type');
+        return 'all';
     }
 
     // Asignar tipos a las filas
     $('.log-row').each(function() {
         var $row = $(this);
-        var action = $row.find('td:eq(1)').text();
-        var description = $row.find('td:eq(2)').text();
-        var type = getLogType(action, description);
+        var description = $row.find('td:eq(2)').text().trim();
+        var type = getLogType(description);
         $row.attr('data-type', type);
+        console.log('Row assigned type:', type, 'Description:', description);
     });
 
     // Función para filtrar por tipo de log
     function filterLogs(type) {
+        console.log('Starting filter for type:', type);
+        var visibleCount = 0;
+        
+        // Primero ocultar todas las filas
+        $('.log-row').hide();
+        
+        // Luego mostrar solo las filas del tipo seleccionado
         if (type === 'all') {
             $('.log-row').show();
+            visibleCount = $('.log-row').length;
         } else {
-            $('.log-row').hide();
-            $('.log-row[data-type="' + type + '"]').show();
+            $('.log-row[data-type="' + type + '"]').each(function() {
+                $(this).show();
+                visibleCount++;
+            });
         }
+        
+        console.log('Filter complete. Visible rows:', visibleCount);
     }
 
     // Manejar cambios de pestaña
@@ -203,6 +226,7 @@ $(document).ready(function() {
         $(this).tab('show');
         
         var type = $(this).attr('id').replace('-tab', '');
+        console.log('Tab clicked:', type);
         filterLogs(type);
     });
 
@@ -238,6 +262,9 @@ $(document).ready(function() {
             $('#logDetailsModal').modal('show');
         });
     }
+
+    // Aplicar filtro inicial
+    filterLogs('all');
 });
 </script>
 @endpush
