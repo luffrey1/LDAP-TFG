@@ -235,12 +235,12 @@ class LdapGroupController extends Controller
             if (in_array('posix', $types)) {
                 $attributes['objectclass'][] = 'posixGroup';
                 $attributes['gidNumber'] = $request->gidNumber;
-                $attributes['memberUid'] = ['nobody'];
+                $attributes['memberUid'] = $request->memberUid ?? ['nobody'];
             }
             
             if (in_array('unique', $types)) {
                 $attributes['objectclass'][] = 'groupOfUniqueNames';
-                $attributes['uniqueMember'] = ['cn=nobody,dc=tierno,dc=es'];
+                $attributes['uniqueMember'] = $request->uniqueMember ?? ['cn=nobody,dc=tierno,dc=es'];
             }
 
             Log::debug('Atributos del grupo: ' . json_encode($attributes));
