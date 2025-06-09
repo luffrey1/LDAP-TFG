@@ -97,9 +97,9 @@
                                         </td>
                                         <td>
                                             @if($alumno->activo)
-                                            <div class="badge badge-success">Activo</div>
+                                                <div class="badge badge-success text-dark" style="color: #212529 !important;">Activo</div>
                                             @else
-                                            <div class="badge badge-danger">Inactivo</div>
+                                                <div class="badge badge-danger text-dark" style="color: #212529 !important;">Inactivo</div>
                                             @endif
                                         </td>
                                         <td>
