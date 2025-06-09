@@ -165,32 +165,19 @@ $(document).ready(function() {
         }
     });
 
-    // Función para determinar el tipo de log basado en la acción
-    function getLogType(action, description) {
-        action = action.toLowerCase();
+    // Función para determinar el tipo de log basado en la descripción
+    function getLogType(description) {
         description = description.toLowerCase();
-
-        // Detección de acciones de usuario
-        if (description.includes('usuario ldap') || 
-            description.includes('creado usuario') || 
-            description.includes('actualizado usuario') || 
-            description.includes('eliminado usuario')) {
+        
+        if (description.includes('usuario ldap')) {
             return 'users';
         }
         
-        // Detección de acciones de grupo
-        if (description.includes('grupo ldap') || 
-            description.includes('creado grupo') || 
-            description.includes('actualizado grupo') || 
-            description.includes('eliminado grupo')) {
+        if (description.includes('grupo ldap')) {
             return 'groups';
         }
         
-        // Detección de intentos de acceso
-        if (description.includes('intento de acceso') || 
-            description.includes('acceso exitoso') || 
-            description.includes('acceso fallido') || 
-            description.includes('desde')) {
+        if (description.includes('desde')) {
             return 'access';
         }
         
@@ -200,25 +187,21 @@ $(document).ready(function() {
     // Asignar tipos a las filas
     $('.log-row').each(function() {
         var $row = $(this);
-        var action = $row.find('td:eq(1)').text().trim();
         var description = $row.find('td:eq(2)').text().trim();
-        var type = getLogType(action, description);
+        var type = getLogType(description);
         $row.attr('data-type', type);
-        console.log('Row type:', type, 'Action:', action, 'Description:', description);
+        console.log('Row type:', type, 'Description:', description);
     });
 
     // Función para filtrar por tipo de log
     function filterLogs(type) {
         console.log('Filtering by type:', type);
-        $('.log-row').each(function() {
-            var $row = $(this);
-            var rowType = $row.attr('data-type');
-            if (type === 'all' || rowType === type) {
-                $row.show();
-            } else {
-                $row.hide();
-            }
-        });
+        if (type === 'all') {
+            $('.log-row').show();
+        } else {
+            $('.log-row').hide();
+            $('.log-row[data-type="' + type + '"]').show();
+        }
     }
 
     // Manejar cambios de pestaña
