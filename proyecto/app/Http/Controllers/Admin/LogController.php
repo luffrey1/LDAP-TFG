@@ -37,8 +37,8 @@ class LogController extends Controller
                     'created_at', DB::raw("'WARNING' as level"),
                     DB::raw("JSON_OBJECT('hostname', hostname, 'ip', ip) as details"))
             ->orderBy('created_at', 'desc')
-            ->paginate(25)
-            ->through(function ($log) {
+            ->get()
+            ->map(function ($log) {
                 return (object) [
                     'id' => $log->id,
                     'user' => $log->user,
@@ -56,7 +56,7 @@ class LogController extends Controller
             ->sortByDesc('created_at')
             ->values();
 
-        return view('admin.users.logs', compact('logs'));
+        return view('admin.users.logs', compact('logs', 'activityLogs'));
     }
 
     public function show($id)
