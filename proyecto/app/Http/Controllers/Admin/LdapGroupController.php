@@ -251,7 +251,7 @@ class LdapGroupController extends Controller
             }
 
             Log::info('Grupo creado exitosamente: ' . $groupDn);
-            return redirect()->route('admin.groups.index')->with('success', 'Grupo creado exitosamente');
+            return redirect()->route('gestion.grupos.index')->with('success', 'Grupo creado exitosamente');
 
         } catch (\Exception $e) {
             Log::error('Error al crear grupo: ' . $e->getMessage());
@@ -311,7 +311,7 @@ class LdapGroupController extends Controller
             $entries = ldap_get_entries($ldapConn, $search);
             if ($entries['count'] == 0) {
                 ldap_close($ldapConn);
-                return redirect()->route('admin.groups.index')
+                return redirect()->route('gestion.grupos.index')
                     ->with('error', 'Grupo no encontrado');
             }
             
@@ -329,7 +329,7 @@ class LdapGroupController extends Controller
             return view('admin.groups.edit', ['groupData' => $groupData]);
         } catch (\Exception $e) {
             Log::error('Error al obtener grupo LDAP: ' . $e->getMessage());
-            return redirect()->route('admin.groups.index')
+            return redirect()->route('gestion.grupos.index')
                 ->with('error', 'Error al obtener el grupo: ' . $e->getMessage());
         }
     }
@@ -439,7 +439,7 @@ class LdapGroupController extends Controller
                 'group' => $cn
             ]);
             
-            return redirect()->route('admin.groups.index')->with('success', 'Grupo actualizado correctamente');
+            return redirect()->route('gestion.grupos.index')->with('success', 'Grupo actualizado correctamente');
         } catch (\Exception $e) {
             Log::channel('activity')->error('Error al actualizar grupo LDAP: ' . $e->getMessage(), [
                 'action' => 'Error',
@@ -501,7 +501,7 @@ class LdapGroupController extends Controller
             $entries = ldap_get_entries($ldapConn, $search);
             if ($entries['count'] == 0) {
                 ldap_close($ldapConn);
-                return redirect()->route('admin.groups.index')
+                return redirect()->route('gestion.grupos.index')
                     ->with('error', 'Grupo no encontrado');
             }
 
@@ -509,7 +509,7 @@ class LdapGroupController extends Controller
             $protectedGroups = ['admin', 'ldapadmins', 'sudo', 'profesores', 'alumnos'];
             if (in_array($cn, $protectedGroups)) {
                 ldap_close($ldapConn);
-                return redirect()->route('admin.groups.index')
+                return redirect()->route('gestion.grupos.index')
                     ->with('error', 'No se puede eliminar un grupo protegido');
             }
 
@@ -529,7 +529,7 @@ class LdapGroupController extends Controller
                 'group' => $cn
             ]);
             
-            return redirect()->route('admin.groups.index')->with('success', 'Grupo eliminado correctamente');
+            return redirect()->route('gestion.grupos.index')->with('success', 'Grupo eliminado correctamente');
         } catch (\Exception $e) {
             Log::channel('activity')->error('Error al eliminar grupo LDAP: ' . $e->getMessage(), [
                 'action' => 'Error',
@@ -619,7 +619,7 @@ class LdapGroupController extends Controller
             
             $entries = ldap_get_entries($ldapConn, $search);
             if ($entries['count'] == 0) {
-                return redirect()->route('admin.groups.index')
+                return redirect()->route('gestion.grupos.index')
                     ->with('error', 'Grupo no encontrado');
             }
             
@@ -663,7 +663,7 @@ class LdapGroupController extends Controller
             
         } catch (Exception $e) {
             Log::error('Error al obtener detalles del grupo: ' . $e->getMessage());
-            return redirect()->route('admin.groups.index')
+            return redirect()->route('gestion.grupos.index')
                 ->with('error', 'Error al obtener detalles del grupo: ' . $e->getMessage());
         }
     }

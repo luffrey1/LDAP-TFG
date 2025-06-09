@@ -2,9 +2,9 @@
 
 @section('content')
 @php
-    $showUrl = route('admin.groups.show', ['cn' => ':cn']);
-    $editUrl = route('admin.groups.edit', ['cn' => ':cn']);
-    $deleteUrl = route('admin.groups.destroy', ['cn' => ':cn']);
+    $showUrl = route('gestion.grupos.show', ['cn' => ':cn']);
+    $editUrl = route('gestion.grupos.edit', ['cn' => ':cn']);
+    $deleteUrl = route('gestion.grupos.destroy', ['cn' => ':cn']);
 @endphp
 <div class="container" 
     data-show-url="{{ $showUrl }}"
@@ -44,7 +44,7 @@
                 <div class="card-header">
                     <h3 class="card-title">Grupos LDAP</h3>
                     <div class="card-tools">
-                        <a href="{{ route('admin.groups.create') }}" class="btn btn-primary">
+                        <a href="{{ route('gestion.grupos.create') }}" class="btn btn-primary">
                             <i class="fas fa-plus"></i> Nuevo Grupo
                         </a>
                     </div>
@@ -166,7 +166,7 @@
 function confirmDelete(cn) {
     const modal = $('#deleteModal');
     const form = $('#deleteForm');
-    form.attr('action', "{{ route('admin.groups.destroy', ':cn') }}".replace(':cn', cn));
+    form.attr('action', "{{ route('gestion.grupos.destroy', ':cn') }}".replace(':cn', cn));
     modal.modal('show');
 }
 
@@ -184,7 +184,7 @@ function updateGroups() {
     const search = searchInput.value;
     const type = typeSelect.value;
     
-    fetch(`{{ route('admin.groups.index') }}?search=${encodeURIComponent(search)}&type=${encodeURIComponent(type)}`, {
+    fetch(`{{ route('gestion.grupos.index') }}?search=${encodeURIComponent(search)}&type=${encodeURIComponent(type)}`, {
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
         }
