@@ -11,18 +11,18 @@
                     </div>
                 </div>
 
-                <div class="card-body">
+                <div class="card-body text-white">
                     @if (session('status'))
-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <div class="alert alert-success alert-dismissible fade show text-white" role="alert" style="background:#198754; border:none;">
                             {{ session('status') }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
                     @endif
 
                     @if (session('error'))
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <div class="alert alert-danger alert-dismissible fade show text-white" role="alert" style="background:#dc3545; border:none;">
                             {{ session('error') }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
                     @endif
 
@@ -31,77 +31,77 @@
                         @method('PUT')
 
                         <div class="mb-3">
-                            <label for="uid" class="form-label">{{ __('UID') }}</label>
-                            <input id="uid" type="text" class="form-control text-white" value="{{ $ldapUid }}" disabled>
-                            <div class="form-text text-white-50">{{ __('El UID no puede cambiarse.') }}</div>
+                            <label for="uid" class="form-label text-white">{{ __('UID') }}</label>
+                            <input id="uid" type="text" class="form-control text-white bg-dark border-secondary" name="uid" value="{{ $ldapUid }}">
+                            <div class="form-text text-white-50">{{ __('Puedes cambiar tu UID.') }}</div>
                         </div>
 
                         <div class="mb-3">
-                            <label for="gid" class="form-label">{{ __('GID') }}</label>
-                            <input id="gid" type="text" class="form-control text-white" value="{{ $ldapGuid }}" disabled>
-                            <div class="form-text text-white-50">{{ __('El GID no puede cambiarse.') }}</div>
+                            <label for="gid" class="form-label text-white">{{ __('GID') }}</label>
+                            <input id="gid" type="text" class="form-control text-white bg-dark border-secondary" name="gid" value="{{ $ldapGuid }}">
+                            <div class="form-text text-white-50">{{ __('Puedes cambiar tu GID.') }}</div>
                         </div>
 
                         <div class="mb-3">
-                            <label for="cn" class="form-label">{{ __('CN') }}</label>
-                            <input id="cn" type="text" class="form-control text-white" value="{{ $ldapCn }}" disabled>
-                            <div class="form-text text-white-50">{{ __('El CN no puede cambiarse.') }}</div>
+                            <label for="cn" class="form-label text-white">{{ __('CN') }}</label>
+                            <input id="cn" type="text" class="form-control text-white bg-dark border-secondary" name="cn" value="{{ $ldapCn }}">
+                            <div class="form-text text-white-50">{{ __('Puedes cambiar tu CN.') }}</div>
                         </div>
 
                         <div class="mb-3">
-                            <label for="name" class="form-label">{{ __('Nombre Completo') }}</label>
-                            <input id="name" type="text" class="form-control @error('name') is-invalid @enderror" name="name" value="{{ old('name', $fullName) }}" required>
+                            <label for="name" class="form-label text-white">{{ __('Nombre Completo') }}</label>
+                            <input id="name" type="text" class="form-control text-white bg-dark border-secondary @error('name') is-invalid @enderror" name="name" value="{{ old('name', $fullName) }}" required>
                             @error('name')
-                                <span class="invalid-feedback" role="alert">
+                                <span class="invalid-feedback d-block text-white" role="alert">
                                     <strong>{{ $message }}</strong>
                                 </span>
                             @enderror
                         </div>
 
                         <div class="mb-3">
-                            <label for="email" class="form-label">{{ __('Correo Electrónico') }}</label>
-                            <input id="email" type="email" class="form-control @error('email') is-invalid @enderror" name="email" value="{{ old('email', $user->email) }}" required>
+                            <label for="email" class="form-label text-white">{{ __('Correo Electrónico') }}</label>
+                            <input id="email" type="email" class="form-control text-white bg-dark border-secondary @error('email') is-invalid @enderror" name="email" value="{{ old('email', $user->email) }}" required>
                             @error('email')
-                                <span class="invalid-feedback" role="alert">
+                                <span class="invalid-feedback d-block text-white" role="alert">
                                     <strong>{{ $message }}</strong>
                                 </span>
                             @enderror
                         </div>
 
                         <div class="mb-3">
-                            <label for="current_password" class="form-label">{{ __('Contraseña Actual') }}</label>
-                            <input id="current_password" type="password" class="form-control @error('current_password') is-invalid @enderror" name="current_password">
+                            <label for="current_password" class="form-label text-white">{{ __('Contraseña Actual') }}</label>
+                            <input id="current_password" type="password" class="form-control text-white bg-dark border-secondary @error('current_password') is-invalid @enderror" name="current_password">
                             @error('current_password')
-                                <span class="invalid-feedback" role="alert">
+                                <span class="invalid-feedback d-block text-white" role="alert">
                                     <strong>{{ $message }}</strong>
                                 </span>
                             @enderror
                         </div>
 
                         <div class="mb-3">
-                            <label for="new_password" class="form-label">{{ __('Nueva Contraseña') }}</label>
-                            <input id="new_password" type="password" class="form-control @error('new_password') is-invalid @enderror" name="new_password">
-                            <div class="form-text text-white-50">{{ __('Mínimo 8 caracteres.') }}</div>
+                            <label for="new_password" class="form-label text-white">{{ __('Nueva Contraseña') }}</label>
+                            <input id="new_password" type="password" class="form-control text-white bg-dark border-secondary @error('new_password') is-invalid @enderror" name="new_password" placeholder="Mínimo 8 caracteres" minlength="8">
+                            <div class="form-text text-white-50">Mínimo 8 caracteres.</div>
                             @error('new_password')
-                                <span class="invalid-feedback" role="alert">
+                                <span class="invalid-feedback d-block text-white" role="alert">
                                     <strong>{{ $message }}</strong>
                                 </span>
                             @enderror
                         </div>
 
                         <div class="mb-3">
-                            <label for="new_password_confirmation" class="form-label">{{ __('Confirmar Nueva Contraseña') }}</label>
-                            <input id="new_password_confirmation" type="password" class="form-control" name="new_password_confirmation">
+                            <label for="new_password_confirmation" class="form-label text-white">{{ __('Confirmar Nueva Contraseña') }}</label>
+                            <input id="new_password_confirmation" type="password" class="form-control text-white bg-dark border-secondary" name="new_password_confirmation">
                         </div>
 
                         <div class="mb-4">
-                            <label class="form-label">{{ __('Grupos LDAP') }}</label>
+                            <label class="form-label text-white">{{ __('Grupos LDAP') }}</label>
                             <div class="grupos-container">
                                 @foreach($groups as $group)
-                                    <div class="grupo-item">
+                                    <div class="grupo-item text-white">
                                         <i class="fas fa-users me-2"></i>
-                                        <span>{{ $group->nombre_completo }}</span>
-                                        @if($group->description)
+                                        <span>{{ $group->nombre_completo ?? $group->cn ?? $group }}</span>
+                                        @if(isset($group->description) && $group->description)
                                             <small class="text-white-50 ms-2">({{ $group->description }})</small>
                                         @endif
                                     </div>
