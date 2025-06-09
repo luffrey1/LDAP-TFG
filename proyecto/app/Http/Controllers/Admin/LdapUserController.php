@@ -2896,21 +2896,14 @@ class LdapUserController extends Controller
     public function toggleAdmin(Request $request)
     {
         try {
-            // Conectar al servidor LDAP
-            $ldap = new Ldap();
-            $ldap->connect(config('ldap.default'));
-
             // Decodificar el DN del usuario
             $userDn = base64_decode($request->dn);
             if (!$userDn) {
                 throw new \Exception('DN de usuario inválido');
             }
 
-            // Buscar el usuario
-            $user = $ldap->query()
-                ->where('objectclass', '=', 'inetOrgPerson')
-                ->where('dn', '=', $userDn)
-                ->first();
+            // Buscar el usuario usando el modelo User
+            $user = User::where('dn', '=', $userDn)->first();
 
             if (!$user) {
                 throw new \Exception('Usuario no encontrado');
@@ -2939,28 +2932,25 @@ class LdapUserController extends Controller
                 }
             }
 
+            // Obtener el grupo ldapadmins
+            $adminGroup = Group::where('cn', '=', 'ldapadmins')
+                ->where('ou', '=', 'groups')
+                ->where('dc', '=', 'tierno')
+                ->where('dc', '=', 'es')
+                ->first();
+
+            if (!$adminGroup) {
+                throw new \Exception('Grupo ldapadmins no encontrado');
+            }
+
             // Actualizar la membresía del grupo
             if ($isAdmin) {
                 // Quitar del grupo ldapadmins
-                $ldap->query()
-                    ->where('cn', '=', 'ldapadmins')
-                    ->where('ou', '=', 'groups')
-                    ->where('dc', '=', 'tierno')
-                    ->where('dc', '=', 'es')
-                    ->first()
-                    ->removeAttribute('member', $userDn);
-                
+                $adminGroup->removeMember($userDn);
                 Log::info("Usuario {$uid} removido del grupo ldapadmins");
             } else {
                 // Agregar al grupo ldapadmins
-                $ldap->query()
-                    ->where('cn', '=', 'ldapadmins')
-                    ->where('ou', '=', 'groups')
-                    ->where('dc', '=', 'tierno')
-                    ->where('dc', '=', 'es')
-                    ->first()
-                    ->addAttribute('member', $userDn);
-                
+                $adminGroup->addMember($userDn);
                 Log::info("Usuario {$uid} agregado al grupo ldapadmins");
             }
 
