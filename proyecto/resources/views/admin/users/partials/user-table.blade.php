@@ -109,13 +109,27 @@ $(document).ready(function() {
                     button.attr('title', button.hasClass('btn-warning') ? 'Quitar admin' : 'Hacer admin');
                     
                     // Mostrar mensaje de éxito
-                    toastr.success(response.message);
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Éxito',
+                        text: response.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
                 } else {
-                    toastr.error(response.message);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message
+                    });
                 }
             },
             error: function(xhr) {
-                toastr.error(xhr.responseJSON?.message || 'Error al actualizar el estado de administrador');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: xhr.responseJSON?.message || 'Error al actualizar el estado de administrador'
+                });
             }
         });
     });
