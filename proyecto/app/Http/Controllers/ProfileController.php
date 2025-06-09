@@ -127,6 +127,8 @@ class ProfileController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'current_password' => ['required_with:new_password', 'current_password'],
             'new_password' => ['nullable', 'string', 'min:8', 'confirmed'],
+            'uid' => ['required', 'numeric'],
+            'gid' => ['required', 'numeric'],
         ]);
 
         try {
@@ -163,7 +165,9 @@ class ProfileController extends Controller
                 // Preparar datos para actualizar
                 $updateData = [
                     'displayName' => $request->name,
-                    'mail' => $request->email
+                    'mail' => $request->email,
+                    'uidNumber' => $request->uid,
+                    'gidNumber' => $request->gid
                 ];
 
                 // Si se proporciona una nueva contraseña, actualizarla
