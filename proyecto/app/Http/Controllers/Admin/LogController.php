@@ -44,6 +44,12 @@ class LogController extends Controller
                         if (isset($properties['attributes']['groups'])) {
                             $details .= "Grupos: " . implode(', ', $properties['attributes']['groups']) . " ";
                         }
+                        if (isset($properties['attributes']['old'])) {
+                            $details .= "Valores anteriores: " . json_encode($properties['attributes']['old']) . " ";
+                        }
+                        if (isset($properties['attributes']['new'])) {
+                            $details .= "Nuevos valores: " . json_encode($properties['attributes']['new']) . " ";
+                        }
                     }
                     
                     // Extraer el usuario que realizó la acción
@@ -55,10 +61,30 @@ class LogController extends Controller
                         }
                     }
                     
+                    // Formatear la descripción según el tipo de acción
+                    $description = $action;
+                    if (strpos($action, 'Usuario LDAP') !== false) {
+                        if (strpos($action, 'creado') !== false) {
+                            $description = "Creación de usuario LDAP";
+                        } elseif (strpos($action, 'actualizado') !== false) {
+                            $description = "Actualización de usuario LDAP";
+                        } elseif (strpos($action, 'eliminado') !== false) {
+                            $description = "Eliminación de usuario LDAP";
+                        }
+                    } elseif (strpos($action, 'Grupo LDAP') !== false) {
+                        if (strpos($action, 'creado') !== false) {
+                            $description = "Creación de grupo LDAP";
+                        } elseif (strpos($action, 'actualizado') !== false) {
+                            $description = "Actualización de grupo LDAP";
+                        } elseif (strpos($action, 'eliminado') !== false) {
+                            $description = "Eliminación de grupo LDAP";
+                        }
+                    }
+                    
                     return [
                         'id' => $log->id,
-                        'action' => $action,
-                        'description' => $details ? $action . ' - ' . $details : $action,
+                        'action' => $description,
+                        'description' => $details ? $description . ' - ' . $details : $description,
                         'type' => $this->getLogType($action),
                         'performed_by' => $performedBy,
                         'created_at' => $log->created_at
@@ -79,10 +105,18 @@ class LogController extends Controller
                 ->get()
                 ->map(function ($attempt) {
                     $action = $attempt->success ? 'Acceso exitoso' : 'Intento de acceso fallido';
+                    $description = $action . ' - Usuario: ' . $attempt->username;
+                    if ($attempt->ip_address) {
+                        $description .= ' desde IP: ' . $attempt->ip_address;
+                    }
+                    if ($attempt->user_agent) {
+                        $description .= ' (Navegador: ' . $attempt->user_agent . ')';
+                    }
+                    
                     return [
                         'id' => $attempt->id,
                         'action' => $action,
-                        'description' => $action . ' - Usuario: ' . $attempt->username . ' desde IP: ' . $attempt->ip_address,
+                        'description' => $description,
                         'type' => 'access',
                         'performed_by' => $attempt->username,
                         'created_at' => $attempt->created_at
