@@ -257,14 +257,18 @@ class ProfileController extends Controller
                             
                             $updateLdap->connect();
                             
-                            // Actualizar la contraseña usando el método modify
-                            $updateLdap->modify($userDn, [
-                                [
-                                    'attrib'  => 'userPassword',
-                                    'modtype' => LDAP_MODIFY_BATCH_REPLACE,
-                                    'values'  => [$this->hashPassword($newPassword)],
-                                ],
-                            ]);
+                            // Actualizar la contraseña usando el método correcto de LdapRecord
+                            $entry = $updateLdap->query()
+                                ->where('dn', '=', $userDn)
+                                ->first();
+
+                            if (!$entry) {
+                                Log::error('No se encontró la entrada LDAP para actualizar la contraseña: ' . $userDn);
+                                return back()->with('error', 'No se pudo encontrar la entrada LDAP para actualizar la contraseña');
+                            }
+
+                            $entry->setAttribute('userPassword', $this->hashPassword($newPassword));
+                            $entry->save();
                             
                             Log::info('Contraseña actualizada correctamente para el usuario: ' . $user->username);
                             
