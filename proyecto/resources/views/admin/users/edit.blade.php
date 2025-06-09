@@ -110,8 +110,8 @@
 
                         <div class="mb-3 text-white">
                             <label for="password" class="form-label">{{ __('Contraseña') }}</label>
-                            <input id="password" type="password" class="form-control @error('password') is-invalid @enderror" name="password">
-                            <div class="form-text">{{ __('Dejar en blanco para mantener la contraseña actual. Mínimo 8 caracteres.') }}</div>
+                            <input id="password" type="password" class="form-control @error('password') is-invalid @enderror" name="password" placeholder="Mínimo 8 caracteres" minlength="8">
+                            <div class="form-text">La contraseña debe tener al menos 8 caracteres. Dejar en blanco para mantener la actual.</div>
                             @error('password')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>

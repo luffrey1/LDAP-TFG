@@ -112,8 +112,8 @@
 
                         <div class="mb-3 text-white">
                             <label for="password" class="form-label">{{ __('Contraseña') }} <span class="text-danger">*</span></label>
-                            <input id="password" type="password" class="form-control @error('password') is-invalid @enderror" name="password" required>
-                            <div class="form-text">{{ __('Mínimo 8 caracteres.') }}</div>
+                            <input id="password" type="password" class="form-control @error('password') is-invalid @enderror" name="password" required placeholder="Mínimo 8 caracteres" minlength="8">
+                            <div class="form-text">La contraseña debe tener al menos 8 caracteres.</div>
                             @error('password')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>
