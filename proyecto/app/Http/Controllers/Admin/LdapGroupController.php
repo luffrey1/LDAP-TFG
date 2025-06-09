@@ -263,16 +263,20 @@ class LdapGroupController extends Controller
             // Si es posix, añadir los atributos necesarios
             if (in_array('posix', $types)) {
                 $attributes['objectclass'][] = 'posixGroup';
-                $attributes['objectclass'][] = 'groupOfNames';
                 $attributes['gidNumber'] = (string)$request->gidNumber;
                 $attributes['memberUid'] = ['profesor']; // Miembro inicial
-                $attributes['member'] = ['cn=nobody']; // Miembro inicial para groupOfNames
             }
             
             // Si es unique, añadir los atributos necesarios
             if (in_array('unique', $types)) {
                 $attributes['objectclass'][] = 'groupOfUniqueNames';
                 $attributes['uniqueMember'] = ['uid=profesor,ou=people,dc=tierno,dc=es']; // Miembro inicial
+            }
+
+            // Si es solo posix (sin unique), añadir groupOfNames
+            if (in_array('posix', $types) && !in_array('unique', $types)) {
+                $attributes['objectclass'][] = 'groupOfNames';
+                $attributes['member'] = ['cn=nobody']; // Miembro inicial para groupOfNames
             }
 
             Log::debug('Atributos del grupo: ' . json_encode($attributes));
