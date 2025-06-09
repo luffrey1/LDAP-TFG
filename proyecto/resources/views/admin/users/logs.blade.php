@@ -185,9 +185,12 @@
 </div>
 @endsection
 
-@section('scripts')
+@push('scripts')
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.10.24/js/dataTables.bootstrap5.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+$(document).ready(function() {
     // Inicializar DataTables
     const table = $('#logsTable').DataTable({
         language: {
@@ -197,40 +200,57 @@ document.addEventListener('DOMContentLoaded', function() {
         pageLength: 25,
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip',
         processing: true,
-        serverSide: false, // Desactivamos serverSide porque usamos la paginación de Laravel
+        serverSide: false,
         searching: true,
         info: true,
         lengthChange: true,
-        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]]
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+        columnDefs: [
+            {
+                targets: 0,
+                visible: false // Ocultar la columna de ID
+            }
+        ]
     });
 
     // Función para filtrar por tipo de log
     function filterByType(type) {
+        table.column(0).search('').draw(); // Limpiar búsqueda anterior
+        
         if (type === 'all') {
             table.column(0).search('').draw();
         } else {
-            table.column(0).search(type).draw();
+            // Buscar en la columna de tipo (data-type)
+            table.rows().every(function() {
+                const rowData = this.data();
+                const rowType = $(this.node()).data('type');
+                if (type === rowType) {
+                    $(this.node()).show();
+                } else {
+                    $(this.node()).hide();
+                }
+            });
         }
     }
 
     // Eventos de las pestañas
-    document.querySelectorAll('#logTabs button').forEach(button => {
-        button.addEventListener('click', function() {
-            const type = this.id.split('-')[0];
-            filterByType(type);
-        });
+    $('#logTabs button').on('click', function() {
+        // Remover clase active de todas las pestañas
+        $('#logTabs button').removeClass('active');
+        // Añadir clase active a la pestaña actual
+        $(this).addClass('active');
+        
+        const type = $(this).attr('id').split('-')[0];
+        filterByType(type);
     });
 
     // Búsqueda de usuario
-    const userSearch = document.getElementById('userSearch');
-    const clearSearch = document.getElementById('clearSearch');
-
-    userSearch.addEventListener('keyup', function() {
+    $('#userSearch').on('keyup', function() {
         table.column(3).search(this.value).draw();
     });
 
-    clearSearch.addEventListener('click', function() {
-        userSearch.value = '';
+    $('#clearSearch').on('click', function() {
+        $('#userSearch').val('');
         table.column(3).search('').draw();
     });
 
@@ -246,13 +266,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const log = await response.json();
             
             // Actualizar contenido del modal
-            document.getElementById('modal-id').textContent = log.id;
-            document.getElementById('modal-date').textContent = new Date(log.created_at).toLocaleString();
-            document.getElementById('modal-user').textContent = log.user || 'Sistema';
-            document.getElementById('modal-level').innerHTML = `<span class="badge bg-${log.level === 'ERROR' ? 'danger' : (log.level === 'WARNING' ? 'warning' : (log.level === 'INFO' ? 'info' : 'secondary'))}">${log.level}</span>`;
-            document.getElementById('modal-action').innerHTML = `<span class="badge bg-${log.action === 'Error' ? 'danger' : (log.action === 'Advertencia' ? 'warning' : (log.action === 'Información' ? 'info' : 'secondary'))}">${log.action}</span>`;
-            document.getElementById('modal-description').textContent = log.description;
-            document.getElementById('modal-details').textContent = JSON.stringify(log.details, null, 2);
+            $('#modal-id').text(log.id);
+            $('#modal-date').text(new Date(log.created_at).toLocaleString());
+            $('#modal-user').text(log.user || 'Sistema');
+            $('#modal-level').html(`<span class="badge bg-${log.level === 'ERROR' ? 'danger' : (log.level === 'WARNING' ? 'warning' : (log.level === 'INFO' ? 'info' : 'secondary'))}">${log.level}</span>`);
+            $('#modal-action').html(`<span class="badge bg-${log.action === 'Error' ? 'danger' : (log.action === 'Advertencia' ? 'warning' : (log.action === 'Información' ? 'info' : 'secondary'))}">${log.action}</span>`);
+            $('#modal-description').text(log.description);
+            $('#modal-details').text(JSON.stringify(log.details, null, 2));
             
             // Mostrar modal
             logDetailsModal.show();
@@ -262,16 +282,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Evento de clic en filas de la tabla
-    document.querySelectorAll('.log-row').forEach(row => {
-        row.addEventListener('click', function() {
-            const id = this.dataset.id;
-            showLogDetails(id);
-        });
+    // Evento de clic en filas de la tabla usando delegación de eventos
+    $('#logsTable tbody').on('click', 'tr.log-row', function() {
+        const id = $(this).data('id');
+        showLogDetails(id);
     });
 
     // Ocultar la paginación de Laravel ya que usamos DataTables
-    document.querySelector('.pagination').style.display = 'none';
+    $('.pagination').hide();
 });
 </script>
-@endsection 
+@endpush 
