@@ -3015,31 +3015,40 @@ class LdapUserController extends Controller
     public function findGroupByGid($gid)
     {
         try {
-            $this->connection->connect();
-            
-            $group = $this->connection->query()
-                ->in($this->groupsOu)
-                ->where('gidnumber', '=', $gid)
-                ->first();
+            Log::info('Intentando conectar a LDAP');
+            $this->ldap->connect();
+            Log::info('Conexión LDAP establecida correctamente');
+
+            Log::info('Buscando grupo con GID: ' . $gid);
+            $query = $this->ldap->query();
+            $groups = $query->where('objectclass', '=', 'posixGroup')
+                           ->where('gidNumber', '=', $gid)
+                           ->get();
+
+            Log::info('Resultados de la búsqueda:', ['count' => $groups->count()]);
+
+            if ($groups->count() > 0) {
+                $group = $groups->first();
+                $groupName = $group->getFirstAttribute('cn');
+                Log::info('Grupo encontrado:', ['name' => $groupName]);
                 
-            if ($group) {
-                $groupName = is_array($group) ? ($group['cn'][0] ?? '') : $group->getFirstAttribute('cn');
                 return response()->json([
                     'success' => true,
                     'group' => $groupName
                 ]);
             }
-            
+
+            Log::info('No se encontró ningún grupo con el GID: ' . $gid);
             return response()->json([
                 'success' => false,
                 'message' => 'No se encontró ningún grupo con ese GID'
             ]);
-            
-        } catch (Exception $e) {
+
+        } catch (\Exception $e) {
             Log::error('Error al buscar grupo por GID: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Error al buscar el grupo'
+                'message' => 'Error al buscar el grupo: ' . $e->getMessage()
             ], 500);
         }
     }
