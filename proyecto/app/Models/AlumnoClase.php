@@ -202,6 +202,37 @@ class AlumnoClase extends Model
                 ? "cn=profesores,ou=groups,{$config['base_dn']}"
                 : "cn=alumnos,ou=groups,{$config['base_dn']}";
 
+            // Verificar y asegurar la estructura correcta del grupo
+            $groupInfo = ldap_read($ldapConn, $groupDn, "(objectClass=*)", ['objectClass']);
+            if (!$groupInfo) {
+                // Si el grupo no existe, crearlo con la estructura correcta
+                $groupAttrs = [
+                    'objectClass' => ['top', 'posixGroup', 'groupOfNames'],
+                    'cn' => $tipoImportacion === 'profesor' ? 'profesores' : 'alumnos',
+                    'gidNumber' => $tipoImportacion === 'profesor' ? '10000' : '10001',
+                    'member' => ['cn=nobody']
+                ];
+                
+                if (!ldap_add($ldapConn, $groupDn, $groupAttrs)) {
+                    throw new \Exception("Error al crear grupo en LDAP: " . ldap_error($ldapConn));
+                }
+            } else {
+                // Si el grupo existe, verificar y actualizar su estructura si es necesario
+                $groupEntry = ldap_first_entry($ldapConn, $groupInfo);
+                $groupAttrs = ldap_get_attributes($ldapConn, $groupEntry);
+                
+                $requiredClasses = ['top', 'posixGroup', 'groupOfNames'];
+                $missingClasses = array_diff($requiredClasses, $groupAttrs['objectClass']);
+                
+                if (!empty($missingClasses)) {
+                    // Añadir las clases de objeto faltantes
+                    $modify = ['objectClass' => $missingClasses];
+                    if (!ldap_mod_add($ldapConn, $groupDn, $modify)) {
+                        throw new \Exception("Error al actualizar estructura del grupo: " . ldap_error($ldapConn));
+                    }
+                }
+            }
+
             // Crear DN del usuario
             $userDn = "uid={$username},{$peopleOu}";
             
