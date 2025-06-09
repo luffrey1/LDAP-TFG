@@ -79,9 +79,9 @@
                                 <tbody>
                                     @forelse($alumnos as $alumno)
                                     <tr class="{{ !$alumno->activo ? 'table-secondary' : '' }}">
-                                        <td>{{ $alumno->nombre_completo }}</td>
-                                        <td>{{ $alumno->email ?: '-' }}</td>
-                                        <td>{{ $alumno->numero_expediente ?: '-' }}</td>
+                                        <td class="text-dark">{{ $alumno->nombre_completo }}</td>
+                                        <td class="text-dark">{{ $alumno->email ?: '-' }}</td>
+                                        <td class="text-dark">{{ $alumno->numero_expediente ?: '-' }}</td>
                                         <td>
                                             @if($alumno->cuenta_creada)
                                             <div class="badge badge-success">{{ $alumno->usuario_ldap }}</div>
