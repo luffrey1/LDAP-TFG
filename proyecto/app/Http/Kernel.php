@@ -67,6 +67,7 @@ class Kernel extends HttpKernel
         'admin' => \App\Http\Middleware\AdminMiddleware::class,
         'ldap.auth' => \App\Http\Middleware\LdapAuthMiddleware::class,
         'check.module' => \App\Http\Middleware\CheckModuleAccess::class,
+        'role' => \App\Http\Middleware\CheckRole::class,
     ];
 
     /**
@@ -87,6 +88,5 @@ class Kernel extends HttpKernel
         'signed' => \App\Http\Middleware\ValidateSignature::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
-        'role' => \App\Http\Middleware\CheckRole::class,
     ];
 } 
