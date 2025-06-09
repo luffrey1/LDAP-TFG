@@ -109,13 +109,43 @@ class LogController extends Controller
 
     private function getLogType($action)
     {
-        if (strpos($action, 'Usuario') !== false) {
+        $action = strtolower($action);
+        
+        // Detección de acciones de usuario
+        if (strpos($action, 'usuario') !== false || 
+            strpos($action, 'user') !== false || 
+            strpos($action, 'crear usuario') !== false ||
+            strpos($action, 'actualizar usuario') !== false ||
+            strpos($action, 'eliminar usuario') !== false ||
+            strpos($action, 'editar usuario') !== false ||
+            strpos($action, 'reset password') !== false ||
+            strpos($action, 'cambiar contraseña') !== false) {
             return 'user';
-        } elseif (strpos($action, 'Grupo') !== false) {
+        }
+        
+        // Detección de acciones de grupo
+        if (strpos($action, 'grupo') !== false || 
+            strpos($action, 'group') !== false || 
+            strpos($action, 'crear grupo') !== false ||
+            strpos($action, 'actualizar grupo') !== false ||
+            strpos($action, 'eliminar grupo') !== false ||
+            strpos($action, 'editar grupo') !== false ||
+            strpos($action, 'añadir miembro') !== false ||
+            strpos($action, 'eliminar miembro') !== false ||
+            strpos($action, 'add member') !== false ||
+            strpos($action, 'remove member') !== false) {
             return 'group';
-        } elseif (strpos($action, 'acceso') !== false) {
+        }
+        
+        // Detección de intentos de acceso
+        if (strpos($action, 'acceso') !== false || 
+            strpos($action, 'access') !== false || 
+            strpos($action, 'login') !== false ||
+            strpos($action, 'logout') !== false ||
+            strpos($action, 'intento') !== false) {
             return 'access';
         }
+        
         return 'other';
     }
 
