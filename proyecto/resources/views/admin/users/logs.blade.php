@@ -148,6 +148,45 @@ $(document).ready(function() {
         }
     });
 
+    // Función para determinar el tipo de log basado en la acción
+    function getLogType(action, description) {
+        action = action.toLowerCase();
+        description = description.toLowerCase();
+
+        // Detección de acciones de usuario
+        if (action.includes('usuario') || 
+            action.includes('user') || 
+            description.includes('usuario ldap')) {
+            return 'user';
+        }
+        
+        // Detección de acciones de grupo
+        if (action.includes('grupo') || 
+            action.includes('group') || 
+            description.includes('grupo ldap')) {
+            return 'group';
+        }
+        
+        // Detección de intentos de acceso
+        if (action.includes('acceso') || 
+            action.includes('access') || 
+            action.includes('intento') || 
+            description.includes('desde')) {
+            return 'access';
+        }
+        
+        return 'other';
+    }
+
+    // Asignar tipos a las filas
+    $('.log-row').each(function() {
+        var $row = $(this);
+        var action = $row.find('td:eq(1)').text();
+        var description = $row.find('td:eq(2)').text();
+        var type = getLogType(action, description);
+        $row.attr('data-type', type);
+    });
+
     // Función para filtrar por tipo de log
     function filterLogs(type) {
         if (type === 'all') {
