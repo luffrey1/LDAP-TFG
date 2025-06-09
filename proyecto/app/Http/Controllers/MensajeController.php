@@ -187,6 +187,7 @@ class MensajeController extends Controller
                 
                 // Si hay archivos adjuntos, procesarlos
                 if ($request->hasFile('adjuntos')) {
+                    // Asegura que la carpeta existe
                     if (!\Storage::disk('public')->exists('adjuntos/mensajes')) {
                         \Storage::disk('public')->makeDirectory('adjuntos/mensajes');
                     }
@@ -199,7 +200,7 @@ class MensajeController extends Controller
                             'extension' => $file->getClientOriginalExtension(),
                             'tipo' => $file->getMimeType(),
                             'tamaño' => $file->getSize(),
-                            'ruta' => $path
+                            'ruta' => $path // Solo la ruta relativa
                         ]);
                     }
                 }
