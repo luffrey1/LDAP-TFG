@@ -137,14 +137,31 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    // Inicializar DataTables
+    // Inicializar DataTables con traducción manual
     var table = $('#logsTable').DataTable({
         "paging": false,
         "ordering": true,
         "info": false,
         "searching": false,
         "language": {
-            "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Spanish.json"
+            "sProcessing": "Procesando...",
+            "sLengthMenu": "Mostrar _MENU_ registros",
+            "sZeroRecords": "No se encontraron resultados",
+            "sEmptyTable": "Ningún dato disponible en esta tabla",
+            "sInfo": "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
+            "sInfoEmpty": "Mostrando registros del 0 al 0 de un total de 0 registros",
+            "sInfoFiltered": "(filtrado de un total de _MAX_ registros)",
+            "sInfoPostFix": "",
+            "sSearch": "Buscar:",
+            "sUrl": "",
+            "sInfoThousands": ",",
+            "sLoadingRecords": "Cargando...",
+            "oPaginate": {
+                "sFirst": "Primero",
+                "sLast": "Último",
+                "sNext": "Siguiente",
+                "sPrevious": "Anterior"
+            }
         }
     });
 
@@ -154,29 +171,25 @@ $(document).ready(function() {
         description = description.toLowerCase();
 
         // Detección de acciones de usuario
-        if (action.includes('crear usuario') || 
-            action.includes('actualizar usuario') || 
-            action.includes('eliminar usuario') || 
-            description.includes('usuario ldap creado') ||
-            description.includes('usuario ldap actualizado') ||
-            description.includes('usuario ldap eliminado')) {
+        if (description.includes('usuario ldap') || 
+            description.includes('creado usuario') || 
+            description.includes('actualizado usuario') || 
+            description.includes('eliminado usuario')) {
             return 'users';
         }
         
         // Detección de acciones de grupo
-        if (action.includes('crear grupo') || 
-            action.includes('actualizar grupo') || 
-            action.includes('eliminar grupo') || 
-            description.includes('grupo ldap creado') ||
-            description.includes('grupo ldap actualizado') ||
-            description.includes('grupo ldap eliminado')) {
+        if (description.includes('grupo ldap') || 
+            description.includes('creado grupo') || 
+            description.includes('actualizado grupo') || 
+            description.includes('eliminado grupo')) {
             return 'groups';
         }
         
         // Detección de intentos de acceso
-        if (action.includes('intento de acceso') || 
-            action.includes('acceso exitoso') || 
-            action.includes('acceso fallido') || 
+        if (description.includes('intento de acceso') || 
+            description.includes('acceso exitoso') || 
+            description.includes('acceso fallido') || 
             description.includes('desde')) {
             return 'access';
         }
@@ -191,18 +204,21 @@ $(document).ready(function() {
         var description = $row.find('td:eq(2)').text().trim();
         var type = getLogType(action, description);
         $row.attr('data-type', type);
-        console.log('Row type:', type, 'Action:', action, 'Description:', description); // Debug
+        console.log('Row type:', type, 'Action:', action, 'Description:', description);
     });
 
     // Función para filtrar por tipo de log
     function filterLogs(type) {
-        console.log('Filtering by type:', type); // Debug
-        if (type === 'all') {
-            $('.log-row').show();
-        } else {
-            $('.log-row').hide();
-            $('.log-row[data-type="' + type + '"]').show();
-        }
+        console.log('Filtering by type:', type);
+        $('.log-row').each(function() {
+            var $row = $(this);
+            var rowType = $row.attr('data-type');
+            if (type === 'all' || rowType === type) {
+                $row.show();
+            } else {
+                $row.hide();
+            }
+        });
     }
 
     // Manejar cambios de pestaña
@@ -211,7 +227,7 @@ $(document).ready(function() {
         $(this).tab('show');
         
         var type = $(this).attr('id').replace('-tab', '');
-        console.log('Tab clicked:', type); // Debug
+        console.log('Tab clicked:', type);
         filterLogs(type);
     });
 
