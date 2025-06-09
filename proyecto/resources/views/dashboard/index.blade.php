@@ -284,17 +284,17 @@
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
                     <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-history me-2"></i>Actividad Reciente
+                        <i class="fas fa-history me-2 text-white"></i>Actividad Reciente
                     </h6>
                 </div>
-                <div class="card-body">
-                    <div class="timeline">
+                <div class="card-body text-white">
+                    <div class="timeline text-white">
                         @if(isset($userActivity) && count($userActivity) > 0)
                             @foreach($userActivity as $activity)
-                            <div class="timeline-item {{ $activity['action'] === 'Intento de acceso' ? 'access-attempt' : '' }}">
-                                <div class="timeline-marker {{ $activity['action'] === 'Intento de acceso' ? 'bg-danger' : '' }}"></div>
-                                <div class="timeline-content">
-                                    <h5 class="timeline-title">
+                            <div class="text-white timeline-item {{ $activity['action'] === 'Intento de acceso' ? 'access-attempt' : '' }}">
+                                <div class="text-white timeline-marker {{ $activity['action'] === 'Intento de acceso' ? 'bg-danger' : '' }}"></div>
+                                <div class="text-white timeline-content">
+                                    <h5 class="text-white timeline-title">
                                         @if($activity['action'] === 'Intento de acceso')
                                             <i class="fas fa-exclamation-triangle text-danger me-2"></i>
                                         @endif
