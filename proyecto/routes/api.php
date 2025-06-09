@@ -30,7 +30,7 @@ Route::get('/config/telemetry-interval', function () {
 
 Route::get('/ldap/groups/gid/{gid}', function ($gid) {
     try {
-        $ldap = new \LdapRecord\Connection([
+        $config = [
             'hosts'    => [env('LDAP_HOST', 'ldap')],
             'port'     => env('LDAP_PORT', 636),
             'base_dn'  => env('LDAP_BASE_DN', 'dc=tierno,dc=es'),
@@ -38,33 +38,63 @@ Route::get('/ldap/groups/gid/{gid}', function ($gid) {
             'password' => env('LDAP_PASSWORD', 'admin'),
             'use_ssl'  => env('LDAP_SSL', true),
             'use_tls'  => env('LDAP_TLS', true),
-        ]);
+        ];
 
-        $ldap->connect();
+        \Log::info('Intentando conectar a LDAP con configuración:', $config);
 
-        $query = $ldap->query();
-        $groups = $query->where('objectclass', '=', 'posixGroup')
-                       ->where('gidNumber', '=', $gid)
-                       ->get();
-
-        if ($groups->count() > 0) {
-            $group = $groups->first();
+        $ldap = new \LdapRecord\Connection($config);
+        
+        try {
+            $ldap->connect();
+            \Log::info('Conexión LDAP establecida correctamente');
+        } catch (\Exception $e) {
+            \Log::error('Error al conectar con LDAP: ' . $e->getMessage());
             return response()->json([
-                'success' => true,
-                'group' => $group->getFirstAttribute('cn')
-            ]);
+                'success' => false,
+                'message' => 'Error al conectar con el servidor LDAP'
+            ], 500);
         }
 
-        return response()->json([
-            'success' => false,
-            'message' => 'No se encontró ningún grupo con ese GID'
-        ]);
+        try {
+            $query = $ldap->query();
+            \Log::info('Buscando grupo con GID: ' . $gid);
+            
+            $groups = $query->where('objectclass', '=', 'posixGroup')
+                           ->where('gidNumber', '=', $gid)
+                           ->get();
+
+            \Log::info('Resultados de la búsqueda:', ['count' => $groups->count()]);
+
+            if ($groups->count() > 0) {
+                $group = $groups->first();
+                $groupName = $group->getFirstAttribute('cn');
+                \Log::info('Grupo encontrado:', ['name' => $groupName]);
+                
+                return response()->json([
+                    'success' => true,
+                    'group' => $groupName
+                ]);
+            }
+
+            \Log::info('No se encontró ningún grupo con el GID: ' . $gid);
+            return response()->json([
+                'success' => false,
+                'message' => 'No se encontró ningún grupo con ese GID'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al buscar grupo en LDAP: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al buscar el grupo en LDAP'
+            ], 500);
+        }
 
     } catch (\Exception $e) {
-        \Log::error('Error al buscar grupo por GID: ' . $e->getMessage());
+        \Log::error('Error general en la búsqueda de grupo por GID: ' . $e->getMessage());
         return response()->json([
             'success' => false,
-            'message' => 'Error al buscar el grupo: ' . $e->getMessage()
+            'message' => 'Error al procesar la solicitud'
         ], 500);
     }
 }); 
