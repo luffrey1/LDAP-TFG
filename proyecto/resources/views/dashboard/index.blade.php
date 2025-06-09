@@ -287,7 +287,7 @@
                         <i class="fas fa-history me-2"></i>Actividad Reciente
                     </h6>
                 </div>
-                <div class="card-body">
+                <div class="card-body text-white">
                     <div class="timeline">
                         @if(isset($userActivity) && count($userActivity) > 0)
                             @foreach($userActivity as $activity)
@@ -365,6 +365,12 @@
         margin-bottom: 10px;
     }
     
+    .access-attempt .timeline-title,
+    .access-attempt p,
+    .access-attempt .timeline-time {
+        color: #333 !important;
+    }
+    
     .access-details {
         background-color: #f8f9fa;
         padding: 8px;
@@ -390,7 +396,7 @@
     .timeline-item {
         position: relative;
         padding: 15px 0;
-        border-bottom: 1px solid #e3e6f0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .timeline-marker {
@@ -411,12 +417,12 @@
         font-size: 1rem;
         font-weight: 600;
         margin-bottom: 0.5rem;
-        color: #2e59d9;
+        color: #fff;
     }
 
     .timeline-time {
         font-size: 0.85rem;
-        color: #858796;
+        color: rgba(255, 255, 255, 0.7);
     }
 </style>
 @endsection
