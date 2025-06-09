@@ -12,6 +12,7 @@ use LdapRecord\Connection;
 use LdapRecord\Models\ActiveDirectory\User as LdapUser;
 use Illuminate\Validation\Rule;
 use App\Models\ClaseGrupo;
+use Exception;
 
 class ProfileController extends Controller
 {
@@ -201,51 +202,43 @@ class ProfileController extends Controller
                         // Si llegamos aquí, la contraseña actual es correcta
                         $updateData['userPassword'] = $this->hashPassword($newPassword);
                         
-                        // Actualizar la contraseña usando el admin
-                        $adminLdap = new \LdapRecord\Connection([
-                            'hosts' => $config['hosts'],
-                            'port' => 636,
-                            'base_dn' => $config['base_dn'],
-                            'username' => $config['username'],
-                            'password' => $config['password'],
-                            'use_ssl' => true,
-                            'use_tls' => false,
-                            'options' => [
-                                LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
-                                LDAP_OPT_REFERRALS => 0,
-                                LDAP_OPT_PROTOCOL_VERSION => 3,
-                                LDAP_OPT_NETWORK_TIMEOUT => 5,
-                            ],
-                        ]);
-                        
-                        $adminLdap->connect();
-                        Log::debug('Buscando usuario en LDAP con DN: ' . $userDn);
-                        
-                        // Buscar el usuario usando el DN directamente
-                        $ldapEntry = $adminLdap->query()
-                            ->in('ou=people,' . $config['base_dn'])
-                            ->where('uid', '=', $user->username)
-                            ->first();
-
-                        if (!$ldapEntry) {
-                            Log::error('No se encontró el usuario en LDAP para actualizar la contraseña: ' . $user->username);
-                            return back()->with('error', 'No se pudo encontrar el usuario en LDAP para actualizar la contraseña');
+                        // Actualizar la contraseña usando LDAP nativo
+                        $ldapConn = ldap_connect('ldaps://' . $config['hosts'][0], $config['port']);
+                        if (!$ldapConn) {
+                            throw new Exception("No se pudo crear la conexión LDAP");
                         }
 
-                        Log::debug('Usuario encontrado en LDAP, actualizando contraseña');
+                        ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
+                        ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
+                        ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
                         
-                        // Obtener el DN de la entrada
-                        $userDn = is_array($ldapEntry) ? $ldapEntry['dn'] : $ldapEntry->getDn();
+                        // Intentar bind con credenciales de admin
+                        $bind = @ldap_bind(
+                            $ldapConn, 
+                            $config['username'], 
+                            $config['password']
+                        );
                         
+                        if (!$bind) {
+                            $error = ldap_error($ldapConn);
+                            Log::error("Error al conectar al servidor LDAP: " . $error);
+                            throw new Exception("No se pudo autenticar en el servidor LDAP: " . $error);
+                        }
+
                         // Actualizar la contraseña
-                        if (is_array($ldapEntry)) {
-                            $ldapEntry['userPassword'] = [$this->hashPassword($newPassword)];
-                            $adminLdap->update($userDn, $ldapEntry);
-                        } else {
-                            $ldapEntry->setAttribute('userPassword', $this->hashPassword($newPassword));
-                            $ldapEntry->save();
-                        }
+                        $modifyData = [
+                            'userPassword' => $this->hashPassword($newPassword)
+                        ];
+
+                        $success = ldap_modify($ldapConn, $userDn, $modifyData);
                         
+                        if (!$success) {
+                            $error = ldap_error($ldapConn);
+                            Log::error("Error al actualizar contraseña: " . $error);
+                            throw new Exception("Error al actualizar contraseña: " . $error);
+                        }
+
+                        ldap_close($ldapConn);
                         Log::info('Contraseña actualizada correctamente para el usuario: ' . $user->username);
                         
                         // Verificar que la contraseña se actualizó correctamente
