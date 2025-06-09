@@ -90,9 +90,9 @@
                                         <td>{{ $alumno->numero_expediente ?: '-' }}</td>
                                         <td>
                                             @if($alumno->cuenta_creada)
-                                            <div class="badge badge-success">{{ $alumno->usuario_ldap }}</div>
+                                            <div class="badge badge-success text-dark" style="color: #212529 !important;">{{ $alumno->usuario_ldap }}</div>
                                             @else
-                                            <div class="badge badge-warning">No creada</div>
+                                            <div class="badge badge-warning text-dark">No creada</div>
                                             @endif
                                         </td>
                                         <td>
