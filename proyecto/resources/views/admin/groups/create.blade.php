@@ -92,7 +92,7 @@ $(document).ready(function() {
 
     // Cargar usuarios para los selectores
     function loadUsers() {
-        $.get('{{ route("admin.users.list") }}', function(data) {
+        $.get('{{ route("gestion.grupos.users.list") }}', function(data) {
             const users = data.users || [];
             
             // Limpiar y llenar los selectores
