@@ -516,8 +516,16 @@ class AlumnoController extends Controller
                         // Crear cuenta LDAP si está habilitado
                         if ($importData['crear_ldap']) {
                             try {
-                                $alumno->crearCuentaLdap($alumnoData['password'], $importData['tipo_importacion']);
-                                $imported++;
+                                // Pasar el tipo de importación para asignar el grupo correcto en LDAP
+                                // Si es 'profesor', se asignará al grupo 'profesores'
+                                // Si es 'alumno', se asignará al grupo 'alumnos'
+                                $resultado = $alumno->crearCuentaLdap($alumnoData['password'], $importData['tipo_importacion']);
+                                
+                                if ($resultado['success']) {
+                                    $imported++;
+                                } else {
+                                    $errors[] = "Error al crear cuenta LDAP para {$alumnoData['nombre_completo']}: " . $resultado['message'];
+                                }
                             } catch (\Exception $e) {
                                 $errors[] = "Error al crear cuenta LDAP para {$alumnoData['nombre_completo']}: " . $e->getMessage();
                             }
