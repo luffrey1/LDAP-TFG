@@ -59,9 +59,9 @@ class ProfileController extends Controller
 
             if ($ldapUser) {
                 // Obtener UID, GID y CN
-                $ldapUid = is_array($ldapUser) ? ($ldapUser['uidnumber'][0] ?? '') : $ldapUser->getFirstAttribute('uidNumber');
+                $ldapUid = is_array($ldapUser) ? ($ldapUser['uid'][0] ?? '') : $ldapUser->getFirstAttribute('uid');
                 $ldapGuid = is_array($ldapUser) ? ($ldapUser['gidnumber'][0] ?? '') : $ldapUser->getFirstAttribute('gidNumber');
-                $ldapCn = is_array($ldapUser) ? ($ldapUser['uid'][0] ?? '') : $ldapUser->getFirstAttribute('uid');
+                $ldapCn = is_array($ldapUser) ? ($ldapUser['cn'][0] ?? '') : $ldapUser->getFirstAttribute('cn');
                 $fullName = is_array($ldapUser) ? ($ldapUser['displayname'][0] ?? $ldapUser['cn'][0] ?? '') : ($ldapUser->getFirstAttribute('displayName') ?? $ldapUser->getFirstAttribute('cn'));
 
                 // Obtener grupos del usuario
@@ -125,10 +125,8 @@ class ProfileController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'current_password' => ['required_with:new_password', 'current_password'],
+            'current_password' => ['required_with:new_password'],
             'new_password' => ['nullable', 'string', 'min:8', 'confirmed'],
-            'uid' => ['required', 'numeric'],
-            'gid' => ['required', 'numeric'],
         ]);
 
         try {
@@ -165,9 +163,7 @@ class ProfileController extends Controller
                 // Preparar datos para actualizar
                 $updateData = [
                     'displayName' => $request->name,
-                    'mail' => $request->email,
-                    'uidNumber' => $request->uid,
-                    'gidNumber' => $request->gid
+                    'mail' => $request->email
                 ];
 
                 // Si se proporciona una nueva contraseña, actualizarla
@@ -198,6 +194,7 @@ class ProfileController extends Controller
                         // Si llegamos aquí, la contraseña actual es correcta
                         $updateData['userPassword'] = $this->hashPassword($newPassword);
                     } catch (\Exception $e) {
+                        Log::error('Error al verificar contraseña actual: ' . $e->getMessage());
                         return back()->withErrors(['current_password' => 'La contraseña actual es incorrecta']);
                     }
                 }
