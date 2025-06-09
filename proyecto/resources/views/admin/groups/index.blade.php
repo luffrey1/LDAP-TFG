@@ -184,7 +184,7 @@ function updateGroups() {
     const search = searchInput.value;
     const type = typeSelect.value;
     
-    fetch(`{{ route('gestion.grupos.index') }}?search=${encodeURIComponent(search)}&type=${encodeURIComponent(type)}`, {
+    fetch(`{{ route('admin.groups.index') }}?search=${encodeURIComponent(search)}&type=${encodeURIComponent(type)}`, {
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
         }

@@ -43,7 +43,7 @@
 
                         <div class="form-group text-white">
                             <button type="submit" class="btn btn-primary">Actualizar Grupo</button>
-                            <a href="{{ route('gestion.grupos.index') }}" class="btn btn-secondary">Cancelar</a>
+                            <a href="{{ route('admin.groups.index') }}" class="btn btn-secondary">Cancelar</a>
                         </div>
                     </form>
                 </div>
