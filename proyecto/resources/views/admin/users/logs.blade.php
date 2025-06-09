@@ -201,15 +201,14 @@ $(document).ready(function() {
 
     // Asignar tipos a las filas y mostrar información de depuración
     console.log('Starting to assign types to rows...');
-    $('.log-row').each(function(index) {
-        var $row = $(this);
-        var description = $row.find('td:eq(2)').text().trim();
+    table.rows().every(function() {
+        var data = this.data();
+        var description = data[2]; // La descripción está en la tercera columna
         var type = getLogType(description);
-        $row.attr('data-type', type);
-        console.log('Row ' + index + ':', {
+        $(this.node()).attr('data-type', type);
+        console.log('Row assigned type:', {
             description: description,
-            type: type,
-            row: $row
+            type: type
         });
     });
 
@@ -217,37 +216,18 @@ $(document).ready(function() {
     function filterLogs(type) {
         console.log('Starting filter for type:', type);
         
-        // Primero ocultar todas las filas
-        table.rows().every(function() {
-            var $row = $(this.node());
-            $row.hide();
+        // Usar la API de DataTables para filtrar
+        $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+            var rowType = $(table.row(dataIndex).node()).attr('data-type');
+            return type === 'all' || rowType === type;
         });
-        console.log('All rows hidden');
         
-        // Luego mostrar solo las filas del tipo seleccionado
-        if (type === 'all') {
-            table.rows().every(function() {
-                var $row = $(this.node());
-                $row.show();
-            });
-            console.log('Showing all rows');
-        } else {
-            table.rows().every(function() {
-                var $row = $(this.node());
-                var rowType = $row.attr('data-type');
-                if (rowType === type) {
-                    $row.show();
-                    console.log('Showing row:', {
-                        type: rowType,
-                        description: $row.find('td:eq(2)').text().trim()
-                    });
-                }
-            });
-        }
+        table.draw();
         
-        // Verificar el estado final
-        var visibleCount = $('.log-row:visible').length;
-        console.log('Final visible count:', visibleCount);
+        // Limpiar el filtro después de aplicarlo
+        $.fn.dataTable.ext.search.pop();
+        
+        console.log('Filter applied. Visible rows:', table.rows({search: 'applied'}).count());
     }
 
     // Manejar cambios de pestaña
@@ -263,23 +243,17 @@ $(document).ready(function() {
     // Búsqueda de usuario
     $('#userSearch').on('keyup', function() {
         var searchText = $(this).val().toLowerCase();
-        table.rows().every(function() {
-            var $row = $(this.node());
-            var userText = $row.find('td:first').text().toLowerCase();
-            $row.toggle(userText.indexOf(searchText) > -1);
-        });
+        table.search(searchText).draw();
     });
 
     // Limpiar búsqueda
     $('#clearSearch').on('click', function() {
         $('#userSearch').val('');
-        table.rows().every(function() {
-            $(this.node()).show();
-        });
+        table.search('').draw();
     });
 
     // Mostrar detalles del log al hacer clic
-    $('.log-row').on('click', function() {
+    $('#logsTable tbody').on('click', 'tr', function() {
         var id = $(this).data('id');
         showLogDetails(id);
     });
