@@ -156,6 +156,7 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
         Route::post('/{cn}/add-member', [LdapGroupController::class, 'addMember'])->name('add-member');
         Route::post('/{cn}/remove-member', [LdapGroupController::class, 'removeMember'])->name('remove-member');
         Route::get('/{cn}/members', [LdapGroupController::class, 'getMembers'])->name('members');
+        Route::get('/users/list', [App\Http\Controllers\Admin\LdapUserController::class, 'list'])->name('users.list');
     });
 });
 
