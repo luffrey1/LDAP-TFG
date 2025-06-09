@@ -63,6 +63,14 @@ class ConfiguracionController extends Controller
                 cache()->forget('config.' . $modulo);
             }
             
+            // Si se desactiva el módulo de clases, también desactivamos los elementos relacionados
+            if (!in_array('modulo_clases_activo', $request->modulos ?? [])) {
+                SistemaConfig::establecerConfig('modulo_mis_clases_activo', 'false', 'boolean', null, Auth::id());
+                SistemaConfig::establecerConfig('modulo_gestion_alumnos_activo', 'false', 'boolean', null, Auth::id());
+                cache()->forget('config.modulo_mis_clases_activo');
+                cache()->forget('config.modulo_gestion_alumnos_activo');
+            }
+            
             // Limpiar la caché general
             cache()->forget('sistema_config');
             

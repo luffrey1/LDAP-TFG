@@ -802,16 +802,20 @@
                             </a>
                         </li>
                         @endif
+                        @if(\App\Models\SistemaConfig::obtenerConfig('modulo_mis_clases_activo', true))
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('profesor.clases.mias') || request()->routeIs('profesor.clases.mias.ver') ? 'active' : '' }}" href="{{ route('profesor.clases.mias') }}">
                                 <i class="fas fa-chalkboard-teacher"></i> Mis Clases
                             </a>
                         </li>
+                        @endif
+                        @if(\App\Models\SistemaConfig::obtenerConfig('modulo_gestion_alumnos_activo', true))
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('profesor.alumnos.*') ? 'active' : '' }}" href="{{ route('profesor.alumnos.index') }}">
                                 <i class="fas fa-user-graduate"></i> Gestión de Alumnos
                             </a>
                         </li>
+                        @endif
                     </ul>
                 </div>
             </div>
