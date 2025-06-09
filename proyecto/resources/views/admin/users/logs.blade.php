@@ -216,37 +216,38 @@ $(document).ready(function() {
     // Función para filtrar por tipo de log
     function filterLogs(type) {
         console.log('Starting filter for type:', type);
-        var visibleCount = 0;
         
         // Primero ocultar todas las filas
-        $('.log-row').hide();
+        table.rows().every(function() {
+            var $row = $(this.node());
+            $row.hide();
+        });
         console.log('All rows hidden');
         
         // Luego mostrar solo las filas del tipo seleccionado
         if (type === 'all') {
-            $('.log-row').show();
-            visibleCount = $('.log-row').length;
-            console.log('Showing all rows:', visibleCount);
-        } else {
-            var matchingRows = $('.log-row[data-type="' + type + '"]');
-            console.log('Found ' + matchingRows.length + ' rows of type ' + type);
-            
-            matchingRows.each(function(index) {
-                var $row = $(this);
+            table.rows().every(function() {
+                var $row = $(this.node());
                 $row.show();
-                visibleCount++;
-                console.log('Showing row ' + index + ':', {
-                    type: $row.attr('data-type'),
-                    description: $row.find('td:eq(2)').text().trim()
-                });
+            });
+            console.log('Showing all rows');
+        } else {
+            table.rows().every(function() {
+                var $row = $(this.node());
+                var rowType = $row.attr('data-type');
+                if (rowType === type) {
+                    $row.show();
+                    console.log('Showing row:', {
+                        type: rowType,
+                        description: $row.find('td:eq(2)').text().trim()
+                    });
+                }
             });
         }
         
-        console.log('Filter complete. Visible rows:', visibleCount);
-        
         // Verificar el estado final
-        var finalVisibleCount = $('.log-row:visible').length;
-        console.log('Final visible count:', finalVisibleCount);
+        var visibleCount = $('.log-row:visible').length;
+        console.log('Final visible count:', visibleCount);
     }
 
     // Manejar cambios de pestaña
@@ -262,16 +263,19 @@ $(document).ready(function() {
     // Búsqueda de usuario
     $('#userSearch').on('keyup', function() {
         var searchText = $(this).val().toLowerCase();
-        $('.log-row').each(function() {
-            var userText = $(this).find('td:first').text().toLowerCase();
-            $(this).toggle(userText.indexOf(searchText) > -1);
+        table.rows().every(function() {
+            var $row = $(this.node());
+            var userText = $row.find('td:first').text().toLowerCase();
+            $row.toggle(userText.indexOf(searchText) > -1);
         });
     });
 
     // Limpiar búsqueda
     $('#clearSearch').on('click', function() {
         $('#userSearch').val('');
-        $('.log-row').show();
+        table.rows().every(function() {
+            $(this.node()).show();
+        });
     });
 
     // Mostrar detalles del log al hacer clic
