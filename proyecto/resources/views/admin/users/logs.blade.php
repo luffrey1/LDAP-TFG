@@ -216,18 +216,30 @@ $(document).ready(function() {
     function filterLogs(type) {
         console.log('Starting filter for type:', type);
         
-        // Usar la API de DataTables para filtrar
-        $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
-            var rowType = $(table.row(dataIndex).node()).attr('data-type');
-            return type === 'all' || rowType === type;
-        });
+        // Limpiar filtros anteriores
+        table.search('').columns().search('').draw();
         
-        table.draw();
+        if (type !== 'all') {
+            // Aplicar el filtro de tipo
+            table.rows().every(function() {
+                var $row = $(this.node());
+                var rowType = $row.attr('data-type');
+                if (rowType !== type) {
+                    $row.hide();
+                } else {
+                    $row.show();
+                }
+            });
+        } else {
+            // Mostrar todas las filas
+            table.rows().every(function() {
+                $(this.node()).show();
+            });
+        }
         
-        // Limpiar el filtro después de aplicarlo
-        $.fn.dataTable.ext.search.pop();
-        
-        console.log('Filter applied. Visible rows:', table.rows({search: 'applied'}).count());
+        // Contar filas visibles
+        var visibleCount = table.rows({search: 'applied'}).count();
+        console.log('Filter applied. Visible rows:', visibleCount);
     }
 
     // Manejar cambios de pestaña
@@ -243,13 +255,23 @@ $(document).ready(function() {
     // Búsqueda de usuario
     $('#userSearch').on('keyup', function() {
         var searchText = $(this).val().toLowerCase();
-        table.search(searchText).draw();
+        table.rows().every(function() {
+            var $row = $(this.node());
+            var userText = $row.find('td:first').text().toLowerCase();
+            if (userText.indexOf(searchText) > -1) {
+                $row.show();
+            } else {
+                $row.hide();
+            }
+        });
     });
 
     // Limpiar búsqueda
     $('#clearSearch').on('click', function() {
         $('#userSearch').val('');
-        table.search('').draw();
+        table.rows().every(function() {
+            $(this.node()).show();
+        });
     });
 
     // Mostrar detalles del log al hacer clic
