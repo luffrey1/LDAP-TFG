@@ -3,113 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acceso Denegado</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Acceso Restringido - IES Tierno Galván</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body {
-            background-color: #000;
-            color: #ff0000;
-            font-family: 'Courier New', monospace;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            font-family: 'Roboto', sans-serif;
+            background-color: #f8f9fa;
             margin: 0;
-            overflow: hidden;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #2c3e50;
         }
+
         .warning-container {
-            text-align: center;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             padding: 2rem;
-            border: 2px solid #ff0000;
-            border-radius: 10px;
-            background-color: rgba(0, 0, 0, 0.8);
-            animation: glitch 1s infinite;
+            max-width: 800px;
+            width: 90%;
+            text-align: center;
         }
-        .warning-title {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            text-transform: uppercase;
-            text-shadow: 2px 2px 4px #ff0000;
-        }
-        .warning-message {
-            font-size: 1.5rem;
+
+        .logo {
+            max-width: 200px;
             margin-bottom: 2rem;
         }
-        .warning-details {
+
+        .title {
+            color: #e74c3c;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .message {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+            color: #34495e;
+        }
+
+        .details {
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+
+        .details p {
+            margin: 0.5rem 0;
             font-size: 1rem;
-            color: #ff6666;
+            color: #7f8c8d;
         }
-        @keyframes glitch {
-            0% { transform: translate(0) }
-            20% { transform: translate(-2px, 2px) }
-            40% { transform: translate(-2px, -2px) }
-            60% { transform: translate(2px, 2px) }
-            80% { transform: translate(2px, -2px) }
-            100% { transform: translate(0) }
+
+        .details strong {
+            color: #2c3e50;
         }
-        .matrix-rain {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: -1;
+
+        .footer {
+            font-size: 0.9rem;
+            color: #95a5a6;
+            margin-top: 2rem;
+        }
+
+        .security-icon {
+            font-size: 4rem;
+            color: #e74c3c;
+            margin-bottom: 1rem;
+        }
+
+        .contact-info {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #ecf0f1;
+        }
+
+        .contact-info p {
+            margin: 0.5rem 0;
+            color: #7f8c8d;
         }
     </style>
 </head>
 <body>
-    <canvas id="matrix" class="matrix-rain"></canvas>
     <div class="warning-container">
-        <h1 class="warning-title">¡ADVERTENCIA!</h1>
-        <p class="warning-message">
-            ACCESO NO AUTORIZADO DETECTADO
-        </p>
-        <div class="warning-details">
-            <p>Se ha detectado un intento de acceso no autorizado desde tu cuenta.</p>
-            <p>Tu actividad ha sido registrada y reportada al administrador del sistema.</p>
-            <p>ID de Sesión: {{ session()->getId() }}</p>
-            <p>IP: {{ request()->ip() }}</p>
-            <p>Hora: {{ now()->format('H:i:s') }}</p>
+        <img src="{{ asset('images/logo.png') }}" alt="IES Tierno Galván" class="logo">
+        
+        <div class="security-icon">🔒</div>
+        
+        <h1 class="title">Acceso Restringido</h1>
+        
+        <div class="message">
+            Estimado estudiante,<br>
+            Has intentado acceder a una sección restringida del sistema. 
+            Este acceso está limitado exclusivamente al personal autorizado del centro.
+        </div>
+
+        <div class="details">
+            <p><strong>Detalles del intento de acceso:</strong></p>
+            <p>• Usuario: {{ session('auth_user.username') }}</p>
+            <p>• Nombre: {{ session('auth_user.nombre') }}</p>
+            <p>• Origen: {{ gethostbyaddr(request()->ip()) }}</p>
+            <p>• Fecha y hora: {{ now()->format('d/m/Y H:i:s') }}</p>
+            <p>• ID de sesión: {{ session()->getId() }}</p>
+        </div>
+
+        <div class="contact-info">
+            <p>Si crees que esto es un error, por favor contacta con el departamento de informática:</p>
+            <p>• Email: informatica@tierno.es</p>
+            <p>• Teléfono: 91 123 45 67</p>
+        </div>
+
+        <div class="footer">
+            <p>© {{ date('Y') }} IES Tierno Galván - Todos los derechos reservados</p>
+            <p>Este incidente ha sido registrado y notificado al personal autorizado.</p>
         </div>
     </div>
 
     <script>
-        // Efecto Matrix
-        const canvas = document.getElementById('matrix');
-        const ctx = canvas.getContext('2d');
-
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()';
-        const fontSize = 14;
-        const columns = canvas.width / fontSize;
-
-        const drops = [];
-        for (let i = 0; i < columns; i++) {
-            drops[i] = 1;
-        }
-
-        function draw() {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            ctx.fillStyle = '#0F0';
-            ctx.font = fontSize + 'px monospace';
-
-            for (let i = 0; i < drops.length; i++) {
-                const text = characters.charAt(Math.floor(Math.random() * characters.length));
-                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-
-                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-                    drops[i] = 0;
-                }
-                drops[i]++;
-            }
-        }
-
-        setInterval(draw, 33);
+        // Registrar el intento de acceso
+        fetch('/api/log-access-attempt', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({
+                username: '{{ session('auth_user.username') }}',
+                hostname: '{{ gethostbyaddr(request()->ip()) }}'
+            })
+        });
     </script>
 </body>
 </html> 

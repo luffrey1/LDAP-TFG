@@ -621,6 +621,7 @@
     @yield('styles')
 </head>
 <body>
+    @include('partials.access-attempts')
 
     <!-- Loader -->
     <div class="page-loader">
