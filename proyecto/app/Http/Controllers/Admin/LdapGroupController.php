@@ -711,6 +711,38 @@ class LdapGroupController extends Controller
                     }
                 }
             }
+            // Procesar miembros para groupOfUniqueNames
+            if (isset($entry['uniquemember'])) {
+                for ($i = 0; $i < $entry['uniquemember']['count']; $i++) {
+                    $userDn = $entry['uniquemember'][$i];
+                    // Ignorar miembros ficticios como 'cn=nobody'
+                    if (strpos($userDn, 'uid=') === 0) {
+                        // Extraer el UID del DN
+                        preg_match('/uid=([^,]+)/', $userDn, $matches);
+                        $uid = $matches[1] ?? null;
+                        if ($uid) {
+                            $userSearch = ldap_search($ldapConn, "ou=people,{$this->baseDn}", "(uid=$uid)", ['uid', 'uidNumber', 'cn', 'givenname', 'sn']);
+                            if ($userSearch) {
+                                $userEntries = ldap_get_entries($ldapConn, $userSearch);
+                                if ($userEntries['count'] > 0) {
+                                    $userEntry = $userEntries[0];
+                                    $group['members'][] = [
+                                        'uid' => $uid,
+                                        'uidNumber' => $userEntry['uidnumber'][0] ?? '',
+                                        'cn' => $userEntry['cn'][0] ?? '',
+                                        'givenname' => $userEntry['givenname'][0] ?? '',
+                                        'sn' => $userEntry['sn'][0] ?? ''
+                                    ];
+                                } else {
+                                    $group['members'][] = ['uid' => $uid];
+                                }
+                            } else {
+                                $group['members'][] = ['uid' => $uid];
+                            }
+                        }
+                    }
+                }
+            }
             
             return view('gestion.grupos.show', compact('group'));
             
