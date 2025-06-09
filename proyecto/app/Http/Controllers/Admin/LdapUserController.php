@@ -356,7 +356,28 @@ class LdapUserController extends Controller
             
             // Calcular UID y GID
             $uidNumber = $request->uidNumber ? $request->uidNumber : $this->getNextUidNumber();
-            $gidNumber = $request->gidNumber ? $request->gidNumber : '9000';  // GID por defecto para 'everybody'
+            
+            // Validar y obtener el grupo correspondiente al GID
+            $gidNumber = $request->gidNumber;
+            if ($gidNumber) {
+                // Buscar el grupo que tenga este GID
+                $group = $this->connection->query()
+                    ->in($this->groupsOu)
+                    ->where('gidnumber', '=', $gidNumber)
+                    ->first();
+                    
+                if (!$group) {
+                    return back()->withInput()->with('error', 'El GID especificado no existe en ningún grupo');
+                }
+                
+                // Añadir el grupo a los grupos seleccionados si no está ya
+                $groupName = is_array($group) ? ($group['cn'][0] ?? '') : $group->getFirstAttribute('cn');
+                if ($groupName && !in_array($groupName, $request->grupos)) {
+                    $request->grupos[] = $groupName;
+                }
+            } else {
+                $gidNumber = '9000'; // GID por defecto si no se especifica
+            }
             
             // Preparar contraseña con hash SSHA
             $hashedPassword = $this->hashPassword($request->password);
@@ -1398,9 +1419,9 @@ class LdapUserController extends Controller
             $group = $this->connection->query()
                 ->in($this->groupsOu)
                 ->where('cn', '=', $groupName)
-                ->first();
-                
-            if ($group) {
+                    ->first();
+                    
+                if ($group) {
                 Log::debug("Grupo encontrado por CN en contenedor de grupos: {$groupName}");
                 return $group;
             }
@@ -1619,9 +1640,9 @@ class LdapUserController extends Controller
                 $group = $this->connection->query()
                     ->in($this->baseDn)
                     ->where('dn', '=', $groupDn)
-                    ->first();
-                    
-                if (!$group) {
+                ->first();
+                
+            if (!$group) {
                     Log::warning("Grupo no encontrado: $groupDn - No se puede eliminar usuario");
                     return false; // No lanzar excepción, simplemente retornar falso
                 }
@@ -2984,6 +3005,41 @@ class LdapUserController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Buscar grupo por GID
+     */
+    public function findGroupByGid($gid)
+    {
+        try {
+            $this->connection->connect();
+            
+            $group = $this->connection->query()
+                ->in($this->groupsOu)
+                ->where('gidnumber', '=', $gid)
+                ->first();
+                
+            if ($group) {
+                $groupName = is_array($group) ? ($group['cn'][0] ?? '') : $group->getFirstAttribute('cn');
+                return response()->json([
+                    'success' => true,
+                    'group' => $groupName
+                ]);
+            }
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'No se encontró ningún grupo con ese GID'
+            ]);
+            
+        } catch (Exception $e) {
+            Log::error('Error al buscar grupo por GID: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al buscar el grupo'
             ], 500);
         }
     }

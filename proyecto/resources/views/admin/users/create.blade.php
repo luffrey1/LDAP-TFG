@@ -184,10 +184,10 @@
         const emailInput = document.getElementById('email');
         const dnPreviewText = document.getElementById('dn_preview_text');
         const homeDirectory = document.getElementById('homeDirectory');
+        const gidNumberInput = document.getElementById('gidNumber');
+        const gruposSelect = document.getElementById('grupos');
         const btnRoleProfesor = document.getElementById('btn-role-profesor');
         const btnRoleAlumno = document.getElementById('btn-role-alumno');
-        const gruposSelect = document.getElementById('grupos');
-        const gidNumberInput = document.getElementById('gidNumber');
 
         // Función para actualizar el nombre de usuario basado en nombre y apellidos
         function updateUsername() {
@@ -195,17 +195,20 @@
                 // Obtener el nombre en minúsculas sin acentos
                 const nombre = nombreInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
                 
-                // Obtener la primera inicial del apellido
+                // Obtener la primera letra del apellido
                 let inicialApellido = '';
                 if (apellidosInput.value) {
                     inicialApellido = apellidosInput.value.charAt(0).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                 }
                 
-                // Combinar para formar el nombre de usuario
+                // Combinar nombre completo con la inicial del apellido
                 uidInput.value = nombre + inicialApellido;
                 
                 // Actualizar también el DN
                 updateDn();
+                
+                // Actualizar el home directory
+                homeDirectory.value = '/home/' + uidInput.value;
             }
         }
 
@@ -221,9 +224,34 @@
         // Función para actualizar el DN
         function updateDn() {
             if (uidInput.value) {
-                dnPreviewText.textContent = `uid=${uidInput.value},ou=people,dc=tierno,dc=es`;
-            } else {
-                dnPreviewText.textContent = 'uid=,ou=people,dc=tierno,dc=es';
+                dnPreviewText.textContent = 'uid=' + uidInput.value + ',ou=people,dc=tierno,dc=es';
+            }
+        }
+
+        // Función para buscar y seleccionar el grupo por GID
+        async function findGroupByGid(gid) {
+            if (!gid) return;
+            
+            try {
+                const response = await fetch(`/api/ldap/groups/gid/${gid}`);
+                const data = await response.json();
+                
+                if (data.success && data.group) {
+                    // Seleccionar el grupo en el select
+                    const options = gruposSelect.options;
+                    for (let i = 0; i < options.length; i++) {
+                        if (options[i].value === data.group) {
+                            options[i].selected = true;
+                            break;
+                        }
+                    }
+                } else {
+                    alert('El GID especificado no existe en ningún grupo');
+                    gidNumberInput.value = '';
+                }
+            } catch (error) {
+                console.error('Error al buscar grupo por GID:', error);
+                alert('Error al buscar el grupo por GID');
             }
         }
 
@@ -305,7 +333,12 @@
             btnRoleAlumno.addEventListener('click', () => selectGroupsByRole('alumno'));
         }
 
-        // Inicializar valores
+        // Evento para buscar y seleccionar grupo por GID
+        gidNumberInput.addEventListener('change', function() {
+            findGroupByGid(this.value);
+        });
+
+        // Inicializar
         updateUsername();
         updateEmail();
         updateDn();
