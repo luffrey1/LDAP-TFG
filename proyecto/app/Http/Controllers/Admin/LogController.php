@@ -119,11 +119,16 @@ class LogController extends Controller
                     'type' => 'access',
                     'details' => [
                         'hostname' => $log->hostname,
-                        'ip' => $log->ip
+                        'ip' => $log->ip,
+                        'action_type' => 'intento_acceso',
+                        'status' => 'fallido'
                     ]
                 ];
             }
         } else {
+            $details = json_decode($log->details ?? '{}', true);
+            $actionType = $this->getActionType($log->action);
+            
             $log = (object) [
                 'id' => $log->id,
                 'user' => $log->user,
@@ -132,7 +137,10 @@ class LogController extends Controller
                 'created_at' => Carbon::parse($log->created_at),
                 'level' => $log->level,
                 'type' => $this->getLogType($log->action),
-                'details' => json_decode($log->details ?? '{}', true)
+                'details' => array_merge($details, [
+                    'action_type' => $actionType['type'],
+                    'action_details' => $actionType['details']
+                ])
             ];
         }
 
@@ -201,6 +209,52 @@ class LogController extends Controller
         }
         
         return 'other';
+    }
+
+    private function getActionType($action)
+    {
+        $action = strtolower($action);
+        $details = [];
+
+        // Detectar tipo de acción
+        if (strpos($action, 'crear') !== false || strpos($action, 'create') !== false) {
+            $type = 'creación';
+            $details['operation'] = 'crear';
+        } elseif (strpos($action, 'actualizar') !== false || strpos($action, 'update') !== false || strpos($action, 'editar') !== false || strpos($action, 'edit') !== false) {
+            $type = 'actualización';
+            $details['operation'] = 'actualizar';
+        } elseif (strpos($action, 'eliminar') !== false || strpos($action, 'delete') !== false) {
+            $type = 'eliminación';
+            $details['operation'] = 'eliminar';
+        } elseif (strpos($action, 'login') !== false || strpos($action, 'acceso') !== false) {
+            $type = 'acceso';
+            $details['operation'] = 'acceso';
+        } elseif (strpos($action, 'password') !== false || strpos($action, 'contraseña') !== false) {
+            $type = 'contraseña';
+            $details['operation'] = 'cambio_contraseña';
+        } elseif (strpos($action, 'permisos') !== false || strpos($action, 'permissions') !== false) {
+            $type = 'permisos';
+            $details['operation'] = 'cambio_permisos';
+        } else {
+            $type = 'otra';
+            $details['operation'] = 'otra';
+        }
+
+        // Detectar entidad afectada
+        if (strpos($action, 'usuario') !== false || strpos($action, 'user') !== false) {
+            $details['entity'] = 'usuario';
+        } elseif (strpos($action, 'grupo') !== false || strpos($action, 'group') !== false) {
+            $details['entity'] = 'grupo';
+        } elseif (strpos($action, 'miembro') !== false || strpos($action, 'member') !== false) {
+            $details['entity'] = 'miembro';
+        } else {
+            $details['entity'] = 'sistema';
+        }
+
+        return [
+            'type' => $type,
+            'details' => $details
+        ];
     }
 
     public function delete($count)

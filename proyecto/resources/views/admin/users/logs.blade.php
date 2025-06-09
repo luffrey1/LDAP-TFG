@@ -84,17 +84,35 @@
                 </button>
             </div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label class="font-weight-bold">ID:</label>
-                    <p id="logId" class="text-muted"></p>
-                </div>
-                <div class="form-group">
-                    <label class="font-weight-bold">Fecha:</label>
-                    <p id="logDate" class="text-muted"></p>
-                </div>
-                <div class="form-group">
-                    <label class="font-weight-bold">Usuario:</label>
-                    <p id="logUser" class="text-muted"></p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="font-weight-bold">ID:</label>
+                            <p id="logId" class="text-muted"></p>
+                        </div>
+                        <div class="form-group">
+                            <label class="font-weight-bold">Fecha:</label>
+                            <p id="logDate" class="text-muted"></p>
+                        </div>
+                        <div class="form-group">
+                            <label class="font-weight-bold">Usuario:</label>
+                            <p id="logUser" class="text-muted"></p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="font-weight-bold">Tipo de Acción:</label>
+                            <p id="logActionType" class="text-muted"></p>
+                        </div>
+                        <div class="form-group">
+                            <label class="font-weight-bold">Entidad:</label>
+                            <p id="logEntity" class="text-muted"></p>
+                        </div>
+                        <div class="form-group">
+                            <label class="font-weight-bold">Operación:</label>
+                            <p id="logOperation" class="text-muted"></p>
+                        </div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label class="font-weight-bold">Acción:</label>
@@ -103,6 +121,9 @@
                 <div class="form-group">
                     <label class="font-weight-bold">Descripción:</label>
                     <p id="logDescription" class="text-muted"></p>
+                </div>
+                <div id="logDetails" class="mt-3">
+                    <!-- Los detalles adicionales se mostrarán aquí -->
                 </div>
             </div>
         </div>
@@ -173,6 +194,36 @@ $(document).ready(function() {
             $('#logUser').text(data.user);
             $('#logAction').text(data.action);
             $('#logDescription').text(data.description);
+            
+            // Mostrar detalles de la acción
+            if (data.details) {
+                $('#logActionType').text(data.details.action_type || 'No especificado');
+                $('#logEntity').text(data.details.action_details?.entity || 'No especificado');
+                $('#logOperation').text(data.details.action_details?.operation || 'No especificado');
+                
+                // Mostrar detalles adicionales
+                let detailsHtml = '<div class="card mt-3"><div class="card-header bg-light">Detalles Adicionales</div><div class="card-body">';
+                
+                // Mostrar detalles específicos según el tipo de log
+                if (data.type === 'access') {
+                    detailsHtml += `
+                        <p><strong>Hostname:</strong> ${data.details.hostname || 'No especificado'}</p>
+                        <p><strong>IP:</strong> ${data.details.ip || 'No especificado'}</p>
+                        <p><strong>Estado:</strong> ${data.details.status || 'No especificado'}</p>
+                    `;
+                } else {
+                    // Mostrar otros detalles si existen
+                    Object.entries(data.details).forEach(([key, value]) => {
+                        if (key !== 'action_type' && key !== 'action_details') {
+                            detailsHtml += `<p><strong>${key}:</strong> ${value}</p>`;
+                        }
+                    });
+                }
+                
+                detailsHtml += '</div></div>';
+                $('#logDetails').html(detailsHtml);
+            }
+            
             $('#logDetailsModal').modal('show');
         });
     }
