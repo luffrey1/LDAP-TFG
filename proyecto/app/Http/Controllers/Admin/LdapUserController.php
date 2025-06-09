@@ -3025,9 +3025,18 @@ class LdapUserController extends Controller
                            ->where('gidNumber', '=', $gid)
                            ->get();
 
-            Log::info('Resultados de la búsqueda:', ['count' => $groups->count()]);
+            Log::info('Resultados de la búsqueda:', ['count' => is_array($groups) ? count($groups) : $groups->count()]);
 
-            if ($groups->count() > 0) {
+            if (is_array($groups) && count($groups) > 0) {
+                $group = $groups[0];
+                $groupName = is_array($group) ? ($group['cn'][0] ?? '') : $group->getFirstAttribute('cn');
+                Log::info('Grupo encontrado:', ['name' => $groupName]);
+                
+                return response()->json([
+                    'success' => true,
+                    'group' => $groupName
+                ]);
+            } elseif (!is_array($groups) && $groups->count() > 0) {
                 $group = $groups->first();
                 $groupName = $group->getFirstAttribute('cn');
                 Log::info('Grupo encontrado:', ['name' => $groupName]);
