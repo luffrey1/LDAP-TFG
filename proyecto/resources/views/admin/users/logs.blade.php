@@ -175,11 +175,42 @@ $(document).ready(function() {
         description = description.toLowerCase();
         console.log('Analizando descripción:', description);
         
-        // Patrones de detección
+        // Patrones de detección mejorados
         const patterns = {
-            users: ['usuario ldap creado', 'usuario ldap actualizado', 'usuario ldap eliminado', 'usuario actualizado'],
-            groups: ['grupo ldap creado', 'grupo ldap actualizado', 'grupo ldap eliminado', 'grupo actualizado'],
-            access: ['intento de acceso', 'acceso exitoso', 'acceso fallido', 'desde', 'ip:', 'user agent']
+            users: [
+                'usuario ldap creado',
+                'usuario ldap actualizado',
+                'usuario ldap eliminado',
+                'usuario actualizado',
+                'usuario creado',
+                'usuario eliminado',
+                'nuevo usuario',
+                'modificación de usuario'
+            ],
+            groups: [
+                'grupo ldap creado',
+                'grupo ldap actualizado',
+                'grupo ldap eliminado',
+                'grupo actualizado',
+                'grupo creado',
+                'grupo eliminado',
+                'nuevo grupo',
+                'modificación de grupo',
+                'miembro añadido al grupo',
+                'miembro eliminado del grupo',
+                'grupo modificado'
+            ],
+            access: [
+                'intento de acceso',
+                'acceso exitoso',
+                'acceso fallido',
+                'desde',
+                'ip:',
+                'user agent',
+                'login',
+                'logout',
+                'sesión'
+            ]
         };
 
         // Verificar cada patrón
@@ -192,6 +223,12 @@ $(document).ready(function() {
             }
         }
 
+        // Si no coincide con ningún patrón, intentar determinar por contexto
+        if (description.includes('grupo') || description.includes('group')) {
+            console.log('Tipo detectado por contexto: groups');
+            return 'groups';
+        }
+
         console.log('No se detectó tipo específico, usando "all"');
         return 'all';
     }
@@ -200,6 +237,7 @@ $(document).ready(function() {
     function assignTypesToRows() {
         console.log('Iniciando asignación de tipos a filas...');
         let typeCount = { users: 0, groups: 0, access: 0, all: 0 };
+        let rowDetails = [];
 
         table.rows().every(function() {
             const data = this.data();
@@ -215,15 +253,19 @@ $(document).ready(function() {
             $row.attr('data-type', type);
             typeCount[type]++;
 
-            console.log('Fila asignada:', {
+            const rowDetail = {
                 description: description,
                 type: type,
                 rowIndex: this.index(),
                 dataType: $row.attr('data-type')
-            });
+            };
+            rowDetails.push(rowDetail);
+
+            console.log('Fila asignada:', rowDetail);
         });
 
         console.log('Conteo de tipos:', typeCount);
+        console.log('Detalles de todas las filas:', rowDetails);
         return typeCount;
     }
 
@@ -234,21 +276,27 @@ $(document).ready(function() {
         // Obtener todas las filas
         const $rows = $('#logsTable tbody tr');
         let visibleCount = 0;
+        let rowDetails = [];
 
         $rows.each(function(index) {
             const $row = $(this);
             const rowType = $row.attr('data-type');
-            console.log(`Fila ${index}:`, {
+            const description = $row.find('td:eq(2)').text();
+            
+            const rowDetail = {
+                index: index,
                 tipo: rowType,
                 esperado: type,
-                descripcion: $row.find('td:eq(2)').text()
-            });
+                descripcion: description,
+                visible: type === 'all' || rowType === type
+            };
+            rowDetails.push(rowDetail);
             
-            const shouldShow = type === 'all' || rowType === type;
+            console.log(`Fila ${index}:`, rowDetail);
             
             // Aplicar visibilidad
-            $row.toggle(shouldShow);
-            if (shouldShow) visibleCount++;
+            $row.toggle(rowDetail.visible);
+            if (rowDetail.visible) visibleCount++;
         });
 
         console.log('Filtrado completado:', {
@@ -260,7 +308,8 @@ $(document).ready(function() {
                 groups: $rows.filter('[data-type="groups"]').length,
                 access: $rows.filter('[data-type="access"]').length,
                 all: $rows.filter('[data-type="all"]').length
-            }
+            },
+            detalles: rowDetails
         });
 
         // Actualizar contador en la interfaz
