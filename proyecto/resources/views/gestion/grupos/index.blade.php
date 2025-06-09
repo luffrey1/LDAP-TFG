@@ -192,8 +192,9 @@ const groupsTable = document.getElementById('groupsTable');
 function updateGroups() {
     const search = searchInput.value;
     const type = typeSelect.value;
+    const page = new URLSearchParams(window.location.search).get('page') || 1;
     
-    fetch(`{{ route('gestion.grupos.index') }}?search=${encodeURIComponent(search)}&type=${encodeURIComponent(type)}`, {
+    fetch(`{{ route('gestion.grupos.index') }}?search=${encodeURIComponent(search)}&type=${encodeURIComponent(type)}&page=${page}`, {
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
         }
@@ -253,6 +254,25 @@ function updateGroups() {
                 </tr>
             `;
         }).join('') || '<tr><td colspan="6" class="text-center">No hay grupos disponibles</td></tr>';
+
+        // Actualizar la paginación
+        const paginationContainer = document.querySelector('.pagination');
+        if (paginationContainer && data.links) {
+            paginationContainer.innerHTML = data.links;
+        }
+
+        // Actualizar el contador de resultados
+        const resultsInfo = document.querySelector('.d-flex.justify-content-between');
+        if (resultsInfo) {
+            resultsInfo.innerHTML = `
+                <div>
+                    Mostrando ${data.from || 0} a ${data.to || 0} de ${data.total || 0} grupos
+                </div>
+                <div>
+                    ${data.links || ''}
+                </div>
+            `;
+        }
     })
     .catch(error => {
         console.error('Error:', error);
@@ -260,13 +280,34 @@ function updateGroups() {
     });
 }
 
-// Add event listeners for search and type filter
+// Modificar el evento de búsqueda para mantener la página actual
 searchInput.addEventListener('input', function() {
     clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(updateGroups, 300);
+    searchTimeout = setTimeout(() => {
+        const url = new URL(window.location.href);
+        url.searchParams.set('page', '1'); // Resetear a la primera página en búsquedas
+        window.history.pushState({}, '', url);
+        updateGroups();
+    }, 300);
 });
 
-typeSelect.addEventListener('change', updateGroups);
+// Modificar el evento de filtro para mantener la página actual
+typeSelect.addEventListener('change', function() {
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', '1'); // Resetear a la primera página en cambios de filtro
+    window.history.pushState({}, '', url);
+    updateGroups();
+});
+
+// Añadir evento para los enlaces de paginación
+document.addEventListener('click', function(e) {
+    if (e.target.matches('.pagination .page-link')) {
+        e.preventDefault();
+        const url = new URL(e.target.href);
+        window.history.pushState({}, '', url);
+        updateGroups();
+    }
+});
 
 // Initial load
 document.addEventListener('DOMContentLoaded', function() {

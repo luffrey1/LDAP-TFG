@@ -176,8 +176,11 @@ class LdapGroupController extends Controller
                 return response()->json([
                     'groups' => $paginatedGroups,
                     'total' => $total,
+                    'from' => $paginator->firstItem(),
+                    'to' => $paginator->lastItem(),
                     'currentPage' => $page,
-                    'lastPage' => $paginator->lastPage()
+                    'lastPage' => $paginator->lastPage(),
+                    'links' => $paginator->links()->toHtml()
                 ]);
             }
             
