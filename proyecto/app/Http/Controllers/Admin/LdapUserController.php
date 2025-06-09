@@ -2896,29 +2896,6 @@ class LdapUserController extends Controller
     public function toggleAdmin(Request $request)
     {
         try {
-            // Obtener la configuración LDAP
-            $config = config('ldap.connections.default');
-            
-            // Crear conexión LDAP usando la configuración
-            $connection = new Connection([
-                'hosts' => $config['hosts'],
-                'port' => 636, // Forzar puerto 636 para LDAPS
-                'base_dn' => $config['base_dn'],
-                'username' => $config['username'],
-                'password' => $config['password'],
-                'use_ssl' => true, // Forzar SSL
-                'use_tls' => false, // Deshabilitar TLS
-                'timeout' => $config['timeout'],
-                'options' => [
-                    LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
-                    LDAP_OPT_REFERRALS => 0,
-                    LDAP_OPT_PROTOCOL_VERSION => 3,
-                ]
-            ]);
-
-            $connection->connect();
-            Log::debug("Conexión LDAP establecida");
-
             $userDn = base64_decode($request->dn);
             Log::debug("DN decodificado: " . $userDn);
             
@@ -2934,40 +2911,79 @@ class LdapUserController extends Controller
                 throw new \Exception('No se pudo extraer el UID del DN');
             }
 
-            // Buscar el usuario por UID en la OU people
-            $user = $connection->query()
-                ->in($this->peopleOu)
-                ->where('uid', '=', $uid)
-                ->first();
+            // Obtener la conexión LDAP nativa
+            $ldapConn = ldap_connect(config('ldap.connections.default.hosts')[0], config('ldap.connections.default.port'));
+            ldap_set_option($ldapConn, LDAP_OPT_PROTOCOL_VERSION, 3);
+            ldap_set_option($ldapConn, LDAP_OPT_REFERRALS, 0);
+            ldap_set_option($ldapConn, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
 
-            Log::debug("Resultado de búsqueda de usuario:", [
-                'uid' => $uid,
-                'ou' => $this->peopleOu,
-                'user_found' => !empty($user),
-                'user_data' => $user
-            ]);
+            $bind = ldap_bind(
+                $ldapConn, 
+                config('ldap.connections.default.username'), 
+                config('ldap.connections.default.password')
+            );
 
-            if (!$user) {
+            if (!$bind) {
+                throw new \Exception('Error al conectar con LDAP: ' . ldap_error($ldapConn));
+            }
+
+            Log::debug("Conexión LDAP establecida");
+
+            // Buscar el usuario
+            $search = ldap_read($ldapConn, $userDn, '(objectClass=*)', ['uid']);
+            if (!$search) {
+                throw new \Exception('Error al buscar usuario: ' . ldap_error($ldapConn));
+            }
+
+            $entries = ldap_get_entries($ldapConn, $search);
+            if ($entries['count'] == 0) {
                 throw new \Exception('Usuario no encontrado');
             }
+
+            Log::debug("Usuario encontrado");
 
             if ($uid === 'ldap-admin') {
                 throw new \Exception('No se puede modificar el estado de administrador del usuario ldap-admin');
             }
 
-            $userGroups = $this->getUserGroups($userDn);
-            Log::debug("Grupos del usuario:", $userGroups);
-            
-            $isAdmin = in_array('ldapadmins', $userGroups);
+            // Verificar si el usuario está en el grupo ldapadmins
+            $adminGroupDn = 'cn=ldapadmins,ou=groups,dc=tierno,dc=es';
+            $groupSearch = ldap_read($ldapConn, $adminGroupDn, '(objectClass=*)', ['uniqueMember']);
+            if (!$groupSearch) {
+                throw new \Exception('Error al buscar grupo ldapadmins: ' . ldap_error($ldapConn));
+            }
+
+            $groupEntries = ldap_get_entries($ldapConn, $groupSearch);
+            $isAdmin = false;
+
+            if ($groupEntries['count'] > 0 && isset($groupEntries[0]['uniquemember'])) {
+                for ($i = 0; $i < $groupEntries[0]['uniquemember']['count']; $i++) {
+                    if ($groupEntries[0]['uniquemember'][$i] === $userDn) {
+                        $isAdmin = true;
+                        break;
+                    }
+                }
+            }
+
             Log::debug("Es admin: " . ($isAdmin ? 'true' : 'false'));
 
             if ($isAdmin) {
-                $this->removeUserFromGroup($userDn, $this->adminGroupDn);
+                // Remover del grupo
+                $mod = ['uniqueMember' => $userDn];
+                if (!ldap_mod_del($ldapConn, $adminGroupDn, $mod)) {
+                    throw new \Exception('Error al remover usuario del grupo: ' . ldap_error($ldapConn));
+                }
                 Log::info("Usuario {$uid} removido del grupo ldapadmins");
             } else {
-                $this->addUserToGroup($userDn, $this->adminGroupDn);
+                // Añadir al grupo
+                $mod = ['uniqueMember' => $userDn];
+                if (!ldap_mod_add($ldapConn, $adminGroupDn, $mod)) {
+                    throw new \Exception('Error al añadir usuario al grupo: ' . ldap_error($ldapConn));
+                }
                 Log::info("Usuario {$uid} agregado al grupo ldapadmins");
             }
+
+            ldap_close($ldapConn);
 
             return response()->json([
                 'success' => true,
