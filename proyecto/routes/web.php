@@ -170,6 +170,7 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware', 'App\Http\Mi
     
     // Logs de actividad LDAP
     Route::get('/logs', [App\Http\Controllers\Admin\LogController::class, 'index'])->name('logs');
+    Route::get('/logs/{id}', [App\Http\Controllers\Admin\LogController::class, 'show'])->name('logs.show');
     Route::get('/logs/delete/{count}', [App\Http\Controllers\Admin\LogController::class, 'delete'])->name('logs.delete');
 
     // Nuevas rutas de configuración del sistema

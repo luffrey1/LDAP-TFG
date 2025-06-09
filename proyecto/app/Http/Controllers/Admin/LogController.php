@@ -3,23 +3,129 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\ActivityLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class LogController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $logs = ActivityLog::orderBy('created_at', 'desc')->paginate(50);
+        // Obtener logs de activity_logs
+        $activityLogs = DB::table('activity_logs')
+            ->select('id', 'user', 'action', 'description', 'created_at', 'level', 'details')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($log) {
+                return (object) [
+                    'id' => $log->id,
+                    'user' => $log->user,
+                    'action' => $log->action,
+                    'description' => $log->description,
+                    'created_at' => Carbon::parse($log->created_at),
+                    'level' => $log->level,
+                    'type' => $this->getLogType($log->action),
+                    'details' => json_decode($log->details ?? '{}', true)
+                ];
+            });
+
+        // Obtener logs de access_attempts
+        $accessLogs = DB::table('access_attempts')
+            ->select('id', 'username as user', DB::raw("'Intento de acceso' as action"), 
+                    DB::raw("CONCAT('Desde ', hostname, ' (', ip, ')') as description"), 
+                    'created_at', DB::raw("'WARNING' as level"),
+                    DB::raw("JSON_OBJECT('hostname', hostname, 'ip', ip) as details"))
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($log) {
+                return (object) [
+                    'id' => $log->id,
+                    'user' => $log->user,
+                    'action' => $log->action,
+                    'description' => $log->description,
+                    'created_at' => Carbon::parse($log->created_at),
+                    'level' => $log->level,
+                    'type' => 'access',
+                    'details' => json_decode($log->details, true)
+                ];
+            });
+
+        // Combinar y ordenar todos los logs
+        $logs = $activityLogs->concat($accessLogs)
+            ->sortByDesc('created_at')
+            ->values();
+
         return view('admin.users.logs', compact('logs'));
+    }
+
+    public function show($id)
+    {
+        // Buscar el log en activity_logs
+        $log = DB::table('activity_logs')
+            ->where('id', $id)
+            ->first();
+
+        if (!$log) {
+            // Si no está en activity_logs, buscar en access_attempts
+            $log = DB::table('access_attempts')
+                ->where('id', $id)
+                ->first();
+
+            if ($log) {
+                $log = (object) [
+                    'id' => $log->id,
+                    'user' => $log->username,
+                    'action' => 'Intento de acceso',
+                    'description' => "Intento de acceso desde {$log->hostname} ({$log->ip})",
+                    'created_at' => Carbon::parse($log->created_at),
+                    'level' => 'WARNING',
+                    'type' => 'access',
+                    'details' => [
+                        'hostname' => $log->hostname,
+                        'ip' => $log->ip
+                    ]
+                ];
+            }
+        } else {
+            $log = (object) [
+                'id' => $log->id,
+                'user' => $log->user,
+                'action' => $log->action,
+                'description' => $log->description,
+                'created_at' => Carbon::parse($log->created_at),
+                'level' => $log->level,
+                'type' => $this->getLogType($log->action),
+                'details' => json_decode($log->details ?? '{}', true)
+            ];
+        }
+
+        if (!$log) {
+            return response()->json(['error' => 'Log no encontrado'], 404);
+        }
+
+        return response()->json($log);
+    }
+
+    private function getLogType($action)
+    {
+        if (strpos($action, 'Usuario') !== false) {
+            return 'user';
+        } elseif (strpos($action, 'Grupo') !== false) {
+            return 'group';
+        } elseif (strpos($action, 'acceso') !== false) {
+            return 'access';
+        }
+        return 'other';
     }
 
     public function delete($count)
     {
         try {
             if ($count === 'all') {
-                ActivityLog::truncate();
-                return redirect()->route('admin.logs.index')->with('status', 'Todos los logs han sido eliminados.');
+                DB::table('activity_logs')->truncate();
+                DB::table('access_attempts')->truncate();
+                return redirect()->route('admin.logs')->with('status', 'Todos los logs han sido eliminados.');
             }
 
             $count = (int) $count;
@@ -27,11 +133,21 @@ class LogController extends Controller
                 throw new \Exception('Número de logs inválido');
             }
 
-            $logs = ActivityLog::orderBy('created_at', 'desc')->take($count)->get();
-            $deleted = $logs->count();
-            $logs->each->delete();
+            // Eliminar logs de activity_logs
+            $activityLogs = DB::table('activity_logs')
+                ->orderBy('created_at', 'desc')
+                ->take($count)
+                ->delete();
 
-            return redirect()->route('admin.logs')->with('status', "Se han eliminado {$deleted} logs.");
+            // Eliminar logs de access_attempts
+            $accessLogs = DB::table('access_attempts')
+                ->orderBy('created_at', 'desc')
+                ->take($count)
+                ->delete();
+
+            $totalDeleted = $activityLogs + $accessLogs;
+
+            return redirect()->route('admin.logs')->with('status', "Se han eliminado {$totalDeleted} logs.");
         } catch (\Exception $e) {
             return redirect()->route('admin.logs')->with('error', 'Error al eliminar los logs: ' . $e->getMessage());
         }
