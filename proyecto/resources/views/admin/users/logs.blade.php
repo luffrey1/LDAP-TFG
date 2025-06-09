@@ -5,68 +5,65 @@
     <div class="row">
         <div class="col-12">
             <div class="card shadow">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h3 class="card-title mb-0">
                         <i class="fas fa-history mr-2"></i>Logs del Sistema
                     </h3>
-                    <div class="card-tools">
-                        <div class="input-group input-group-sm" style="width: 250px;">
-                            <input type="text" id="userSearch" class="form-control float-right" placeholder="Buscar usuario...">
+                    <div class="d-flex align-items-center">
+                        <div class="input-group input-group-sm mr-3" style="width: 250px;">
+                            <input type="text" id="searchInput" class="form-control" placeholder="Buscar...">
                             <div class="input-group-append">
                                 <button type="button" class="btn btn-light" id="clearSearch">
                                     <i class="fas fa-times"></i>
                                 </button>
                             </div>
                         </div>
+                        <span id="visibleCount" class="badge badge-light"></span>
                     </div>
                 </div>
                 <div class="card-body">
                     <!-- Pestañas de filtro -->
                     <ul class="nav nav-tabs nav-fill mb-4" id="logTabs" role="tablist">
                         <li class="nav-item">
-                            <a class="nav-link active" id="all-tab" data-toggle="tab" href="#all" role="tab">
+                            <a class="nav-link active" id="all-tab" data-type="all" href="#all" role="tab">
                                 <i class="fas fa-list mr-1"></i> Todos
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="users-tab" data-toggle="tab" href="#users" role="tab">
+                            <a class="nav-link" id="users-tab" data-type="users" href="#users" role="tab">
                                 <i class="fas fa-users mr-1"></i> Usuarios
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="groups-tab" data-toggle="tab" href="#groups" role="tab">
+                            <a class="nav-link" id="groups-tab" data-type="groups" href="#groups" role="tab">
                                 <i class="fas fa-user-friends mr-1"></i> Grupos
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="access-tab" data-toggle="tab" href="#access" role="tab">
+                            <a class="nav-link" id="access-tab" data-type="access" href="#access" role="tab">
                                 <i class="fas fa-sign-in-alt mr-1"></i> Accesos
                             </a>
                         </li>
                     </ul>
 
-                    <!-- Contenido de las pestañas -->
-                    <div class="tab-content" id="logTabsContent">
-                        <div class="tab-pane fade show active" id="all" role="tabpanel">
-                            <div class="table-responsive">
-                                <table class="table table-hover" id="logsTable">
-                                    <thead class="thead-light">
-                                        <tr>
-                                            <th>Usuario</th>
-                                            <th>Acción</th>
-                                            <th>Descripción</th>
-                                            <th>Fecha</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="logsTableBody">
-                                        @include('admin.users.logs_table', ['logs' => $logs])
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div class="mt-4">
-                                {{ $logs->links() }}
-                            </div>
-                        </div>
+                    <!-- Tabla de logs -->
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="logsTable">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Usuario</th>
+                                    <th>Acción</th>
+                                    <th>Descripción</th>
+                                    <th>Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logsTableBody">
+                                <!-- Los logs se cargarán aquí dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="pagination" class="mt-4">
+                        <!-- La paginación se cargará aquí dinámicamente -->
                     </div>
                 </div>
             </div>
@@ -132,6 +129,7 @@ $(document).ready(function() {
             page: page
         }, function(response) {
             $('#logsTableBody').html(response.html);
+            $('#pagination').html(response.pagination);
             updateVisibleCount(response.total);
         });
     }
@@ -139,15 +137,16 @@ $(document).ready(function() {
     // Manejar cambios de pestaña
     $('#logTabs a').on('click', function(e) {
         e.preventDefault();
-        $(this).tab('show');
+        $('#logTabs a').removeClass('active');
+        $(this).addClass('active');
         
-        const type = $(this).attr('id').replace('-tab', '');
+        const type = $(this).data('type');
         loadLogs(type);
     });
 
-    // Búsqueda de usuario
+    // Búsqueda
     let searchTimeout;
-    $('#userSearch').on('keyup', function() {
+    $('#searchInput').on('keyup', function() {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
             const searchText = $(this).val();
@@ -157,7 +156,7 @@ $(document).ready(function() {
 
     // Limpiar búsqueda
     $('#clearSearch').on('click', function() {
-        $('#userSearch').val('');
+        $('#searchInput').val('');
         loadLogs(currentType, '');
     });
 
@@ -180,13 +179,15 @@ $(document).ready(function() {
 
     // Función para actualizar el contador
     function updateVisibleCount(count) {
-        const $counter = $('#visibleCount');
-        if ($counter.length === 0) {
-            $('.card-header').append('<span id="visibleCount" class="ml-3 badge badge-info">Filas visibles: ' + count + '</span>');
-        } else {
-            $counter.text('Filas visibles: ' + count);
-        }
+        $('#visibleCount').text('Filas visibles: ' + count);
     }
+
+    // Manejar paginación
+    $(document).on('click', '.pagination a', function(e) {
+        e.preventDefault();
+        const page = $(this).attr('href').split('page=')[1];
+        loadLogs(currentType, currentSearch, page);
+    });
 
     // Cargar logs iniciales
     loadLogs();
@@ -224,17 +225,6 @@ $(document).ready(function() {
 .badge {
     padding: 0.5em 0.75em;
     font-weight: 500;
-    background-color: #e9ecef;
-    color: #000 !important;
-}
-.badge-info {
-    background-color: #e9ecef !important;
-}
-.badge-warning {
-    background-color: #ffeeba !important;
-}
-.badge-success {
-    background-color: #d4edda !important;
 }
 .card {
     border: none;
