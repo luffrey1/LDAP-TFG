@@ -203,18 +203,19 @@ $(document).ready(function() {
         console.log('Starting filter for type:', type);
         var visibleCount = 0;
         
-        $('.log-row').each(function() {
-            var $row = $(this);
-            var rowType = $row.attr('data-type');
-            console.log('Row type:', rowType, 'Filter type:', type);
-            
-            if (type === 'all' || rowType === type) {
-                $row.show();
+        // Primero ocultar todas las filas
+        $('.log-row').hide();
+        
+        // Luego mostrar solo las filas del tipo seleccionado
+        if (type === 'all') {
+            $('.log-row').show();
+            visibleCount = $('.log-row').length;
+        } else {
+            $('.log-row[data-type="' + type + '"]').each(function() {
+                $(this).show();
                 visibleCount++;
-            } else {
-                $row.hide();
-            }
-        });
+            });
+        }
         
         console.log('Filter complete. Visible rows:', visibleCount);
     }
