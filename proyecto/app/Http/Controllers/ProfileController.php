@@ -215,10 +215,17 @@ class ProfileController extends Controller
                         ]);
                         
                         $adminLdap->connect();
-                        $adminLdap->query()
+                        $ldapEntry = $adminLdap->query()
                             ->where('dn', '=', $userDn)
-                            ->first()
-                            ->update(['userPassword' => $updateData['userPassword']]);
+                            ->first();
+
+                        if (!$ldapEntry) {
+                            Log::error('No se encontró el usuario en LDAP para actualizar la contraseña: ' . $userDn);
+                            return back()->with('error', 'No se pudo encontrar el usuario en LDAP para actualizar la contraseña');
+                        }
+
+                        $ldapEntry->update(['userPassword' => $updateData['userPassword']]);
+                        Log::info('Contraseña actualizada correctamente para el usuario: ' . $userDn);
                             
                     } catch (\Exception $e) {
                         Log::error('Error al verificar contraseña actual: ' . $e->getMessage());
@@ -233,18 +240,24 @@ class ProfileController extends Controller
                     $entry = $ldap->query()
                         ->where('dn', '=', $dn)
                         ->first();
-                    if ($entry) {
-                        foreach ($updateData as $attribute => $value) {
-                            if ($attribute !== 'userPassword') { // No actualizar la contraseña aquí
-                                $entry->setAttribute($attribute, $value);
-                            }
-                        }
-                        $entry->save();
+
+                    if (!$entry) {
+                        Log::error('No se encontró el usuario en LDAP para actualizar los datos: ' . $dn);
+                        return back()->with('error', 'No se pudo encontrar el usuario en LDAP para actualizar los datos');
                     }
+
+                    foreach ($updateData as $attribute => $value) {
+                        if ($attribute !== 'userPassword') { // No actualizar la contraseña aquí
+                            $entry->setAttribute($attribute, $value);
+                        }
+                    }
+                    $entry->save();
+                    Log::info('Datos del usuario actualizados correctamente: ' . $dn);
                 } else {
                     // Si es un objeto, usar el método update
                     $updateDataWithoutPassword = array_diff_key($updateData, ['userPassword' => '']);
                     $ldapUser->update($updateDataWithoutPassword);
+                    Log::info('Datos del usuario actualizados correctamente usando objeto LDAP');
                 }
 
                 // Actualizar el usuario local
