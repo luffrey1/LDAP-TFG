@@ -206,14 +206,12 @@ class ProfileController extends Controller
                 if (is_array($ldapUser)) {
                     // Si es un array, usar la conexión LDAP directamente
                     $dn = $ldapUser['dn'];
-                    foreach ($updateData as $attribute => $value) {
-                        $ldap->modify($dn, [
-                            [
-                                'attrib'  => $attribute,
-                                'modtype' => LDAP_MODIFY_BATCH_REPLACE,
-                                'values'  => [$value],
-                            ],
-                        ]);
+                    $entry = $ldap->query()->findByDn($dn);
+                    if ($entry) {
+                        foreach ($updateData as $attribute => $value) {
+                            $entry->setAttribute($attribute, $value);
+                        }
+                        $entry->save();
                     }
                 } else {
                     // Si es un objeto, usar el método update
