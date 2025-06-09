@@ -234,72 +234,43 @@ class ProfileController extends Controller
 
                         Log::debug('Usuario encontrado en LDAP, actualizando contraseña');
                         
-                        try {
-                            // Obtener el DN del usuario
-                            $userDn = is_array($ldapEntry) ? $ldapEntry['dn'] : $ldapEntry->getDn();
-                            
-                            // Crear una nueva conexión LDAP para la actualización
-                            $updateLdap = new \LdapRecord\Connection([
-                                'hosts' => $config['hosts'],
-                                'port' => 636,
-                                'base_dn' => $config['base_dn'],
-                                'username' => $config['username'],
-                                'password' => $config['password'],
-                                'use_ssl' => true,
-                                'use_tls' => false,
-                                'options' => [
-                                    LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
-                                    LDAP_OPT_REFERRALS => 0,
-                                    LDAP_OPT_PROTOCOL_VERSION => 3,
-                                    LDAP_OPT_NETWORK_TIMEOUT => 5,
-                                ],
-                            ]);
-                            
-                            $updateLdap->connect();
-                            
-                            // Actualizar la contraseña usando el método correcto de LdapRecord
-                            $entry = $updateLdap->query()
-                                ->where('dn', '=', $userDn)
-                                ->first();
-
-                            if (!$entry) {
-                                Log::error('No se encontró la entrada LDAP para actualizar la contraseña: ' . $userDn);
-                                return back()->with('error', 'No se pudo encontrar la entrada LDAP para actualizar la contraseña');
-                            }
-
-                            $entry->setAttribute('userPassword', $this->hashPassword($newPassword));
-                            $entry->save();
-                            
-                            Log::info('Contraseña actualizada correctamente para el usuario: ' . $user->username);
-                            
-                            // Verificar que la contraseña se actualizó correctamente
-                            $verifyLdap = new \LdapRecord\Connection([
-                                'hosts' => $config['hosts'],
-                                'port' => 636,
-                                'base_dn' => $config['base_dn'],
-                                'username' => $userDn,
-                                'password' => $newPassword,
-                                'use_ssl' => true,
-                                'use_tls' => false,
-                                'options' => [
-                                    LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
-                                    LDAP_OPT_REFERRALS => 0,
-                                    LDAP_OPT_PROTOCOL_VERSION => 3,
-                                    LDAP_OPT_NETWORK_TIMEOUT => 5,
-                                ],
-                            ]);
-                            
-                            $verifyLdap->connect();
-                            Log::info('Verificación de contraseña exitosa para el usuario: ' . $user->username);
-                            
-                        } catch (\Exception $e) {
-                            Log::error('Error al actualizar la contraseña: ' . $e->getMessage());
-                            return back()->with('error', 'Error al actualizar la contraseña: ' . $e->getMessage());
+                        // Obtener el DN de la entrada
+                        $userDn = is_array($ldapEntry) ? $ldapEntry['dn'] : $ldapEntry->getDn();
+                        
+                        // Actualizar la contraseña
+                        if (is_array($ldapEntry)) {
+                            $ldapEntry['userPassword'] = [$this->hashPassword($newPassword)];
+                            $adminLdap->update($userDn, $ldapEntry);
+                        } else {
+                            $ldapEntry->setAttribute('userPassword', $this->hashPassword($newPassword));
+                            $ldapEntry->save();
                         }
-                            
+                        
+                        Log::info('Contraseña actualizada correctamente para el usuario: ' . $user->username);
+                        
+                        // Verificar que la contraseña se actualizó correctamente
+                        $verifyLdap = new \LdapRecord\Connection([
+                            'hosts' => $config['hosts'],
+                            'port' => 636,
+                            'base_dn' => $config['base_dn'],
+                            'username' => $userDn,
+                            'password' => $newPassword,
+                            'use_ssl' => true,
+                            'use_tls' => false,
+                            'options' => [
+                                LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                                LDAP_OPT_REFERRALS => 0,
+                                LDAP_OPT_PROTOCOL_VERSION => 3,
+                                LDAP_OPT_NETWORK_TIMEOUT => 5,
+                            ],
+                        ]);
+                        
+                        $verifyLdap->connect();
+                        Log::info('Verificación de contraseña exitosa para el usuario: ' . $user->username);
+                        
                     } catch (\Exception $e) {
-                        Log::error('Error al verificar contraseña actual: ' . $e->getMessage());
-                        return back()->withErrors(['current_password' => 'La contraseña actual es incorrecta']);
+                        Log::error('Error al actualizar la contraseña: ' . $e->getMessage());
+                        return back()->with('error', 'Error al actualizar la contraseña: ' . $e->getMessage());
                     }
                 }
 
