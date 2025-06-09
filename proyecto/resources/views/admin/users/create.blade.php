@@ -192,7 +192,7 @@
         // Función para actualizar el nombre de usuario basado en nombre y apellidos
         function updateUsername() {
             if (nombreInput.value && !uidInput.value) {
-                // Obtener el nombre completo en minúsculas sin acentos
+                // Obtener el nombre en minúsculas sin acentos
                 const nombre = nombreInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
                 
                 // Obtener la primera letra del apellido
@@ -216,8 +216,8 @@
         function updateEmail() {
             if (nombreInput.value && apellidosInput.value && !emailInput.value) {
                 const nombre = nombreInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
-                const apellidos = apellidosInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
-                emailInput.value = nombre + '.' + apellidos + '@tierno.es';
+                const apellido = apellidosInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
+                emailInput.value = nombre + apellido + '@tierno.es';
             }
         }
 
