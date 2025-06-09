@@ -2906,32 +2906,29 @@ class LdapUserController extends Controller
                 throw new \Exception('DN de usuario inválido');
             }
 
-            // Buscar el usuario directamente por DN
+            // Extraer el UID del DN
+            if (preg_match('/uid=([^,]+)/', $userDn, $matches)) {
+                $uid = $matches[1];
+                Log::debug("UID extraído del DN: " . $uid);
+            } else {
+                throw new \Exception('No se pudo extraer el UID del DN');
+            }
+
+            // Buscar el usuario por UID en la OU people
             $user = $this->connection->query()
-                ->where('dn', '=', $userDn)
+                ->in($this->peopleOu)
+                ->where('uid', '=', $uid)
                 ->first();
 
             Log::debug("Resultado de búsqueda de usuario:", [
-                'dn' => $userDn,
+                'uid' => $uid,
+                'ou' => $this->peopleOu,
                 'user_found' => !empty($user),
                 'user_data' => $user
             ]);
 
             if (!$user) {
                 throw new \Exception('Usuario no encontrado');
-            }
-
-            $uid = '';
-            if (is_array($user)) {
-                $uid = $user['uid'][0] ?? '';
-            } else {
-                $uid = $user->getFirstAttribute('uid');
-            }
-            
-            Log::debug("UID encontrado: " . $uid);
-            
-            if (empty($uid)) {
-                throw new \Exception('UID de usuario no encontrado');
             }
 
             if ($uid === 'ldap-admin') {
