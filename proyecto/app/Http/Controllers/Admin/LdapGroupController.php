@@ -147,11 +147,61 @@ class LdapGroupController extends Controller
                 ];
                 
                 // Procesar miembros según el tipo de grupo
+                $membersByUid = [];
                 if (isset($entry['memberuid'])) {
                     for ($j = 0; $j < $entry['memberuid']['count']; $j++) {
-                        $group['members'][] = $entry['memberuid'][$j];
+                        $uid = $entry['memberuid'][$j];
+                        $userSearch = ldap_search($ldapConn, "ou=people,{$this->baseDn}", "(uid=$uid)", ['uid', 'uidNumber', 'cn', 'givenname', 'sn']);
+                        if ($userSearch) {
+                            $userEntries = ldap_get_entries($ldapConn, $userSearch);
+                            if ($userEntries['count'] > 0) {
+                                $userEntry = $userEntries[0];
+                                $membersByUid[$uid] = [
+                                    'uid' => $uid,
+                                    'uidNumber' => $userEntry['uidnumber'][0] ?? '',
+                                    'cn' => $userEntry['cn'][0] ?? '',
+                                    'givenname' => $userEntry['givenname'][0] ?? '',
+                                    'sn' => $userEntry['sn'][0] ?? ''
+                                ];
+                            } else {
+                                $membersByUid[$uid] = ['uid' => $uid];
+                            }
+                        } else {
+                            $membersByUid[$uid] = ['uid' => $uid];
+                        }
                     }
                 }
+                // Procesar miembros para groupOfUniqueNames
+                if (isset($entry['uniquemember'])) {
+                    for ($j = 0; $j < $entry['uniquemember']['count']; $j++) {
+                        $userDn = $entry['uniquemember'][$j];
+                        if (strpos($userDn, 'uid=') === 0) {
+                            preg_match('/uid=([^,]+)/', $userDn, $matches);
+                            $uid = $matches[1] ?? null;
+                            if ($uid && !isset($membersByUid[$uid])) {
+                                $userSearch = ldap_search($ldapConn, "ou=people,{$this->baseDn}", "(uid=$uid)", ['uid', 'uidNumber', 'cn', 'givenname', 'sn']);
+                                if ($userSearch) {
+                                    $userEntries = ldap_get_entries($ldapConn, $userSearch);
+                                    if ($userEntries['count'] > 0) {
+                                        $userEntry = $userEntries[0];
+                                        $membersByUid[$uid] = [
+                                            'uid' => $uid,
+                                            'uidNumber' => $userEntry['uidnumber'][0] ?? '',
+                                            'cn' => $userEntry['cn'][0] ?? '',
+                                            'givenname' => $userEntry['givenname'][0] ?? '',
+                                            'sn' => $userEntry['sn'][0] ?? ''
+                                        ];
+                                    } else {
+                                        $membersByUid[$uid] = ['uid' => $uid];
+                                    }
+                                } else {
+                                    $membersByUid[$uid] = ['uid' => $uid];
+                                }
+                            }
+                        }
+                    }
+                }
+                $group['members'] = array_values($membersByUid);
                 
                 $groups[] = $group;
             }
@@ -687,16 +737,16 @@ class LdapGroupController extends Controller
             ];
             
             // Procesar miembros según el tipo de grupo
+            $membersByUid = [];
             if (isset($entry['memberuid'])) {
                 for ($i = 0; $i < $entry['memberuid']['count']; $i++) {
                     $uid = $entry['memberuid'][$i];
-                    // Buscar información adicional del usuario
                     $userSearch = ldap_search($ldapConn, "ou=people,{$this->baseDn}", "(uid=$uid)", ['uid', 'uidNumber', 'cn', 'givenname', 'sn']);
                     if ($userSearch) {
                         $userEntries = ldap_get_entries($ldapConn, $userSearch);
                         if ($userEntries['count'] > 0) {
                             $userEntry = $userEntries[0];
-                            $group['members'][] = [
+                            $membersByUid[$uid] = [
                                 'uid' => $uid,
                                 'uidNumber' => $userEntry['uidnumber'][0] ?? '',
                                 'cn' => $userEntry['cn'][0] ?? '',
@@ -704,10 +754,10 @@ class LdapGroupController extends Controller
                                 'sn' => $userEntry['sn'][0] ?? ''
                             ];
                         } else {
-                            $group['members'][] = ['uid' => $uid];
+                            $membersByUid[$uid] = ['uid' => $uid];
                         }
                     } else {
-                        $group['members'][] = ['uid' => $uid];
+                        $membersByUid[$uid] = ['uid' => $uid];
                     }
                 }
             }
@@ -715,18 +765,16 @@ class LdapGroupController extends Controller
             if (isset($entry['uniquemember'])) {
                 for ($i = 0; $i < $entry['uniquemember']['count']; $i++) {
                     $userDn = $entry['uniquemember'][$i];
-                    // Ignorar miembros ficticios como 'cn=nobody'
                     if (strpos($userDn, 'uid=') === 0) {
-                        // Extraer el UID del DN
                         preg_match('/uid=([^,]+)/', $userDn, $matches);
                         $uid = $matches[1] ?? null;
-                        if ($uid) {
+                        if ($uid && !isset($membersByUid[$uid])) {
                             $userSearch = ldap_search($ldapConn, "ou=people,{$this->baseDn}", "(uid=$uid)", ['uid', 'uidNumber', 'cn', 'givenname', 'sn']);
                             if ($userSearch) {
                                 $userEntries = ldap_get_entries($ldapConn, $userSearch);
                                 if ($userEntries['count'] > 0) {
                                     $userEntry = $userEntries[0];
-                                    $group['members'][] = [
+                                    $membersByUid[$uid] = [
                                         'uid' => $uid,
                                         'uidNumber' => $userEntry['uidnumber'][0] ?? '',
                                         'cn' => $userEntry['cn'][0] ?? '',
@@ -734,15 +782,16 @@ class LdapGroupController extends Controller
                                         'sn' => $userEntry['sn'][0] ?? ''
                                     ];
                                 } else {
-                                    $group['members'][] = ['uid' => $uid];
+                                    $membersByUid[$uid] = ['uid' => $uid];
                                 }
                             } else {
-                                $group['members'][] = ['uid' => $uid];
+                                $membersByUid[$uid] = ['uid' => $uid];
                             }
                         }
                     }
                 }
             }
+            $group['members'] = array_values($membersByUid);
             
             return view('gestion.grupos.show', compact('group'));
             
