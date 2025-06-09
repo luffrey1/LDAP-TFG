@@ -289,7 +289,10 @@ class AlumnoClase extends Model
                     'uid' => $this->getNextUidNumber($ldapConn),
                     'gid' => $tipoImportacion === 'profesor' ? '10000' : '10001',
                     'home' => "/home/{$username}",
-                    'shell' => '/bin/bash'
+                    'shell' => '/bin/bash',
+                    'ldap_dn' => $userDn,
+                    'usuario_ldap' => $username,
+                    'cuenta_creada' => true
                 ]);
             }
 
