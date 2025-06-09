@@ -27,4 +27,5 @@ Route::get('/config/telemetry-interval', function () {
     return response()->json(['interval' => (int)$interval]);
 });
 
-Route::get('/ldap/groups/gid/{gid}', [\App\Http\Controllers\Admin\LdapUserController::class, 'findGroupByGid']); 
+Route::get('/ldap/groups/gid/{gid}', [\App\Http\Controllers\Admin\LdapUserController::class, 'findGroupByGid']);
+Route::get('/ldap/groups/{group}/gid', [\App\Http\Controllers\Admin\LdapUserController::class, 'findGidByGroup']); 

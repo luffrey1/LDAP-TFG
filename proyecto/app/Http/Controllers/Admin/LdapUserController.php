@@ -3061,4 +3061,41 @@ class LdapUserController extends Controller
             ], 500);
         }
     }
+
+    public function findGidByGroup($group)
+    {
+        try {
+            $config = config('ldap.connections.default');
+            $ldap = new \LdapRecord\Connection($config);
+            $ldap->connect();
+
+            $query = $ldap->query();
+            $groupEntry = $query->in('ou=groups,' . $config['base_dn'])
+                ->where('cn', '=', $group)
+                ->first();
+
+            if (!$groupEntry) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Grupo no encontrado'
+                ], 404);
+            }
+
+            $gidNumber = is_array($groupEntry) ? 
+                $groupEntry['gidnumber'][0] : 
+                $groupEntry->getFirstAttribute('gidNumber');
+
+            return response()->json([
+                'success' => true,
+                'gidNumber' => $gidNumber
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al buscar GID por grupo: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al buscar el GID del grupo'
+            ], 500);
+        }
+    }
 } 

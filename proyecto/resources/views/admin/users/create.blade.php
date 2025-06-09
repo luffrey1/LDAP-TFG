@@ -262,6 +262,27 @@
             }
         }
 
+        // Función para buscar el GID de un grupo
+        async function findGidByGroup(groupName) {
+            if (!groupName) return;
+            
+            try {
+                const response = await fetch(`/api/ldap/groups/${groupName}/gid`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                if (data.success && data.gidNumber) {
+                    gidNumberInput.value = data.gidNumber;
+                } else {
+                    console.warn(`No se encontró GID para el grupo ${groupName}`);
+                }
+            } catch (error) {
+                console.error('Error al buscar GID por grupo:', error);
+            }
+        }
+
         // Función para seleccionar grupos según el rol
         function selectGroupsByRole(role) {
             // Primero deseleccionamos todos los grupos
@@ -343,6 +364,15 @@
         // Evento para buscar y seleccionar grupo por GID
         gidNumberInput.addEventListener('change', function() {
             findGroupByGid(this.value);
+        });
+
+        // Evento para actualizar GID cuando cambia la selección de grupos
+        gruposSelect.addEventListener('change', function() {
+            // Si solo hay un grupo seleccionado, buscar su GID
+            const selectedOptions = Array.from(this.selectedOptions);
+            if (selectedOptions.length === 1) {
+                findGidByGroup(selectedOptions[0].value);
+            }
         });
 
         // Inicializar
