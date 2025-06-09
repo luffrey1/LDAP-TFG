@@ -142,7 +142,7 @@
                 <h5 class="modal-title" id="logDetailsModalLabel">Detalles del Log</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body text-dark">
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <strong>ID:</strong> <span id="modal-id"></span>
@@ -151,7 +151,7 @@
                         <strong>Fecha:</strong> <span id="modal-date"></span>
                     </div>
                 </div>
-                <div class="row mb-3">
+                <div class="row mb-3 text-dark">
                     <div class="col-md-6">
                         <strong>Usuario:</strong> <span id="modal-user"></span>
                     </div>
@@ -159,18 +159,18 @@
                         <strong>Nivel:</strong> <span id="modal-level"></span>
                     </div>
                 </div>
-                <div class="row mb-3">
+                <div class="row mb-3 text-dark">
                     <div class="col-md-12">
                         <strong>Acción:</strong> <span id="modal-action"></span>
                     </div>
                 </div>
-                <div class="row mb-3">
+                <div class="row mb-3 text-dark">
                     <div class="col-md-12">
                         <strong>Descripción:</strong>
                         <p id="modal-description" class="mt-2"></p>
                     </div>
                 </div>
-                <div class="row">
+                <div class="row text-dark">
                     <div class="col-md-12">
                         <strong>Detalles Adicionales:</strong>
                         <pre id="modal-details" class="mt-2 bg-light p-3 rounded"></pre>
@@ -215,14 +215,17 @@ $(document).ready(function() {
 
     // Función para filtrar por tipo de log
     function filterByType(type) {
-        table.column(0).search('').draw(); // Limpiar búsqueda anterior
+        // Limpiar búsqueda anterior
+        table.search('').columns().search('').draw();
         
         if (type === 'all') {
-            table.column(0).search('').draw();
-        } else {
-            // Buscar en la columna de tipo (data-type)
+            // Mostrar todos los registros
             table.rows().every(function() {
-                const rowData = this.data();
+                $(this.node()).show();
+            });
+        } else {
+            // Filtrar por tipo
+            table.rows().every(function() {
                 const rowType = $(this.node()).data('type');
                 if (type === rowType) {
                     $(this.node()).show();
@@ -246,12 +249,22 @@ $(document).ready(function() {
 
     // Búsqueda de usuario
     $('#userSearch').on('keyup', function() {
-        table.column(3).search(this.value).draw();
+        const searchValue = this.value;
+        const currentType = $('#logTabs button.active').attr('id').split('-')[0];
+        
+        // Aplicar filtro de tipo primero
+        filterByType(currentType);
+        
+        // Luego aplicar la búsqueda de usuario
+        if (searchValue) {
+            table.column(3).search(searchValue).draw();
+        }
     });
 
     $('#clearSearch').on('click', function() {
         $('#userSearch').val('');
-        table.column(3).search('').draw();
+        const currentType = $('#logTabs button.active').attr('id').split('-')[0];
+        filterByType(currentType);
     });
 
     // Modal de detalles
