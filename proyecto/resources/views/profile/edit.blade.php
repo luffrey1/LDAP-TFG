@@ -100,9 +100,9 @@
                                 @foreach($groups as $group)
                                     <div class="grupo-item text-white">
                                         <i class="fas fa-users me-2"></i>
-                                        <span>{{ $group->nombre_completo ?? $group->cn ?? $group }}</span>
-                                        @if(isset($group->description) && $group->description)
-                                            <small class="text-white-50 ms-2">({{ $group->description }})</small>
+                                        <span>{{ $group['nombre_completo'] ?? $group['cn'] ?? $group }}</span>
+                                        @if(isset($group['description']) && $group['description'])
+                                            <small class="text-white-50 ms-2">({{ $group['description'] }})</small>
                                         @endif
                                     </div>
                                 @endforeach
