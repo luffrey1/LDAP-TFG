@@ -170,17 +170,27 @@ $(document).ready(function() {
         description = description.toLowerCase();
         console.log('Analyzing description:', description);
         
-        if (description.includes('usuario ldap')) {
+        // Detección de acciones de usuario
+        if (description.includes('usuario ldap creado') || 
+            description.includes('usuario ldap actualizado') || 
+            description.includes('usuario ldap eliminado')) {
             console.log('Detected as users type');
             return 'users';
         }
         
-        if (description.includes('grupo ldap')) {
+        // Detección de acciones de grupo
+        if (description.includes('grupo ldap creado') || 
+            description.includes('grupo ldap actualizado') || 
+            description.includes('grupo ldap eliminado')) {
             console.log('Detected as groups type');
             return 'groups';
         }
         
-        if (description.includes('desde') || description.includes('intento de acceso')) {
+        // Detección de intentos de acceso
+        if (description.includes('intento de acceso') || 
+            description.includes('acceso exitoso') || 
+            description.includes('acceso fallido') || 
+            description.includes('desde')) {
             console.log('Detected as access type');
             return 'access';
         }
@@ -189,13 +199,18 @@ $(document).ready(function() {
         return 'all';
     }
 
-    // Asignar tipos a las filas
-    $('.log-row').each(function() {
+    // Asignar tipos a las filas y mostrar información de depuración
+    console.log('Starting to assign types to rows...');
+    $('.log-row').each(function(index) {
         var $row = $(this);
         var description = $row.find('td:eq(2)').text().trim();
         var type = getLogType(description);
         $row.attr('data-type', type);
-        console.log('Row assigned type:', type, 'Description:', description);
+        console.log('Row ' + index + ':', {
+            description: description,
+            type: type,
+            row: $row
+        });
     });
 
     // Función para filtrar por tipo de log
@@ -211,7 +226,9 @@ $(document).ready(function() {
             $('.log-row').show();
             visibleCount = $('.log-row').length;
         } else {
-            $('.log-row[data-type="' + type + '"]').each(function() {
+            var matchingRows = $('.log-row[data-type="' + type + '"]');
+            console.log('Found ' + matchingRows.length + ' rows of type ' + type);
+            matchingRows.each(function() {
                 $(this).show();
                 visibleCount++;
             });
