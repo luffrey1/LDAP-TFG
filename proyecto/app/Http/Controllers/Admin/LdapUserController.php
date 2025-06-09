@@ -3075,26 +3075,37 @@ class LdapUserController extends Controller
                 ->first();
 
             if (!$groupEntry) {
+                Log::info('No se encontró el grupo: ' . $group);
                 return response()->json([
                     'success' => false,
                     'message' => 'Grupo no encontrado'
                 ], 404);
             }
 
+            // Obtener el GID del grupo
             $gidNumber = is_array($groupEntry) ? 
                 $groupEntry['gidnumber'][0] : 
                 $groupEntry->getFirstAttribute('gidNumber');
 
+            if (!$gidNumber) {
+                Log::warning('El grupo ' . $group . ' no tiene GID asignado');
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El grupo no tiene GID asignado'
+                ], 404);
+            }
+
+            Log::info('GID encontrado para el grupo ' . $group . ': ' . $gidNumber);
             return response()->json([
                 'success' => true,
                 'gidNumber' => $gidNumber
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error al buscar GID por grupo: ' . $e->getMessage());
+            Log::error('Error al buscar GID por grupo: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Error al buscar el GID del grupo'
+                'message' => 'Error al buscar el GID del grupo: ' . $e->getMessage()
             ], 500);
         }
     }
