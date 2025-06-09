@@ -3110,4 +3110,39 @@ class LdapUserController extends Controller
             ], 500);
         }
     }
+
+    public function checkUserExists($username)
+    {
+        try {
+            $ldapConn = $this->connection->getLdapConnection()->getConnection();
+            
+            // Buscar el usuario
+            $search = ldap_search(
+                $ldapConn,
+                "ou=people,{$this->baseDn}",
+                "(uid={$username})"
+            );
+            
+            if (!$search) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al buscar usuario: ' . ldap_error($ldapConn)
+                ], 500);
+            }
+            
+            $entries = ldap_get_entries($ldapConn, $search);
+            
+            return response()->json([
+                'success' => true,
+                'exists' => $entries['count'] > 0
+            ]);
+            
+        } catch (Exception $e) {
+            Log::error('Error al verificar usuario: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al verificar usuario: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 } 

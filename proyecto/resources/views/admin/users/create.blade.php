@@ -238,7 +238,10 @@
             if (!username) return false;
             
             try {
-                const response = await fetch(`/api/ldap/users/check/${username}`);
+                const response = await fetch(`{{ route('api.ldap.users.check', ['username' => '']) }}${username}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 const data = await response.json();
                 return data.exists;
             } catch (error) {

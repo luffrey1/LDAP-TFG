@@ -28,4 +28,8 @@ Route::get('/config/telemetry-interval', function () {
 });
 
 Route::get('/ldap/groups/gid/{gid}', [\App\Http\Controllers\Admin\LdapUserController::class, 'findGroupByGid']);
-Route::get('/ldap/groups/{group}/gid', [\App\Http\Controllers\Admin\LdapUserController::class, 'findGidByGroup']); 
+Route::get('/ldap/groups/{group}/gid', [\App\Http\Controllers\Admin\LdapUserController::class, 'findGidByGroup']);
+
+// Rutas para verificación de usuarios LDAP
+Route::get('/ldap/users/check/{username}', [App\Http\Controllers\Admin\LdapUserController::class, 'checkUserExists'])
+    ->name('api.ldap.users.check'); 
