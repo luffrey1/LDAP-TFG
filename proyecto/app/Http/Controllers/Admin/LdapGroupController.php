@@ -233,18 +233,15 @@ class LdapGroupController extends Controller
             $types = explode(',', $request->type);
             
             if (in_array('posix', $types)) {
-                $attributes['objectclass'] = ['top', 'posixGroup'];
+                $attributes['objectclass'] = ['top', 'posixGroup', 'groupOfNames'];
                 $attributes['gidNumber'] = (string)$request->gidNumber;
-                $attributes['memberUid'] = ['profesor']; // Este usuario existe en LDAP
+                $attributes['memberUid'] = ['profesor'];
+                $attributes['member'] = ['cn=nobody'];
             }
             
             if (in_array('unique', $types)) {
-                $attributes['objectclass'][] = 'groupOfUniqueNames';
-                $attributes['uniqueMember'] = ['uid=profesor,ou=people,dc=tierno,dc=es'];
-            }
-
-            if (in_array('posix', $types) && in_array('unique', $types)) {
                 $attributes['objectclass'] = ['top', 'posixGroup', 'groupOfUniqueNames'];
+                $attributes['uniqueMember'] = ['uid=profesor,ou=people,dc=tierno,dc=es'];
             }
 
             Log::debug('Atributos del grupo: ' . json_encode($attributes));
