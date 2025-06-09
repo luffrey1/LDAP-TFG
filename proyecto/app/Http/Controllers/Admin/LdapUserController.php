@@ -3015,32 +3015,27 @@ class LdapUserController extends Controller
     public function findGroupByGid($gid)
     {
         try {
-            Log::info('Intentando conectar a LDAP');
-            $this->connection->connect();
-            Log::info('Conexión LDAP establecida correctamente');
+            $config = config('ldap.connections.default');
+            // Aseguramos que use SSL y no TLS
+            $config['use_ssl'] = true;
+            $config['use_tls'] = false;
+            
+            Log::debug('Configurando conexión LDAP para buscar grupo por GID con los siguientes parámetros: ' . json_encode($config));
+            
+            $ldap = new \LdapRecord\Connection($config);
+            $ldap->connect();
 
-            Log::info('Buscando grupo con GID: ' . $gid);
-            $query = $this->connection->query();
-            $groups = $query->where('objectclass', '=', 'posixGroup')
-                           ->where('gidNumber', '=', $gid)
-                           ->get();
+            $query = $ldap->query();
+            $groupEntry = $query->in('ou=groups,' . $config['base_dn'])
+                ->where('gidnumber', '=', $gid)
+                ->first();
 
-            Log::info('Resultados de la búsqueda:', ['count' => is_array($groups) ? count($groups) : $groups->count()]);
+            if ($groupEntry) {
+                $groupName = is_array($groupEntry) ? 
+                    $groupEntry['cn'][0] : 
+                    $groupEntry->getFirstAttribute('cn');
 
-            if (is_array($groups) && count($groups) > 0) {
-                $group = $groups[0];
-                $groupName = is_array($group) ? ($group['cn'][0] ?? '') : $group->getFirstAttribute('cn');
-                Log::info('Grupo encontrado:', ['name' => $groupName]);
-                
-                return response()->json([
-                    'success' => true,
-                    'group' => $groupName
-                ]);
-            } elseif (!is_array($groups) && $groups->count() > 0) {
-                $group = $groups->first();
-                $groupName = $group->getFirstAttribute('cn');
-                Log::info('Grupo encontrado:', ['name' => $groupName]);
-                
+                Log::info('Grupo encontrado para el GID ' . $gid . ': ' . $groupName);
                 return response()->json([
                     'success' => true,
                     'group' => $groupName
@@ -3066,6 +3061,12 @@ class LdapUserController extends Controller
     {
         try {
             $config = config('ldap.connections.default');
+            // Aseguramos que use SSL y no TLS
+            $config['use_ssl'] = true;
+            $config['use_tls'] = false;
+            
+            Log::debug('Configurando conexión LDAP para buscar GID con los siguientes parámetros: ' . json_encode($config));
+            
             $ldap = new \LdapRecord\Connection($config);
             $ldap->connect();
 
