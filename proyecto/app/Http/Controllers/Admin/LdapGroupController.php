@@ -161,7 +161,7 @@ class LdapGroupController extends Controller
                 return response()->json(['groups' => $groups]);
             }
             
-            return view('gestion.grupos.index', compact('groups'));
+            return view('admin.groups.index', compact('groups'));
             
         } catch (Exception $e) {
             Log::error('Error al obtener grupos LDAP: ' . $e->getMessage());
@@ -187,7 +187,7 @@ class LdapGroupController extends Controller
 
     public function create()
     {
-        return view('gestion.grupos.create');
+        return view('admin.groups.create');
     }
 
     public function store(Request $request)
@@ -343,7 +343,7 @@ class LdapGroupController extends Controller
             
             ldap_close($ldapConn);
 
-            return view('gestion.grupos.edit', ['groupData' => $groupData]);
+            return view('admin.groups.edit', ['groupData' => $groupData]);
         } catch (\Exception $e) {
             Log::error('Error al obtener grupo LDAP: ' . $e->getMessage());
             return redirect()->route('gestion.grupos.index')
@@ -676,7 +676,7 @@ class LdapGroupController extends Controller
                 }
             }
             
-            return view('gestion.grupos.show', compact('group'));
+            return view('admin.groups.show', compact('group'));
             
         } catch (Exception $e) {
             Log::error('Error al obtener detalles del grupo: ' . $e->getMessage());
