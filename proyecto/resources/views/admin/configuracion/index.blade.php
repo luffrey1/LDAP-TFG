@@ -191,7 +191,16 @@ input.form-control::placeholder {
                                     $configuraciones['modulos']->where('clave', 'modulo_ssh_activo')->first()->valor == 'true') checked @endif>
                             </div>
                         </div>
+                    </div>
+                </div>
 
+                <!-- Gestión Académica -->
+                <div class="card shadow card-configuracion">
+                    <div class="card-header py-2">
+                        <h6 class="m-0 font-weight-bold text-primary">Gestión Académica</h6>
+                        <p class="panel-descripcion mb-0">Configuración de módulos relacionados con la gestión académica</p>
+                    </div>
+                    <div class="card-body">
                         <div class="modulo-card">
                             <div class="modulo-titulo">Gestión de Clases</div>
                             <div class="modulo-descripcion">Activa o desactiva el módulo de gestión de clases</div>

@@ -44,10 +44,6 @@ class ConfiguracionController extends Controller
             // Validar datos recibidos
             $request->validate([
                 'modulos' => 'nullable|array',
-                'politica_password_longitud' => 'required|integer|min:6|max:20',
-                'politica_password_mayusculas' => 'nullable|boolean',
-                'politica_password_numeros' => 'nullable|boolean',
-                'politica_password_especiales' => 'nullable|boolean',
                 'telemetria_intervalo_minutos' => 'required|integer|min:1|max:1440',
             ]);
             
@@ -70,39 +66,6 @@ class ConfiguracionController extends Controller
             // Limpiar la caché general
             cache()->forget('sistema_config');
             
-            // Actualizar políticas de contraseñas
-            SistemaConfig::establecerConfig(
-                'politica_password_longitud',
-                $request->politica_password_longitud,
-                'integer',
-                'Longitud mínima de contraseñas',
-                Auth::id()
-            );
-            
-            SistemaConfig::establecerConfig(
-                'politica_password_mayusculas',
-                $request->has('politica_password_mayusculas') ? 'true' : 'false',
-                'boolean',
-                'Requerir al menos una letra mayúscula en contraseñas',
-                Auth::id()
-            );
-            
-            SistemaConfig::establecerConfig(
-                'politica_password_numeros',
-                $request->has('politica_password_numeros') ? 'true' : 'false',
-                'boolean',
-                'Requerir al menos un número en contraseñas',
-                Auth::id()
-            );
-            
-            SistemaConfig::establecerConfig(
-                'politica_password_especiales',
-                $request->has('politica_password_especiales') ? 'true' : 'false',
-                'boolean',
-                'Requerir al menos un carácter especial en contraseñas',
-                Auth::id()
-            );
-            
             // Guardar intervalo de telemetría
             SistemaConfig::establecerConfig(
                 'telemetria_intervalo_minutos',
@@ -111,21 +74,6 @@ class ConfiguracionController extends Controller
                 'Intervalo de telemetría de los agentes (en minutos)',
                 Auth::id()
             );
-            
-            // Generar contraseña de VPN si se solicita
-            if ($request->has('generar_vpn_password')) {
-                $vpnPassword = $this->generarPasswordSeguro(12);
-                SistemaConfig::establecerConfig(
-                    'vpn_password',
-                    $vpnPassword,
-                    'string',
-                    'Contraseña de acceso VPN',
-                    Auth::id()
-                );
-                return redirect()->route('admin.configuracion.index')
-                    ->with('success', 'Configuración guardada correctamente')
-                    ->with('vpn_password', $vpnPassword);
-            }
             
             return redirect()->route('admin.configuracion.index')
                 ->with('success', 'Configuración guardada correctamente');
