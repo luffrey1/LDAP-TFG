@@ -229,7 +229,21 @@ class ProfileController extends Controller
                         }
 
                         Log::debug('Usuario encontrado en LDAP, actualizando contraseña');
-                        $ldapEntry->update(['userPassword' => $updateData['userPassword']]);
+                        
+                        // Actualizar la contraseña usando el método correcto según el tipo de resultado
+                        if (is_array($ldapEntry)) {
+                            $dn = $ldapEntry['dn'];
+                            $entry = $adminLdap->query()
+                                ->where('dn', '=', $dn)
+                                ->first();
+                            if ($entry) {
+                                $entry->setAttribute('userPassword', $updateData['userPassword']);
+                                $entry->save();
+                            }
+                        } else {
+                            $ldapEntry->update(['userPassword' => $updateData['userPassword']]);
+                        }
+                        
                         Log::info('Contraseña actualizada correctamente para el usuario: ' . $user->username);
                             
                     } catch (\Exception $e) {
@@ -255,12 +269,30 @@ class ProfileController extends Controller
                     }
 
                     Log::debug('Usuario encontrado en LDAP, actualizando datos');
-                    foreach ($updateData as $attribute => $value) {
-                        if ($attribute !== 'userPassword') { // No actualizar la contraseña aquí
-                            $entry->setAttribute($attribute, $value);
+                    
+                    // Actualizar los datos usando el método correcto según el tipo de resultado
+                    if (is_array($entry)) {
+                        $dn = $entry['dn'];
+                        $ldapEntry = $ldap->query()
+                            ->where('dn', '=', $dn)
+                            ->first();
+                        if ($ldapEntry) {
+                            foreach ($updateData as $attribute => $value) {
+                                if ($attribute !== 'userPassword') {
+                                    $ldapEntry->setAttribute($attribute, $value);
+                                }
+                            }
+                            $ldapEntry->save();
                         }
+                    } else {
+                        foreach ($updateData as $attribute => $value) {
+                            if ($attribute !== 'userPassword') {
+                                $entry->setAttribute($attribute, $value);
+                            }
+                        }
+                        $entry->save();
                     }
-                    $entry->save();
+                    
                     Log::info('Datos del usuario actualizados correctamente: ' . $user->username);
                 } else {
                     // Si es un objeto, usar el método update
