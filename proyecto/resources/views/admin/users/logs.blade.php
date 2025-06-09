@@ -138,59 +138,108 @@
 <script>
 $(document).ready(function() {
     // Función para determinar el tipo de log
-    function getLogType(description) {
-        if (!description) return 'all';
+    function getLogType(action, description) {
+        if (!action && !description) return 'all';
         
-        description = description.toLowerCase();
-        console.log('Analizando descripción:', description);
+        action = (action || '').toLowerCase();
+        description = (description || '').toLowerCase();
+        
+        console.log('Analizando:', { action, description });
         
         // Patrones de detección
         const patterns = {
             users: [
+                // Patrones en action
                 'crear usuario',
                 'actualizar usuario',
                 'eliminar usuario',
                 'modificar usuario',
                 'nuevo usuario',
-                'usuario creado',
+                // Patrones en description
+                'usuario ldap creado',
+                'usuario ldap actualizado',
+                'usuario ldap eliminado',
                 'usuario actualizado',
+                'usuario creado',
                 'usuario eliminado',
-                'usuario modificado'
+                'usuario modificado',
+                'nuevo usuario',
+                'modificación de usuario'
             ],
             groups: [
+                // Patrones en action
                 'crear grupo',
                 'actualizar grupo',
                 'eliminar grupo',
                 'modificar grupo',
                 'nuevo grupo',
-                'grupo creado',
+                // Patrones en description
+                'grupo ldap creado',
+                'grupo ldap actualizado',
+                'grupo ldap eliminado',
                 'grupo actualizado',
+                'grupo creado',
                 'grupo eliminado',
                 'grupo modificado',
-                'añadir miembro',
-                'eliminar miembro',
-                'miembro añadido',
-                'miembro eliminado'
+                'nuevo grupo',
+                'modificación de grupo',
+                'miembro añadido al grupo',
+                'miembro eliminado del grupo',
+                'grupo modificado',
+                'memberuid',
+                'uniquemember',
+                'member'
             ],
             access: [
+                // Patrones en action
                 'intento de acceso',
                 'acceso exitoso',
                 'acceso fallido',
                 'login',
                 'logout',
+                // Patrones en description
+                'desde',
+                'ip:',
+                'user agent',
                 'sesión iniciada',
-                'sesión cerrada'
+                'sesión cerrada',
+                'autenticación',
+                'authentication',
+                'failed login',
+                'successful login'
             ]
         };
 
-        // Verificar cada patrón
+        // Verificar cada patrón en ambos campos
         for (const [type, patternList] of Object.entries(patterns)) {
-            if (patternList.some(pattern => description.includes(pattern))) {
-                console.log('Tipo detectado:', type);
+            if (patternList.some(pattern => 
+                action.includes(pattern) || description.includes(pattern)
+            )) {
+                console.log('Tipo detectado:', type, 'para:', { action, description });
                 return type;
             }
         }
 
+        // Si no coincide con ningún patrón, intentar determinar por contexto
+        if (description.includes('grupo') || description.includes('group') || 
+            action.includes('grupo') || action.includes('group')) {
+            console.log('Tipo detectado por contexto: groups');
+            return 'groups';
+        }
+
+        if (description.includes('acceso') || description.includes('access') || 
+            action.includes('acceso') || action.includes('access')) {
+            console.log('Tipo detectado por contexto: access');
+            return 'access';
+        }
+
+        if (description.includes('usuario') || description.includes('user') || 
+            action.includes('usuario') || action.includes('user')) {
+            console.log('Tipo detectado por contexto: users');
+            return 'users';
+        }
+
+        console.log('No se detectó tipo específico, usando "all"');
         return 'all';
     }
 
@@ -198,9 +247,10 @@ $(document).ready(function() {
     $('.log-row').each(function() {
         const $row = $(this);
         const action = $row.find('td:eq(1)').text();
-        const type = getLogType(action);
+        const description = $row.find('td:eq(2)').text();
+        const type = getLogType(action, description);
         $row.attr('data-type', type);
-        console.log('Fila asignada:', { action, type });
+        console.log('Fila asignada:', { action, description, type });
     });
 
     // Función para filtrar logs
