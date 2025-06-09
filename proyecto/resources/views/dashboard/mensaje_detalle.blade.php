@@ -82,16 +82,16 @@
             </div>
 
             <!-- Archivos adjuntos -->
-            @if(!empty($mensaje['adjuntos']))
+            @if(!empty($mensaje['archivos']))
             <div class="attachments mb-4">
                 <div class="d-flex align-items-center mb-2">
                     <i class="fas fa-paperclip mr-2"></i>
-                    <span class="font-weight-bold">Archivos adjuntos ({{ count($mensaje['adjuntos']) }})</span>
+                    <span class="font-weight-bold">Archivos adjuntos ({{ count($mensaje['archivos']) }})</span>
                 </div>
                 <div class="row">
-                    @foreach($mensaje['adjuntos'] as $adjunto)
+                    @foreach($mensaje['archivos'] as $adjunto)
                     <div class="col-md-4 mb-3">
-                        <div class="card h-100">
+                        <div class="card h-100 bg-white text-dark border-primary">
                             <div class="card-body p-3">
                                 <div class="d-flex align-items-center">
                                     <div class="mr-3">
@@ -160,9 +160,21 @@
     }
     .attachments .card {
         transition: transform 0.2s;
+        background: #fff !important;
+        color: #222 !important;
+        border: 1px solid #4e73df;
     }
     .attachments .card:hover {
         transform: translateY(-2px);
+        box-shadow: 0 0 8px #4e73df33;
+    }
+    .attachments .btn-outline-primary {
+        color: #224abe;
+        border-color: #4e73df;
+    }
+    .attachments .btn-outline-primary:hover {
+        background: #4e73df;
+        color: #fff;
     }
 </style>
 @endpush
