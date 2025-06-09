@@ -24,12 +24,12 @@
                         </div>
 
                         <div class="form-group text-white">
-                            <button type="button" class="btn btn-info" data-bs-toggle="collapse" data-bs-target="#advancedOptions" aria-expanded="false" aria-controls="advancedOptions">
+                            <button type="button" class="btn btn-info" id="toggleAdvanced">
                                 <i class="fas fa-cog"></i> Opciones Avanzadas
                             </button>
                         </div>
 
-                        <div id="advancedOptions" class="collapse show">
+                        <div id="advancedOptions" class="mt-3" style="display: none;">
                             <div class="card card-body bg-dark">
                                 <h5 class="text-white">Tipo de Grupo</h5>
                                 <div class="form-check text-white">
@@ -88,6 +88,11 @@ $(document).ready(function() {
         placeholder: 'Selecciona los miembros',
         allowClear: true,
         theme: 'bootstrap4'
+    });
+
+    // Manejar el toggle de opciones avanzadas
+    $('#toggleAdvanced').on('click', function() {
+        $('#advancedOptions').slideToggle(300);
     });
 
     // Cargar usuarios para los selectores
@@ -227,9 +232,6 @@ $(document).ready(function() {
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <link href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@x.x.x/dist/select2-bootstrap4.min.css" rel="stylesheet">
 <style>
-.collapse {
-    transition: all 0.3s ease;
-}
 .card-body.bg-dark {
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 4px;
