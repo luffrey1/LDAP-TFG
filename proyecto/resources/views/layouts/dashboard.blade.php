@@ -727,8 +727,8 @@
                         </li>
                         @if(session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->is('admin/groups*') ? 'active' : '' }}" href="{{ route('admin.groups.index') }}">
-                                <i class="fas fa-users-cog"></i>
+                            <a class="nav-link {{ request()->is('gestion/grupos*') ? 'active' : '' }}" href="{{ route('gestion.grupos.index') }}">
+                                <i class="fas fa-users"></i>
                                 <span>Grupos LDAP</span>
                             </a>
                         </li>
