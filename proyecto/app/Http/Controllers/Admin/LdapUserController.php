@@ -2896,61 +2896,45 @@ class LdapUserController extends Controller
     public function toggleAdmin(Request $request)
     {
         try {
-            // Decodificar el DN del usuario
+            $this->connection->connect();
+
             $userDn = base64_decode($request->dn);
             if (!$userDn) {
                 throw new \Exception('DN de usuario inválido');
             }
 
-            // Buscar el usuario usando el modelo User
-            $user = User::where('dn', '=', $userDn)->first();
+            $user = $this->connection->query()
+                ->in($this->peopleOu)
+                ->where('dn', '=', $userDn)
+                ->first();
 
             if (!$user) {
                 throw new \Exception('Usuario no encontrado');
             }
 
-            // Obtener el UID del usuario
-            $uid = $user->getFirstAttribute('uid');
+            $uid = '';
+            if (is_array($user)) {
+                $uid = $user['uid'][0] ?? '';
+            } else {
+                $uid = $user->getFirstAttribute('uid');
+            }
+            
             if (empty($uid)) {
                 throw new \Exception('UID de usuario no encontrado');
             }
 
-            // No permitir modificar al usuario ldap-admin
             if ($uid === 'ldap-admin') {
                 throw new \Exception('No se puede modificar el estado de administrador del usuario ldap-admin');
             }
 
-            // Verificar si el usuario es admin
-            $isAdmin = false;
-            $memberOf = $user->getAttribute('memberOf');
-            if ($memberOf) {
-                foreach ($memberOf as $group) {
-                    if (strpos($group, 'cn=ldapadmins,ou=groups,dc=tierno,dc=es') !== false) {
-                        $isAdmin = true;
-                        break;
-                    }
-                }
-            }
+            $userGroups = $this->getUserGroups($userDn);
+            $isAdmin = in_array('ldapadmins', $userGroups);
 
-            // Obtener el grupo ldapadmins
-            $adminGroup = Group::where('cn', '=', 'ldapadmins')
-                ->where('ou', '=', 'groups')
-                ->where('dc', '=', 'tierno')
-                ->where('dc', '=', 'es')
-                ->first();
-
-            if (!$adminGroup) {
-                throw new \Exception('Grupo ldapadmins no encontrado');
-            }
-
-            // Actualizar la membresía del grupo
             if ($isAdmin) {
-                // Quitar del grupo ldapadmins
-                $adminGroup->removeMember($userDn);
+                $this->removeUserFromGroup($userDn, $this->adminGroupDn);
                 Log::info("Usuario {$uid} removido del grupo ldapadmins");
             } else {
-                // Agregar al grupo ldapadmins
-                $adminGroup->addMember($userDn);
+                $this->addUserToGroup($userDn, $this->adminGroupDn);
                 Log::info("Usuario {$uid} agregado al grupo ldapadmins");
             }
 
