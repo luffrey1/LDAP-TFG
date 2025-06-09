@@ -138,7 +138,7 @@ class LogController extends Controller
             strpos($action, 'update user') !== false ||
             strpos($action, 'delete user') !== false ||
             strpos($action, 'create user') !== false) {
-            return 'user';
+            return 'users';
         }
         
         // Detección de acciones de grupo
@@ -159,7 +159,7 @@ class LogController extends Controller
             strpos($action, 'memberuid') !== false ||
             strpos($action, 'uniquemember') !== false ||
             strpos($action, 'member') !== false) {
-            return 'group';
+            return 'groups';
         }
         
         // Detección de intentos de acceso
