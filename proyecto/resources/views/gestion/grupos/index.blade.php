@@ -132,7 +132,7 @@
                         </table>
                     </div>
 
-                    <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div class="d-flex justify-content-between align-items-center mt-3 text-white">
                         <div>
                             Mostrando {{ $groups->firstItem() ?? 0 }} a {{ $groups->lastItem() ?? 0 }} de {{ $groups->total() ?? 0 }} grupos
                         </div>
