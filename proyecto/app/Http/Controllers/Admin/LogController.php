@@ -128,7 +128,22 @@ class LogController extends Controller
             }
         } else {
             $details = json_decode($log->details ?? '{}', true);
+            
+            // Añadir logs para depuración
+            \Log::info('Log encontrado:', [
+                'id' => $log->id,
+                'action' => $log->action,
+                'description' => $log->description,
+                'details' => $details
+            ]);
+            
             $actionType = $this->getActionType($log->action, $log->description);
+            
+            // Añadir log del resultado de getActionType
+            \Log::info('Resultado getActionType:', [
+                'action_type' => $actionType['type'],
+                'details' => $actionType['details']
+            ]);
             
             $log = (object) [
                 'id' => $log->id,
@@ -216,43 +231,66 @@ class LogController extends Controller
     {
         $action = strtolower($action);
         $description = strtolower($description);
+        
+        // Añadir log para depuración
+        \Log::info('getActionType recibió:', [
+            'action' => $action,
+            'description' => $description
+        ]);
+        
         $details = [];
 
         // Extraer el nombre del usuario/grupo de la descripción
         $targetName = '';
         if (preg_match('/(?:usuario|user|grupo|group)\s+[\'"]?([^\'"]+)[\'"]?/i', $description, $matches)) {
             $targetName = $matches[1];
+            \Log::info('Nombre encontrado (patrón 1):', ['targetName' => $targetName]);
+        } else {
+            // Intentar extraer el nombre de otras formas comunes en la descripción
+            if (preg_match('/(?:creado|actualizado|eliminado|modificado)\s+(?:el|la|los|las)?\s+[\'"]?([^\'"]+)[\'"]?/i', $description, $matches)) {
+                $targetName = $matches[1];
+                \Log::info('Nombre encontrado (patrón 2):', ['targetName' => $targetName]);
+            } elseif (preg_match('/(?:para|de)\s+[\'"]?([^\'"]+)[\'"]?/i', $description, $matches)) {
+                $targetName = $matches[1];
+                \Log::info('Nombre encontrado (patrón 3):', ['targetName' => $targetName]);
+            }
+        }
+
+        // Si no se encontró un nombre específico, usar la descripción completa
+        if (empty($targetName)) {
+            $targetName = $description;
+            \Log::info('Usando descripción completa como targetName:', ['targetName' => $targetName]);
         }
 
         // Detectar tipo de acción
         if (strpos($action, 'crear') !== false || strpos($action, 'create') !== false) {
             $type = 'creación';
             $details['operation'] = 'crear';
-            $details['message'] = $targetName ? "Creación de {$targetName}" : 'Creación';
+            $details['message'] = "Creación de {$targetName}";
         } elseif (strpos($action, 'actualizar') !== false || strpos($action, 'update') !== false || strpos($action, 'editar') !== false || strpos($action, 'edit') !== false) {
             $type = 'actualización';
             $details['operation'] = 'actualizar';
-            $details['message'] = $targetName ? "Actualización de {$targetName}" : 'Actualización';
+            $details['message'] = "Actualización de {$targetName}";
         } elseif (strpos($action, 'eliminar') !== false || strpos($action, 'delete') !== false) {
             $type = 'eliminación';
             $details['operation'] = 'eliminar';
-            $details['message'] = $targetName ? "Eliminación de {$targetName}" : 'Eliminación';
+            $details['message'] = "Eliminación de {$targetName}";
         } elseif (strpos($action, 'login') !== false || strpos($action, 'acceso') !== false) {
             $type = 'acceso';
             $details['operation'] = 'acceso';
-            $details['message'] = 'Intento de acceso';
+            $details['message'] = "Intento de acceso de {$targetName}";
         } elseif (strpos($action, 'password') !== false || strpos($action, 'contraseña') !== false) {
             $type = 'contraseña';
             $details['operation'] = 'cambio_contraseña';
-            $details['message'] = $targetName ? "Cambio de contraseña de {$targetName}" : 'Cambio de contraseña';
+            $details['message'] = "Cambio de contraseña de {$targetName}";
         } elseif (strpos($action, 'permisos') !== false || strpos($action, 'permissions') !== false) {
             $type = 'permisos';
             $details['operation'] = 'cambio_permisos';
-            $details['message'] = $targetName ? "Cambio de permisos de {$targetName}" : 'Cambio de permisos';
+            $details['message'] = "Cambio de permisos de {$targetName}";
         } else {
             $type = 'otra';
             $details['operation'] = 'otra';
-            $details['message'] = $action;
+            $details['message'] = $targetName;
         }
 
         // Detectar entidad afectada
@@ -265,6 +303,11 @@ class LogController extends Controller
         } else {
             $details['entity'] = 'sistema';
         }
+
+        \Log::info('Resultado final getActionType:', [
+            'type' => $type,
+            'details' => $details
+        ]);
 
         return [
             'type' => $type,
