@@ -29,6 +29,14 @@ echo "OpenLDAP está disponible."
 echo "Verificando red..."
 ping -c 2 $LDAP_HOST || echo "No se puede hacer ping a LDAP, pero seguimos con la configuración"
 
+# Configurar Apache primero
+echo "Configurando Apache..."
+a2enmod ssl
+a2enmod rewrite
+cp /var/www/html/apache-config.conf /etc/apache2/sites-available/000-default.conf
+rm -f /etc/apache2/sites-enabled/*
+ln -s /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-enabled/
+
 # Verificar que existen los certificados SSL
 echo "Verificando certificados SSL..."
 if [ -f "/etc/ssl/certs/site/certificate.crt" ] && [ -f "/etc/ssl/certs/site/private.key" ]; then
@@ -62,20 +70,6 @@ if [ -f "/etc/ssl/certs/site/certificate.crt" ] && [ -f "/etc/ssl/certs/site/pri
     echo "ADVERTENCIA: No se encontró certificado intermedio."
   fi
   
-  # Habilitar módulos de Apache necesarios para SSL
-  echo "Habilitando módulos de Apache para SSL..."
-  a2enmod ssl
-  a2enmod rewrite
-  
-  # Copiar la configuración de Apache con SSL
-  echo "Copiando configuración de Apache con SSL..."
-  cp /var/www/html/apache-config.conf /etc/apache2/sites-available/000-default.conf
-  
-  # Forzar la habilitación del sitio SSL
-  echo "Habilitando sitio SSL..."
-  rm -f /etc/apache2/sites-enabled/*
-  ln -s /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-enabled/
-  
   # Configurar permisos de los certificados
   chmod 644 /etc/ssl/certs/site/certificate.crt
   chmod 644 /etc/ssl/certs/site/ca_bundle.crt
@@ -84,10 +78,6 @@ if [ -f "/etc/ssl/certs/site/certificate.crt" ] && [ -f "/etc/ssl/certs/site/pri
   echo "Configuración SSL completada para ldap.tierno.es"
 else
   echo "ADVERTENCIA: No se encontraron certificados SSL. Usando configuración sin SSL."
-  
-  # Habilitar módulos de Apache necesarios
-  echo "Habilitando módulos de Apache..."
-  a2enmod rewrite
   
   # Crear una configuración simple sin SSL
   cat > /etc/apache2/sites-available/000-default.conf << 'EOF'
@@ -137,6 +127,13 @@ sed -i "s#APP_URL=.*#APP_URL=https://ldap.tierno.es#" /var/www/html/.env
 # Ejecutar comandos de inicialización de Laravel
 cd /var/www/html
 
+# Establecer permisos adecuados antes de cualquier operación
+echo "Estableciendo permisos iniciales..."
+chown -R www-data:www-data /var/www/html
+chmod -R 755 /var/www/html
+chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+chmod -R 775 /var/www/html/public/documentos
+
 # Instalar dependencias de PHP si es necesario
 if [ -f composer.json ]; then
   composer install --no-interaction --prefer-dist --optimize-autoloader
@@ -156,16 +153,24 @@ php artisan view:clear || true
 php artisan config:cache || true
 php artisan route:cache || true
 
+# Esperar a que MySQL esté completamente listo antes de migrar
+echo "Esperando a que MySQL esté completamente listo para migrar..."
+sleep 10
+
 # Migrar base de datos si es necesario
+echo "Ejecutando migraciones de la base de datos..."
 php artisan migrate --force || true
 
 # Crear usuario de prueba solo si no existe
 php artisan tinker --execute="if(DB::table('users')->where('username', 'profesor')->count() == 0) { exit(1); }" || php artisan db:seed --class=UserSeeder
 
-# Establecer permisos adecuados
-echo "Estableciendo permisos..."
+# Establecer permisos finales
+echo "Estableciendo permisos finales..."
 chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+chmod -R 775 /var/www/html/public/documentos
+chmod -R 775 /var/www/html/vendor
+chmod -R 775 /var/www/html/node_modules
 
 # Asegurar que los directorios de documentos existen y tienen permisos correctos
 echo "Configurando directorios de documentos..."
@@ -198,6 +203,10 @@ try {
 # Verificar la configuración de Apache antes de iniciar
 echo "Verificando configuración de Apache..."
 apache2ctl -t
+
+# Recargar Apache para aplicar todos los cambios
+echo "Recargando Apache para aplicar cambios..."
+service apache2 reload
 
 # Iniciar Apache en primer plano
 echo "Iniciando servidor Apache..."
