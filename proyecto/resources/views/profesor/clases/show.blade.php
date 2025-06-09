@@ -82,11 +82,11 @@
                                         <td class="text-dark">{{ $alumno->nombre_completo }}</td>
                                         <td class="text-dark">{{ $alumno->email ?: '-' }}</td>
                                         <td class="text-dark">{{ $alumno->numero_expediente ?: '-' }}</td>
-                                        <td>
+                                        <td class="text-dark">
                                             @if($alumno->cuenta_creada)
-                                            <div class="badge badge-success">{{ $alumno->usuario_ldap }}</div>
+                                            <div class="badge badge-success text-white">{{ $alumno->usuario_ldap }}</div>
                                             @else
-                                            <div class="badge badge-warning">No creada</div>
+                                            <div class="badge badge-warning text-dark">No creada</div>
                                             @endif
                                         </td>
                                         <td>
