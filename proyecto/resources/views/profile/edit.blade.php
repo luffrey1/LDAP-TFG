@@ -37,6 +37,12 @@
                         </div>
 
                         <div class="mb-3">
+                            <label class="form-label text-white">{{ __('DN Completo') }}</label>
+                            <input type="text" class="form-control text-white bg-dark border-secondary" value="{{ $ldapUser['dn'] ?? '' }}" readonly>
+                            <div class="form-text text-white-50">{{ __('Distinguished Name (DN) del usuario en LDAP.') }}</div>
+                        </div>
+
+                        <div class="mb-3">
                             <label for="gid" class="form-label text-white">{{ __('GID') }}</label>
                             <input id="gid" type="text" class="form-control text-white bg-dark border-secondary" name="gid" value="{{ $ldapGuid }}" readonly>
                             <div class="form-text text-white-50">{{ __('El GID no puede ser modificado.') }}</div>

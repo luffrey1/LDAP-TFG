@@ -112,7 +112,7 @@ class ProfileController extends Controller
             Log::error('Error al obtener datos LDAP del usuario: ' . $e->getMessage());
         }
 
-        return view('profile.edit', compact('user', 'groups', 'ldapUid', 'ldapGuid', 'ldapCn', 'fullName'));
+        return view('profile.edit', compact('user', 'groups', 'ldapUid', 'ldapGuid', 'ldapCn', 'fullName', 'ldapUser'));
     }
 
     /**
