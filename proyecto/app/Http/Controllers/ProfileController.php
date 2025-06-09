@@ -28,18 +28,24 @@ class ProfileController extends Controller
         $fullName = $user->name;
 
         try {
+            // Obtener la configuración LDAP
+            $config = config('ldap.connections.default');
+            
+            // Crear conexión LDAP usando la configuración
             $ldap = new \LdapRecord\Connection([
-                'hosts' => config('ldap.connections.default.hosts'),
-                'port' => config('ldap.connections.default.port'),
-                'base_dn' => config('ldap.connections.default.base_dn'),
-                'username' => config('ldap.connections.default.username'),
-                'password' => config('ldap.connections.default.password'),
-                'use_ssl' => config('ldap.connections.default.use_ssl'),
-                'use_tls' => config('ldap.connections.default.use_tls'),
-                'timeout' => config('ldap.connections.default.timeout'),
+                'hosts' => $config['hosts'],
+                'port' => 636, // Forzar puerto 636 para LDAPS
+                'base_dn' => $config['base_dn'],
+                'username' => $config['username'],
+                'password' => $config['password'],
+                'use_ssl' => true, // Forzar SSL
+                'use_tls' => false, // Deshabilitar TLS
+                'timeout' => $config['timeout'],
                 'options' => [
                     LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
                     LDAP_OPT_REFERRALS => 0,
+                    LDAP_OPT_PROTOCOL_VERSION => 3,
+                    LDAP_OPT_NETWORK_TIMEOUT => 5,
                 ],
             ]);
 
@@ -123,18 +129,24 @@ class ProfileController extends Controller
         ]);
 
         try {
+            // Obtener la configuración LDAP
+            $config = config('ldap.connections.default');
+            
+            // Crear conexión LDAP usando la configuración
             $ldap = new \LdapRecord\Connection([
-                'hosts' => config('ldap.connections.default.hosts'),
-                'port' => config('ldap.connections.default.port'),
-                'base_dn' => config('ldap.connections.default.base_dn'),
-                'username' => config('ldap.connections.default.username'),
-                'password' => config('ldap.connections.default.password'),
-                'use_ssl' => config('ldap.connections.default.use_ssl'),
-                'use_tls' => config('ldap.connections.default.use_tls'),
-                'timeout' => config('ldap.connections.default.timeout'),
+                'hosts' => $config['hosts'],
+                'port' => 636, // Forzar puerto 636 para LDAPS
+                'base_dn' => $config['base_dn'],
+                'username' => $config['username'],
+                'password' => $config['password'],
+                'use_ssl' => true, // Forzar SSL
+                'use_tls' => false, // Deshabilitar TLS
+                'timeout' => $config['timeout'],
                 'options' => [
                     LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
                     LDAP_OPT_REFERRALS => 0,
+                    LDAP_OPT_PROTOCOL_VERSION => 3,
+                    LDAP_OPT_NETWORK_TIMEOUT => 5,
                 ],
             ]);
 
@@ -161,13 +173,19 @@ class ProfileController extends Controller
 
                     // Intentar autenticar con la contraseña actual
                     $authLdap = new \LdapRecord\Connection([
-                        'hosts' => config('ldap.connections.default.hosts'),
-                        'port' => config('ldap.connections.default.port'),
-                        'base_dn' => config('ldap.connections.default.base_dn'),
+                        'hosts' => $config['hosts'],
+                        'port' => 636,
+                        'base_dn' => $config['base_dn'],
                         'username' => $ldapUser->getDn(),
                         'password' => $currentPassword,
-                        'use_ssl' => config('ldap.connections.default.use_ssl'),
-                        'use_tls' => config('ldap.connections.default.use_tls'),
+                        'use_ssl' => true,
+                        'use_tls' => false,
+                        'options' => [
+                            LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                            LDAP_OPT_REFERRALS => 0,
+                            LDAP_OPT_PROTOCOL_VERSION => 3,
+                            LDAP_OPT_NETWORK_TIMEOUT => 5,
+                        ],
                     ]);
 
                     try {
