@@ -16,8 +16,8 @@ class LogController extends Controller
         $activityLogs = DB::table('activity_logs')
             ->select('id', 'user', 'action', 'description', 'created_at', 'level', 'details')
             ->orderBy('created_at', 'desc')
-            ->paginate(25)
-            ->through(function ($log) {
+            ->get()
+            ->map(function ($log) {
                 return (object) [
                     'id' => $log->id,
                     'user' => $log->user,
@@ -52,11 +52,22 @@ class LogController extends Controller
             });
 
         // Combinar y ordenar todos los logs
-        $logs = $activityLogs->concat($accessLogs)
+        $allLogs = $activityLogs->concat($accessLogs)
             ->sortByDesc('created_at')
             ->values();
 
-        return view('admin.users.logs', compact('logs', 'activityLogs'));
+        // Crear una colección paginada
+        $page = $request->get('page', 1);
+        $perPage = 15;
+        $paginatedLogs = new \Illuminate\Pagination\LengthAwarePaginator(
+            $allLogs->forPage($page, $perPage),
+            $allLogs->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        return view('admin.users.logs', ['logs' => $paginatedLogs]);
     }
 
     public function show($id)
