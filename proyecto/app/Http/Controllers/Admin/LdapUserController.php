@@ -2934,22 +2934,18 @@ class LdapUserController extends Controller
             $connection->connect();
             Log::debug("Conexión LDAP establecida");
 
-            // Buscar el usuario por UID en la OU people
-            $user = $connection->query()
-                ->in($this->peopleOu)
-                ->where('uid', '=', $uid)
-                ->first();
+            // Buscar el usuario
+            $search = ldap_read($ldapConn, $userDn, '(objectClass=*)', ['uid']);
+            if (!$search) {
+                throw new \Exception('Error al buscar usuario: ' . ldap_error($ldapConn));
+            }
 
-            Log::debug("Resultado de búsqueda de usuario:", [
-                'uid' => $uid,
-                'ou' => $this->peopleOu,
-                'user_found' => !empty($user),
-                'user_data' => $user
-            ]);
-
-            if (!$user) {
+            $entries = ldap_get_entries($ldapConn, $search);
+            if ($entries['count'] == 0) {
                 throw new \Exception('Usuario no encontrado');
             }
+
+            Log::debug("Usuario encontrado");
 
             if ($uid === 'ldap-admin') {
                 throw new \Exception('No se puede modificar el estado de administrador del usuario ldap-admin');
@@ -2957,12 +2953,12 @@ class LdapUserController extends Controller
 
             // Verificar si el usuario está en el grupo ldapadmins
             $adminGroupDn = 'cn=ldapadmins,ou=groups,dc=tierno,dc=es';
-            $groupSearch = ldap_read($connection->getConnection(), $adminGroupDn, '(objectClass=*)', ['uniqueMember']);
+            $groupSearch = ldap_read($ldapConn, $adminGroupDn, '(objectClass=*)', ['uniqueMember']);
             if (!$groupSearch) {
-                throw new \Exception('Error al buscar grupo ldapadmins: ' . ldap_error($connection->getConnection()));
+                throw new \Exception('Error al buscar grupo ldapadmins: ' . ldap_error($ldapConn));
             }
 
-            $groupEntries = ldap_get_entries($connection->getConnection(), $groupSearch);
+            $groupEntries = ldap_get_entries($ldapConn, $groupSearch);
             $isAdmin = false;
 
             if ($groupEntries['count'] > 0 && isset($groupEntries[0]['uniquemember'])) {
@@ -2979,20 +2975,22 @@ class LdapUserController extends Controller
             if ($isAdmin) {
                 // Remover del grupo
                 $mod = ['uniqueMember' => $userDn];
-                if (!ldap_mod_del($connection->getConnection(), $adminGroupDn, $mod)) {
-                    throw new \Exception('Error al remover usuario del grupo: ' . ldap_error($connection->getConnection()));
+                if (!ldap_mod_del($ldapConn, $adminGroupDn, $mod)) {
+                    throw new \Exception('Error al remover usuario del grupo: ' . ldap_error($ldapConn));
                 }
                 Log::info("Usuario {$uid} removido del grupo ldapadmins");
                 $message = 'Usuario removido de administradores';
             } else {
                 // Añadir al grupo
                 $mod = ['uniqueMember' => $userDn];
-                if (!ldap_mod_add($connection->getConnection(), $adminGroupDn, $mod)) {
-                    throw new \Exception('Error al añadir usuario al grupo: ' . ldap_error($connection->getConnection()));
+                if (!ldap_mod_add($ldapConn, $adminGroupDn, $mod)) {
+                    throw new \Exception('Error al añadir usuario al grupo: ' . ldap_error($ldapConn));
                 }
                 Log::info("Usuario {$uid} agregado al grupo ldapadmins");
                 $message = 'Usuario agregado como administrador';
             }
+
+            ldap_close($ldapConn);
 
             return response()->json([
                 'success' => true,
