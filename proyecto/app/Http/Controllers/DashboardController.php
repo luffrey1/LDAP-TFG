@@ -950,51 +950,71 @@ class DashboardController extends Controller
     private function getUserActivity()
     {
         try {
-            // Intentar obtener actividad de la base de datos primero
+            $activities = collect();
+            
+            // Obtener actividad reciente de activity_logs
             try {
-                $dbActivities = \DB::table('user_activity')
+                $dbActivities = \DB::table('activity_logs')
                     ->orderBy('created_at', 'desc')
-                    ->limit(5)
+                    ->limit(3)
                     ->get();
-                    
-                if ($dbActivities && count($dbActivities) > 0) {
-                    $activities = [];
-                    foreach ($dbActivities as $activity) {
-                        $activities[] = [
-                            'usuario' => $activity->user_id,
-                            'nombre' => $this->getUserName($activity->user_id),
-                            'accion' => $activity->action,
-                            'detalles' => $activity->details,
-                            'fecha' => $activity->created_at
-                        ];
-                    }
-                    return $activities;
-                }
+                
+                $activities = $activities->concat($dbActivities->map(function($activity) {
+                    return [
+                        'user' => $activity->user,
+                        'action' => $activity->action,
+                        'description' => $activity->description,
+                        'time' => \Carbon\Carbon::parse($activity->created_at)->diffForHumans()
+                    ];
+                }));
             } catch (\Exception $e) {
-                Log::warning('Sin tabla user_activity: ' . $e->getMessage());
+                Log::warning('Error al obtener activity_logs: ' . $e->getMessage());
+            }
+
+            // Si el usuario es admin, obtener intentos de acceso recientes
+            if (session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin') {
+                try {
+                    $accessAttempts = \DB::table('access_attempts')
+                        ->orderBy('created_at', 'desc')
+                        ->limit(2)
+                        ->get();
+                    
+                    $activities = $activities->concat($accessAttempts->map(function($attempt) {
+                        return [
+                            'user' => $attempt->username,
+                            'action' => 'Intento de acceso',
+                            'description' => "Desde {$attempt->hostname} ({$attempt->ip})",
+                            'time' => \Carbon\Carbon::parse($attempt->created_at)->diffForHumans()
+                        ];
+                    }));
+                } catch (\Exception $e) {
+                    Log::warning('Error al obtener access_attempts: ' . $e->getMessage());
+                }
             }
             
-            // Si no hay actividades en la base de datos, usar datos por defecto
-            return [
-                [
-                    'usuario' => 'sistema',
-                    'nombre' => 'Sistema',
-                    'accion' => 'Inició',
-                    'detalles' => 'la aplicación',
-                    'fecha' => now()->format('Y-m-d H:i:s')
-                ]
-            ];
-        } catch (\Exception $e) {
-            //Log::error('Error al obtener actividad de usuarios: ' . $e->getMessage());
+            // Si no hay actividades, devolver actividad por defecto
+            if ($activities->isEmpty()) {
+                return [
+                    [
+                        'user' => 'Sistema',
+                        'action' => 'Inició',
+                        'description' => 'la aplicación',
+                        'time' => now()->diffForHumans()
+                    ]
+                ];
+            }
             
-            // Devolver actividad por defecto
+            return $activities->toArray();
+            
+        } catch (\Exception $e) {
+            Log::error('Error al obtener actividad de usuarios: ' . $e->getMessage());
+            
             return [
                 [
-                    'usuario' => 'sistema',
-                    'nombre' => 'Sistema',
-                    'accion' => 'Inició',
-                    'detalles' => 'la aplicación',
-                    'fecha' => now()->format('Y-m-d H:i:s')
+                    'user' => 'Sistema',
+                    'action' => 'Inició',
+                    'description' => 'la aplicación',
+                    'time' => now()->diffForHumans()
                 ]
             ];
         }

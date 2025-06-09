@@ -291,12 +291,17 @@
                     <div class="timeline">
                         @if(isset($userActivity) && count($userActivity) > 0)
                             @foreach($userActivity as $activity)
-                            <div class="timeline-item">
-                                <div class="timeline-marker"></div>
-                                <div class="timeline-content text-white">
-                                    <h5 class="timeline-title">{{ $activity['nombre'] }} {{ $activity['accion'] }}</h5>
-                                    <p class="mb-1">{{ $activity['detalles'] }}</p>
-                                    <small class="text-muted">{{ date('d/m/Y H:i', strtotime($activity['fecha'])) }}</small>
+                            <div class="timeline-item {{ $activity['action'] === 'Intento de acceso' ? 'access-attempt' : '' }}">
+                                <div class="timeline-marker {{ $activity['action'] === 'Intento de acceso' ? 'bg-danger' : '' }}"></div>
+                                <div class="timeline-content">
+                                    <h5 class="timeline-title">
+                                        @if($activity['action'] === 'Intento de acceso')
+                                            <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                                        @endif
+                                        {{ $activity['user'] }} {{ $activity['action'] }}
+                                    </h5>
+                                    <p class="mb-1">{{ $activity['description'] }}</p>
+                                    <small class="text-muted">{{ $activity['time'] }}</small>
                                 </div>
                             </div>
                             @endforeach
@@ -350,6 +355,33 @@
     
     .counter {
         transition: all 1s ease;
+    }
+    
+    .access-attempt {
+        background-color: rgba(220, 53, 69, 0.05);
+        border-left: 3px solid #dc3545;
+        margin-left: -1rem;
+        padding-left: 1rem;
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding: 1rem 0;
+        border-bottom: 1px solid rgba(0,0,0,0.1);
+    }
+    
+    .timeline-marker {
+        position: absolute;
+        left: -1.5rem;
+        top: 1.5rem;
+        width: 1rem;
+        height: 1rem;
+        border-radius: 50%;
+        background-color: #4e73df;
+    }
+    
+    .timeline-content {
+        padding-left: 1rem;
     }
 </style>
 @endsection
