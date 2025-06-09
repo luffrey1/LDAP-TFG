@@ -1,12 +1,48 @@
-@extends('layouts.app')
+@extends('layouts.dashboard')
 
 @section('content')
-<div class="container-fluid">
+@php
+    $showUrl = route('gestion.grupos.show', ['cn' => ':cn']);
+    $editUrl = route('gestion.grupos.edit', ['cn' => ':cn']);
+    $deleteUrl = route('gestion.grupos.destroy', ['cn' => ':cn']);
+@endphp
+<div class="container" 
+    data-show-url="{{ $showUrl }}"
+    data-edit-url="{{ $editUrl }}"
+    data-delete-url="{{ $deleteUrl }}">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="search" class="text-white">Buscar grupo:</label>
+                                <input type="text" class="form-control" id="search" placeholder="Escribe para buscar...">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="type" class="text-white">Filtrar por tipo:</label>
+                                <select class="form-control" id="type">
+                                    <option value="all">Todos los tipos</option>
+                                    <option value="posix">Posix Group</option>
+                                    <option value="unique">Group of Unique Names</option>
+                                    <option value="combined">Combinado</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
-        <div class="col-12">
+        <div class="col-md-12">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">Gestión de Grupos LDAP</h3>
+                    <h3 class="card-title">Grupos LDAP</h3>
                     <div class="card-tools">
                         <a href="{{ route('gestion.grupos.create') }}" class="btn btn-primary">
                             <i class="fas fa-plus"></i> Nuevo Grupo
@@ -14,26 +50,17 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="input-group">
-                                <input type="text" id="searchInput" class="form-control" placeholder="Buscar grupos...">
-                                <div class="input-group-append">
-                                    <button class="btn btn-default" type="button" id="searchButton">
-                                        <i class="fas fa-search"></i>
-                                    </button>
-                                </div>
-                            </div>
+                    @if (session('success'))
+                        <div class="alert alert-success">
+                            {{ session('success') }}
                         </div>
-                        <div class="col-md-6">
-                            <select id="typeFilter" class="form-control">
-                                <option value="">Todos los tipos</option>
-                                <option value="posix">Posix</option>
-                                <option value="unique">Unique</option>
-                                <option value="both">Combinado</option>
-                            </select>
+                    @endif
+
+                    @if (session('error'))
+                        <div class="alert alert-danger">
+                            {{ session('error') }}
                         </div>
-                    </div>
+                    @endif
 
                     <div class="table-responsive">
                         <table class="table table-bordered table-striped">
@@ -47,41 +74,67 @@
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody id="groupsTableBody">
-                                @foreach($groups as $group)
-                                <tr>
-                                    <td>{{ $group['cn'] }}</td>
-                                    <td>{{ $group['type'] }}</td>
-                                    <td>{{ $group['gidNumber'] }}</td>
-                                    <td>{{ $group['description'] }}</td>
-                                    <td>
-                                        @if(!empty($group['members']))
-                                            {{ implode(', ', $group['members']) }}
-                                        @else
-                                            <span class="text-muted">Sin miembros</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <a href="{{ route('gestion.grupos.edit', ['group' => $group['dn']]) }}" class="btn btn-sm btn-info">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <form action="{{ route('gestion.grupos.destroy', ['group' => $group['dn']]) }}" method="POST" class="d-inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Estás seguro de eliminar este grupo?')">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                                @endforeach
+                            <tbody id="groupsTable">
+                                @forelse ($groups as $group)
+                                    @php
+                                        $cn = $group['cn'] ?? '';
+                                        $gidNumber = $group['gidNumber'] ?? 'N/A';
+                                        $description = $group['description'] ?? 'Sin descripción';
+                                    @endphp
+                                    <tr>
+                                        <td class="text-black">{{ $cn }}</td>
+                                        <td>
+                                            @if($group['type'] === 'posix')
+                                                <button type="button" class="btn btn-sm btn-info filter-type" data-type="posix" 
+                                                    onclick="filterByType('posix')">
+                                                    Posix
+                                                </button>
+                                            @elseif($group['type'] === 'unique')
+                                                <button type="button" class="btn btn-sm btn-success filter-type" data-type="unique" 
+                                                    onclick="filterByType('unique')">
+                                                    Unique Names
+                                                </button>
+                                            @elseif($group['type'] === 'combined')
+                                                <button type="button" class="btn btn-sm btn-warning filter-type" data-type="combined" 
+                                                    onclick="filterByType('combined')">
+                                                    Combinado
+                                                </button>
+                                            @endif
+                                        </td>
+                                        <td>{{ $gidNumber }}</td>
+                                        <td>{{ $description }}</td>
+                                        <td>{{ count($group['members']) }}</td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <a href="{{ str_replace(':cn', $group['cn'], $showUrl) }}" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-eye"></i> Ver
+                                                </a>
+                                                @if(!empty($group['cn']))
+                                                <a href="{{ str_replace(':cn', $group['cn'], $editUrl) }}" class="btn btn-sm btn-info">
+                                                    <i class="fas fa-edit"></i> Editar
+                                                </a>
+                                                @if (!in_array($group['cn'], ['admin', 'ldapadmins', 'sudo']))
+                                                    <button type="button" class="btn btn-sm btn-danger" 
+                                                            onclick="confirmDelete('{{ $group['cn'] }}')">
+                                                        <i class="fas fa-trash"></i> Eliminar
+                                                    </button>
+                                                @endif
+                                                @endif
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="4" class="text-center">No hay grupos disponibles</td>
+                                    </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>
 
                     <div class="d-flex justify-content-between align-items-center mt-3">
                         <div>
-                            Mostrando {{ $groups->firstItem() ?? 0 }} a {{ $groups->lastItem() ?? 0 }} de {{ $total }} grupos
+                            Mostrando {{ $groups->firstItem() ?? 0 }} a {{ $groups->lastItem() ?? 0 }} de {{ $groups->total() ?? 0 }} grupos
                         </div>
                         <div>
                             {{ $groups->links() }}
@@ -93,116 +146,131 @@
     </div>
 </div>
 
-@push('scripts')
+<!-- Modal de confirmación -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirmar eliminación</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                ¿Está seguro de que desea eliminar este grupo?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-$(document).ready(function() {
-    let currentPage = 1;
-    let searchTerm = '';
-    let typeFilter = '';
+function confirmDelete(cn) {
+    const modal = $('#deleteModal');
+    const form = $('#deleteForm');
+    form.attr('action', "{{ route('gestion.grupos.destroy', ':cn') }}".replace(':cn', cn));
+    modal.modal('show');
+}
 
-    function loadGroups() {
-        $.ajax({
-            url: '{{ route("gestion.grupos.index") }}',
-            data: {
-                page: currentPage,
-                search: searchTerm,
-                type: typeFilter
-            },
-            success: function(response) {
-                let html = '';
-                response.groups.forEach(function(group) {
-                    html += `
-                        <tr>
-                            <td>${group.cn}</td>
-                            <td>${group.type}</td>
-                            <td>${group.gidNumber}</td>
-                            <td>${group.description || ''}</td>
-                            <td>${group.members.length ? group.members.join(', ') : '<span class="text-muted">Sin miembros</span>'}</td>
-                            <td>
-                                <a href="/gestion/grupos/${encodeURIComponent(group.dn)}/edit" class="btn btn-sm btn-info">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <form action="/gestion/grupos/${encodeURIComponent(group.dn)}" method="POST" class="d-inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Estás seguro de eliminar este grupo?')">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                    `;
-                });
-                $('#groupsTableBody').html(html);
-                
-                // Actualizar paginación
-                updatePagination(response.currentPage, response.lastPage);
-            }
-        });
-    }
+function filterByType(type) {
+    typeSelect.value = type;
+    updateGroups();
+}
 
-    function updatePagination(currentPage, lastPage) {
-        let paginationHtml = '';
-        
-        // Botón anterior
-        paginationHtml += `
-            <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                <a class="page-link" href="#" data-page="${currentPage - 1}">Anterior</a>
-            </li>
-        `;
-        
-        // Números de página
-        for (let i = 1; i <= lastPage; i++) {
-            paginationHtml += `
-                <li class="page-item ${i === currentPage ? 'active' : ''}">
-                    <a class="page-link" href="#" data-page="${i}">${i}</a>
-                </li>
+let searchTimeout;
+const searchInput = document.getElementById('search');
+const typeSelect = document.getElementById('type');
+const groupsTable = document.getElementById('groupsTable');
+
+function updateGroups() {
+    const search = searchInput.value;
+    const type = typeSelect.value;
+    
+    fetch(`{{ route('gestion.grupos.index') }}?search=${encodeURIComponent(search)}&type=${encodeURIComponent(type)}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.groups) {
+            console.error('No groups data received');
+            return;
+        }
+
+        const container = document.querySelector('.container');
+        const showUrl = container.dataset.showUrl;
+        const editUrl = container.dataset.editUrl;
+        const deleteUrl = container.dataset.deleteUrl;
+
+        groupsTable.innerHTML = data.groups.map(group => {
+            const showUrlWithCn = showUrl.replace(':cn', group.cn);
+            const editUrlWithCn = editUrl.replace(':cn', group.cn);
+            
+            return `
+                <tr>
+                    <td class="text-black">${group.cn}</td>
+                    <td>
+                        ${group.type === 'posix' ? 
+                            `<button type="button" class="btn btn-sm btn-info filter-type" data-type="posix" 
+                                onclick="filterByType('posix')">
+                                Posix
+                            </button>` :
+                        group.type === 'unique' ?
+                            `<button type="button" class="btn btn-sm btn-success filter-type" data-type="unique" 
+                                onclick="filterByType('unique')">
+                                Unique Names
+                            </button>` :
+                            `<button type="button" class="btn btn-sm btn-warning filter-type" data-type="combined" 
+                                onclick="filterByType('combined')">
+                                Combinado
+                            </button>`
+                        }
+                    </td>
+                    <td>${group.gidNumber || ''}</td>
+                    <td>${group.description || ''}</td>
+                    <td>${group.members ? group.members.length : 0}</td>
+                    <td>
+                        <div class="btn-group" role="group">
+                            <a href="${showUrlWithCn}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-eye"></i> Ver
+                            </a>
+                            <a href="${editUrlWithCn}" class="btn btn-sm btn-info">
+                                <i class="fas fa-edit"></i> Editar
+                            </a>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete('${group.cn}')">
+                                <i class="fas fa-trash"></i> Eliminar
+                            </button>
+                        </div>
+                    </td>
+                </tr>
             `;
-        }
-        
-        // Botón siguiente
-        paginationHtml += `
-            <li class="page-item ${currentPage === lastPage ? 'disabled' : ''}">
-                <a class="page-link" href="#" data-page="${currentPage + 1}">Siguiente</a>
-            </li>
-        `;
-        
-        $('.pagination').html(paginationHtml);
-    }
-
-    // Eventos de paginación
-    $(document).on('click', '.pagination .page-link', function(e) {
-        e.preventDefault();
-        const page = $(this).data('page');
-        if (page && page !== currentPage) {
-            currentPage = page;
-            loadGroups();
-        }
+        }).join('') || '<tr><td colspan="6" class="text-center">No hay grupos disponibles</td></tr>';
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        groupsTable.innerHTML = '<tr><td colspan="6" class="text-center">Error al cargar los grupos</td></tr>';
     });
+}
 
-    // Evento de búsqueda
-    $('#searchButton').click(function() {
-        searchTerm = $('#searchInput').val();
-        currentPage = 1;
-        loadGroups();
-    });
+// Add event listeners for search and type filter
+searchInput.addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(updateGroups, 300);
+});
 
-    // Evento de filtro por tipo
-    $('#typeFilter').change(function() {
-        typeFilter = $(this).val();
-        currentPage = 1;
-        loadGroups();
-    });
+typeSelect.addEventListener('change', updateGroups);
 
-    // Evento de tecla en el campo de búsqueda
-    $('#searchInput').keypress(function(e) {
-        if (e.which === 13) {
-            searchTerm = $(this).val();
-            currentPage = 1;
-            loadGroups();
-        }
-    });
+// Initial load
+document.addEventListener('DOMContentLoaded', function() {
+    updateGroups();
 });
 </script>
-@endpush
 @endsection 
