@@ -191,18 +191,10 @@
 
         // Función para actualizar el nombre de usuario basado en nombre y apellidos
         function updateUsername() {
-            if (nombreInput.value && !uidInput.value) {
-                // Obtener el nombre en minúsculas sin acentos
+            if (nombreInput.value && apellidosInput.value && !uidInput.value) {
                 const nombre = nombreInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
-                
-                // Obtener la primera letra del apellido
-                let inicialApellido = '';
-                if (apellidosInput.value) {
-                    inicialApellido = apellidosInput.value.charAt(0).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                }
-                
-                // Combinar nombre completo con la inicial del apellido
-                uidInput.value = nombre + inicialApellido;
+                const apellidos = apellidosInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
+                uidInput.value = nombre + apellidos;
                 
                 // Actualizar también el DN
                 updateDn();
