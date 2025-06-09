@@ -168,19 +168,24 @@ $(document).ready(function() {
     // Función para determinar el tipo de log basado en la descripción
     function getLogType(description) {
         description = description.toLowerCase();
+        console.log('Analyzing description:', description);
         
         if (description.includes('usuario ldap')) {
+            console.log('Detected as users type');
             return 'users';
         }
         
         if (description.includes('grupo ldap')) {
+            console.log('Detected as groups type');
             return 'groups';
         }
         
-        if (description.includes('desde')) {
+        if (description.includes('desde') || description.includes('intento de acceso')) {
+            console.log('Detected as access type');
             return 'access';
         }
         
+        console.log('Detected as all type');
         return 'all';
     }
 
@@ -190,18 +195,28 @@ $(document).ready(function() {
         var description = $row.find('td:eq(2)').text().trim();
         var type = getLogType(description);
         $row.attr('data-type', type);
-        console.log('Row type:', type, 'Description:', description);
+        console.log('Row assigned type:', type, 'Description:', description);
     });
 
     // Función para filtrar por tipo de log
     function filterLogs(type) {
-        console.log('Filtering by type:', type);
-        if (type === 'all') {
-            $('.log-row').show();
-        } else {
-            $('.log-row').hide();
-            $('.log-row[data-type="' + type + '"]').show();
-        }
+        console.log('Starting filter for type:', type);
+        var visibleCount = 0;
+        
+        $('.log-row').each(function() {
+            var $row = $(this);
+            var rowType = $row.attr('data-type');
+            console.log('Row type:', rowType, 'Filter type:', type);
+            
+            if (type === 'all' || rowType === type) {
+                $row.show();
+                visibleCount++;
+            } else {
+                $row.hide();
+            }
+        });
+        
+        console.log('Filter complete. Visible rows:', visibleCount);
     }
 
     // Manejar cambios de pestaña
