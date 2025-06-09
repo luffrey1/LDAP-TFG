@@ -187,9 +187,11 @@ class MensajeController extends Controller
                 
                 // Si hay archivos adjuntos, procesarlos
                 if ($request->hasFile('adjuntos')) {
+                    if (!\Storage::disk('public')->exists('adjuntos/mensajes')) {
+                        \Storage::disk('public')->makeDirectory('adjuntos/mensajes');
+                    }
                     foreach ($request->file('adjuntos') as $file) {
                         $path = $file->store('adjuntos/mensajes', 'public');
-                        
                         MensajeAdjunto::create([
                             'mensaje_id' => $mensaje->id,
                             'nombre' => $file->getClientOriginalName(),
