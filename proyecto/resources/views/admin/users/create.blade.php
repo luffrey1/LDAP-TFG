@@ -100,7 +100,7 @@
 
                         <div class="mb-3 text-white">
                             <label for="homeDirectory" class="form-label">{{ __('Home Directory') }}</label>
-                            <input id="homeDirectory" type="text" class="form-control" name="homeDirectory" value="{{ old('homeDirectory', '/home/') }}" readonly>
+                            <input id="homeDirectory" type="text" class="form-control" name="homeDirectory" value="{{ old('homeDirectory', '/home/') }}">
                             <div class="form-text">{{ __('Se genera automáticamente a partir del nombre de usuario.') }}</div>
                         </div>
 
@@ -209,7 +209,7 @@
             if (nombreInput.value && apellidosInput.value && !emailInput.value) {
                 const nombre = nombreInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
                 const apellidos = apellidosInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
-                emailInput.value = nombre + '.' + apellidos + '@tierno.es';
+                emailInput.value = nombre + apellidos + '@tierno.es';
             }
         }
 

@@ -98,7 +98,7 @@
 
                         <div class="mb-3 text-white">
                             <label for="homeDirectory" class="form-label">{{ __('Home Directory') }}</label>
-                            <input id="homeDirectory" type="text" class="form-control" name="homeDirectory" value="{{ old('homeDirectory', is_array($user) ? ($user['homedirectory'][0] ?? '') : $user->getFirstAttribute('homedirectory')) }}" readonly>
+                            <input id="homeDirectory" type="text" class="form-control" name="homeDirectory" value="{{ old('homeDirectory', is_array($user) ? ($user['homedirectory'][0] ?? '') : $user->getFirstAttribute('homedirectory')) }}">
                             <div class="form-text">{{ __('Directorio home del usuario.') }}</div>
                         </div>
 
@@ -228,6 +228,7 @@
         const btnRoleProfesor = document.getElementById('btn-role-profesor');
         const btnRoleAlumno = document.getElementById('btn-role-alumno');
         const gruposSelect = document.getElementById('grupos');
+        const gidNumberInput = document.getElementById('gidNumber');
 
         // Función para actualizar el DN cuando cambia el username
         function updateDn() {
@@ -321,6 +322,83 @@
 
         // Inicializar
         checkActiveRole();
+
+        // Función para buscar y seleccionar el grupo por GID
+        async function findGroupByGid(gid) {
+            if (!gid) return;
+            
+            try {
+                const response = await fetch(`/api/ldap/groups/gid/${gid}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                if (data.success && data.group) {
+                    // Deseleccionar todos los grupos primero
+                    for (let i = 0; i < gruposSelect.options.length; i++) {
+                        gruposSelect.options[i].selected = false;
+                    }
+                    
+                    // Seleccionar el grupo encontrado
+                    const options = gruposSelect.options;
+                    let found = false;
+                    for (let i = 0; i < options.length; i++) {
+                        if (options[i].value === data.group) {
+                            options[i].selected = true;
+                            found = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!found) {
+                        console.warn(`Grupo ${data.group} encontrado pero no está en la lista de opciones`);
+                    }
+                } else {
+                    alert(data.message || 'El GID especificado no existe en ningún grupo');
+                    gidNumberInput.value = '';
+                }
+            } catch (error) {
+                console.error('Error al buscar grupo por GID:', error);
+                alert('Error al buscar el grupo por GID. Por favor, inténtalo de nuevo.');
+                gidNumberInput.value = '';
+            }
+        }
+
+        // Función para buscar el GID de un grupo
+        async function findGidByGroup(groupName) {
+            if (!groupName) return;
+            
+            try {
+                const response = await fetch(`/api/ldap/groups/${groupName}/gid`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                if (data.success && data.gidNumber) {
+                    gidNumberInput.value = data.gidNumber;
+                } else {
+                    console.warn(`No se encontró GID para el grupo ${groupName}`);
+                }
+            } catch (error) {
+                console.error('Error al buscar GID por grupo:', error);
+            }
+        }
+
+        // Evento para buscar y seleccionar grupo por GID
+        gidNumberInput.addEventListener('change', function() {
+            findGroupByGid(this.value);
+        });
+
+        // Evento para actualizar GID cuando cambia la selección de grupos
+        gruposSelect.addEventListener('change', function() {
+            // Si solo hay un grupo seleccionado, buscar su GID
+            const selectedOptions = Array.from(this.selectedOptions);
+            if (selectedOptions.length === 1) {
+                findGidByGroup(selectedOptions[0].value);
+            }
+        });
     });
 </script>
 @endpush
