@@ -163,11 +163,7 @@ class LdapGroupController extends Controller
                                     'givenname' => $userEntry['givenname'][0] ?? '',
                                     'sn' => $userEntry['sn'][0] ?? ''
                                 ];
-                            } else {
-                                $membersByUid[$uid] = ['uid' => $uid];
                             }
-                        } else {
-                            $membersByUid[$uid] = ['uid' => $uid];
                         }
                     }
                 }
@@ -191,11 +187,7 @@ class LdapGroupController extends Controller
                                             'givenname' => $userEntry['givenname'][0] ?? '',
                                             'sn' => $userEntry['sn'][0] ?? ''
                                         ];
-                                    } else {
-                                        $membersByUid[$uid] = ['uid' => $uid];
                                     }
-                                } else {
-                                    $membersByUid[$uid] = ['uid' => $uid];
                                 }
                             }
                         }
@@ -753,15 +745,10 @@ class LdapGroupController extends Controller
                                 'givenname' => $userEntry['givenname'][0] ?? '',
                                 'sn' => $userEntry['sn'][0] ?? ''
                             ];
-                        } else {
-                            $membersByUid[$uid] = ['uid' => $uid];
                         }
-                    } else {
-                        $membersByUid[$uid] = ['uid' => $uid];
                     }
                 }
             }
-            // Procesar miembros para groupOfUniqueNames
             if (isset($entry['uniquemember'])) {
                 for ($i = 0; $i < $entry['uniquemember']['count']; $i++) {
                     $userDn = $entry['uniquemember'][$i];
@@ -781,11 +768,7 @@ class LdapGroupController extends Controller
                                         'givenname' => $userEntry['givenname'][0] ?? '',
                                         'sn' => $userEntry['sn'][0] ?? ''
                                     ];
-                                } else {
-                                    $membersByUid[$uid] = ['uid' => $uid];
                                 }
-                            } else {
-                                $membersByUid[$uid] = ['uid' => $uid];
                             }
                         }
                     }
