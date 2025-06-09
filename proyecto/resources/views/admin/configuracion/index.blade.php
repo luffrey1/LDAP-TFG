@@ -10,7 +10,7 @@ body, .container-fluid {
 .card-configuracion {
     box-shadow: 0 4px 24px rgba(25,118,237,0.08), 0 1.5px 4px rgba(25,118,237,0.03);
     border-radius: 0.7rem;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
     transition: all 0.3s;
     border: none;
 }
@@ -22,31 +22,32 @@ body, .container-fluid {
 }
 .card-body {
     background: transparent !important;
+    padding: 1rem;
 }
 .modulo-card {
-    color: #222 !important;
+    color: #fff !important;
     border: 1.5px solid #dbeafe;
     border-radius: 10px;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
     transition: all 0.2s;
     box-shadow: 0 1px 4px rgba(25,118,237,0.04);
-    padding: 1.25rem;
+    padding: 0.75rem 1rem;
 }
 .modulo-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(25,118,237,0.08);
 }
 .modulo-titulo {
-    font-size: 1.13rem;
+    color: #fff !important;
+    font-size: 1.1rem;
     font-weight: 700 !important;
     letter-spacing: 0.01em;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
 }
 .modulo-descripcion {
-    color: #444 !important;
-    font-size: 1rem !important;
-    opacity: 0.92;
-    margin-bottom: 1rem;
+    color: rgba(255, 255, 255, 0.8) !important;
+    font-size: 0.9rem !important;
+    margin-bottom: 0.5rem;
 }
 .form-check-input:checked {
     background-color: #4e73df !important;
@@ -56,7 +57,7 @@ input.form-control, select.form-control {
     color: #222 !important;
     border: 1.5px solid #b3c6e6 !important;
     border-radius: 0.4rem !important;
-    font-size: 1.08rem !important;
+    font-size: 1rem !important;
     font-weight: 500;
     box-shadow: none !important;
     transition: border-color 0.2s;
@@ -71,6 +72,11 @@ input.form-control, select.form-control {
     font-size: 1.1rem;
     font-weight: 600;
     letter-spacing: 0.01em;
+}
+.panel-descripcion {
+    color: rgba(255, 255, 255, 0.8) !important;
+    font-size: 0.9rem !important;
+    margin-top: 0.25rem !important;
 }
 </style>
 @endsection
@@ -119,9 +125,9 @@ input.form-control, select.form-control {
             <!-- Configuración de Módulos -->
             <div class="col-lg-6">
                 <div class="card shadow card-configuracion">
-                    <div class="card-header py-3">
+                    <div class="card-header py-2">
                         <h6 class="m-0 font-weight-bold text-primary">Módulos del Sistema</h6>
-                        <p class="panel-descripcion mt-1 mb-0 text-white">Activa o desactiva los módulos del sistema</p>
+                        <p class="panel-descripcion mb-0">Activa o desactiva los módulos del sistema</p>
                     </div>
                     <div class="card-body">
                         <div class="modulo-card">
@@ -190,16 +196,16 @@ input.form-control, select.form-control {
             <!-- Telemetría de Equipos -->
             <div class="col-lg-6">
                 <div class="card shadow card-configuracion">
-                    <div class="card-header py-3">
+                    <div class="card-header py-2">
                         <h6 class="m-0 font-weight-bold text-primary">Telemetría de Equipos</h6>
-                        <p class="panel-descripcion mt-1 mb-0 text-white">Configura cada cuánto tiempo los agentes deben enviar datos automáticamente (en minutos). Si usas modo bajo demanda, este valor es solo informativo.</p>
+                        <p class="panel-descripcion mb-0">Configura cada cuánto tiempo los agentes deben enviar datos automáticamente (en minutos). Si usas modo bajo demanda, este valor es solo informativo.</p>
                     </div>
                     <div class="card-body">
                         <div class="modulo-card">
-                            <label for="telemetria_intervalo_minutos" class="form-label">Intervalo de telemetría (minutos)</label>
+                            <label for="telemetria_intervalo_minutos" class="form-label text-white">Intervalo de telemetría (minutos)</label>
                             <input type="number" class="form-control" id="telemetria_intervalo_minutos" name="telemetria_intervalo_minutos" min="1" max="1440" 
                                 value="{{ isset($configuraciones['general']) && $configuraciones['general']->where('clave', 'telemetria_intervalo_minutos')->first() ? $configuraciones['general']->where('clave', 'telemetria_intervalo_minutos')->first()->valor : 60 }}">
-                            <small class="form-text text-muted">Ejemplo: 60 = cada hora, 10 = cada 10 minutos, 1440 = una vez al día.</small>
+                            <small class="form-text text-white-50">Ejemplo: 60 = cada hora, 10 = cada 10 minutos, 1440 = una vez al día.</small>
                         </div>
                     </div>
                 </div>
@@ -207,7 +213,7 @@ input.form-control, select.form-control {
         </div>
 
         <!-- Botón de guardar -->
-        <div class="text-center mb-5">
+        <div class="text-center mb-4">
             <button type="submit" class="btn btn-primary btn-lg">
                 <i class="fas fa-save mr-2"></i>Guardar Configuración
             </button>
