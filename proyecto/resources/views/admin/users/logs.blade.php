@@ -123,9 +123,9 @@
                         </table>
                     </div>
 
-                    @if($logs->hasPages())
+                    @if($logs->count() > 0)
                         <div class="d-flex justify-content-center mt-4">
-                            {{ $logs->links() }}
+                            {{ $activityLogs->links() }}
                         </div>
                     @endif
                 </div>

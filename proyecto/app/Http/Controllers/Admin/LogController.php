@@ -16,8 +16,8 @@ class LogController extends Controller
         $activityLogs = DB::table('activity_logs')
             ->select('id', 'user', 'action', 'description', 'created_at', 'level', 'details')
             ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($log) {
+            ->paginate(25)
+            ->through(function ($log) {
                 return (object) [
                     'id' => $log->id,
                     'user' => $log->user,
@@ -37,8 +37,8 @@ class LogController extends Controller
                     'created_at', DB::raw("'WARNING' as level"),
                     DB::raw("JSON_OBJECT('hostname', hostname, 'ip', ip) as details"))
             ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($log) {
+            ->paginate(25)
+            ->through(function ($log) {
                 return (object) [
                     'id' => $log->id,
                     'user' => $log->user,
