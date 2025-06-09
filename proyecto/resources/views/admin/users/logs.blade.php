@@ -101,22 +101,18 @@
                     </div>
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label class="font-weight-bold">Tipo de Acción:</label>
+                            <label class="font-weight-bold">Acción Realizada:</label>
+                            <p id="logMessage" class="text-primary font-weight-bold"></p>
+                        </div>
+                        <div class="form-group">
+                            <label class="font-weight-bold">Tipo:</label>
                             <p id="logActionType" class="text-muted"></p>
                         </div>
                         <div class="form-group">
                             <label class="font-weight-bold">Entidad:</label>
                             <p id="logEntity" class="text-muted"></p>
                         </div>
-                        <div class="form-group">
-                            <label class="font-weight-bold">Operación:</label>
-                            <p id="logOperation" class="text-muted"></p>
-                        </div>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label class="font-weight-bold">Acción:</label>
-                    <p id="logAction" class="text-muted"></p>
                 </div>
                 <div class="form-group">
                     <label class="font-weight-bold">Descripción:</label>
@@ -192,14 +188,13 @@ $(document).ready(function() {
             $('#logId').text(data.id);
             $('#logDate').text(new Date(data.created_at).toLocaleString());
             $('#logUser').text(data.user);
-            $('#logAction').text(data.action);
             $('#logDescription').text(data.description);
             
             // Mostrar detalles de la acción
             if (data.details) {
+                $('#logMessage').text(data.details.message || 'No especificado');
                 $('#logActionType').text(data.details.action_type || 'No especificado');
                 $('#logEntity').text(data.details.action_details?.entity || 'No especificado');
-                $('#logOperation').text(data.details.action_details?.operation || 'No especificado');
                 
                 // Mostrar detalles adicionales
                 let detailsHtml = '<div class="card mt-3"><div class="card-header bg-light">Detalles Adicionales</div><div class="card-body">';
@@ -214,7 +209,7 @@ $(document).ready(function() {
                 } else {
                     // Mostrar otros detalles si existen
                     Object.entries(data.details).forEach(([key, value]) => {
-                        if (key !== 'action_type' && key !== 'action_details') {
+                        if (key !== 'action_type' && key !== 'action_details' && key !== 'message') {
                             detailsHtml += `<p><strong>${key}:</strong> ${value}</p>`;
                         }
                     });

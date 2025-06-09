@@ -121,13 +121,14 @@ class LogController extends Controller
                         'hostname' => $log->hostname,
                         'ip' => $log->ip,
                         'action_type' => 'intento_acceso',
-                        'status' => 'fallido'
+                        'status' => 'fallido',
+                        'message' => 'Intento de acceso fallido'
                     ]
                 ];
             }
         } else {
             $details = json_decode($log->details ?? '{}', true);
-            $actionType = $this->getActionType($log->action);
+            $actionType = $this->getActionType($log->action, $log->description);
             
             $log = (object) [
                 'id' => $log->id,
@@ -211,33 +212,47 @@ class LogController extends Controller
         return 'other';
     }
 
-    private function getActionType($action)
+    private function getActionType($action, $description = '')
     {
         $action = strtolower($action);
+        $description = strtolower($description);
         $details = [];
+
+        // Extraer el nombre del usuario/grupo de la descripción
+        $targetName = '';
+        if (preg_match('/(?:usuario|user|grupo|group)\s+[\'"]?([^\'"]+)[\'"]?/i', $description, $matches)) {
+            $targetName = $matches[1];
+        }
 
         // Detectar tipo de acción
         if (strpos($action, 'crear') !== false || strpos($action, 'create') !== false) {
             $type = 'creación';
             $details['operation'] = 'crear';
+            $details['message'] = $targetName ? "Creación de {$targetName}" : 'Creación';
         } elseif (strpos($action, 'actualizar') !== false || strpos($action, 'update') !== false || strpos($action, 'editar') !== false || strpos($action, 'edit') !== false) {
             $type = 'actualización';
             $details['operation'] = 'actualizar';
+            $details['message'] = $targetName ? "Actualización de {$targetName}" : 'Actualización';
         } elseif (strpos($action, 'eliminar') !== false || strpos($action, 'delete') !== false) {
             $type = 'eliminación';
             $details['operation'] = 'eliminar';
+            $details['message'] = $targetName ? "Eliminación de {$targetName}" : 'Eliminación';
         } elseif (strpos($action, 'login') !== false || strpos($action, 'acceso') !== false) {
             $type = 'acceso';
             $details['operation'] = 'acceso';
+            $details['message'] = 'Intento de acceso';
         } elseif (strpos($action, 'password') !== false || strpos($action, 'contraseña') !== false) {
             $type = 'contraseña';
             $details['operation'] = 'cambio_contraseña';
+            $details['message'] = $targetName ? "Cambio de contraseña de {$targetName}" : 'Cambio de contraseña';
         } elseif (strpos($action, 'permisos') !== false || strpos($action, 'permissions') !== false) {
             $type = 'permisos';
             $details['operation'] = 'cambio_permisos';
+            $details['message'] = $targetName ? "Cambio de permisos de {$targetName}" : 'Cambio de permisos';
         } else {
             $type = 'otra';
             $details['operation'] = 'otra';
+            $details['message'] = $action;
         }
 
         // Detectar entidad afectada
