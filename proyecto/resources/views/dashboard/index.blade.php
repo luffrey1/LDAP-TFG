@@ -302,7 +302,10 @@
                                             <p><strong>IP:</strong> {{ $activity['details']['ip'] }}</p>
                                         </div>
                                     @endif
-                                    <span class="timeline-time">{{ $activity['time'] }}</span>
+                                    <div class="timeline-footer">
+                                        <span class="timeline-time">{{ $activity['time'] }}</span>
+                                        <span class="timeline-user">por {{ $activity['performed_by'] }}</span>
+                                    </div>
                                 </div>
                             </div>
                             @endforeach
@@ -423,6 +426,23 @@
     .timeline-time {
         font-size: 0.85rem;
         color: rgba(255, 255, 255, 0.7);
+    }
+
+    .timeline-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 8px;
+        font-size: 0.85rem;
+    }
+
+    .timeline-user {
+        color: rgba(255, 255, 255, 0.7);
+        font-style: italic;
+    }
+
+    .access-attempt .timeline-user {
+        color: #666 !important;
     }
 </style>
 @endsection

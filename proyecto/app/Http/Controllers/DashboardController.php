@@ -964,7 +964,8 @@ class DashboardController extends Controller
                         'user' => $activity->user,
                         'action' => $activity->action,
                         'description' => $activity->description,
-                        'time' => \Carbon\Carbon::parse($activity->created_at)->diffForHumans()
+                        'time' => \Carbon\Carbon::parse($activity->created_at)->diffForHumans(),
+                        'performed_by' => $activity->performed_by ?? 'Sistema'
                     ];
                 }));
             } catch (\Exception $e) {
@@ -989,7 +990,8 @@ class DashboardController extends Controller
                             'details' => [
                                 'hostname' => $attempt->hostname,
                                 'ip' => $attempt->ip
-                            ]
+                            ],
+                            'performed_by' => $attempt->username
                         ];
                     }));
                 } catch (\Exception $e) {
@@ -1004,7 +1006,8 @@ class DashboardController extends Controller
                         'user' => 'Sistema',
                         'action' => 'Inició',
                         'description' => 'la aplicación',
-                        'time' => now()->diffForHumans()
+                        'time' => now()->diffForHumans(),
+                        'performed_by' => 'Sistema'
                     ]
                 ];
             }
@@ -1019,7 +1022,8 @@ class DashboardController extends Controller
                     'user' => 'Sistema',
                     'action' => 'Inició',
                     'description' => 'la aplicación',
-                    'time' => now()->diffForHumans()
+                    'time' => now()->diffForHumans(),
+                    'performed_by' => 'Sistema'
                 ]
             ];
         }
