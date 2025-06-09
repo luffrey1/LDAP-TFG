@@ -17,21 +17,50 @@ class LogController extends Controller
             $activityLogs = DB::table('activity_logs')
                 ->select([
                     'id',
-                    'level',
-                    'user',
-                    'action',
+                    'log_name',
                     'description',
+                    'subject_type',
+                    'subject_id',
+                    'causer_type',
+                    'causer_id',
+                    'properties',
                     'created_at'
                 ])
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($log) {
+                    $properties = json_decode($log->properties, true);
+                    $action = $log->description;
+                    $details = '';
+                    
+                    // Extraer detalles específicos según el tipo de acción
+                    if (isset($properties['attributes'])) {
+                        if (isset($properties['attributes']['username'])) {
+                            $details .= "Usuario: " . $properties['attributes']['username'] . " ";
+                        }
+                        if (isset($properties['attributes']['group'])) {
+                            $details .= "Grupo: " . $properties['attributes']['group'] . " ";
+                        }
+                        if (isset($properties['attributes']['groups'])) {
+                            $details .= "Grupos: " . implode(', ', $properties['attributes']['groups']) . " ";
+                        }
+                    }
+                    
+                    // Extraer el usuario que realizó la acción
+                    $performedBy = 'Sistema';
+                    if ($log->causer_type === 'App\\Models\\User') {
+                        $user = DB::table('users')->where('id', $log->causer_id)->first();
+                        if ($user) {
+                            $performedBy = $user->name;
+                        }
+                    }
+                    
                     return [
                         'id' => $log->id,
-                        'action' => $log->action,
-                        'description' => $log->description,
-                        'type' => $this->getLogType($log->action),
-                        'performed_by' => $log->user ?? 'Sistema',
+                        'action' => $action,
+                        'description' => $details ? $action . ' - ' . $details : $action,
+                        'type' => $this->getLogType($action),
+                        'performed_by' => $performedBy,
                         'created_at' => $log->created_at
                     ];
                 });
@@ -50,18 +79,10 @@ class LogController extends Controller
                 ->get()
                 ->map(function ($attempt) {
                     $action = $attempt->success ? 'Acceso exitoso' : 'Intento de acceso fallido';
-                    $description = $action . ' - Usuario: ' . $attempt->username;
-                    if ($attempt->ip_address) {
-                        $description .= ' desde IP: ' . $attempt->ip_address;
-                    }
-                    if ($attempt->user_agent) {
-                        $description .= ' (Navegador: ' . $attempt->user_agent . ')';
-                    }
-                    
                     return [
                         'id' => $attempt->id,
                         'action' => $action,
-                        'description' => $description,
+                        'description' => $action . ' - Usuario: ' . $attempt->username . ' desde IP: ' . $attempt->ip_address,
                         'type' => 'access',
                         'performed_by' => $attempt->username,
                         'created_at' => $attempt->created_at
