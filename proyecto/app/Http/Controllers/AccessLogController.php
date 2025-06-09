@@ -9,6 +9,7 @@ use LdapRecord\Container;
 use App\Models\AccessAttempt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 
 class AccessLogController extends Controller
 {
@@ -62,17 +63,20 @@ class AccessLogController extends Controller
     private function getHostnameFromMacScanner($ip)
     {
         try {
-            $response = file_get_contents("http://localhost:5000/api/devices?ip=" . urlencode($ip));
-            $data = json_decode($response, true);
+            $baseUrl = env('MACSCANNER_URL', 'http://localhost:5000');
+            $response = Http::timeout(2)->get("{$baseUrl}/api/devices", ['ip' => $ip]);
             
-            if ($data && isset($data['hostname'])) {
-                return $data['hostname'];
+            if ($response->successful()) {
+                $data = $response->json();
+                if (isset($data['hostname'])) {
+                    return $data['hostname'];
+                }
             }
         } catch (\Exception $e) {
-            Log::error('Error getting hostname from macscanner: ' . $e->getMessage());
+            Log::warning('Error al obtener hostname del macscanner: ' . $e->getMessage());
         }
 
         // Fallback a gethostbyaddr si el macscanner falla
-        return gethostbyaddr($ip);
+        return gethostbyaddr($ip) ?: $ip;
     }
 } 
