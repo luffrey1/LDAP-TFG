@@ -147,28 +147,39 @@ $(document).ready(function() {
         // Patrones de detección
         const patterns = {
             users: [
-                'usuario ldap creado',
-                'usuario ldap actualizado',
-                'usuario ldap eliminado',
-                'usuario actualizado',
+                'crear usuario',
+                'actualizar usuario',
+                'eliminar usuario',
+                'modificar usuario',
+                'nuevo usuario',
                 'usuario creado',
-                'usuario eliminado'
+                'usuario actualizado',
+                'usuario eliminado',
+                'usuario modificado'
             ],
             groups: [
-                'grupo ldap creado',
-                'grupo ldap actualizado',
-                'grupo ldap eliminado',
-                'grupo actualizado',
+                'crear grupo',
+                'actualizar grupo',
+                'eliminar grupo',
+                'modificar grupo',
+                'nuevo grupo',
                 'grupo creado',
-                'grupo eliminado'
+                'grupo actualizado',
+                'grupo eliminado',
+                'grupo modificado',
+                'añadir miembro',
+                'eliminar miembro',
+                'miembro añadido',
+                'miembro eliminado'
             ],
             access: [
                 'intento de acceso',
                 'acceso exitoso',
                 'acceso fallido',
-                'desde',
-                'ip:',
-                'user agent'
+                'login',
+                'logout',
+                'sesión iniciada',
+                'sesión cerrada'
             ]
         };
 
@@ -186,10 +197,10 @@ $(document).ready(function() {
     // Asignar tipos a las filas
     $('.log-row').each(function() {
         const $row = $(this);
-        const description = $row.find('td:eq(2)').text();
-        const type = getLogType(description);
+        const action = $row.find('td:eq(1)').text();
+        const type = getLogType(action);
         $row.attr('data-type', type);
-        console.log('Fila asignada:', { description, type });
+        console.log('Fila asignada:', { action, type });
     });
 
     // Función para filtrar logs
