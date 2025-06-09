@@ -12,9 +12,17 @@ class LogController extends Controller
 {
     public function index(Request $request)
     {
+        $type = $request->get('type', 'all');
+        $search = $request->get('search', '');
+
         // Obtener logs de activity_logs
         $activityLogs = DB::table('activity_logs')
             ->select('id', 'user', 'action', 'description', 'created_at', 'level', 'details')
+            ->when($search, function($query) use ($search) {
+                return $query->where('user', 'like', "%{$search}%")
+                           ->orWhere('action', 'like', "%{$search}%")
+                           ->orWhere('description', 'like', "%{$search}%");
+            })
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($log) {
@@ -36,6 +44,11 @@ class LogController extends Controller
                     DB::raw("CONCAT('Desde ', hostname, ' (', ip, ')') as description"), 
                     'created_at', DB::raw("'WARNING' as level"),
                     DB::raw("JSON_OBJECT('hostname', hostname, 'ip', ip) as details"))
+            ->when($search, function($query) use ($search) {
+                return $query->where('username', 'like', "%{$search}%")
+                           ->orWhere('hostname', 'like', "%{$search}%")
+                           ->orWhere('ip', 'like', "%{$search}%");
+            })
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($log) {
@@ -51,8 +64,13 @@ class LogController extends Controller
                 ];
             });
 
-        // Combinar y ordenar todos los logs
+        // Combinar y filtrar por tipo
         $allLogs = $activityLogs->concat($accessLogs)
+            ->when($type !== 'all', function($collection) use ($type) {
+                return $collection->filter(function($log) use ($type) {
+                    return $log->type === $type;
+                });
+            })
             ->sortByDesc('created_at')
             ->values();
 
@@ -66,6 +84,13 @@ class LogController extends Controller
             $page,
             ['path' => $request->url(), 'query' => $request->query()]
         );
+
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('admin.users.logs_table', ['logs' => $paginatedLogs])->render(),
+                'total' => $allLogs->count()
+            ]);
+        }
 
         return view('admin.users.logs', ['logs' => $paginatedLogs]);
     }
@@ -94,11 +119,32 @@ class LogController extends Controller
                     'type' => 'access',
                     'details' => [
                         'hostname' => $log->hostname,
-                        'ip' => $log->ip
+                        'ip' => $log->ip,
+                        'action_type' => 'intento_acceso',
+                        'status' => 'fallido',
+                        'message' => 'Intento de acceso fallido'
                     ]
                 ];
             }
         } else {
+            $details = json_decode($log->details ?? '{}', true);
+            
+            // Añadir logs para depuración
+            \Log::info('Log encontrado:', [
+                'id' => $log->id,
+                'action' => $log->action,
+                'description' => $log->description,
+                'details' => $details
+            ]);
+            
+            $actionType = $this->getActionType($log->action, $log->description);
+            
+            // Añadir log del resultado de getActionType
+            \Log::info('Resultado getActionType:', [
+                'action_type' => $actionType['type'],
+                'details' => $actionType['details']
+            ]);
+            
             $log = (object) [
                 'id' => $log->id,
                 'user' => $log->user,
@@ -107,7 +153,10 @@ class LogController extends Controller
                 'created_at' => Carbon::parse($log->created_at),
                 'level' => $log->level,
                 'type' => $this->getLogType($log->action),
-                'details' => json_decode($log->details ?? '{}', true)
+                'details' => array_merge($details, [
+                    'action_type' => $actionType['type'],
+                    'action_details' => $actionType['details']
+                ])
             ];
         }
 
@@ -138,7 +187,7 @@ class LogController extends Controller
             strpos($action, 'update user') !== false ||
             strpos($action, 'delete user') !== false ||
             strpos($action, 'create user') !== false) {
-            return 'user';
+            return 'users';
         }
         
         // Detección de acciones de grupo
@@ -159,7 +208,7 @@ class LogController extends Controller
             strpos($action, 'memberuid') !== false ||
             strpos($action, 'uniquemember') !== false ||
             strpos($action, 'member') !== false) {
-            return 'group';
+            return 'groups';
         }
         
         // Detección de intentos de acceso
@@ -176,6 +225,94 @@ class LogController extends Controller
         }
         
         return 'other';
+    }
+
+    private function getActionType($action, $description = '')
+    {
+        $action = strtolower($action);
+        $description = strtolower($description);
+        
+        // Añadir log para depuración
+        \Log::info('getActionType recibió:', [
+            'action' => $action,
+            'description' => $description
+        ]);
+        
+        $details = [];
+
+        // Extraer el nombre del usuario/grupo de la descripción
+        $targetName = '';
+        if (preg_match('/(?:usuario|user|grupo|group)\s+[\'"]?([^\'"]+)[\'"]?/i', $description, $matches)) {
+            $targetName = $matches[1];
+            \Log::info('Nombre encontrado (patrón 1):', ['targetName' => $targetName]);
+        } else {
+            // Intentar extraer el nombre de otras formas comunes en la descripción
+            if (preg_match('/(?:creado|actualizado|eliminado|modificado)\s+(?:el|la|los|las)?\s+[\'"]?([^\'"]+)[\'"]?/i', $description, $matches)) {
+                $targetName = $matches[1];
+                \Log::info('Nombre encontrado (patrón 2):', ['targetName' => $targetName]);
+            } elseif (preg_match('/(?:para|de)\s+[\'"]?([^\'"]+)[\'"]?/i', $description, $matches)) {
+                $targetName = $matches[1];
+                \Log::info('Nombre encontrado (patrón 3):', ['targetName' => $targetName]);
+            }
+        }
+
+        // Si no se encontró un nombre específico, usar la descripción completa
+        if (empty($targetName)) {
+            $targetName = $description;
+            \Log::info('Usando descripción completa como targetName:', ['targetName' => $targetName]);
+        }
+
+        // Detectar tipo de acción
+        if (strpos($action, 'crear') !== false || strpos($action, 'create') !== false) {
+            $type = 'creación';
+            $details['operation'] = 'crear';
+            $details['message'] = "Creación de {$targetName}";
+        } elseif (strpos($action, 'actualizar') !== false || strpos($action, 'update') !== false || strpos($action, 'editar') !== false || strpos($action, 'edit') !== false) {
+            $type = 'actualización';
+            $details['operation'] = 'actualizar';
+            $details['message'] = "Actualización de {$targetName}";
+        } elseif (strpos($action, 'eliminar') !== false || strpos($action, 'delete') !== false) {
+            $type = 'eliminación';
+            $details['operation'] = 'eliminar';
+            $details['message'] = "Eliminación de {$targetName}";
+        } elseif (strpos($action, 'login') !== false || strpos($action, 'acceso') !== false) {
+            $type = 'acceso';
+            $details['operation'] = 'acceso';
+            $details['message'] = "Intento de acceso de {$targetName}";
+        } elseif (strpos($action, 'password') !== false || strpos($action, 'contraseña') !== false) {
+            $type = 'contraseña';
+            $details['operation'] = 'cambio_contraseña';
+            $details['message'] = "Cambio de contraseña de {$targetName}";
+        } elseif (strpos($action, 'permisos') !== false || strpos($action, 'permissions') !== false) {
+            $type = 'permisos';
+            $details['operation'] = 'cambio_permisos';
+            $details['message'] = "Cambio de permisos de {$targetName}";
+        } else {
+            $type = 'otra';
+            $details['operation'] = 'otra';
+            $details['message'] = $targetName;
+        }
+
+        // Detectar entidad afectada
+        if (strpos($action, 'usuario') !== false || strpos($action, 'user') !== false) {
+            $details['entity'] = 'usuario';
+        } elseif (strpos($action, 'grupo') !== false || strpos($action, 'group') !== false) {
+            $details['entity'] = 'grupo';
+        } elseif (strpos($action, 'miembro') !== false || strpos($action, 'member') !== false) {
+            $details['entity'] = 'miembro';
+        } else {
+            $details['entity'] = 'sistema';
+        }
+
+        \Log::info('Resultado final getActionType:', [
+            'type' => $type,
+            'details' => $details
+        ]);
+
+        return [
+            'type' => $type,
+            'details' => $details
+        ];
     }
 
     public function delete($count)

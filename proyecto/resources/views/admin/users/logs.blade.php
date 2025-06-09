@@ -5,88 +5,65 @@
     <div class="row">
         <div class="col-12">
             <div class="card shadow">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h3 class="card-title mb-0">
                         <i class="fas fa-history mr-2"></i>Logs del Sistema
                     </h3>
-                    <div class="card-tools">
-                        <div class="input-group input-group-sm" style="width: 250px;">
-                            <input type="text" id="userSearch" class="form-control float-right" placeholder="Buscar usuario...">
+                    <div class="d-flex align-items-center">
+                        <div class="input-group input-group-sm mr-3" style="width: 250px;">
+                            <input type="text" id="searchInput" class="form-control" placeholder="Buscar...">
                             <div class="input-group-append">
                                 <button type="button" class="btn btn-light" id="clearSearch">
                                     <i class="fas fa-times"></i>
                                 </button>
                             </div>
                         </div>
+                        <span id="visibleCount" class="badge badge-light"></span>
                     </div>
                 </div>
                 <div class="card-body">
                     <!-- Pestañas de filtro -->
                     <ul class="nav nav-tabs nav-fill mb-4" id="logTabs" role="tablist">
                         <li class="nav-item">
-                            <a class="nav-link active" id="all-tab" data-toggle="tab" href="#all" role="tab">
+                            <a class="nav-link active" id="all-tab" data-type="all" href="#all" role="tab">
                                 <i class="fas fa-list mr-1"></i> Todos
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="users-tab" data-toggle="tab" href="#users" role="tab">
+                            <a class="nav-link" id="users-tab" data-type="users" href="#users" role="tab">
                                 <i class="fas fa-users mr-1"></i> Usuarios
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="groups-tab" data-toggle="tab" href="#groups" role="tab">
+                            <a class="nav-link" id="groups-tab" data-type="groups" href="#groups" role="tab">
                                 <i class="fas fa-user-friends mr-1"></i> Grupos
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="access-tab" data-toggle="tab" href="#access" role="tab">
+                            <a class="nav-link" id="access-tab" data-type="access" href="#access" role="tab">
                                 <i class="fas fa-sign-in-alt mr-1"></i> Accesos
                             </a>
                         </li>
                     </ul>
 
-                    <!-- Contenido de las pestañas -->
-                    <div class="tab-content" id="logTabsContent">
-                        <div class="tab-pane fade show active" id="all" role="tabpanel">
-                            <div class="table-responsive">
-                                <table class="table table-hover" id="logsTable">
-                                    <thead class="thead-light">
-                                        <tr>
-                                            <th>Usuario</th>
-                                            <th>Acción</th>
-                                            <th>Descripción</th>
-                                            <th>Fecha</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($logs as $log)
-                                        <tr class="log-row" data-id="{{ $log->id }}" data-type="{{ $log->type }}">
-                                            <td>
-                                                <span class="badge badge-info text-black">
-                                                    <i class="fas fa-user mr-1"></i>{{ $log->user }}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <span class="badge badge-{{ $log->level === 'WARNING' ? 'warning' : 'success' }} text-black">
-                                                    {{ $log->action }}
-                                                </span>
-                                            </td>
-                                            <td class="text-black">{{ $log->description }}</td>
-                                            <td>
-                                                <span class="text-muted">
-                                                    <i class="far fa-clock mr-1"></i>
-                                                    {{ \Carbon\Carbon::parse($log->created_at)->format('d/m/Y H:i:s') }}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div class="mt-4">
-                                {{ $logs->links() }}
-                            </div>
-                        </div>
+                    <!-- Tabla de logs -->
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="logsTable">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Usuario</th>
+                                    <th>Acción</th>
+                                    <th>Descripción</th>
+                                    <th>Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logsTableBody">
+                                <!-- Los logs se cargarán aquí dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="pagination" class="mt-4">
+                        <!-- La paginación se cargará aquí dinámicamente -->
                     </div>
                 </div>
             </div>
@@ -107,25 +84,42 @@
                 </button>
             </div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label class="font-weight-bold">ID:</label>
-                    <p id="logId" class="text-muted"></p>
-                </div>
-                <div class="form-group">
-                    <label class="font-weight-bold">Fecha:</label>
-                    <p id="logDate" class="text-muted"></p>
-                </div>
-                <div class="form-group">
-                    <label class="font-weight-bold">Usuario:</label>
-                    <p id="logUser" class="text-muted"></p>
-                </div>
-                <div class="form-group">
-                    <label class="font-weight-bold">Acción:</label>
-                    <p id="logAction" class="text-muted"></p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="font-weight-bold">ID:</label>
+                            <p id="logId" class="text-muted"></p>
+                        </div>
+                        <div class="form-group">
+                            <label class="font-weight-bold">Fecha:</label>
+                            <p id="logDate" class="text-muted"></p>
+                        </div>
+                        <div class="form-group">
+                            <label class="font-weight-bold">Usuario:</label>
+                            <p id="logUser" class="text-muted"></p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="font-weight-bold">Acción Realizada:</label>
+                            <p id="logMessage" class="text-primary font-weight-bold"></p>
+                        </div>
+                        <div class="form-group">
+                            <label class="font-weight-bold">Tipo:</label>
+                            <p id="logActionType" class="text-muted"></p>
+                        </div>
+                        <div class="form-group">
+                            <label class="font-weight-bold">Entidad:</label>
+                            <p id="logEntity" class="text-muted"></p>
+                        </div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label class="font-weight-bold">Descripción:</label>
                     <p id="logDescription" class="text-muted"></p>
+                </div>
+                <div id="logDetails" class="mt-3">
+                    <!-- Los detalles adicionales se mostrarán aquí -->
                 </div>
             </div>
         </div>
@@ -137,242 +131,54 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    // Inicializar DataTables con configuración básica
-    var table = $('#logsTable').DataTable({
-        "paging": false,
-        "ordering": true,
-        "info": false,
-        "searching": false,
-        "language": {
-            "sProcessing": "Procesando...",
-            "sLengthMenu": "Mostrar _MENU_ registros",
-            "sZeroRecords": "No se encontraron resultados",
-            "sEmptyTable": "Ningún dato disponible en esta tabla",
-            "sInfo": "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
-            "sInfoEmpty": "Mostrando registros del 0 al 0 de un total de 0 registros",
-            "sInfoFiltered": "(filtrado de un total de _MAX_ registros)",
-            "sInfoPostFix": "",
-            "sSearch": "Buscar:",
-            "sUrl": "",
-            "sInfoThousands": ",",
-            "sLoadingRecords": "Cargando...",
-            "oPaginate": {
-                "sFirst": "Primero",
-                "sLast": "Último",
-                "sNext": "Siguiente",
-                "sPrevious": "Anterior"
-            }
-        }
-    });
+    let currentType = 'all';
+    let currentSearch = '';
+    let currentPage = 1;
 
-    // Función mejorada para determinar el tipo de log
-    function getLogType(description) {
-        if (!description) {
-            console.log('Descripción vacía o nula');
-            return 'all';
-        }
-        
-        description = description.toLowerCase();
-        console.log('Analizando descripción:', description);
-        
-        // Patrones de detección mejorados
-        const patterns = {
-            users: [
-                'usuario ldap creado',
-                'usuario ldap actualizado',
-                'usuario ldap eliminado',
-                'usuario actualizado',
-                'usuario creado',
-                'usuario eliminado',
-                'nuevo usuario',
-                'modificación de usuario'
-            ],
-            groups: [
-                'grupo ldap creado',
-                'grupo ldap actualizado',
-                'grupo ldap eliminado',
-                'grupo actualizado',
-                'grupo creado',
-                'grupo eliminado',
-                'nuevo grupo',
-                'modificación de grupo',
-                'miembro añadido al grupo',
-                'miembro eliminado del grupo',
-                'grupo modificado'
-            ],
-            access: [
-                'intento de acceso',
-                'acceso exitoso',
-                'acceso fallido',
-                'desde',
-                'ip:',
-                'user agent',
-                'login',
-                'logout',
-                'sesión'
-            ]
-        };
+    function loadLogs(type = currentType, search = currentSearch, page = currentPage) {
+        currentType = type;
+        currentSearch = search;
+        currentPage = page;
 
-        // Verificar cada patrón
-        for (const [type, patternList] of Object.entries(patterns)) {
-            const matches = patternList.filter(pattern => description.includes(pattern));
-            if (matches.length > 0) {
-                console.log('Tipo detectado:', type, 'para descripción:', description);
-                console.log('Patrones coincidentes:', matches);
-                return type;
-            }
-        }
-
-        // Si no coincide con ningún patrón, intentar determinar por contexto
-        if (description.includes('grupo') || description.includes('group')) {
-            console.log('Tipo detectado por contexto: groups');
-            return 'groups';
-        }
-
-        console.log('No se detectó tipo específico, usando "all"');
-        return 'all';
-    }
-
-    // Función para asignar tipos a las filas
-    function assignTypesToRows() {
-        console.log('Iniciando asignación de tipos a filas...');
-        let typeCount = { users: 0, groups: 0, access: 0, all: 0 };
-        let rowDetails = [];
-
-        table.rows().every(function() {
-            const data = this.data();
-            console.log('Datos de la fila:', data);
-            
-            const description = data[2]; // Descripción en la tercera columna
-            console.log('Descripción encontrada:', description);
-            
-            const type = getLogType(description);
-            
-            // Asignar tipo a la fila
-            const $row = $(this.node());
-            $row.attr('data-type', type);
-            typeCount[type]++;
-
-            const rowDetail = {
-                description: description,
-                type: type,
-                rowIndex: this.index(),
-                dataType: $row.attr('data-type')
-            };
-            rowDetails.push(rowDetail);
-
-            console.log('Fila asignada:', rowDetail);
+        $.get('{{ route("admin.logs") }}', {
+            type: type,
+            search: search,
+            page: page
+        }, function(response) {
+            $('#logsTableBody').html(response.html);
+            $('#pagination').html(response.pagination);
+            updateVisibleCount(response.total);
         });
-
-        console.log('Conteo de tipos:', typeCount);
-        console.log('Detalles de todas las filas:', rowDetails);
-        return typeCount;
     }
-
-    // Función mejorada para filtrar logs
-    function filterLogs(type) {
-        console.log('Iniciando filtrado para tipo:', type);
-        
-        // Obtener todas las filas
-        const $rows = $('#logsTable tbody tr');
-        let visibleCount = 0;
-        let rowDetails = [];
-
-        $rows.each(function(index) {
-            const $row = $(this);
-            const rowType = $row.attr('data-type');
-            const description = $row.find('td:eq(2)').text();
-            
-            const rowDetail = {
-                index: index,
-                tipo: rowType,
-                esperado: type,
-                descripcion: description,
-                visible: type === 'all' || rowType === type
-            };
-            rowDetails.push(rowDetail);
-            
-            console.log(`Fila ${index}:`, rowDetail);
-            
-            // Aplicar visibilidad
-            $row.toggle(rowDetail.visible);
-            if (rowDetail.visible) visibleCount++;
-        });
-
-        console.log('Filtrado completado:', {
-            tipo: type,
-            filasVisibles: visibleCount,
-            totalFilas: $rows.length,
-            filasPorTipo: {
-                users: $rows.filter('[data-type="users"]').length,
-                groups: $rows.filter('[data-type="groups"]').length,
-                access: $rows.filter('[data-type="access"]').length,
-                all: $rows.filter('[data-type="all"]').length
-            },
-            detalles: rowDetails
-        });
-
-        // Actualizar contador en la interfaz
-        updateVisibleCount(visibleCount);
-    }
-
-    // Función para actualizar el contador de filas visibles
-    function updateVisibleCount(count) {
-        const $counter = $('#visibleCount');
-        if ($counter.length === 0) {
-            $('.card-header').append('<span id="visibleCount" class="ml-3 badge badge-info">Filas visibles: ' + count + '</span>');
-        } else {
-            $counter.text('Filas visibles: ' + count);
-        }
-    }
-
-    // Asignar tipos iniciales
-    const typeCount = assignTypesToRows();
-    console.log('Tipos asignados inicialmente:', typeCount);
 
     // Manejar cambios de pestaña
     $('#logTabs a').on('click', function(e) {
         e.preventDefault();
-        $(this).tab('show');
+        $('#logTabs a').removeClass('active');
+        $(this).addClass('active');
         
-        const type = $(this).attr('id').replace('-tab', '');
-        console.log('Pestaña clickeada:', type);
-        filterLogs(type);
+        const type = $(this).data('type');
+        loadLogs(type);
     });
 
-    // Búsqueda de usuario mejorada
-    $('#userSearch').on('keyup', function() {
-        const searchText = $(this).val().toLowerCase();
-        console.log('Buscando:', searchText);
-
-        const $rows = $('#logsTable tbody tr');
-        let visibleCount = 0;
-
-        $rows.each(function() {
-            const $row = $(this);
-            const userText = $row.find('td:first').text().toLowerCase();
-            const type = $row.attr('data-type');
-            const currentTab = $('#logTabs .active').attr('id').replace('-tab', '');
-            
-            const matchesSearch = userText.includes(searchText);
-            const matchesType = currentTab === 'all' || type === currentTab;
-            
-            $row.toggle(matchesSearch && matchesType);
-            if (matchesSearch && matchesType) visibleCount++;
-        });
-
-        updateVisibleCount(visibleCount);
+    // Búsqueda
+    let searchTimeout;
+    $('#searchInput').on('keyup', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            const searchText = $(this).val();
+            loadLogs(currentType, searchText);
+        }, 300);
     });
 
     // Limpiar búsqueda
     $('#clearSearch').on('click', function() {
-        $('#userSearch').val('');
-        const currentTab = $('#logTabs .active').attr('id').replace('-tab', '');
-        filterLogs(currentTab);
+        $('#searchInput').val('');
+        loadLogs(currentType, '');
     });
 
     // Mostrar detalles del log
-    $('#logsTable tbody').on('click', 'tr', function() {
+    $(document).on('click', '.log-row', function() {
         const id = $(this).data('id');
         showLogDetails(id);
     });
@@ -382,14 +188,55 @@ $(document).ready(function() {
             $('#logId').text(data.id);
             $('#logDate').text(new Date(data.created_at).toLocaleString());
             $('#logUser').text(data.user);
-            $('#logAction').text(data.action);
             $('#logDescription').text(data.description);
+            
+            // Mostrar detalles de la acción
+            if (data.details) {
+                $('#logMessage').text(data.details.message || 'No especificado');
+                $('#logActionType').text(data.details.action_type || 'No especificado');
+                $('#logEntity').text(data.details.action_details?.entity || 'No especificado');
+                
+                // Mostrar detalles adicionales
+                let detailsHtml = '<div class="card mt-3"><div class="card-header bg-light">Detalles Adicionales</div><div class="card-body">';
+                
+                // Mostrar detalles específicos según el tipo de log
+                if (data.type === 'access') {
+                    detailsHtml += `
+                        <p><strong>Hostname:</strong> ${data.details.hostname || 'No especificado'}</p>
+                        <p><strong>IP:</strong> ${data.details.ip || 'No especificado'}</p>
+                        <p><strong>Estado:</strong> ${data.details.status || 'No especificado'}</p>
+                    `;
+                } else {
+                    // Mostrar otros detalles si existen
+                    Object.entries(data.details).forEach(([key, value]) => {
+                        if (key !== 'action_type' && key !== 'action_details' && key !== 'message') {
+                            detailsHtml += `<p><strong>${key}:</strong> ${value}</p>`;
+                        }
+                    });
+                }
+                
+                detailsHtml += '</div></div>';
+                $('#logDetails').html(detailsHtml);
+            }
+            
             $('#logDetailsModal').modal('show');
         });
     }
 
-    // Aplicar filtro inicial
-    filterLogs('all');
+    // Función para actualizar el contador
+    function updateVisibleCount(count) {
+        $('#visibleCount').text('Filas visibles: ' + count);
+    }
+
+    // Manejar paginación
+    $(document).on('click', '.pagination a', function(e) {
+        e.preventDefault();
+        const page = $(this).attr('href').split('page=')[1];
+        loadLogs(currentType, currentSearch, page);
+    });
+
+    // Cargar logs iniciales
+    loadLogs();
 });
 </script>
 @endpush
@@ -424,17 +271,6 @@ $(document).ready(function() {
 .badge {
     padding: 0.5em 0.75em;
     font-weight: 500;
-    background-color: #e9ecef;
-    color: #000 !important;
-}
-.badge-info {
-    background-color: #e9ecef !important;
-}
-.badge-warning {
-    background-color: #ffeeba !important;
-}
-.badge-success {
-    background-color: #d4edda !important;
 }
 .card {
     border: none;
