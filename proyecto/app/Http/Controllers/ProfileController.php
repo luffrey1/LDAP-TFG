@@ -23,7 +23,7 @@ class ProfileController extends Controller
         $user = $request->user();
         $groups = [];
         $ldapUid = $user->username;
-        $ldapGuid = $user->guid;
+        $ldapGuid = '';
         $ldapCn = '';
         $fullName = $user->name;
 
@@ -47,43 +47,39 @@ class ProfileController extends Controller
 
             // Buscar el usuario por su nombre de usuario
             $ldapUser = $ldap->query()
-                ->in(config('ldap.connections.default.base_dn'))
-                ->rawFilter('(&(objectClass=posixAccount)(uid=' . $user->username . '))')
+                ->in('ou=people,' . config('ldap.connections.default.base_dn'))
+                ->where('uid', '=', $user->username)
                 ->first();
 
             if ($ldapUser) {
-                $ldapUid = $ldapUser['uidnumber'][0] ?? $ldapUser['uid'][0] ?? $user->username;
-                $ldapGuid = $ldapUser['gidnumber'][0] ?? $ldapUser['gid'][0] ?? $user->guid;
-                $ldapCn = $ldapUser['dn'] ?? '';
-                $fullName = $ldapUser['cn'][0] ?? $user->name;
+                // Obtener UID, GID y CN
+                $ldapUid = $ldapUser->getFirstAttribute('uid');
+                $ldapGuid = $ldapUser->getFirstAttribute('gidNumber');
+                $ldapCn = $ldapUser->getFirstAttribute('cn');
+                $fullName = $ldapUser->getFirstAttribute('displayName') ?? $ldapUser->getFirstAttribute('cn');
 
-                // Update the local user model's guid
-                if ($user->guid !== $ldapGuid) {
-                     $user->guid = $ldapGuid;
-                     $user->save();
-                }
-
-                // Obtener todos los grupos disponibles
+                // Obtener grupos del usuario
                 $allGroups = $ldap->query()
-                    ->in(config('ldap.connections.default.base_dn'))
+                    ->in('ou=groups,' . config('ldap.connections.default.base_dn'))
                     ->rawFilter('(|(objectclass=groupOfUniqueNames)(objectclass=posixGroup))')
                     ->get();
 
                 foreach ($allGroups as $group) {
                     $isMember = false;
-
-                    // Verificar si el grupo tiene miembros (groupOfUniqueNames)
+                    
+                    // Verificar si el grupo tiene miembros y mostrarlos (para groupOfUniqueNames)
                     if (isset($group['uniquemember'])) {
                         $members = is_array($group['uniquemember']) 
                             ? $group['uniquemember'] 
                             : [$group['uniquemember']];
                         
-                        if (in_array($ldapUser['dn'], $members)) {
+                        // Validar si el usuario está en este grupo
+                        if (in_array($ldapUser->getDn(), $members)) {
                             $isMember = true;
                         }
                     }
-
-                    // Verificar memberUid para posixGroup
+                    
+                    // También verificar memberUid para posixGroup
                     if (isset($group['memberuid'])) {
                         $memberUids = is_array($group['memberuid']) 
                             ? $group['memberuid'] 
@@ -93,30 +89,23 @@ class ProfileController extends Controller
                             $isMember = true;
                         }
                     }
-
-                    // Si el usuario es miembro, añadir el grupo
+                    
+                    // Si el usuario es miembro por cualquier método, añadir el grupo
                     if ($isMember) {
-                        $groups[] = (object)[
-                            'nombre_completo' => $group['cn'][0] ?? '',
-                            'gid' => $group['gidnumber'][0] ?? '',
-                            'description' => $group['description'][0] ?? ''
+                        $groups[] = [
+                            'cn' => $group->getFirstAttribute('cn'),
+                            'description' => $group->getFirstAttribute('description'),
+                            'nombre_completo' => $group->getFirstAttribute('cn')
                         ];
                     }
                 }
             }
 
         } catch (\Exception $e) {
-            Log::error('Error al obtener información de LDAP en ProfileController@edit: ' . $e->getMessage());
+            Log::error('Error al obtener datos LDAP del usuario: ' . $e->getMessage());
         }
 
-        return view('profile.edit', [
-            'user' => $user,
-            'groups' => $groups,
-            'ldapUid' => $ldapUid,
-            'ldapGuid' => $ldapGuid,
-            'ldapCn' => $ldapCn,
-            'fullName' => $fullName
-        ]);
+        return view('profile.edit', compact('user', 'groups', 'ldapUid', 'ldapGuid', 'ldapCn', 'fullName'));
     }
 
     /**
@@ -125,17 +114,15 @@ class ProfileController extends Controller
     public function update(Request $request)
     {
         $user = $request->user();
-        
-        // Validar los datos del formulario
-        $validated = $request->validate([
+
+        $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
-            'current_password' => ['required_with:new_password'],
-            'new_password' => ['nullable', 'min:8', 'confirmed'],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'current_password' => ['required_with:new_password', 'current_password'],
+            'new_password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ]);
 
         try {
-            // Conectar a LDAP
             $ldap = new \LdapRecord\Connection([
                 'hosts' => config('ldap.connections.default.hosts'),
                 'port' => config('ldap.connections.default.port'),
@@ -155,58 +142,73 @@ class ProfileController extends Controller
 
             // Buscar el usuario en LDAP
             $ldapUser = $ldap->query()
-                ->in(config('ldap.connections.default.base_dn'))
-                ->rawFilter('(&(objectClass=posixAccount)(uid=' . $user->username . '))')
+                ->in('ou=people,' . config('ldap.connections.default.base_dn'))
+                ->where('uid', '=', $user->username)
                 ->first();
 
-            if (!$ldapUser) {
-                throw new \Exception('Usuario no encontrado en LDAP');
-            }
+            if ($ldapUser) {
+                // Preparar datos para actualizar
+                $updateData = [
+                    'cn' => $request->name,
+                    'displayName' => $request->name,
+                    'mail' => $request->email
+                ];
 
-            // Si se está cambiando la contraseña
-            if (!empty($validated['new_password'])) {
-                // Verificar la contraseña actual
-                $authLdap = new \LdapRecord\Connection([
-                    'hosts' => config('ldap.connections.default.hosts'),
-                    'port' => config('ldap.connections.default.port'),
-                    'base_dn' => config('ldap.connections.default.base_dn'),
-                    'username' => $ldapUser['dn'],
-                    'password' => $validated['current_password'],
-                    'use_ssl' => config('ldap.connections.default.use_ssl'),
-                    'use_tls' => config('ldap.connections.default.use_tls'),
-                ]);
+                // Si se proporciona una nueva contraseña, actualizarla
+                if ($request->filled('new_password')) {
+                    // Verificar la contraseña actual
+                    $currentPassword = $request->current_password;
+                    $newPassword = $request->new_password;
 
-                try {
-                    $authLdap->connect();
-                } catch (\Exception $e) {
-                    return back()->withErrors(['current_password' => 'La contraseña actual es incorrecta']);
+                    // Intentar autenticar con la contraseña actual
+                    $authLdap = new \LdapRecord\Connection([
+                        'hosts' => config('ldap.connections.default.hosts'),
+                        'port' => config('ldap.connections.default.port'),
+                        'base_dn' => config('ldap.connections.default.base_dn'),
+                        'username' => $ldapUser->getDn(),
+                        'password' => $currentPassword,
+                        'use_ssl' => config('ldap.connections.default.use_ssl'),
+                        'use_tls' => config('ldap.connections.default.use_tls'),
+                    ]);
+
+                    try {
+                        $authLdap->connect();
+                        // Si llegamos aquí, la contraseña actual es correcta
+                        $updateData['userPassword'] = $this->hashPassword($newPassword);
+                    } catch (\Exception $e) {
+                        return back()->withErrors(['current_password' => 'La contraseña actual es incorrecta']);
+                    }
                 }
 
-                // Cambiar la contraseña en LDAP
-                $ldapUser->userPassword = $validated['new_password'];
-                $ldapUser->save();
+                // Actualizar el usuario en LDAP
+                $ldapUser->update($updateData);
 
-                // Actualizar la contraseña en la base de datos local
-                $user->password = Hash::make($validated['new_password']);
+                // Actualizar el usuario local
+                $user->name = $request->name;
+                $user->email = $request->email;
+                if ($request->filled('new_password')) {
+                    $user->password = Hash::make($request->new_password);
+                }
+                $user->save();
+
+                return back()->with('status', 'Perfil actualizado correctamente');
             }
 
-            // Actualizar el nombre y email en LDAP si es necesario
-            if ($ldapUser['cn'][0] !== $validated['name']) {
-                $ldapUser->cn = $validated['name'];
-                $ldapUser->save();
-            }
-
-            // Actualizar el usuario local
-            $user->name = $validated['name'];
-            $user->email = $validated['email'];
-            $user->save();
-
-            return redirect()->route('profile.edit')
-                ->with('status', 'Perfil actualizado correctamente');
+            return back()->with('error', 'No se pudo encontrar el usuario en LDAP');
 
         } catch (\Exception $e) {
-            Log::error('Error al actualizar perfil en LDAP: ' . $e->getMessage());
-            return back()->withErrors(['error' => 'Error al actualizar el perfil: ' . $e->getMessage()]);
+            Log::error('Error al actualizar perfil: ' . $e->getMessage());
+            return back()->with('error', 'Error al actualizar el perfil: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Genera un hash SSHA para la contraseña
+     */
+    protected function hashPassword($password)
+    {
+        $salt = random_bytes(4);
+        $hash = sha1($password . $salt, true);
+        return '{SSHA}' . base64_encode($hash . $salt);
     }
 } 
