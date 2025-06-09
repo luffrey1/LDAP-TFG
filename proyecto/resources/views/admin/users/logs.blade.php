@@ -51,7 +51,7 @@
                                     <tbody>
                                         @foreach($logs as $log)
                                         <tr class="log-row" data-id="{{ $log->id }}" data-type="{{ $log->type }}">
-                                            <td>{{ $log->performed_by }}</td>
+                                            <td>{{ $log->user }}</td>
                                             <td>{{ $log->action }}</td>
                                             <td>{{ $log->description }}</td>
                                             <td>{{ \Carbon\Carbon::parse($log->created_at)->format('d/m/Y H:i:s') }}</td>
