@@ -247,6 +247,10 @@ class LdapGroupController extends Controller
                 ], 422);
             }
 
+            // Procesar los tipos de grupo
+            $types = explode(',', $request->type);
+            
+            // Atributos base
             $attributes = [
                 'objectclass' => ['top'],
                 'cn' => $request->cn
@@ -256,19 +260,19 @@ class LdapGroupController extends Controller
                 $attributes['description'] = $request->description;
             }
 
-            // Procesar los tipos de grupo
-            $types = explode(',', $request->type);
-            
+            // Si es posix, añadir los atributos necesarios
             if (in_array('posix', $types)) {
-                $attributes['objectclass'] = ['top', 'posixGroup', 'groupOfNames'];
+                $attributes['objectclass'][] = 'posixGroup';
+                $attributes['objectclass'][] = 'groupOfNames';
                 $attributes['gidNumber'] = (string)$request->gidNumber;
-                $attributes['memberUid'] = ['profesor'];
-                $attributes['member'] = ['cn=nobody'];
+                $attributes['memberUid'] = ['profesor']; // Miembro inicial
+                $attributes['member'] = ['cn=nobody']; // Miembro inicial para groupOfNames
             }
             
+            // Si es unique, añadir los atributos necesarios
             if (in_array('unique', $types)) {
-                $attributes['objectclass'] = ['top', 'posixGroup', 'groupOfUniqueNames'];
-                $attributes['uniqueMember'] = ['uid=profesor,ou=people,dc=tierno,dc=es'];
+                $attributes['objectclass'][] = 'groupOfUniqueNames';
+                $attributes['uniqueMember'] = ['uid=profesor,ou=people,dc=tierno,dc=es']; // Miembro inicial
             }
 
             Log::debug('Atributos del grupo: ' . json_encode($attributes));
