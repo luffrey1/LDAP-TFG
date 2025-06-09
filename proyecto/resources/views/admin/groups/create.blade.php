@@ -30,7 +30,7 @@
                     <div class="tab-content mt-3" id="groupTabsContent">
                         <!-- PosixGroup -->
                         <div class="tab-pane fade show active" id="posix" role="tabpanel" aria-labelledby="posix-tab">
-                            <form id="posixForm" class="group-form" method="POST" action="{{ route('admin.groups.store') }}">
+                            <form id="posixForm" class="group-form" method="POST" action="{{ route('gestion.grupos.store') }}">
                                 @csrf
                                 <input type="hidden" name="type" value="posix">
                                 <div class="form-group text-white">
@@ -53,7 +53,7 @@
 
                         <!-- GroupOfUniqueNames -->
                         <div class="tab-pane fade" id="unique" role="tabpanel" aria-labelledby="unique-tab">
-                            <form id="uniqueForm" class="group-form" method="POST" action="{{ route('admin.groups.store') }}">
+                            <form id="uniqueForm" class="group-form" method="POST" action="{{ route('gestion.grupos.store') }}">
                                 @csrf
                                 <input type="hidden" name="type" value="unique">
                                 <div class="form-group text-white">
@@ -72,7 +72,7 @@
 
                         <!-- Combinado -->
                         <div class="tab-pane fade" id="combined" role="tabpanel" aria-labelledby="combined-tab">
-                            <form id="combinedForm" class="group-form" method="POST" action="{{ route('admin.groups.store') }}">
+                            <form id="combinedForm" class="group-form" method="POST" action="{{ route('gestion.grupos.store') }}">
                                 @csrf
                                 <input type="hidden" name="type" value="combined">
                                 <div class="form-group text-white">
