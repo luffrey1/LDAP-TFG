@@ -8,6 +8,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Auth;
 use LdapRecord\Connection;
 use Illuminate\Support\Facades\Log;
+use LdapRecord\Ldap;
 
 class LdapAuthMiddleware
 {
@@ -25,46 +26,34 @@ class LdapAuthMiddleware
             return $next($request);
         }
         
-        if (!session()->has('auth_user')) {
-            Log::warning('LdapAuthMiddleware: No hay sesión de usuario');
+        if (!session()->has('ldap_auth')) {
             return redirect()->route('login');
         }
 
-        try {
-            // Intentar verificar la conexión LDAP
-            $config = config('ldap.connections.default');
-            $connection = new Connection([
-                'hosts' => $config['hosts'],
-                'port' => 636,
-                'base_dn' => $config['base_dn'],
-                'username' => $config['username'],
-                'password' => $config['password'],
-                'use_ssl' => true,
-                'use_tls' => false,
-                'timeout' => 5
-            ]);
-
-            // Forzar la conexión SSL
-            $connection->getLdapConnection()->setOption(LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_NEVER);
-            
-            // Intentar conectar
-            $connection->connect();
-            
-            // Si llegamos aquí, la conexión fue exitosa
-            return $next($request);
-            
-        } catch (\Exception $e) {
-            Log::error('LdapAuthMiddleware: Error de conexión LDAP - ' . $e->getMessage());
-            
-            // Si es un error de conexión, redirigir a una página de error
-            if (str_contains($e->getMessage(), 'Can\'t contact LDAP server')) {
-                return response()->view('errors.ldap', [
-                    'message' => 'No se pudo conectar al servidor LDAP. Por favor, intente de nuevo en unos momentos.'
-                ], 503);
+        // Verificar si el usuario pertenece al grupo alumnos
+        $user = session('ldap_auth');
+        $ldap = new Ldap();
+        $connection = $ldap->connect();
+        
+        if ($connection) {
+            try {
+                // Buscar el grupo alumnos
+                $search = ldap_search($connection, 'dc=tierno,dc=es', '(&(objectClass=posixGroup)(cn=alumnos))');
+                $entries = ldap_get_entries($connection, $search);
+                
+                if ($entries['count'] > 0) {
+                    $alumnosGroup = $entries[0];
+                    // Verificar si el usuario está en el grupo
+                    if (isset($alumnosGroup['memberuid']) && in_array($user['uid'], $alumnosGroup['memberuid'])) {
+                        // El usuario es un alumno, mostrar la pantalla de advertencia
+                        return response()->view('auth.student-warning');
+                    }
+                }
+            } catch (\Exception $e) {
+                \Log::error('Error al verificar grupo de alumnos: ' . $e->getMessage());
             }
-            
-            // Para otros errores, redirigir al login
-            return redirect()->route('login')->with('error', 'Error de autenticación. Por favor, vuelva a iniciar sesión.');
         }
+
+        return $next($request);
     }
 } 
