@@ -17,68 +17,21 @@ class LogController extends Controller
             $activityLogs = DB::table('activity_logs')
                 ->select([
                     'id',
+                    'level',
+                    'user',
+                    'action',
                     'description',
-                    'properties',
                     'created_at'
                 ])
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($log) {
-                    $properties = json_decode($log->properties, true);
-                    $action = $log->description;
-                    $details = '';
-                    
-                    // Extraer detalles específicos según el tipo de acción
-                    if (isset($properties['attributes'])) {
-                        if (isset($properties['attributes']['username'])) {
-                            $details .= "Usuario: " . $properties['attributes']['username'] . " ";
-                        }
-                        if (isset($properties['attributes']['group'])) {
-                            $details .= "Grupo: " . $properties['attributes']['group'] . " ";
-                        }
-                        if (isset($properties['attributes']['groups'])) {
-                            $details .= "Grupos: " . implode(', ', $properties['attributes']['groups']) . " ";
-                        }
-                        if (isset($properties['attributes']['old'])) {
-                            $details .= "Valores anteriores: " . json_encode($properties['attributes']['old']) . " ";
-                        }
-                        if (isset($properties['attributes']['new'])) {
-                            $details .= "Nuevos valores: " . json_encode($properties['attributes']['new']) . " ";
-                        }
-                    }
-                    
-                    // Extraer el usuario que realizó la acción
-                    $performedBy = 'Sistema';
-                    if (isset($properties['causer'])) {
-                        $performedBy = $properties['causer']['name'] ?? 'Sistema';
-                    }
-                    
-                    // Formatear la descripción según el tipo de acción
-                    $description = $action;
-                    if (strpos($action, 'Usuario LDAP') !== false) {
-                        if (strpos($action, 'creado') !== false) {
-                            $description = "Creación de usuario LDAP";
-                        } elseif (strpos($action, 'actualizado') !== false) {
-                            $description = "Actualización de usuario LDAP";
-                        } elseif (strpos($action, 'eliminado') !== false) {
-                            $description = "Eliminación de usuario LDAP";
-                        }
-                    } elseif (strpos($action, 'Grupo LDAP') !== false) {
-                        if (strpos($action, 'creado') !== false) {
-                            $description = "Creación de grupo LDAP";
-                        } elseif (strpos($action, 'actualizado') !== false) {
-                            $description = "Actualización de grupo LDAP";
-                        } elseif (strpos($action, 'eliminado') !== false) {
-                            $description = "Eliminación de grupo LDAP";
-                        }
-                    }
-                    
                     return [
                         'id' => $log->id,
-                        'action' => $description,
-                        'description' => $details ? $description . ' - ' . $details : $description,
-                        'type' => $this->getLogType($action),
-                        'performed_by' => $performedBy,
+                        'action' => $log->action,
+                        'description' => $log->description,
+                        'type' => $this->getLogType($log->action),
+                        'performed_by' => $log->user ?? 'Sistema',
                         'created_at' => $log->created_at
                     ];
                 });
