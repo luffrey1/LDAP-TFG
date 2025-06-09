@@ -2897,16 +2897,25 @@ class LdapUserController extends Controller
     {
         try {
             $this->connection->connect();
+            Log::debug("Conexión LDAP establecida");
 
             $userDn = base64_decode($request->dn);
+            Log::debug("DN decodificado: " . $userDn);
+            
             if (!$userDn) {
                 throw new \Exception('DN de usuario inválido');
             }
 
+            // Buscar el usuario directamente por DN
             $user = $this->connection->query()
-                ->in($this->peopleOu)
                 ->where('dn', '=', $userDn)
                 ->first();
+
+            Log::debug("Resultado de búsqueda de usuario:", [
+                'dn' => $userDn,
+                'user_found' => !empty($user),
+                'user_data' => $user
+            ]);
 
             if (!$user) {
                 throw new \Exception('Usuario no encontrado');
@@ -2919,6 +2928,8 @@ class LdapUserController extends Controller
                 $uid = $user->getFirstAttribute('uid');
             }
             
+            Log::debug("UID encontrado: " . $uid);
+            
             if (empty($uid)) {
                 throw new \Exception('UID de usuario no encontrado');
             }
@@ -2928,7 +2939,10 @@ class LdapUserController extends Controller
             }
 
             $userGroups = $this->getUserGroups($userDn);
+            Log::debug("Grupos del usuario:", $userGroups);
+            
             $isAdmin = in_array('ldapadmins', $userGroups);
+            Log::debug("Es admin: " . ($isAdmin ? 'true' : 'false'));
 
             if ($isAdmin) {
                 $this->removeUserFromGroup($userDn, $this->adminGroupDn);
@@ -2945,6 +2959,7 @@ class LdapUserController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Error al cambiar estado de administrador: ' . $e->getMessage());
+            Log::error('Traza: ' . $e->getTraceAsString());
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()
