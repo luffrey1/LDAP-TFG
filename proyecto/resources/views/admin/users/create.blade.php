@@ -226,6 +226,9 @@
             
             try {
                 const response = await fetch(`/api/ldap/groups/gid/${gid}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 const data = await response.json();
                 
                 if (data.success && data.group) {
@@ -236,19 +239,26 @@
                     
                     // Seleccionar el grupo encontrado
                     const options = gruposSelect.options;
+                    let found = false;
                     for (let i = 0; i < options.length; i++) {
                         if (options[i].value === data.group) {
                             options[i].selected = true;
+                            found = true;
                             break;
                         }
                     }
+                    
+                    if (!found) {
+                        console.warn(`Grupo ${data.group} encontrado pero no está en la lista de opciones`);
+                    }
                 } else {
-                    alert('El GID especificado no existe en ningún grupo');
+                    alert(data.message || 'El GID especificado no existe en ningún grupo');
                     gidNumberInput.value = '';
                 }
             } catch (error) {
                 console.error('Error al buscar grupo por GID:', error);
-                alert('Error al buscar el grupo por GID');
+                alert('Error al buscar el grupo por GID. Por favor, inténtalo de nuevo.');
+                gidNumberInput.value = '';
             }
         }
 
