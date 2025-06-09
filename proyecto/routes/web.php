@@ -156,7 +156,7 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
 // Rutas que requieren permisos de administrador
 Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware', 'App\Http\Middleware\AdminMiddleware'])->prefix('admin')->name('admin.')->group(function () {
     // Operaciones exclusivas para administradores de usuarios LDAP
-    Route::post('/usuarios/{dn}/toggle-admin', [App\Http\Controllers\Admin\LdapUserController::class, 'toggleAdmin'])->name('users.toggle-admin');
+    Route::post('/admin/users/toggle-admin', [LdapUserController::class, 'toggleAdmin'])->name('admin.users.toggle-admin');
     Route::get('/usuarios-exportar', [App\Http\Controllers\Admin\LdapUserController::class, 'exportExcel'])->name('users.export');
     Route::post('/usuarios/reparar/{uid}', [App\Http\Controllers\Admin\LdapUserController::class, 'repairUser'])->name('users.repair');
     

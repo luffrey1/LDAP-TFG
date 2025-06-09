@@ -57,12 +57,11 @@
                 </a>
                 
                 @if(session('auth_user.is_admin') || session('auth_user.username') === 'ldap-admin')
-                <form action="{{ route('admin.users.toggle-admin', $encodedDn) }}" method="POST" class="d-inline">
-                    @csrf
-                    <button type="submit" class="btn btn-sm {{ $isAdmin ? 'btn-warning' : 'btn-secondary' }}" title="{{ $isAdmin ? 'Quitar admin' : 'Hacer admin' }}">
-                        <i class="fas fa-crown"></i>
-                    </button>
-                </form>
+                <button type="button" class="btn btn-sm {{ $isAdmin ? 'btn-warning' : 'btn-secondary' }} toggle-admin" 
+                        data-dn="{{ $encodedDn }}" 
+                        title="{{ $isAdmin ? 'Quitar admin' : 'Hacer admin' }}">
+                    <i class="fas fa-crown"></i>
+                </button>
                 @endif
                 
                 <form action="{{ route('admin.users.destroy', $encodedDn) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Está seguro de que desea eliminar este usuario?')">
@@ -88,3 +87,38 @@
         </td>
     </tr>
 @endforelse
+
+@push('scripts')
+<script>
+$(document).ready(function() {
+    $('.toggle-admin').click(function() {
+        const button = $(this);
+        const dn = button.data('dn');
+        
+        $.ajax({
+            url: '{{ route("admin.users.toggle-admin") }}',
+            type: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}',
+                dn: dn
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Actualizar el botón
+                    button.toggleClass('btn-warning btn-secondary');
+                    button.attr('title', button.hasClass('btn-warning') ? 'Quitar admin' : 'Hacer admin');
+                    
+                    // Mostrar mensaje de éxito
+                    toastr.success(response.message);
+                } else {
+                    toastr.error(response.message);
+                }
+            },
+            error: function(xhr) {
+                toastr.error(xhr.responseJSON?.message || 'Error al actualizar el estado de administrador');
+            }
+        });
+    });
+});
+</script>
+@endpush

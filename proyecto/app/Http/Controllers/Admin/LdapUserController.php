@@ -10,6 +10,7 @@ use LdapRecord\Models\ActiveDirectory\User;
 use LdapRecord\Models\ActiveDirectory\Group;
 use LdapRecord\Connection;
 use Exception;
+use LdapRecord\Ldap;
 
 class LdapUserController extends Controller
 {
@@ -2892,81 +2893,88 @@ class LdapUserController extends Controller
     /**
      * Toggle admin status for a user
      */
-    public function toggleAdmin($dn)
+    public function toggleAdmin(Request $request)
     {
         try {
-            $this->connection->connect();
-            
-            // Decodificar el DN
-            $userDn = base64_decode($dn);
+            // Conectar al servidor LDAP
+            $ldap = new Ldap();
+            $ldap->connect(config('ldap.default'));
+
+            // Decodificar el DN del usuario
+            $userDn = base64_decode($request->dn);
             if (!$userDn) {
-                Log::error("Error al decodificar DN: " . $dn);
-                return redirect()->route('admin.users.index')
-                    ->with('error', 'Error: DN inválido');
+                throw new \Exception('DN de usuario inválido');
             }
-            
-            // Obtener el usuario
-            $user = $this->connection->query()
-                ->in($this->baseDn)
+
+            // Buscar el usuario
+            $user = $ldap->query()
+                ->where('objectclass', '=', 'inetOrgPerson')
                 ->where('dn', '=', $userDn)
                 ->first();
-                
+
             if (!$user) {
-                return redirect()->route('admin.users.index')
-                    ->with('error', 'Usuario no encontrado');
+                throw new \Exception('Usuario no encontrado');
             }
-            
+
             // Obtener el UID del usuario
-            $uid = '';
-            if (is_array($user)) {
-                $uid = $user['uid'][0] ?? '';
-            } else {
-                $uid = $user->getFirstAttribute('uid');
-            }
-            
+            $uid = $user->getFirstAttribute('uid');
             if (empty($uid)) {
-                return redirect()->route('admin.users.index')
-                    ->with('error', 'No se pudo obtener el UID del usuario');
+                throw new \Exception('UID de usuario no encontrado');
             }
-            
-            // Verificar si el usuario es ldap-admin
+
+            // No permitir modificar al usuario ldap-admin
             if ($uid === 'ldap-admin') {
-                return redirect()->route('admin.users.index')
-                    ->with('error', 'No se puede modificar el estado de administrador del usuario ldap-admin');
+                throw new \Exception('No se puede modificar el estado de administrador del usuario ldap-admin');
             }
-            
-            // Obtener grupos actuales del usuario
-            $userGroups = $this->getUserGroups($userDn);
-            $isAdmin = in_array('ldapadmins', $userGroups);
-            
-            // Preparar la lista de grupos
-            $grupos = $userGroups;
-            
+
+            // Verificar si el usuario es admin
+            $isAdmin = false;
+            $memberOf = $user->getAttribute('memberOf');
+            if ($memberOf) {
+                foreach ($memberOf as $group) {
+                    if (strpos($group, 'cn=ldapadmins,ou=groups,dc=tierno,dc=es') !== false) {
+                        $isAdmin = true;
+                        break;
+                    }
+                }
+            }
+
+            // Actualizar la membresía del grupo
             if ($isAdmin) {
-                // Remover del grupo ldapadmins
-                $grupos = array_filter($grupos, function($group) {
-                    return $group !== 'ldapadmins';
-                });
-            } else {
-                // Añadir al grupo ldapadmins
-                $grupos[] = 'ldapadmins';
-            }
-            
-            // Actualizar los grupos del usuario
-            $this->updateUserGroupsDirect($userDn, $grupos, $this->connection);
-            
-            // Registrar la acción en logs
-            $adminUser = $this->getCurrentUsername();
-            $action = $isAdmin ? 'removido de' : 'añadido a';
-            Log::info("Usuario {$uid} {$action} grupo ldapadmins por {$adminUser}");
-            
-            return redirect()->route('admin.users.index')
-                ->with('success', 'Estado de administrador actualizado correctamente');
+                // Quitar del grupo ldapadmins
+                $ldap->query()
+                    ->where('cn', '=', 'ldapadmins')
+                    ->where('ou', '=', 'groups')
+                    ->where('dc', '=', 'tierno')
+                    ->where('dc', '=', 'es')
+                    ->first()
+                    ->removeAttribute('member', $userDn);
                 
-        } catch (Exception $e) {
-            Log::error("Error al cambiar estado de administrador: " . $e->getMessage());
-            return redirect()->route('admin.users.index')
-                ->with('error', 'Error al cambiar estado de administrador: ' . $e->getMessage());
+                Log::info("Usuario {$uid} removido del grupo ldapadmins");
+            } else {
+                // Agregar al grupo ldapadmins
+                $ldap->query()
+                    ->where('cn', '=', 'ldapadmins')
+                    ->where('ou', '=', 'groups')
+                    ->where('dc', '=', 'tierno')
+                    ->where('dc', '=', 'es')
+                    ->first()
+                    ->addAttribute('member', $userDn);
+                
+                Log::info("Usuario {$uid} agregado al grupo ldapadmins");
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $isAdmin ? 'Usuario removido de administradores' : 'Usuario agregado como administrador'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error al cambiar estado de administrador: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
         }
     }
 } 
