@@ -1,308 +1,197 @@
-@extends('layouts.dashboard')
+@extends('layouts.app')
 
 @section('content')
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-12">
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
             <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span>{{ __('Logs de Actividad LDAP') }}</span>
-                        <div>
-                            <div class="btn-group me-2">
-                                <button type="button" class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="fas fa-trash"></i> {{ __('Borrar últimos') }}
+                <div class="card-header">
+                    <h3 class="card-title">Logs del Sistema</h3>
+                    <div class="card-tools">
+                        <div class="input-group input-group-sm" style="width: 250px;">
+                            <input type="text" id="userSearch" class="form-control float-right" placeholder="Buscar usuario...">
+                            <div class="input-group-append">
+                                <button type="button" class="btn btn-default" id="clearSearch">
+                                    <i class="fas fa-times"></i>
                                 </button>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="{{ route('admin.logs.delete', ['count' => 500]) }}" onclick="return confirm('¿Estás seguro de borrar los últimos 500 logs?')">Últimos 500</a></li>
-                                    <li><a class="dropdown-item" href="{{ route('admin.logs.delete', ['count' => 1000]) }}" onclick="return confirm('¿Estás seguro de borrar los últimos 1000 logs?')">Últimos 1000</a></li>
-                                    <li><a class="dropdown-item" href="{{ route('admin.logs.delete', ['count' => 2000]) }}" onclick="return confirm('¿Estás seguro de borrar los últimos 2000 logs?')">Últimos 2000</a></li>
-                                    <li><a class="dropdown-item" href="{{ route('admin.logs.delete', ['count' => 5000]) }}" onclick="return confirm('¿Estás seguro de borrar los últimos 5000 logs?')">Últimos 5000</a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item text-danger" href="{{ route('admin.logs.delete', ['count' => 'all']) }}" onclick="return confirm('¿Estás seguro de borrar TODOS los logs? Esta acción no se puede deshacer.')">Borrar todos</a></li>
-                                </ul>
                             </div>
-                            <a href="{{ route('admin.users.index') }}" class="btn btn-sm btn-light">
-                                <i class="fas fa-users"></i> {{ __('Volver a Usuarios') }}
-                            </a>
                         </div>
                     </div>
                 </div>
-
                 <div class="card-body">
-                    @if (session('status'))
-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            {{ session('status') }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    @endif
-
-                    @if (session('error'))
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            {{ session('error') }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    @endif
-
                     <!-- Pestañas de filtro -->
-                    <ul class="nav nav-tabs mb-3" id="logTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab" aria-controls="all" aria-selected="true">
-                                <i class="fas fa-list"></i> Todos
-                            </button>
+                    <ul class="nav nav-tabs" id="logTabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="all-tab" data-toggle="tab" href="#all" role="tab">Todos</a>
                         </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button" role="tab" aria-controls="users" aria-selected="false">
-                                <i class="fas fa-users"></i> Usuarios
-                            </button>
+                        <li class="nav-item">
+                            <a class="nav-link" id="users-tab" data-toggle="tab" href="#users" role="tab">Usuarios</a>
                         </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="groups-tab" data-bs-toggle="tab" data-bs-target="#groups" type="button" role="tab" aria-controls="groups" aria-selected="false">
-                                <i class="fas fa-user-friends"></i> Grupos
-                            </button>
+                        <li class="nav-item">
+                            <a class="nav-link" id="groups-tab" data-toggle="tab" href="#groups" role="tab">Grupos</a>
                         </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="access-tab" data-bs-toggle="tab" data-bs-target="#access" type="button" role="tab" aria-controls="access" aria-selected="false">
-                                <i class="fas fa-sign-in-alt"></i> Accesos
-                            </button>
+                        <li class="nav-item">
+                            <a class="nav-link" id="access-tab" data-toggle="tab" href="#access" role="tab">Accesos</a>
                         </li>
                     </ul>
 
-                    <!-- Búsqueda de usuario -->
-                    <div class="mb-3">
-                        <div class="input-group">
-                            <input type="text" id="userSearch" class="form-control" placeholder="Buscar por usuario...">
-                            <button class="btn btn-outline-secondary" type="button" id="clearSearch">
-                                <i class="fas fa-times"></i>
-                            </button>
+                    <!-- Contenido de las pestañas -->
+                    <div class="tab-content mt-3" id="logTabsContent">
+                        <div class="tab-pane fade show active" id="all" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-hover" id="logsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Usuario</th>
+                                            <th>Acción</th>
+                                            <th>Descripción</th>
+                                            <th>Fecha</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($logs as $log)
+                                        <tr class="log-row" data-id="{{ $log->id }}" data-type="{{ $log->type }}">
+                                            <td>{{ $log->performed_by }}</td>
+                                            <td>{{ $log->action }}</td>
+                                            <td>{{ $log->description }}</td>
+                                            <td>{{ \Carbon\Carbon::parse($log->created_at)->format('d/m/Y H:i:s') }}</td>
+                                        </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="mt-3">
+                                {{ $logs->links() }}
+                            </div>
                         </div>
                     </div>
-
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover" id="logsTable">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>#</th>
-                                    <th>{{ __('Fecha') }}</th>
-                                    <th>{{ __('Nivel') }}</th>
-                                    <th>{{ __('Usuario') }}</th>
-                                    <th>{{ __('Acción') }}</th>
-                                    <th>{{ __('Descripción') }}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($logs as $log)
-                                    <tr data-type="{{ $log->type ?? 'other' }}" data-id="{{ $log->id }}" class="log-row" style="cursor: pointer;">
-                                        <td>{{ $log->id }}</td>
-                                        <td>{{ $log->created_at->format('d/m/Y H:i:s') }}</td>
-                                        <td>
-                                            <span class="badge bg-{{ $log->level == 'ERROR' ? 'danger' : ($log->level == 'WARNING' ? 'warning' : ($log->level == 'INFO' ? 'info' : ($log->level == 'DEBUG' ? 'secondary' : 'primary'))) }}">
-                                                {{ $log->level }}
-                                            </span>
-                                        </td>
-                                        <td>{{ $log->user ?? 'Sistema' }}</td>
-                                        <td>
-                                            <span class="badge bg-{{ $log->action == 'Error' ? 'danger' : ($log->action == 'Advertencia' ? 'warning' : ($log->action == 'Información' ? 'info' : 'secondary')) }}">
-                                                {{ $log->action }}
-                                            </span>
-                                        </td>
-                                        <td class="text-truncate" style="max-width: 400px;" title="{{ $log->description }}">
-                                            {{ \Illuminate\Support\Str::limit($log->description, 100) }}
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="6" class="text-center py-4">
-                                            <div class="alert alert-info mb-0">
-                                                <i class="fas fa-info-circle me-2"></i> {{ __('No hay registros de actividad disponibles') }}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-
-                    @if($activityLogs->hasPages())
-                        <div class="d-flex justify-content-center mt-4">
-                            {{ $activityLogs->links() }}
-                        </div>
-                    @endif
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal de detalles -->
-<div class="modal fade" id="logDetailsModal" tabindex="-1" aria-labelledby="logDetailsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+<!-- Modal para detalles del log -->
+<div class="modal fade" id="logDetailsModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="logDetailsModalLabel">Detalles del Log</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title">Detalles del Log</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
             </div>
-            <div class="modal-body text-dark">
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <strong>ID:</strong> <span id="modal-id"></span>
-                    </div>
-                    <div class="col-md-6">
-                        <strong>Fecha:</strong> <span id="modal-date"></span>
-                    </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>ID:</label>
+                    <p id="logId"></p>
                 </div>
-                <div class="row mb-3 text-dark">
-                    <div class="col-md-6">
-                        <strong>Usuario:</strong> <span id="modal-user"></span>
-                    </div>
-                    <div class="col-md-6">
-                        <strong>Nivel:</strong> <span id="modal-level"></span>
-                    </div>
+                <div class="form-group">
+                    <label>Fecha:</label>
+                    <p id="logDate"></p>
                 </div>
-                <div class="row mb-3 text-dark">
-                    <div class="col-md-12">
-                        <strong>Acción:</strong> <span id="modal-action"></span>
-                    </div>
+                <div class="form-group">
+                    <label>Usuario:</label>
+                    <p id="logUser"></p>
                 </div>
-                <div class="row mb-3 text-dark">
-                    <div class="col-md-12">
-                        <strong>Descripción:</strong>
-                        <p id="modal-description" class="mt-2"></p>
-                    </div>
+                <div class="form-group">
+                    <label>Acción:</label>
+                    <p id="logAction"></p>
                 </div>
-                <div class="row text-dark">
-                    <div class="col-md-12">
-                        <strong>Detalles Adicionales:</strong>
-                        <pre id="modal-details" class="mt-2 bg-light p-3 rounded"></pre>
-                    </div>
+                <div class="form-group">
+                    <label>Descripción:</label>
+                    <p id="logDescription"></p>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
     </div>
 </div>
+
 @endsection
 
 @push('scripts')
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.10.24/js/dataTables.bootstrap5.min.js"></script>
 <script>
 $(document).ready(function() {
     // Inicializar DataTables
-    const table = $('#logsTable').DataTable({
-        language: {
-            url: '//cdn.datatables.net/plug-ins/1.10.24/i18n/Spanish.json'
-        },
-        order: [[1, 'desc']], // Ordenar por fecha descendente
-        pageLength: 25,
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip',
-        processing: true,
-        serverSide: false,
-        searching: true,
-        info: true,
-        lengthChange: true,
-        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
-        columnDefs: [
-            {
-                targets: 0,
-                visible: false // Ocultar la columna de ID
-            }
-        ]
+    var table = $('#logsTable').DataTable({
+        "paging": false,
+        "ordering": true,
+        "info": false,
+        "searching": false,
+        "language": {
+            "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Spanish.json"
+        }
     });
 
     // Función para filtrar por tipo de log
-    function filterByType(type) {
-        // Limpiar búsqueda anterior
-        table.search('').columns().search('').draw();
-        
+    function filterLogs(type) {
         if (type === 'all') {
-            // Mostrar todos los registros
-            table.rows().every(function() {
-                $(this.node()).show();
-            });
+            $('.log-row').show();
         } else {
-            // Filtrar por tipo
-            table.rows().every(function() {
-                const rowType = $(this.node()).data('type');
-                if (type === rowType) {
-                    $(this.node()).show();
-                } else {
-                    $(this.node()).hide();
-                }
-            });
+            $('.log-row').hide();
+            $('.log-row[data-type="' + type + '"]').show();
         }
     }
 
-    // Eventos de las pestañas
-    $('#logTabs button').on('click', function() {
-        // Remover clase active de todas las pestañas
-        $('#logTabs button').removeClass('active');
-        // Añadir clase active a la pestaña actual
-        $(this).addClass('active');
+    // Manejar cambios de pestaña
+    $('#logTabs a').on('click', function(e) {
+        e.preventDefault();
+        $(this).tab('show');
         
-        const type = $(this).attr('id').split('-')[0];
-        filterByType(type);
+        var type = $(this).attr('id').replace('-tab', '');
+        filterLogs(type);
     });
 
     // Búsqueda de usuario
     $('#userSearch').on('keyup', function() {
-        const searchValue = this.value;
-        const currentType = $('#logTabs button.active').attr('id').split('-')[0];
-        
-        // Aplicar filtro de tipo primero
-        filterByType(currentType);
-        
-        // Luego aplicar la búsqueda de usuario
-        if (searchValue) {
-            table.column(3).search(searchValue).draw();
-        }
+        var searchText = $(this).val().toLowerCase();
+        $('.log-row').each(function() {
+            var userText = $(this).find('td:first').text().toLowerCase();
+            $(this).toggle(userText.indexOf(searchText) > -1);
+        });
     });
 
+    // Limpiar búsqueda
     $('#clearSearch').on('click', function() {
         $('#userSearch').val('');
-        const currentType = $('#logTabs button.active').attr('id').split('-')[0];
-        filterByType(currentType);
+        $('.log-row').show();
     });
 
-    // Modal de detalles
-    const logDetailsModal = new bootstrap.Modal(document.getElementById('logDetailsModal'));
-    
-    // Función para mostrar detalles del log
-    async function showLogDetails(id) {
-        try {
-            const response = await fetch(`/admin/logs/${id}`);
-            if (!response.ok) throw new Error('Log no encontrado');
-            
-            const log = await response.json();
-            
-            // Actualizar contenido del modal
-            $('#modal-id').text(log.id);
-            $('#modal-date').text(new Date(log.created_at).toLocaleString());
-            $('#modal-user').text(log.user || 'Sistema');
-            $('#modal-level').html(`<span class="badge bg-${log.level === 'ERROR' ? 'danger' : (log.level === 'WARNING' ? 'warning' : (log.level === 'INFO' ? 'info' : 'secondary'))}">${log.level}</span>`);
-            $('#modal-action').html(`<span class="badge bg-${log.action === 'Error' ? 'danger' : (log.action === 'Advertencia' ? 'warning' : (log.action === 'Información' ? 'info' : 'secondary'))}">${log.action}</span>`);
-            $('#modal-description').text(log.description);
-            $('#modal-details').text(JSON.stringify(log.details, null, 2));
-            
-            // Mostrar modal
-            logDetailsModal.show();
-        } catch (error) {
-            console.error('Error al cargar detalles del log:', error);
-            alert('Error al cargar los detalles del log');
-        }
-    }
-
-    // Evento de clic en filas de la tabla usando delegación de eventos
-    $('#logsTable tbody').on('click', 'tr.log-row', function() {
-        const id = $(this).data('id');
+    // Mostrar detalles del log al hacer clic
+    $('.log-row').on('click', function() {
+        var id = $(this).data('id');
         showLogDetails(id);
     });
 
-    // Ocultar la paginación de Laravel ya que usamos DataTables
-    $('.pagination').hide();
+    // Función para mostrar detalles del log
+    function showLogDetails(id) {
+        $.get('/admin/logs/' + id, function(data) {
+            $('#logId').text(data.id);
+            $('#logDate').text(new Date(data.created_at).toLocaleString());
+            $('#logUser').text(data.performed_by);
+            $('#logAction').text(data.action);
+            $('#logDescription').text(data.description);
+            $('#logDetailsModal').modal('show');
+        });
+    }
 });
 </script>
+@endpush
+
+@push('styles')
+<style>
+.log-row {
+    cursor: pointer;
+}
+.log-row:hover {
+    background-color: #f8f9fa;
+}
+.nav-tabs .nav-link {
+    color: #495057;
+}
+.nav-tabs .nav-link.active {
+    color: #007bff;
+    font-weight: bold;
+}
+</style>
 @endpush 
