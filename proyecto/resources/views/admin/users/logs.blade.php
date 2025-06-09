@@ -167,7 +167,10 @@ $(document).ready(function() {
 
     // Función mejorada para determinar el tipo de log
     function getLogType(description) {
-        if (!description) return 'all';
+        if (!description) {
+            console.log('Descripción vacía o nula');
+            return 'all';
+        }
         
         description = description.toLowerCase();
         console.log('Analizando descripción:', description);
@@ -181,8 +184,10 @@ $(document).ready(function() {
 
         // Verificar cada patrón
         for (const [type, patternList] of Object.entries(patterns)) {
-            if (patternList.some(pattern => description.includes(pattern))) {
+            const matches = patternList.filter(pattern => description.includes(pattern));
+            if (matches.length > 0) {
                 console.log('Tipo detectado:', type, 'para descripción:', description);
+                console.log('Patrones coincidentes:', matches);
                 return type;
             }
         }
@@ -198,7 +203,11 @@ $(document).ready(function() {
 
         table.rows().every(function() {
             const data = this.data();
+            console.log('Datos de la fila:', data);
+            
             const description = data[2]; // Descripción en la tercera columna
+            console.log('Descripción encontrada:', description);
+            
             const type = getLogType(description);
             
             // Asignar tipo a la fila
@@ -209,7 +218,8 @@ $(document).ready(function() {
             console.log('Fila asignada:', {
                 description: description,
                 type: type,
-                rowIndex: this.index()
+                rowIndex: this.index(),
+                dataType: $row.attr('data-type')
             });
         });
 
@@ -225,9 +235,15 @@ $(document).ready(function() {
         const $rows = $('#logsTable tbody tr');
         let visibleCount = 0;
 
-        $rows.each(function() {
+        $rows.each(function(index) {
             const $row = $(this);
             const rowType = $row.attr('data-type');
+            console.log(`Fila ${index}:`, {
+                tipo: rowType,
+                esperado: type,
+                descripcion: $row.find('td:eq(2)').text()
+            });
+            
             const shouldShow = type === 'all' || rowType === type;
             
             // Aplicar visibilidad
@@ -238,7 +254,13 @@ $(document).ready(function() {
         console.log('Filtrado completado:', {
             tipo: type,
             filasVisibles: visibleCount,
-            totalFilas: $rows.length
+            totalFilas: $rows.length,
+            filasPorTipo: {
+                users: $rows.filter('[data-type="users"]').length,
+                groups: $rows.filter('[data-type="groups"]').length,
+                access: $rows.filter('[data-type="access"]').length,
+                all: $rows.filter('[data-type="all"]').length
+            }
         });
 
         // Actualizar contador en la interfaz
