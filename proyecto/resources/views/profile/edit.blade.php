@@ -31,9 +31,9 @@
                         @method('PUT')
 
                         <div class="mb-3">
-                            <label for="uid" class="form-label text-white">{{ __('UID') }}</label>
+                            <label for="uid" class="form-label text-white">{{ __('UID (Número)') }}</label>
                             <input id="uid" type="text" class="form-control text-white bg-dark border-secondary" name="uid" value="{{ $ldapUid }}" readonly>
-                            <div class="form-text text-white-50">{{ __('El UID no puede ser modificado.') }}</div>
+                            <div class="form-text text-white-50">{{ __('El UID numérico no puede ser modificado.') }}</div>
                         </div>
 
                         <div class="mb-3">
@@ -43,15 +43,15 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="gid" class="form-label text-white">{{ __('GID') }}</label>
+                            <label for="gid" class="form-label text-white">{{ __('GID (Número)') }}</label>
                             <input id="gid" type="text" class="form-control text-white bg-dark border-secondary" name="gid" value="{{ $ldapGuid }}" readonly>
-                            <div class="form-text text-white-50">{{ __('El GID no puede ser modificado.') }}</div>
+                            <div class="form-text text-white-50">{{ __('El GID numérico no puede ser modificado.') }}</div>
                         </div>
 
                         <div class="mb-3">
-                            <label for="cn" class="form-label text-white">{{ __('CN') }}</label>
+                            <label for="cn" class="form-label text-white">{{ __('Nombre de Usuario') }}</label>
                             <input id="cn" type="text" class="form-control text-white bg-dark border-secondary" name="cn" value="{{ $ldapCn }}" readonly>
-                            <div class="form-text text-white-50">{{ __('El CN no puede ser modificado.') }}</div>
+                            <div class="form-text text-white-50">{{ __('El nombre de usuario no puede ser modificado.') }}</div>
                         </div>
 
                         <div class="mb-3">
