@@ -22,7 +22,7 @@ class ProfileController extends Controller
     {
         $user = $request->user();
         $groups = [];
-        $ldapUid = $user->username;
+        $ldapUid = '';
         $ldapGuid = '';
         $ldapCn = '';
         $fullName = $user->name;
@@ -59,10 +59,14 @@ class ProfileController extends Controller
 
             if ($ldapUser) {
                 // Obtener UID, GID y CN
-                $ldapUid = is_array($ldapUser) ? ($ldapUser['uid'][0] ?? '') : $ldapUser->getFirstAttribute('uid');
+                $ldapUid = is_array($ldapUser) ? ($ldapUser['uidnumber'][0] ?? '') : $ldapUser->getFirstAttribute('uidNumber');
                 $ldapGuid = is_array($ldapUser) ? ($ldapUser['gidnumber'][0] ?? '') : $ldapUser->getFirstAttribute('gidNumber');
                 $ldapCn = is_array($ldapUser) ? ($ldapUser['cn'][0] ?? '') : $ldapUser->getFirstAttribute('cn');
                 $fullName = is_array($ldapUser) ? ($ldapUser['displayname'][0] ?? $ldapUser['cn'][0] ?? '') : ($ldapUser->getFirstAttribute('displayName') ?? $ldapUser->getFirstAttribute('cn'));
+
+                Log::debug('UID numérico encontrado: ' . $ldapUid);
+                Log::debug('GID encontrado: ' . $ldapGuid);
+                Log::debug('CN encontrado: ' . $ldapCn);
 
                 // Obtener grupos del usuario
                 $allGroups = $ldap->query()
