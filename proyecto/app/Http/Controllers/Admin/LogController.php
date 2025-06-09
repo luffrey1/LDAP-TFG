@@ -16,8 +16,8 @@ class LogController extends Controller
         $activityLogs = DB::table('activity_logs')
             ->select('id', 'user', 'action', 'description', 'created_at', 'level', 'details')
             ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($log) {
+            ->paginate(25)
+            ->through(function ($log) {
                 return (object) [
                     'id' => $log->id,
                     'user' => $log->user,
@@ -56,7 +56,7 @@ class LogController extends Controller
             ->sortByDesc('created_at')
             ->values();
 
-        return view('admin.users.logs', compact('logs'));
+        return view('admin.users.logs', compact('logs', 'activityLogs'));
     }
 
     public function show($id)
