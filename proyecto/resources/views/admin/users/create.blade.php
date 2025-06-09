@@ -93,8 +93,8 @@
 
                             <div class="col-md-6 mb-3 text-white">
                                 <label for="gidNumber" class="form-label">{{ __('GID Number') }}</label>
-                                <input id="gidNumber" type="number" class="form-control" name="gidNumber" value="{{ old('gidNumber') }}" readonly>
-                                <div class="form-text">{{ __('Se asigna según el tipo de usuario.') }}</div>
+                                <input id="gidNumber" type="number" class="form-control" name="gidNumber" value="{{ old('gidNumber') }}" placeholder="Ej: 10000 para ldapadmins">
+                                <div class="form-text">{{ __('Se asignará automáticamente según el grupo seleccionado.') }}</div>
                             </div>
                         </div>
 
@@ -208,8 +208,8 @@
         function updateEmail() {
             if (nombreInput.value && apellidosInput.value && !emailInput.value) {
                 const nombre = nombreInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
-                const apellido = apellidosInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
-                emailInput.value = nombre + apellido + '@tierno.es';
+                const apellidos = apellidosInput.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
+                emailInput.value = nombre + '.' + apellidos + '@tierno.es';
             }
         }
 
@@ -229,7 +229,12 @@
                 const data = await response.json();
                 
                 if (data.success && data.group) {
-                    // Seleccionar el grupo en el select
+                    // Deseleccionar todos los grupos primero
+                    for (let i = 0; i < gruposSelect.options.length; i++) {
+                        gruposSelect.options[i].selected = false;
+                    }
+                    
+                    // Seleccionar el grupo encontrado
                     const options = gruposSelect.options;
                     for (let i = 0; i < options.length; i++) {
                         if (options[i].value === data.group) {
@@ -334,8 +339,7 @@
         updateUsername();
         updateEmail();
         updateDn();
-        // Seleccionar alumno por defecto
-        selectGroupsByRole('alumno');
+        // Quitamos la selección por defecto de alumno
     });
 </script>
 @endpush
