@@ -8,33 +8,55 @@ use Illuminate\Support\Facades\Notification;
 use LdapRecord\Container;
 use App\Models\AccessAttempt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class AccessLogController extends Controller
 {
     public function logAccessAttempt(Request $request)
     {
+        Log::debug('AccessLogController: Iniciando registro de intento de acceso', [
+            'request_data' => $request->all(),
+            'session_user' => session('auth_user')
+        ]);
+
         $user = session('auth_user');
         
         if (!$user) {
+            Log::warning('AccessLogController: No hay usuario autenticado en la sesión');
             return response()->json(['error' => 'No authenticated user'], 401);
         }
 
         // Obtener el hostname usando el macscanner
         $hostname = $this->getHostnameFromMacScanner($request->ip());
+        Log::debug('AccessLogController: Hostname obtenido', ['hostname' => $hostname]);
 
-        // Guardar el intento de acceso en la base de datos
-        AccessAttempt::create([
-            'username' => $user['username'],
-            'nombre' => $user['nombre'],
-            'hostname' => $hostname,
-            'ip' => $request->ip(),
-            'created_at' => now()
-        ]);
+        try {
+            // Guardar el intento de acceso en la base de datos
+            $attempt = AccessAttempt::create([
+                'username' => $user['username'],
+                'nombre' => $user['nombre'],
+                'hostname' => $hostname,
+                'ip' => $request->ip(),
+                'created_at' => now()
+            ]);
 
-        return response()->json([
-            'message' => 'Access attempt logged successfully',
-            'hostname' => $hostname
-        ]);
+            Log::info('AccessLogController: Intento de acceso registrado exitosamente', [
+                'attempt_id' => $attempt->id,
+                'username' => $user['username']
+            ]);
+
+            return response()->json([
+                'message' => 'Access attempt logged successfully',
+                'hostname' => $hostname
+            ]);
+        } catch (\Exception $e) {
+            Log::error('AccessLogController: Error al registrar intento de acceso', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json(['error' => 'Error logging access attempt'], 500);
+        }
     }
 
     private function getHostnameFromMacScanner($ip)
@@ -47,7 +69,7 @@ class AccessLogController extends Controller
                 return $data['hostname'];
             }
         } catch (\Exception $e) {
-            \Log::error('Error getting hostname from macscanner: ' . $e->getMessage());
+            Log::error('Error getting hostname from macscanner: ' . $e->getMessage());
         }
 
         // Fallback a gethostbyaddr si el macscanner falla

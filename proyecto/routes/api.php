@@ -34,4 +34,4 @@ Route::get('/ldap/groups/{group}/gid', [\App\Http\Controllers\Admin\LdapUserCont
 Route::get('/ldap/users/check/{username}', [App\Http\Controllers\Admin\LdapUserController::class, 'checkUserExists'])
     ->name('api.ldap.users.check');
 
-Route::post('/log-access-attempt', [App\Http\Controllers\AccessLogController::class, 'logAccessAttempt']); 
+// ... existing code ... 

@@ -16,6 +16,7 @@ use App\Events\TestBroadcast;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\LdapGroupController;
 use Illuminate\Support\Facades\Http;
+use App\Http\Controllers\AccessLogController;
 
 // Ruta principal redirige al login
 Route::get('/', function () {
@@ -239,5 +240,8 @@ Route::post('/api/debug/log', function(\Illuminate\Http\Request $request) {
 // Route::post('/terminal/send', [App\Http\Controllers\MonitorController::class, 'terminalSend'])->name('terminal.send');
 
 Route::get('/monitor/estado-global', [App\Http\Controllers\MonitorController::class, 'healthStatus'])->name('monitor.health');
+
+// Ruta para registrar intentos de acceso
+Route::post('/api/log-access-attempt', [AccessLogController::class, 'logAccessAttempt']);
 
 
