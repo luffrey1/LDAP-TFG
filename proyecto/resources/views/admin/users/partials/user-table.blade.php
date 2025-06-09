@@ -104,23 +104,16 @@ $(document).ready(function() {
             },
             success: function(response) {
                 if (response.success) {
-                    // Actualizar el botón basado en el nuevo estado
-                    if (response.isAdmin) {
-                        button.removeClass('btn-secondary').addClass('btn-warning');
-                        button.attr('title', 'Quitar admin');
-                    } else {
-                        button.removeClass('btn-warning').addClass('btn-secondary');
-                        button.attr('title', 'Hacer admin');
-                    }
-                    
                     // Mostrar mensaje de éxito
                     alert(response.message);
+                    // Recargar la página
+                    window.location.reload();
                 } else {
-                    alert('Error: ' + response.message);
+                    alert(response.message);
                 }
             },
             error: function(xhr) {
-                alert('Error: ' + (xhr.responseJSON?.message || 'Error al actualizar el estado de administrador'));
+                alert('Error: ' + (xhr.responseJSON?.message || 'Error al procesar la solicitud'));
             }
         });
     });
