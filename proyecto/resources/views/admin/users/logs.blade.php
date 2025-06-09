@@ -154,41 +154,49 @@ $(document).ready(function() {
         description = description.toLowerCase();
 
         // Detección de acciones de usuario
-        if (action.includes('usuario') || 
-            action.includes('user') || 
-            description.includes('usuario ldap')) {
-            return 'user';
+        if (action.includes('crear usuario') || 
+            action.includes('actualizar usuario') || 
+            action.includes('eliminar usuario') || 
+            description.includes('usuario ldap creado') ||
+            description.includes('usuario ldap actualizado') ||
+            description.includes('usuario ldap eliminado')) {
+            return 'users';
         }
         
         // Detección de acciones de grupo
-        if (action.includes('grupo') || 
-            action.includes('group') || 
-            description.includes('grupo ldap')) {
-            return 'group';
+        if (action.includes('crear grupo') || 
+            action.includes('actualizar grupo') || 
+            action.includes('eliminar grupo') || 
+            description.includes('grupo ldap creado') ||
+            description.includes('grupo ldap actualizado') ||
+            description.includes('grupo ldap eliminado')) {
+            return 'groups';
         }
         
         // Detección de intentos de acceso
-        if (action.includes('acceso') || 
-            action.includes('access') || 
-            action.includes('intento') || 
+        if (action.includes('intento de acceso') || 
+            action.includes('acceso exitoso') || 
+            action.includes('acceso fallido') || 
             description.includes('desde')) {
             return 'access';
         }
         
-        return 'other';
+        return 'all';
     }
 
     // Asignar tipos a las filas
     $('.log-row').each(function() {
         var $row = $(this);
-        var action = $row.find('td:eq(1)').text();
-        var description = $row.find('td:eq(2)').text();
+        var action = $row.find('td:eq(1)').text().trim();
+        var description = $row.find('td:eq(2)').text().trim();
         var type = getLogType(action, description);
         $row.attr('data-type', type);
+        console.log('Row type:', type, 'Action:', action, 'Description:', description); // Debug
     });
 
     // Función para filtrar por tipo de log
     function filterLogs(type) {
+        console.log('Filtering by type:', type); // Debug
         if (type === 'all') {
             $('.log-row').show();
         } else {
@@ -203,6 +211,7 @@ $(document).ready(function() {
         $(this).tab('show');
         
         var type = $(this).attr('id').replace('-tab', '');
+        console.log('Tab clicked:', type); // Debug
         filterLogs(type);
     });
 
@@ -238,6 +247,9 @@ $(document).ready(function() {
             $('#logDetailsModal').modal('show');
         });
     }
+
+    // Aplicar filtro inicial
+    filterLogs('all');
 });
 </script>
 @endpush
