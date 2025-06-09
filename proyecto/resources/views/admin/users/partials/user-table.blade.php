@@ -94,6 +94,7 @@ $(document).ready(function() {
     $('.toggle-admin').click(function() {
         const button = $(this);
         const dn = button.data('dn');
+        const isCurrentlyAdmin = button.hasClass('btn-warning');
         
         $.ajax({
             url: '{{ route("admin.users.toggle-admin") }}',
@@ -105,8 +106,13 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.success) {
                     // Actualizar el botón
-                    button.toggleClass('btn-warning btn-secondary');
-                    button.attr('title', button.hasClass('btn-warning') ? 'Quitar admin' : 'Hacer admin');
+                    if (isCurrentlyAdmin) {
+                        button.removeClass('btn-warning').addClass('btn-secondary');
+                        button.attr('title', 'Hacer admin');
+                    } else {
+                        button.removeClass('btn-secondary').addClass('btn-warning');
+                        button.attr('title', 'Quitar admin');
+                    }
                     
                     // Mostrar mensaje de éxito
                     alert(response.message);
