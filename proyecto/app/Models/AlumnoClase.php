@@ -203,13 +203,13 @@ class AlumnoClase extends Model
                 : "cn=alumnos,ou=groups,{$config['base_dn']}";
 
             // Verificar y asegurar la estructura correcta del grupo
-            $groupInfo = ldap_read($ldapConn, $groupDn, "(objectClass=*)", ['objectClass', 'member']);
+            $groupInfo = ldap_read($ldapConn, $groupDn, "(objectClass=*)", ['objectClass', 'uniqueMember']);
             if (!$groupInfo) {
                 // Si el grupo no existe, crearlo con la estructura correcta
                 $groupAttrs = [
-                    'objectClass' => ['top', 'groupOfNames'],
+                    'objectClass' => ['top', 'groupOfUniqueNames'],
                     'cn' => $tipoImportacion === 'profesor' ? 'profesores' : 'alumnos',
-                    'member' => ['cn=nobody']
+                    'uniqueMember' => ['cn=nobody']
                 ];
                 
                 if (!ldap_add($ldapConn, $groupDn, $groupAttrs)) {
@@ -220,7 +220,7 @@ class AlumnoClase extends Model
                 $groupEntry = ldap_first_entry($ldapConn, $groupInfo);
                 $groupAttrs = ldap_get_attributes($ldapConn, $groupEntry);
                 
-                $requiredClasses = ['top', 'groupOfNames'];
+                $requiredClasses = ['top', 'groupOfUniqueNames'];
                 $missingClasses = array_values(array_diff($requiredClasses, $groupAttrs['objectClass']));
                 
                 if (!empty($missingClasses)) {
@@ -263,8 +263,8 @@ class AlumnoClase extends Model
                     throw new \Exception("Error al crear usuario en LDAP: " . ldap_error($ldapConn));
                 }
 
-                // Añadir el usuario al grupo
-                $modify = ['member' => [$userDn]];
+                // Añadir el usuario al grupo usando uniqueMember
+                $modify = ['uniqueMember' => [$userDn]];
                 if (!ldap_mod_add($ldapConn, $groupDn, $modify)) {
                     // Si falla al añadir al grupo, eliminar el usuario
                     ldap_delete($ldapConn, $userDn);
