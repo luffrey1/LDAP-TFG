@@ -196,6 +196,30 @@ class ProfileController extends Controller
                         $authLdap->connect();
                         // Si llegamos aquí, la contraseña actual es correcta
                         $updateData['userPassword'] = $this->hashPassword($newPassword);
+                        
+                        // Actualizar la contraseña usando el admin
+                        $adminLdap = new \LdapRecord\Connection([
+                            'hosts' => $config['hosts'],
+                            'port' => 636,
+                            'base_dn' => $config['base_dn'],
+                            'username' => $config['username'],
+                            'password' => $config['password'],
+                            'use_ssl' => true,
+                            'use_tls' => false,
+                            'options' => [
+                                LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
+                                LDAP_OPT_REFERRALS => 0,
+                                LDAP_OPT_PROTOCOL_VERSION => 3,
+                                LDAP_OPT_NETWORK_TIMEOUT => 5,
+                            ],
+                        ]);
+                        
+                        $adminLdap->connect();
+                        $adminLdap->query()
+                            ->where('dn', '=', $userDn)
+                            ->first()
+                            ->update(['userPassword' => $updateData['userPassword']]);
+                            
                     } catch (\Exception $e) {
                         Log::error('Error al verificar contraseña actual: ' . $e->getMessage());
                         return back()->withErrors(['current_password' => 'La contraseña actual es incorrecta']);
@@ -211,13 +235,16 @@ class ProfileController extends Controller
                         ->first();
                     if ($entry) {
                         foreach ($updateData as $attribute => $value) {
-                            $entry->setAttribute($attribute, $value);
+                            if ($attribute !== 'userPassword') { // No actualizar la contraseña aquí
+                                $entry->setAttribute($attribute, $value);
+                            }
                         }
                         $entry->save();
                     }
                 } else {
                     // Si es un objeto, usar el método update
-                    $ldapUser->update($updateData);
+                    $updateDataWithoutPassword = array_diff_key($updateData, ['userPassword' => '']);
+                    $ldapUser->update($updateDataWithoutPassword);
                 }
 
                 // Actualizar el usuario local

@@ -30,10 +30,10 @@
                         @csrf
                         @method('PUT')
 
-                        <div class="mb-3">
-                            <label for="uid" class="form-label text-white">{{ __('UID (Número)') }}</label>
-                            <input id="uid" type="text" class="form-control text-white bg-dark border-secondary" name="uid" value="{{ $ldapUid }}" readonly>
-                            <div class="form-text text-white-50">{{ __('El UID numérico no puede ser modificado.') }}</div>
+                        <div class="mb-4">
+                            <label for="uid" class="block text-sm font-medium text-white">UID</label>
+                            <input type="text" name="uid" id="uid" value="{{ $ldapUid }}" class="mt-1 block w-full rounded-md border-gray-300 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" readonly>
+                            <p class="mt-1 text-sm text-gray-400">El UID no se puede modificar</p>
                         </div>
 
                         <div class="mb-3">
