@@ -246,17 +246,25 @@ $(document).ready(function() {
     // Asignar tipos a las filas
     $('.log-row').each(function() {
         const $row = $(this);
-        const action = $row.find('td:eq(1)').text();
-        const description = $row.find('td:eq(2)').text();
+        const action = $row.find('td:eq(1)').text().trim();
+        const description = $row.find('td:eq(2)').text().trim();
         const type = getLogType(action, description);
         $row.attr('data-type', type);
-        console.log('Fila asignada:', { action, description, type });
+        
+        // Log detallado de cada fila
+        console.log('Fila encontrada:', {
+            action: action,
+            description: description,
+            type: type,
+            html: $row.html()
+        });
     });
 
     // Función para filtrar logs
     function filterLogs(type) {
         console.log('Filtrando por tipo:', type);
         let visibleCount = 0;
+        let typeCount = { users: 0, groups: 0, access: 0, all: 0 };
 
         $('.log-row').each(function() {
             const $row = $(this);
@@ -269,8 +277,11 @@ $(document).ready(function() {
             } else {
                 $row.hide();
             }
+            
+            typeCount[rowType] = (typeCount[rowType] || 0) + 1;
         });
 
+        console.log('Resumen de tipos:', typeCount);
         console.log('Filas visibles:', visibleCount);
         updateVisibleCount(visibleCount);
     }
