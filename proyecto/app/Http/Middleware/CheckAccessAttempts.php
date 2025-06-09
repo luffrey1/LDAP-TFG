@@ -26,6 +26,14 @@ class CheckAccessAttempts
             // Compartir los intentos con todas las vistas
             View::share('recentAccessAttempts', $recentAttempts);
             
+            // Si hay intentos y no se ha mostrado la alerta en esta sesión
+            if ($recentAttempts->count() > 0 && !session('access_attempts_shown')) {
+                // Incluir el partial en la vista
+                View::share('show_access_attempts', true);
+                // Marcar como mostrado en la sesión
+                session(['access_attempts_shown' => true]);
+            }
+            
             Log::debug('CheckAccessAttempts: Intentos de acceso compartidos con la vista', [
                 'count' => $recentAttempts->count()
             ]);

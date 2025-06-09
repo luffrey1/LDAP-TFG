@@ -1,4 +1,4 @@
-@if(isset($recentAccessAttempts) && $recentAccessAttempts->count() > 0)
+@if(isset($show_access_attempts) && $show_access_attempts && isset($recentAccessAttempts) && $recentAccessAttempts->count() > 0)
 <div class="access-attempts-alert">
     <div class="alert-content">
         <h3>⚠️ Intentos de acceso recientes</h3>
