@@ -156,12 +156,36 @@ class LdapGroupController extends Controller
                 $groups[] = $group;
             }
             
+            // Paginar resultados
+            $page = $request->input('page', 1);
+            $perPage = $request->input('perPage', 10);
+            $total = count($groups);
+            $offset = ($page - 1) * $perPage;
+            $paginatedGroups = array_slice($groups, $offset, $perPage);
+            
+            $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
+                $paginatedGroups,
+                $total,
+                $perPage,
+                $page,
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
+            
             // Si es una petición AJAX, devolver JSON
             if ($request->ajax()) {
-                return response()->json(['groups' => $groups]);
+                return response()->json([
+                    'groups' => $paginatedGroups,
+                    'total' => $total,
+                    'currentPage' => $page,
+                    'lastPage' => $paginator->lastPage()
+                ]);
             }
             
-            return view('gestion.grupos.index', compact('groups'));
+            return view('gestion.grupos.index', [
+                'groups' => $paginator,
+                'total' => $total,
+                'perPage' => $perPage
+            ]);
             
         } catch (Exception $e) {
             Log::error('Error al obtener grupos LDAP: ' . $e->getMessage());
