@@ -10,86 +10,53 @@ use Illuminate\Support\Facades\Log;
 
 class LogController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        try {
-            // Obtener logs de actividad
-            $activityLogs = DB::table('activity_logs')
-                ->select([
-                    'id',
-                    'level',
-                    'user',
-                    'action',
-                    'description',
-                    'created_at'
-                ])
-                ->orderBy('created_at', 'desc')
-                ->get()
-                ->map(function ($log) {
-                    return [
-                        'id' => $log->id,
-                        'action' => $log->action,
-                        'description' => $log->description,
-                        'type' => $this->getLogType($log->action),
-                        'performed_by' => $log->user ?? 'Sistema',
-                        'created_at' => $log->created_at
-                    ];
-                });
+        // Obtener logs de activity_logs
+        $activityLogs = DB::table('activity_logs')
+            ->select('id', 'user', 'action', 'description', 'created_at', 'level', 'details')
+            ->orderBy('created_at', 'desc')
+            ->paginate(25)
+            ->through(function ($log) {
+                return (object) [
+                    'id' => $log->id,
+                    'user' => $log->user,
+                    'action' => $log->action,
+                    'description' => $log->description,
+                    'created_at' => Carbon::parse($log->created_at),
+                    'level' => $log->level,
+                    'type' => $this->getLogType($log->action),
+                    'details' => json_decode($log->details ?? '{}', true)
+                ];
+            });
 
-            // Obtener intentos de acceso
-            $accessAttempts = DB::table('access_attempts')
-                ->select([
-                    'id',
-                    'username',
-                    'ip_address',
-                    'user_agent',
-                    'success',
-                    'created_at'
-                ])
-                ->orderBy('created_at', 'desc')
-                ->get()
-                ->map(function ($attempt) {
-                    $action = $attempt->success ? 'Acceso exitoso' : 'Intento de acceso fallido';
-                    $description = $action . ' - Usuario: ' . $attempt->username;
-                    if ($attempt->ip_address) {
-                        $description .= ' desde IP: ' . $attempt->ip_address;
-                    }
-                    if ($attempt->user_agent) {
-                        $description .= ' (Navegador: ' . $attempt->user_agent . ')';
-                    }
-                    
-                    return [
-                        'id' => $attempt->id,
-                        'action' => $action,
-                        'description' => $description,
-                        'type' => 'access',
-                        'performed_by' => $attempt->username,
-                        'created_at' => $attempt->created_at
-                    ];
-                });
+        // Obtener logs de access_attempts
+        $accessLogs = DB::table('access_attempts')
+            ->select('id', 'username as user', DB::raw("'Intento de acceso' as action"), 
+                    DB::raw("CONCAT('Desde ', hostname, ' (', ip, ')') as description"), 
+                    'created_at', DB::raw("'WARNING' as level"),
+                    DB::raw("JSON_OBJECT('hostname', hostname, 'ip', ip) as details"))
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($log) {
+                return (object) [
+                    'id' => $log->id,
+                    'user' => $log->user,
+                    'action' => $log->action,
+                    'description' => $log->description,
+                    'created_at' => Carbon::parse($log->created_at),
+                    'level' => $log->level,
+                    'type' => 'access',
+                    'details' => json_decode($log->details, true)
+                ];
+            });
 
-            // Combinar y ordenar todos los logs
-            $allLogs = $activityLogs->concat($accessAttempts)
-                ->sortByDesc('created_at')
-                ->values();
+        // Combinar y ordenar todos los logs
+        $logs = $activityLogs->concat($accessLogs)
+            ->sortByDesc('created_at')
+            ->values();
 
-            // Crear una colección paginada
-            $page = request()->get('page', 1);
-            $perPage = 15;
-            $paginatedCollection = new \Illuminate\Pagination\LengthAwarePaginator(
-                $allLogs->forPage($page, $perPage),
-                $allLogs->count(),
-                $perPage,
-                $page,
-                ['path' => request()->url(), 'query' => request()->query()]
-            );
-            
-            return view('admin.users.logs', ['logs' => $paginatedCollection]);
-            
-        } catch (\Exception $e) {
-            Log::error('Error al obtener logs: ' . $e->getMessage());
-            return back()->with('error', 'Error al cargar los logs: ' . $e->getMessage());
-        }
+        return view('admin.users.logs', compact('logs', 'activityLogs'));
     }
 
     public function show($id)
