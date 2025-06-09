@@ -2911,31 +2911,8 @@ class LdapUserController extends Controller
                 throw new \Exception('No se pudo extraer el UID del DN');
             }
 
-            // Obtener la configuración LDAP
-            $config = config('ldap.connections.default');
-            
-            // Crear conexión LDAP usando la configuración
-            $connection = new Connection([
-                'hosts' => $config['hosts'],
-                'port' => 636, // Forzar puerto 636 para LDAPS
-                'base_dn' => $config['base_dn'],
-                'username' => $config['username'],
-                'password' => $config['password'],
-                'use_ssl' => true, // Forzar SSL
-                'use_tls' => false, // Deshabilitar TLS
-                'timeout' => $config['timeout'],
-                'options' => [
-                    LDAP_OPT_X_TLS_REQUIRE_CERT => LDAP_OPT_X_TLS_NEVER,
-                    LDAP_OPT_REFERRALS => 0,
-                    LDAP_OPT_PROTOCOL_VERSION => 3,
-                ]
-            ]);
-
-            $connection->connect();
-            Log::debug("Conexión LDAP establecida");
-
             // Buscar el usuario por UID en la OU people
-            $user = $connection->query()
+            $user = $this->connection->query()
                 ->in($this->peopleOu)
                 ->where('uid', '=', $uid)
                 ->first();
@@ -2957,12 +2934,12 @@ class LdapUserController extends Controller
 
             // Verificar si el usuario está en el grupo ldapadmins
             $adminGroupDn = 'cn=ldapadmins,ou=groups,dc=tierno,dc=es';
-            $groupSearch = ldap_read($connection->getConnection(), $adminGroupDn, '(objectClass=*)', ['uniqueMember']);
+            $groupSearch = ldap_read($this->connection->getLdapConnection()->getConnection(), $adminGroupDn, '(objectClass=*)', ['uniqueMember']);
             if (!$groupSearch) {
-                throw new \Exception('Error al buscar grupo ldapadmins: ' . ldap_error($connection->getConnection()));
+                throw new \Exception('Error al buscar grupo ldapadmins: ' . ldap_error($this->connection->getLdapConnection()->getConnection()));
             }
 
-            $groupEntries = ldap_get_entries($connection->getConnection(), $groupSearch);
+            $groupEntries = ldap_get_entries($this->connection->getLdapConnection()->getConnection(), $groupSearch);
             $isAdmin = false;
 
             if ($groupEntries['count'] > 0 && isset($groupEntries[0]['uniquemember'])) {
@@ -2979,16 +2956,16 @@ class LdapUserController extends Controller
             if ($isAdmin) {
                 // Remover del grupo
                 $mod = ['uniqueMember' => $userDn];
-                if (!ldap_mod_del($connection->getConnection(), $adminGroupDn, $mod)) {
-                    throw new \Exception('Error al remover usuario del grupo: ' . ldap_error($connection->getConnection()));
+                if (!ldap_mod_del($this->connection->getLdapConnection()->getConnection(), $adminGroupDn, $mod)) {
+                    throw new \Exception('Error al remover usuario del grupo: ' . ldap_error($this->connection->getLdapConnection()->getConnection()));
                 }
                 Log::info("Usuario {$uid} removido del grupo ldapadmins");
                 $message = 'Usuario removido de administradores';
             } else {
                 // Añadir al grupo
                 $mod = ['uniqueMember' => $userDn];
-                if (!ldap_mod_add($connection->getConnection(), $adminGroupDn, $mod)) {
-                    throw new \Exception('Error al añadir usuario al grupo: ' . ldap_error($connection->getConnection()));
+                if (!ldap_mod_add($this->connection->getLdapConnection()->getConnection(), $adminGroupDn, $mod)) {
+                    throw new \Exception('Error al añadir usuario al grupo: ' . ldap_error($this->connection->getLdapConnection()->getConnection()));
                 }
                 Log::info("Usuario {$uid} agregado al grupo ldapadmins");
                 $message = 'Usuario agregado como administrador';
