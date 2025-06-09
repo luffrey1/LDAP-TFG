@@ -189,17 +189,19 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware', 'App\Http\Mi
 // Rutas para la gestión de alumnos
 Route::middleware(['App\Http\Middleware\LdapAuthMiddleware'])->prefix('profesor')->name('profesor.')->group(function () {
     // Rutas para gestión de clases
-    Route::get('clases', [App\Http\Controllers\Profesor\ClaseController::class, 'index'])->name('clases.index');
-    Route::get('clases/create', [App\Http\Controllers\Profesor\ClaseController::class, 'create'])->name('clases.create');
-    Route::post('clases', [App\Http\Controllers\Profesor\ClaseController::class, 'store'])->name('clases.store');
-    Route::get('clases/{id}', [App\Http\Controllers\Profesor\ClaseController::class, 'show'])->name('clases.show');
-    Route::get('clases/{id}/edit', [App\Http\Controllers\Profesor\ClaseController::class, 'edit'])->name('clases.edit');
-    Route::put('clases/{id}', [App\Http\Controllers\Profesor\ClaseController::class, 'update'])->name('clases.update');
-    Route::delete('clases/{id}', [App\Http\Controllers\Profesor\ClaseController::class, 'destroy'])->name('clases.destroy');
-    
-    // Rutas para clases de tutores
-    Route::get('mis-clases', [App\Http\Controllers\Profesor\ClaseController::class, 'misClases'])->name('clases.mias');
-    Route::get('mis-clases/{id}', [App\Http\Controllers\Profesor\ClaseController::class, 'verMiClase'])->name('clases.mias.ver');
+    Route::middleware(CheckModuleAccess::class.':clases')->group(function () {
+        Route::get('clases', [App\Http\Controllers\Profesor\ClaseController::class, 'index'])->name('clases.index');
+        Route::get('clases/create', [App\Http\Controllers\Profesor\ClaseController::class, 'create'])->name('clases.create');
+        Route::post('clases', [App\Http\Controllers\Profesor\ClaseController::class, 'store'])->name('clases.store');
+        Route::get('clases/{id}', [App\Http\Controllers\Profesor\ClaseController::class, 'show'])->name('clases.show');
+        Route::get('clases/{id}/edit', [App\Http\Controllers\Profesor\ClaseController::class, 'edit'])->name('clases.edit');
+        Route::put('clases/{id}', [App\Http\Controllers\Profesor\ClaseController::class, 'update'])->name('clases.update');
+        Route::delete('clases/{id}', [App\Http\Controllers\Profesor\ClaseController::class, 'destroy'])->name('clases.destroy');
+        
+        // Rutas para clases de tutores
+        Route::get('mis-clases', [App\Http\Controllers\Profesor\ClaseController::class, 'misClases'])->name('clases.mias');
+        Route::get('mis-clases/{id}', [App\Http\Controllers\Profesor\ClaseController::class, 'verMiClase'])->name('clases.mias.ver');
+    });
     
     // Rutas para gestión de alumnos
     Route::get('alumnos', [App\Http\Controllers\Profesor\AlumnoController::class, 'index'])->name('alumnos.index');

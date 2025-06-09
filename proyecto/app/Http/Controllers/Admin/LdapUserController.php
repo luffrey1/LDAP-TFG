@@ -2888,4 +2888,85 @@ class LdapUserController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+
+    /**
+     * Toggle admin status for a user
+     */
+    public function toggleAdmin($dn)
+    {
+        try {
+            $this->connection->connect();
+            
+            // Decodificar el DN
+            $userDn = base64_decode($dn);
+            if (!$userDn) {
+                Log::error("Error al decodificar DN: " . $dn);
+                return redirect()->route('admin.users.index')
+                    ->with('error', 'Error: DN inválido');
+            }
+            
+            // Obtener el usuario
+            $user = $this->connection->query()
+                ->in($this->baseDn)
+                ->where('dn', '=', $userDn)
+                ->first();
+                
+            if (!$user) {
+                return redirect()->route('admin.users.index')
+                    ->with('error', 'Usuario no encontrado');
+            }
+            
+            // Obtener el UID del usuario
+            $uid = '';
+            if (is_array($user)) {
+                $uid = $user['uid'][0] ?? '';
+            } else {
+                $uid = $user->getFirstAttribute('uid');
+            }
+            
+            if (empty($uid)) {
+                return redirect()->route('admin.users.index')
+                    ->with('error', 'No se pudo obtener el UID del usuario');
+            }
+            
+            // Verificar si el usuario es ldap-admin
+            if ($uid === 'ldap-admin') {
+                return redirect()->route('admin.users.index')
+                    ->with('error', 'No se puede modificar el estado de administrador del usuario ldap-admin');
+            }
+            
+            // Obtener grupos actuales del usuario
+            $userGroups = $this->getUserGroups($userDn);
+            $isAdmin = in_array('ldapadmins', $userGroups);
+            
+            // Preparar la lista de grupos
+            $grupos = $userGroups;
+            
+            if ($isAdmin) {
+                // Remover del grupo ldapadmins
+                $grupos = array_filter($grupos, function($group) {
+                    return $group !== 'ldapadmins';
+                });
+            } else {
+                // Añadir al grupo ldapadmins
+                $grupos[] = 'ldapadmins';
+            }
+            
+            // Actualizar los grupos del usuario
+            $this->updateUserGroupsDirect($userDn, $grupos, $this->connection);
+            
+            // Registrar la acción en logs
+            $adminUser = $this->getCurrentUsername();
+            $action = $isAdmin ? 'removido de' : 'añadido a';
+            Log::info("Usuario {$uid} {$action} grupo ldapadmins por {$adminUser}");
+            
+            return redirect()->route('admin.users.index')
+                ->with('success', 'Estado de administrador actualizado correctamente');
+                
+        } catch (Exception $e) {
+            Log::error("Error al cambiar estado de administrador: " . $e->getMessage());
+            return redirect()->route('admin.users.index')
+                ->with('error', 'Error al cambiar estado de administrador: ' . $e->getMessage());
+        }
+    }
 } 

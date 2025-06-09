@@ -195,6 +195,16 @@ input.form-control:focus, select.form-control:focus {
                                     $configuraciones['modulos']->where('clave', 'modulo_ssh_activo')->first()->valor == 'true') checked @endif>
                             </div>
                         </div>
+
+                        <div class="modulo-card text-white">
+                            <div class="modulo-titulo">Gestión de Clases</div>
+                            <div class="modulo-descripcion">Activa o desactiva el módulo de gestión de clases</div>
+                            <div class="form-check form-switch modulo-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="modulo_clases_activo" name="modulos[]" value="modulo_clases_activo"
+                                    @if(isset($configuraciones['modulos']) && $configuraciones['modulos']->where('clave', 'modulo_clases_activo')->first() && 
+                                    $configuraciones['modulos']->where('clave', 'modulo_clases_activo')->first()->valor == 'true') checked @endif>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

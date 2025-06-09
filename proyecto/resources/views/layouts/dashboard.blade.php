@@ -744,6 +744,16 @@
                         </li>
                         @endif
                         
+                        @if(\App\Models\SistemaConfig::obtenerConfig('modulo_clases_activo', true))
+                        <div class="sidebar-divider"></div>
+                        <div class="nav-item-header">Clases</div>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('profesor.clases*') ? 'active' : '' }}" href="{{ route('profesor.clases.index') }}">
+                                <i class="fas fa-chalkboard"></i> Gestión de Clases
+                            </a>
+                        </li>
+                        @endif
+                        
                         <div class="sidebar-divider"></div>
                         <div class="nav-item-header">Comunicación</div>
                         
@@ -795,11 +805,6 @@
                         <!-- Gestión Académica -->
                         <div class="sidebar-divider"></div>
                         <div class="nav-item-header">Gestión Académica</div>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('profesor.clases.*') ? 'active' : '' }}" href="{{ route('profesor.clases.index') }}">
-                                <i class="fas fa-chalkboard"></i> Gestión de Clases
-                            </a>
-                        </li>
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('profesor.clases.mias') || request()->routeIs('profesor.clases.mias.ver') ? 'active' : '' }}" href="{{ route('profesor.clases.mias') }}">
                                 <i class="fas fa-chalkboard-teacher"></i> Mis Clases

@@ -112,6 +112,14 @@ return new class extends Migration
                 'created_at' => now(),
                 'updated_at' => now()
             ],
+            [
+                'clave' => 'modulo_clases_activo',
+                'valor' => 'true',
+                'tipo' => 'boolean',
+                'descripcion' => 'Activa o desactiva el módulo de gestión de clases',
+                'created_at' => now(),
+                'updated_at' => now()
+            ],
         ]);
     }
 }; 

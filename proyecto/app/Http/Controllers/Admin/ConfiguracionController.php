@@ -57,7 +57,8 @@ class ConfiguracionController extends Controller
                 'modulo_mensajeria_activo',
                 'modulo_documentos_activo',
                 'modulo_monitoreo_activo',
-                'modulo_ssh_activo'
+                'modulo_ssh_activo',
+                'modulo_clases_activo'
             ];
             
             foreach ($modulos as $modulo) {
