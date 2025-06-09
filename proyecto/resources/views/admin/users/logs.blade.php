@@ -137,45 +137,14 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    // Inicializar DataTables con configuración básica
-    var table = $('#logsTable').DataTable({
-        "paging": false,
-        "ordering": true,
-        "info": false,
-        "searching": false,
-        "language": {
-            "sProcessing": "Procesando...",
-            "sLengthMenu": "Mostrar _MENU_ registros",
-            "sZeroRecords": "No se encontraron resultados",
-            "sEmptyTable": "Ningún dato disponible en esta tabla",
-            "sInfo": "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
-            "sInfoEmpty": "Mostrando registros del 0 al 0 de un total de 0 registros",
-            "sInfoFiltered": "(filtrado de un total de _MAX_ registros)",
-            "sInfoPostFix": "",
-            "sSearch": "Buscar:",
-            "sUrl": "",
-            "sInfoThousands": ",",
-            "sLoadingRecords": "Cargando...",
-            "oPaginate": {
-                "sFirst": "Primero",
-                "sLast": "Último",
-                "sNext": "Siguiente",
-                "sPrevious": "Anterior"
-            }
-        }
-    });
-
-    // Función mejorada para determinar el tipo de log
+    // Función para determinar el tipo de log
     function getLogType(description) {
-        if (!description) {
-            console.log('Descripción vacía o nula');
-            return 'all';
-        }
+        if (!description) return 'all';
         
         description = description.toLowerCase();
         console.log('Analizando descripción:', description);
         
-        // Patrones de detección mejorados
+        // Patrones de detección
         const patterns = {
             users: [
                 'usuario ldap creado',
@@ -183,9 +152,7 @@ $(document).ready(function() {
                 'usuario ldap eliminado',
                 'usuario actualizado',
                 'usuario creado',
-                'usuario eliminado',
-                'nuevo usuario',
-                'modificación de usuario'
+                'usuario eliminado'
             ],
             groups: [
                 'grupo ldap creado',
@@ -193,12 +160,7 @@ $(document).ready(function() {
                 'grupo ldap eliminado',
                 'grupo actualizado',
                 'grupo creado',
-                'grupo eliminado',
-                'nuevo grupo',
-                'modificación de grupo',
-                'miembro añadido al grupo',
-                'miembro eliminado del grupo',
-                'grupo modificado'
+                'grupo eliminado'
             ],
             access: [
                 'intento de acceso',
@@ -206,117 +168,53 @@ $(document).ready(function() {
                 'acceso fallido',
                 'desde',
                 'ip:',
-                'user agent',
-                'login',
-                'logout',
-                'sesión'
+                'user agent'
             ]
         };
 
         // Verificar cada patrón
         for (const [type, patternList] of Object.entries(patterns)) {
-            const matches = patternList.filter(pattern => description.includes(pattern));
-            if (matches.length > 0) {
-                console.log('Tipo detectado:', type, 'para descripción:', description);
-                console.log('Patrones coincidentes:', matches);
+            if (patternList.some(pattern => description.includes(pattern))) {
+                console.log('Tipo detectado:', type);
                 return type;
             }
         }
 
-        // Si no coincide con ningún patrón, intentar determinar por contexto
-        if (description.includes('grupo') || description.includes('group')) {
-            console.log('Tipo detectado por contexto: groups');
-            return 'groups';
-        }
-
-        console.log('No se detectó tipo específico, usando "all"');
         return 'all';
     }
 
-    // Función para asignar tipos a las filas
-    function assignTypesToRows() {
-        console.log('Iniciando asignación de tipos a filas...');
-        let typeCount = { users: 0, groups: 0, access: 0, all: 0 };
-        let rowDetails = [];
+    // Asignar tipos a las filas
+    $('.log-row').each(function() {
+        const $row = $(this);
+        const description = $row.find('td:eq(2)').text();
+        const type = getLogType(description);
+        $row.attr('data-type', type);
+        console.log('Fila asignada:', { description, type });
+    });
 
-        table.rows().every(function() {
-            const data = this.data();
-            console.log('Datos de la fila:', data);
-            
-            const description = data[2]; // Descripción en la tercera columna
-            console.log('Descripción encontrada:', description);
-            
-            const type = getLogType(description);
-            
-            // Asignar tipo a la fila
-            const $row = $(this.node());
-            $row.attr('data-type', type);
-            typeCount[type]++;
-
-            const rowDetail = {
-                description: description,
-                type: type,
-                rowIndex: this.index(),
-                dataType: $row.attr('data-type')
-            };
-            rowDetails.push(rowDetail);
-
-            console.log('Fila asignada:', rowDetail);
-        });
-
-        console.log('Conteo de tipos:', typeCount);
-        console.log('Detalles de todas las filas:', rowDetails);
-        return typeCount;
-    }
-
-    // Función mejorada para filtrar logs
+    // Función para filtrar logs
     function filterLogs(type) {
-        console.log('Iniciando filtrado para tipo:', type);
-        
-        // Obtener todas las filas
-        const $rows = $('#logsTable tbody tr');
+        console.log('Filtrando por tipo:', type);
         let visibleCount = 0;
-        let rowDetails = [];
 
-        $rows.each(function(index) {
+        $('.log-row').each(function() {
             const $row = $(this);
             const rowType = $row.attr('data-type');
-            const description = $row.find('td:eq(2)').text();
+            const shouldShow = type === 'all' || rowType === type;
             
-            const rowDetail = {
-                index: index,
-                tipo: rowType,
-                esperado: type,
-                descripcion: description,
-                visible: type === 'all' || rowType === type
-            };
-            rowDetails.push(rowDetail);
-            
-            console.log(`Fila ${index}:`, rowDetail);
-            
-            // Aplicar visibilidad
-            $row.toggle(rowDetail.visible);
-            if (rowDetail.visible) visibleCount++;
+            if (shouldShow) {
+                $row.show();
+                visibleCount++;
+            } else {
+                $row.hide();
+            }
         });
 
-        console.log('Filtrado completado:', {
-            tipo: type,
-            filasVisibles: visibleCount,
-            totalFilas: $rows.length,
-            filasPorTipo: {
-                users: $rows.filter('[data-type="users"]').length,
-                groups: $rows.filter('[data-type="groups"]').length,
-                access: $rows.filter('[data-type="access"]').length,
-                all: $rows.filter('[data-type="all"]').length
-            },
-            detalles: rowDetails
-        });
-
-        // Actualizar contador en la interfaz
+        console.log('Filas visibles:', visibleCount);
         updateVisibleCount(visibleCount);
     }
 
-    // Función para actualizar el contador de filas visibles
+    // Función para actualizar el contador
     function updateVisibleCount(count) {
         const $counter = $('#visibleCount');
         if ($counter.length === 0) {
@@ -325,10 +223,6 @@ $(document).ready(function() {
             $counter.text('Filas visibles: ' + count);
         }
     }
-
-    // Asignar tipos iniciales
-    const typeCount = assignTypesToRows();
-    console.log('Tipos asignados inicialmente:', typeCount);
 
     // Manejar cambios de pestaña
     $('#logTabs a').on('click', function(e) {
@@ -340,25 +234,26 @@ $(document).ready(function() {
         filterLogs(type);
     });
 
-    // Búsqueda de usuario mejorada
+    // Búsqueda de usuario
     $('#userSearch').on('keyup', function() {
         const searchText = $(this).val().toLowerCase();
-        console.log('Buscando:', searchText);
-
-        const $rows = $('#logsTable tbody tr');
+        const currentTab = $('#logTabs .active').attr('id').replace('-tab', '');
         let visibleCount = 0;
 
-        $rows.each(function() {
+        $('.log-row').each(function() {
             const $row = $(this);
             const userText = $row.find('td:first').text().toLowerCase();
-            const type = $row.attr('data-type');
-            const currentTab = $('#logTabs .active').attr('id').replace('-tab', '');
+            const rowType = $row.attr('data-type');
             
             const matchesSearch = userText.includes(searchText);
-            const matchesType = currentTab === 'all' || type === currentTab;
+            const matchesType = currentTab === 'all' || rowType === currentTab;
             
-            $row.toggle(matchesSearch && matchesType);
-            if (matchesSearch && matchesType) visibleCount++;
+            if (matchesSearch && matchesType) {
+                $row.show();
+                visibleCount++;
+            } else {
+                $row.hide();
+            }
         });
 
         updateVisibleCount(visibleCount);
@@ -372,7 +267,7 @@ $(document).ready(function() {
     });
 
     // Mostrar detalles del log
-    $('#logsTable tbody').on('click', 'tr', function() {
+    $('.log-row').on('click', function() {
         const id = $(this).data('id');
         showLogDetails(id);
     });
