@@ -358,7 +358,7 @@ $(document).ready(function() {
             method: 'GET',
             data: { query: query },
             success: function(response) {
-                if (response.length > 0) {
+                if (response && response.length > 0) {
                     resultadosBusqueda.empty();
                     response.forEach(function(usuario) {
                         resultadosBusqueda.append(`
@@ -373,6 +373,10 @@ $(document).ready(function() {
                 } else {
                     resultadosBusqueda.hide();
                 }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error al buscar destinatarios:', error);
+                resultadosBusqueda.hide();
             }
         });
     }
@@ -381,7 +385,7 @@ $(document).ready(function() {
     $('#buscarDestinatario').on('input', function() {
         clearTimeout(timeoutId);
         timeoutId = setTimeout(() => {
-            buscarDestinatarios($(this).val());
+            buscarDestinatarios($(this).val().trim());
         }, 300);
     });
     
