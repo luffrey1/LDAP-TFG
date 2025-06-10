@@ -143,8 +143,8 @@ input.form-control::placeholder {
                     </div>
                     <div class="card-body">
                         <div class="modulo-card">
-                            <div class="modulo-titulo">Calendario</div>
-                            <div class="modulo-descripcion">Permite gestionar eventos y reuniones del centro</div>
+                            <div class="modulo-titulo text-white">Calendario</div>
+                            <div class="modulo-descripcion text-white">Permite gestionar eventos y reuniones del centro</div>
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" role="switch" id="modulo_calendario_activo" name="modulos[]" value="modulo_calendario_activo"
                                     @if(isset($configuraciones['modulos']) && $configuraciones['modulos']->where('clave', 'modulo_calendario_activo')->first() && 
@@ -153,8 +153,8 @@ input.form-control::placeholder {
                         </div>
                         
                         <div class="modulo-card">
-                            <div class="modulo-titulo">Mensajería</div>
-                            <div class="modulo-descripcion">Sistema de mensajería interna entre usuarios</div>
+                            <div class="modulo-titulo text-white">Mensajería</div>
+                            <div class="modulo-descripcion text-white">Sistema de mensajería interna entre usuarios</div>
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" role="switch" id="modulo_mensajeria_activo" name="modulos[]" value="modulo_mensajeria_activo"
                                     @if(isset($configuraciones['modulos']) && $configuraciones['modulos']->where('clave', 'modulo_mensajeria_activo')->first() && 
@@ -163,8 +163,8 @@ input.form-control::placeholder {
                         </div>
                         
                         <div class="modulo-card">
-                            <div class="modulo-titulo">Documentos</div>
-                            <div class="modulo-descripcion">Gestión de documentos compartidos</div>
+                            <div class="modulo-titulo text-white">Documentos</div>
+                            <div class="modulo-descripcion text-white">Gestión de documentos compartidos</div>
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" role="switch" id="modulo_documentos_activo" name="modulos[]" value="modulo_documentos_activo"
                                     @if(isset($configuraciones['modulos']) && $configuraciones['modulos']->where('clave', 'modulo_documentos_activo')->first() && 
@@ -173,8 +173,8 @@ input.form-control::placeholder {
                         </div>
                         
                         <div class="modulo-card">
-                            <div class="modulo-titulo">Monitor de Equipos</div>
-                            <div class="modulo-descripcion">Monitoreo y gestión de equipos por aulas</div>
+                            <div class="modulo-titulo text-white">Monitor de Equipos</div>
+                            <div class="modulo-descripcion text-white">Monitoreo y gestión de equipos por aulas</div>
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" role="switch" id="modulo_monitoreo_activo" name="modulos[]" value="modulo_monitoreo_activo"
                                     @if(isset($configuraciones['modulos']) && $configuraciones['modulos']->where('clave', 'modulo_monitoreo_activo')->first() && 
@@ -183,8 +183,8 @@ input.form-control::placeholder {
                         </div>
 
                         <div class="modulo-card">
-                            <div class="modulo-titulo">Acceso SSH</div>
-                            <div class="modulo-descripcion">Gestión de acceso SSH a equipos</div>
+                            <div class="modulo-titulo text-white">Acceso SSH</div>
+                            <div class="modulo-descripcion text-white">Gestión de acceso SSH a equipos</div>
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" role="switch" id="modulo_ssh_activo" name="modulos[]" value="modulo_ssh_activo"
                                     @if(isset($configuraciones['modulos']) && $configuraciones['modulos']->where('clave', 'modulo_ssh_activo')->first() && 
@@ -193,8 +193,8 @@ input.form-control::placeholder {
                         </div>
 
                         <div class="modulo-card">
-                            <div class="modulo-titulo">Gestión de Clases</div>
-                            <div class="modulo-descripcion">Activa o desactiva el módulo de gestión de clases</div>
+                            <div class="modulo-titulo text-white">Gestión de Clases</div>
+                            <div class="modulo-descripcion text-white">Activa o desactiva el módulo de gestión de clases</div>
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" role="switch" id="modulo_clases_activo" name="modulos[]" value="modulo_clases_activo"
                                     @if(isset($configuraciones['modulos']) && $configuraciones['modulos']->where('clave', 'modulo_clases_activo')->first() && 
