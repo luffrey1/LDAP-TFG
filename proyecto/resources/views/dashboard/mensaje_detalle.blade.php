@@ -141,16 +141,32 @@
 
 @push('styles')
 <style>
-    .message-content {
-        line-height: 1.6;
+    .card.shadow.mb-4 {
+        background: #fff !important;
+        color: #222 !important;
+        border-radius: 12px;
+        border: 1px solid #e3e6f0;
+        box-shadow: 0 2px 8px #4e73df22;
     }
-    .message-content img {
-        max-width: 100%;
-        height: auto;
+    .card-header.py-3 {
+        background: #f8f9fc !important;
+        color: #224abe !important;
+        border-bottom: 1px solid #4e73df44;
+    }
+    .message-content {
+        background: #fff !important;
+        color: #222 !important;
+        padding: 1.5rem;
+        border-radius: 8px;
+        font-size: 1.08rem;
+        line-height: 1.7;
+        box-shadow: 0 1px 4px #4e73df11;
     }
     .message-header {
-        border-bottom: 1px solid #e3e6f0;
+        border-bottom: 1px solid #4e73df33;
         padding-bottom: 1rem;
+        background: #f8f9fc;
+        border-radius: 8px 8px 0 0;
     }
     .attachments .card {
         transition: transform 0.2s;
