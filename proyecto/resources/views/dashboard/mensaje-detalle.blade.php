@@ -7,7 +7,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="mt-4">Detalle del mensaje</h1>
         <div>
-            <a href="{{ route('mensajes.index') }}" class="btn btn-outline-secondary">
+            <a href="{{ route('dashboard.mensajes') }}" class="btn btn-outline-secondary">
                 <i class="fas fa-arrow-left me-1"></i> Volver a la bandeja
             </a>
         </div>
@@ -37,10 +37,10 @@
                 <button type="button" class="btn btn-sm btn-outline-primary" title="Responder" data-bs-toggle="modal" data-bs-target="#replyModal">
                     <i class="fas fa-reply"></i>
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-primary" title="Reenviar">
+                <a href="{{ route('dashboard.mensajes.reenviar', $mensaje['id']) }}" class="btn btn-sm btn-outline-primary" title="Reenviar">
                     <i class="fas fa-share"></i>
-                </button>
-                <form action="{{ route('mensajes.destroy', $mensaje['id']) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Está seguro que desea eliminar este mensaje?');">
+                </a>
+                <form action="{{ route('dashboard.mensajes.eliminar', $mensaje['id']) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Está seguro que desea eliminar este mensaje?');">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
@@ -53,17 +53,17 @@
             <div class="mb-4 border-bottom pb-3">
                 <div class="d-flex align-items-center mb-2">
                     <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; font-weight: bold;">
-                        {{ strtoupper(substr($mensaje['remitente'], 0, 1)) }}
+                        {{ strtoupper(substr($mensaje['remitente']['nombre'], 0, 1)) }}
                     </div>
                     <div>
-                        <h5 class="mb-0">{{ $mensaje['remitente'] }}</h5>
+                        <h5 class="mb-0">{{ $mensaje['remitente']['nombre'] }}</h5>
                         <div class="text-muted small">
-                            {{ $mensaje['fecha'] }} {{ $mensaje['hora'] }}
+                            {{ $mensaje['fecha']->format('d/m/Y H:i') }}
                         </div>
                     </div>
                 </div>
                 <div class="ms-5 ps-2">
-                    <span class="text-muted">Para: Mi nombre</span>
+                    <span class="text-muted">Para: {{ $mensaje['destinatarios'][0]['nombre'] }}</span>
                 </div>
             </div>
             
@@ -102,7 +102,7 @@
                                             <i class="{{ $iconClass }} fa-2x text-primary me-3"></i>
                                             <div class="flex-grow-1">
                                                 <p class="mb-0 text-truncate">{{ $archivo['nombre'] }}</p>
-                                                <small class="text-muted">{{ $archivo['tamaño'] }}</small>
+                                                <small class="text-muted">{{ $archivo['tamano'] }}</small>
                                             </div>
                                             <div class="btn-group">
                                                 <a href="#" class="btn btn-sm btn-outline-secondary" title="Ver" data-bs-toggle="modal" data-bs-target="#previewModal{{ $loop->index }}">
@@ -128,11 +128,11 @@
                                         <div class="modal-body">
                                             @if(preg_match('/\.(jpg|jpeg|png|gif)$/i', $archivo['nombre']))
                                                 <div class="text-center">
-                                                    <img src="{{ asset('img/placeholder.png') }}" alt="{{ $archivo['nombre'] }}" class="img-fluid">
+                                                    <img src="{{ route('dashboard.mensajes.adjunto', ['id' => $mensaje['id'], 'adjuntoId' => $archivo['id']]) }}" alt="{{ $archivo['nombre'] }}" class="img-fluid">
                                                 </div>
                                             @elseif(preg_match('/\.(pdf)$/i', $archivo['nombre']))
                                                 <div class="ratio ratio-16x9">
-                                                    <iframe src="{{ asset('img/placeholder-pdf.html') }}" allowfullscreen></iframe>
+                                                    <iframe src="{{ route('dashboard.mensajes.adjunto', ['id' => $mensaje['id'], 'adjuntoId' => $archivo['id']]) }}" allowfullscreen></iframe>
                                                 </div>
                                             @else
                                                 <div class="text-center py-5">
@@ -156,17 +156,17 @@
         <div class="card-footer">
             <div class="d-flex justify-content-between">
                 <div>
-                    <button type="button" class="btn btn-outline-secondary" onclick="window.history.back()">
+                    <a href="{{ route('dashboard.mensajes') }}" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left me-1"></i> Volver
-                    </button>
+                    </a>
                 </div>
                 <div>
                     <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#replyModal">
                         <i class="fas fa-reply me-1"></i> Responder
                     </button>
-                    <button type="button" class="btn btn-outline-primary">
+                    <a href="{{ route('dashboard.mensajes.reenviar', $mensaje['id']) }}" class="btn btn-outline-primary">
                         <i class="fas fa-share me-1"></i> Reenviar
-                    </button>
+                    </a>
                 </div>
             </div>
         </div>
@@ -179,14 +179,12 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="replyModalLabel">Responder mensaje</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form action="{{ route('dashboard.mensajes.enviar') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="respuesta_a" value="{{ $mensaje['id'] }}">
-                <input type="hidden" name="destinatario" value="{{ $mensaje['remitente_id'] }}">
+                <input type="hidden" name="destinatario" value="{{ $mensaje['remitente']['id'] }}">
                 <input type="hidden" name="asunto" value="RE: {{ $mensaje['asunto'] }}">
                 
                 <div class="modal-body">
@@ -200,7 +198,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Enviar respuesta</button>
                 </div>
             </form>
