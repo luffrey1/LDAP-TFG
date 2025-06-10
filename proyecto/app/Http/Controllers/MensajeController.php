@@ -811,26 +811,27 @@ class MensajeController extends Controller
             }
             
             // Verificar si el archivo existe
-            $rutaArchivo = storage_path('app/public/' . $adjunto->ruta);
-            if (!file_exists($rutaArchivo)) {
+            if (!Storage::disk('public')->exists($adjunto->ruta)) {
                 return response()->json(['error' => 'El archivo no existe'], 404);
             }
             
             // Obtener el tipo MIME del archivo
-            $mimeType = mime_content_type($rutaArchivo);
+            $mimeType = Storage::disk('public')->mimeType($adjunto->ruta);
             
             // Si es una imagen o PDF, mostrarla en el navegador
             if (strpos($mimeType, 'image/') === 0 || $mimeType === 'application/pdf') {
-                return response()->file($rutaArchivo, [
+                return response()->file(storage_path('app/public/' . $adjunto->ruta), [
                     'Content-Type' => $mimeType,
                     'Content-Disposition' => 'inline; filename="' . $adjunto->nombre_original . '"'
                 ]);
             }
             
             // Para otros tipos de archivo, forzar la descarga
-            return response()->download($rutaArchivo, $adjunto->nombre_original, [
-                'Content-Type' => $mimeType
-            ]);
+            return response()->download(
+                storage_path('app/public/' . $adjunto->ruta),
+                $adjunto->nombre_original,
+                ['Content-Type' => $mimeType]
+            );
             
         } catch (\Exception $e) {
             Log::error('Error al acceder al archivo adjunto: ' . $e->getMessage());
