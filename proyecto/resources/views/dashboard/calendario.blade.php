@@ -216,25 +216,25 @@
                     
                     <div class="form-group">
                         <label class="form-label text-black" for="titulo">Título del evento</label>
-                        <input type="text" id="titulo" name="titulo" class="form-control" required>
+                        <input type="text" id="titulo" name="titulo" class="form-control text-black" required>
                     </div>
                     
                     <div class="form-group">
                         <label class="form-label text-black" for="descripcion">Descripción</label>
-                        <textarea id="descripcion" name="descripcion" class="form-control" rows="3"></textarea>
+                        <textarea id="descripcion" name="descripcion" class="form-control text-black" rows="3"></textarea>
                     </div>
                     
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="form-label text-black" for="fecha_inicio">Fecha inicio</label>
-                                <input type="datetime-local" id="fecha_inicio" name="fecha_inicio" class="form-control" required>
+                                <input type="datetime-local" id="fecha_inicio" name="fecha_inicio" class="form-control text-black" required>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="form-label text-black" for="fecha_fin">Fecha fin</label>
-                                <input type="datetime-local" id="fecha_fin" name="fecha_fin" class="form-control" required>
+                                <input type="datetime-local" id="fecha_fin" name="fecha_fin" class="form-control text-black" required>
                             </div>
                         </div>
                     </div>
@@ -243,7 +243,7 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="form-label text-black" for="color">Tipo de evento</label>
-                                <select id="color" name="color" class="form-control">
+                                <select id="color" name="color" class="form-control text-black">
                                     <option value="#3788d8">Reunión</option>
                                     <option value="#e74c3c">Fecha límite</option>
                                     <option value="#2ecc71">Formación</option>
