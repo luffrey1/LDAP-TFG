@@ -68,6 +68,7 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
         Route::post('/{id}/destacar', [MensajeController::class, 'toggleStarred'])->name('dashboard.mensajes.destacar');
         Route::post('/{id}/responder', [MensajeController::class, 'reply'])->name('dashboard.mensajes.responder');
         Route::post('/{id}/reenviar', [MensajeController::class, 'forward'])->name('dashboard.mensajes.reenviar');
+        Route::get('/{id}/descargar/{adjunto}', [MensajeController::class, 'descargarAdjunto'])->name('dashboard.mensajes.descargar');
     });
     
     // Calendario y eventos

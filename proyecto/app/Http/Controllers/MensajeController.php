@@ -770,4 +770,30 @@ class MensajeController extends Controller
             return round($bytes / 1048576, 1) . ' MB';
         }
     }
+
+    /**
+     * Descargar un archivo adjunto de un mensaje
+     */
+    public function descargarAdjunto($id, $adjuntoId)
+    {
+        $userId = session('auth_user')['id'] ?? Auth::id();
+        $mensaje = Mensaje::with('adjuntos')->findOrFail($id);
+        $adjunto = $mensaje->adjuntos()->findOrFail($adjuntoId);
+
+        // Permitir solo remitente, destinatario o admin
+        if (
+            $mensaje->destinatario_id != $userId &&
+            $mensaje->remitente_id != $userId &&
+            !$this->isAdmin()
+        ) {
+            abort(403, 'No tienes permiso para descargar este archivo.');
+        }
+
+        // Descargar desde storage público
+        if (\Storage::disk('public')->exists($adjunto->ruta)) {
+            return \Storage::disk('public')->download($adjunto->ruta, $adjunto->nombre);
+        } else {
+            abort(404, 'Archivo no encontrado.');
+        }
+    }
 } 
