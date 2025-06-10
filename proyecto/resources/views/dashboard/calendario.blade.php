@@ -4,7 +4,9 @@
 
 @section('styles')
 <!-- FullCalendar CSS -->
-<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/daygrid/main.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/timegrid/main.min.css" rel="stylesheet" />
 <style>
     /* Hacer las celdas del calendario más altas */
     .fc-daygrid-day {
