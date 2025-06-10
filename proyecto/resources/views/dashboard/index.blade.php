@@ -92,7 +92,7 @@
                             <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Eventos Próximos</div>
                             <div class="h5 mb-0 font-weight-bold text-white">
                                 <span class="counter">{{ $stats['eventos_proximos'] }}</span>
-                                <small class="text-muted ml-2">en los próximos 7 días</small>
+                                <small class="text-white ml-2">en los próximos 7 días</small>
                             </div>
                         </div>
                         <div class="col-auto">
@@ -107,7 +107,7 @@
                             aria-valuemax="10">
                         </div>
                     </div>
-                    <div class="mt-2 text-xs text-muted">
+                    <div class="mt-2 text-xs text-white">
                         <i class="fas fa-info-circle mr-1"></i>
                         {{ $stats['eventos_proximos'] > 0 ? 'Tienes eventos programados' : 'No hay eventos próximos' }}
                     </div>
