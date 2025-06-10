@@ -66,10 +66,9 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
         Route::delete('/{id}', [MensajeController::class, 'destroy'])->name('dashboard.mensajes.eliminar');
         Route::post('/{id}/restaurar', [MensajeController::class, 'restore'])->name('dashboard.mensajes.restaurar');
         Route::post('/{id}/destacar', [MensajeController::class, 'toggleStarred'])->name('dashboard.mensajes.destacar');
-        Route::post('/{id}/responder', [MensajeController::class, 'reply'])->name('dashboard.mensajes.responder');
-        Route::post('/{id}/reenviar', [MensajeController::class, 'forward'])->name('dashboard.mensajes.reenviar');
-        Route::get('/{id}/descargar/{adjunto}', [MensajeController::class, 'descargarAdjunto'])->name('dashboard.mensajes.descargar');
-        Route::get('/{id}/ver/{adjunto}', [MensajeController::class, 'verAdjunto'])->name('dashboard.mensajes.ver');
+        Route::get('/{id}/responder', [MensajeController::class, 'reply'])->name('dashboard.mensajes.responder');
+        Route::get('/{id}/reenviar', [MensajeController::class, 'forward'])->name('dashboard.mensajes.reenviar');
+        Route::get('/{id}/adjunto/{adjuntoId}', [MensajeController::class, 'verAdjunto'])->name('dashboard.mensajes.adjunto');
     });
     
     // Calendario y eventos
