@@ -799,6 +799,10 @@ class MensajeController extends Controller
             // Obtener el usuario autenticado
             $userId = session('auth_user')['id'] ?? Auth::id();
             
+            if (!$userId) {
+                return redirect()->route('login')->with('error', 'Debe iniciar sesión para acceder a este recurso.');
+            }
+            
             // Buscar el mensaje y el adjunto
             $mensaje = Mensaje::with('adjuntos')->findOrFail($id);
             $adjunto = $mensaje->adjuntos()->findOrFail($adjuntoId);
@@ -807,12 +811,14 @@ class MensajeController extends Controller
             if ($mensaje->destinatario_id != $userId && 
                 $mensaje->remitente_id != $userId && 
                 !$this->isAdmin()) {
-                return response()->json(['error' => 'No tienes permiso para ver este archivo'], 403);
+                return redirect()->route('dashboard.mensajes')
+                    ->with('error', 'No tienes permiso para ver este archivo.');
             }
             
             // Verificar si el archivo existe
             if (!Storage::disk('public')->exists($adjunto->ruta)) {
-                return response()->json(['error' => 'El archivo no existe'], 404);
+                return redirect()->route('dashboard.mensajes')
+                    ->with('error', 'El archivo no existe.');
             }
             
             // Obtener el tipo MIME del archivo
@@ -835,7 +841,8 @@ class MensajeController extends Controller
             
         } catch (\Exception $e) {
             Log::error('Error al acceder al archivo adjunto: ' . $e->getMessage());
-            return response()->json(['error' => 'Error al acceder al archivo'], 500);
+            return redirect()->route('dashboard.mensajes')
+                ->with('error', 'Error al acceder al archivo: ' . $e->getMessage());
         }
     }
 } 
