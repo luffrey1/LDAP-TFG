@@ -77,7 +77,7 @@
                                     </button>
                                 </div>
                             </div>
-                            <div id="resultadosBusqueda" class="list-group mt-2" style="display: none;"></div>
+                            <div id="resultadosBusqueda" class="list-group mt-2" style="display: none; position: absolute; z-index: 1000; width: 100%; max-height: 200px; overflow-y: auto; background: white; border: 1px solid #ddd; border-radius: 4px;"></div>
                             <input type="hidden" name="destinatario" id="destinatario" value="{{ $destinatario ?? '' }}">
                             <div id="destinatarioSeleccionado" class="mt-2"></div>
                         </div>
@@ -268,6 +268,12 @@
 <style>
     .list-group-item {
         cursor: pointer;
+        padding: 8px 15px;
+        border: none;
+        border-bottom: 1px solid #eee;
+    }
+    .list-group-item:last-child {
+        border-bottom: none;
     }
     .list-group-item:hover {
         background-color: #f8f9fc;
@@ -283,6 +289,21 @@
     .destinatario-tag .remove {
         margin-left: 0.5rem;
         cursor: pointer;
+    }
+    #resultadosBusqueda {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    #resultadosBusqueda .list-group-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    #resultadosBusqueda .list-group-item .user-info {
+        flex-grow: 1;
+    }
+    #resultadosBusqueda .list-group-item .user-email {
+        font-size: 0.8em;
+        color: #666;
     }
     /* Estilos existentes */
     .card-body, .form-control, .custom-file-label, .custom-file-input, #contenido {
@@ -365,7 +386,10 @@ $(document).ready(function() {
                             <a href="#" class="list-group-item list-group-item-action" 
                                data-id="${usuario.id}" 
                                data-nombre="${usuario.name}">
-                                ${usuario.name} <small class="text-muted">(${usuario.email})</small>
+                                <div class="user-info">
+                                    <div class="user-name">${usuario.name}</div>
+                                    <div class="user-email">${usuario.email}</div>
+                                </div>
                             </a>
                         `);
                     });
