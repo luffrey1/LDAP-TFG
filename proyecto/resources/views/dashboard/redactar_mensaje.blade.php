@@ -380,6 +380,9 @@ $(document).ready(function() {
             url: '{{ route("dashboard.mensajes.buscar-destinatarios") }}',
             method: 'GET',
             data: { query: query },
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
             success: function(response) {
                 console.log('Respuesta recibida:', response);
                 if (response && Array.isArray(response)) {
@@ -398,6 +401,9 @@ $(document).ready(function() {
                         `);
                     });
                     resultadosBusqueda.show();
+                } else if (response.error) {
+                    console.error('Error en la respuesta:', response.error);
+                    resultadosBusqueda.hide();
                 } else {
                     console.log('No hay resultados o respuesta inválida');
                     resultadosBusqueda.hide();
