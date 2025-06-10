@@ -320,6 +320,48 @@
             </div>
         </div>
     </div>
+
+    @if($moduloCalendarioActivo)
+    <!-- Próximos Eventos -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow" data-aos="fade-up" data-aos-delay="300">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Próximos Eventos</h6>
+                    <a href="{{ route('dashboard.calendario') }}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-calendar-alt fa-sm"></i> Ver Calendario
+                    </a>
+                </div>
+                <div class="card-body">
+                    @if(count($upcomingEvents) > 0)
+                        <div class="timeline">
+                            @foreach($upcomingEvents as $evento)
+                                <div class="timeline-item">
+                                    <div class="timeline-marker" style="background-color: {{ $evento['color'] }}"></div>
+                                    <div class="timeline-content">
+                                        <h6 class="timeline-title">{{ $evento['titulo'] }}</h6>
+                                        <p class="text-muted mb-0">
+                                            <i class="fas fa-clock fa-sm mr-2"></i>
+                                            {{ \Carbon\Carbon::parse($evento['fecha_inicio'])->format('d/m/Y H:i') }}
+                                            @if($evento['todo_el_dia'])
+                                                <span class="badge badge-info ml-2">Todo el día</span>
+                                            @endif
+                                        </p>
+                                        @if($evento['descripcion'])
+                                            <p class="text-muted mt-2">{{ Str::limit($evento['descripcion'], 100) }}</p>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="text-muted text-center my-3">No hay eventos próximos</p>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
 </div>
 @endsection
 
@@ -398,51 +440,50 @@
 
     .timeline-item {
         position: relative;
-        padding: 15px 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-left: 40px;
+        margin-bottom: 20px;
     }
 
     .timeline-marker {
         position: absolute;
-        left: -1.5rem;
-        top: 1.5rem;
-        width: 1rem;
-        height: 1rem;
+        left: 0;
+        top: 0;
+        width: 15px;
+        height: 15px;
         border-radius: 50%;
-        background-color: #4e73df;
+        border: 3px solid #fff;
+        box-shadow: 0 0 0 2px #e2e8f0;
     }
 
     .timeline-content {
-        padding-left: 1rem;
+        background: #fff;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
 
     .timeline-title {
-        font-size: 1rem;
+        margin: 0 0 10px 0;
+        color: #2d3748;
         font-weight: 600;
-        margin-bottom: 0.5rem;
-        color: #fff;
     }
 
-    .timeline-time {
-        font-size: 0.85rem;
-        color: rgba(255, 255, 255, 0.7);
+    .timeline-item:last-child {
+        margin-bottom: 0;
     }
 
-    .timeline-footer {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 8px;
-        font-size: 0.85rem;
+    .timeline-item:before {
+        content: '';
+        position: absolute;
+        left: 7px;
+        top: 15px;
+        height: calc(100% + 5px);
+        width: 2px;
+        background: #e2e8f0;
     }
 
-    .timeline-user {
-        color: rgba(255, 255, 255, 0.7);
-        font-style: italic;
-    }
-
-    .access-attempt .timeline-user {
-        color: #666 !important;
+    .timeline-item:last-child:before {
+        display: none;
     }
 </style>
 @endsection
