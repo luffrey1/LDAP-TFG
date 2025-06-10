@@ -431,27 +431,19 @@ class DashboardController extends Controller
             
             // Obtener el recuento de documentos
             try {
-                $documentosCount = \DB::table('documentos')->count();
+                $documentosCount = \DB::table('documentos')->where('activo', true)->count();
             } catch (\Exception $e) {
                 Log::warning('Error al obtener recuento de documentos: ' . $e->getMessage());
             }
             
             // Obtener el recuento de mensajes no leídos para el usuario actual
             try {
-                // Usar el modelo Mensaje con su scope
-                $mensajesNuevosCount = \App\Models\Mensaje::recibidos($userId)
+                $mensajesNuevosCount = \DB::table('mensajes')
+                    ->where('destinatario_id', $userId)
                     ->where('leido', false)
+                    ->where('eliminado_destinatario', false)
+                    ->where('borrador', false)
                     ->count();
-                
-                // Si no funciona el modelo, intentar con consulta directa
-                if ($mensajesNuevosCount === 0) {
-                    $mensajesNuevosCount = \DB::table('mensajes')
-                        ->where('destinatario_id', $userId)
-                        ->where('leido', false)
-                        ->where('eliminado_destinatario', false)
-                        ->where('borrador', false)
-                        ->count();
-                }
             } catch (\Exception $e) {
                 Log::warning('Error al obtener recuento de mensajes nuevos: ' . $e->getMessage());
             }
@@ -463,6 +455,7 @@ class DashboardController extends Controller
                 $eventosProximosCount = \DB::table('eventos')
                     ->whereDate('fecha_inicio', '>=', $fechaHoy)
                     ->whereDate('fecha_inicio', '<=', $fechaLimite)
+                    ->where('cancelado', false)
                     ->count();
             } catch (\Exception $e) {
                 Log::warning('Error al obtener recuento de eventos próximos: ' . $e->getMessage());
@@ -470,15 +463,12 @@ class DashboardController extends Controller
             
             // Obtener el recuento de usuarios
             try {
-                $usuariosCount = \DB::table('users')->count();
-                
-                // Si no hay usuarios en la tabla, al menos mostrar 1 para el usuario actual
+                $usuariosCount = \DB::table('users')->where('active', true)->count();
                 if ($usuariosCount === 0) {
                     $usuariosCount = 1;
                 }
             } catch (\Exception $e) {
                 Log::warning('Error al obtener recuento de usuarios: ' . $e->getMessage());
-                // Si hay error, al menos mostrar 1 para el usuario actual
                 $usuariosCount = 1;
             }
             
