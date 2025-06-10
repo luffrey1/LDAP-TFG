@@ -188,8 +188,8 @@ class MensajeController extends Controller
                 // Si hay archivos adjuntos, procesarlos
                 if ($request->hasFile('adjuntos')) {
                     // Asegura que la carpeta existe
-                    if (!\Storage::disk('public')->exists('adjuntos/mensajes')) {
-                        \Storage::disk('public')->makeDirectory('adjuntos/mensajes');
+                    if (!Storage::disk('public')->exists('adjuntos/mensajes')) {
+                        Storage::disk('public')->makeDirectory('adjuntos/mensajes');
                     }
                     foreach ($request->file('adjuntos') as $file) {
                         $path = $file->store('adjuntos/mensajes', 'public');
@@ -198,9 +198,9 @@ class MensajeController extends Controller
                             'nombre' => $file->getClientOriginalName(),
                             'nombre_original' => $file->getClientOriginalName(),
                             'extension' => $file->getClientOriginalExtension(),
-                            'tipo' => $file->getMimeType(),
+                            'tipo' => $file->getClientMimeType(),
                             'tamaño' => $file->getSize(),
-                            'ruta' => $path // Solo la ruta relativa
+                            'ruta' => $path,
                         ]);
                     }
                 }
@@ -768,32 +768,6 @@ class MensajeController extends Controller
             return round($bytes / 1024, 1) . ' KB';
         } else {
             return round($bytes / 1048576, 1) . ' MB';
-        }
-    }
-
-    /**
-     * Descargar un archivo adjunto de un mensaje
-     */
-    public function descargarAdjunto($id, $adjuntoId)
-    {
-        $userId = session('auth_user')['id'] ?? Auth::id();
-        $mensaje = Mensaje::with('adjuntos')->findOrFail($id);
-        $adjunto = $mensaje->adjuntos()->findOrFail($adjuntoId);
-
-        // Permitir solo remitente, destinatario o admin
-        if (
-            $mensaje->destinatario_id != $userId &&
-            $mensaje->remitente_id != $userId &&
-            !$this->isAdmin()
-        ) {
-            abort(403, 'No tienes permiso para descargar este archivo.');
-        }
-
-        // Descargar desde storage público
-        if (\Storage::disk('public')->exists($adjunto->ruta)) {
-            return \Storage::disk('public')->download($adjunto->ruta, $adjunto->nombre);
-        } else {
-            abort(404, 'Archivo no encontrado.');
         }
     }
 } 
