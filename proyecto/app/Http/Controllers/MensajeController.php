@@ -776,20 +776,36 @@ class MensajeController extends Controller
      */
     public function verAdjunto($id, $adjuntoId)
     {
+        // Obtener usuario actual
         $userId = session('auth_user')['id'] ?? Auth::id();
+        Log::info('Verificando permisos para adjunto', [
+            'userId' => $userId,
+            'mensajeId' => $id,
+            'adjuntoId' => $adjuntoId
+        ]);
+
+        // Obtener mensaje y adjunto
         $mensaje = Mensaje::with('adjuntos')->findOrFail($id);
         $adjunto = $mensaje->adjuntos()->findOrFail($adjuntoId);
 
-        // Permitir solo remitente, destinatario o admin
-        if (
-            $mensaje->destinatario_id != $userId &&
-            $mensaje->remitente_id != $userId &&
-            !$this->isAdmin()
-        ) {
-            abort(403, 'No tienes permiso para ver este archivo.');
+        // Verificar permisos
+        $esRemitente = $mensaje->remitente_id == $userId;
+        $esDestinatario = $mensaje->destinatario_id == $userId;
+        $esAdmin = $this->isAdmin();
+
+        Log::info('Estado de permisos', [
+            'esRemitente' => $esRemitente,
+            'esDestinatario' => $esDestinatario,
+            'esAdmin' => $esAdmin,
+            'remitente_id' => $mensaje->remitente_id,
+            'destinatario_id' => $mensaje->destinatario_id
+        ]);
+
+        // Permitir acceso si es remitente, destinatario o admin
+        if ($esRemitente || $esDestinatario || $esAdmin) {
+            return redirect()->to(asset('storage/' . $adjunto->ruta));
         }
 
-        // Redirigir al archivo público
-        return redirect()->to(asset('storage/' . $adjunto->ruta));
+        abort(403, 'No tienes permiso para ver este archivo.');
     }
 } 
