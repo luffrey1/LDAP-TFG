@@ -395,7 +395,7 @@ class MonitorController extends Controller
                 $columnasInput = $request->input('columnas', 'A,B,C,D,E,F');
                 $filasInput = $request->input('filas', '1,2,3,4,5,6');
                 
-                // Convertir a arrays individuales
+                // Convertir a arrays individuales y asegurarnos de que son strings
                 $columnas = is_array($columnasInput) ? $columnasInput : array_map('trim', explode(',', $columnasInput));
                 $filas = is_array($filasInput) ? $filasInput : array_map('trim', explode(',', $filasInput));
                 
@@ -416,15 +416,17 @@ class MonitorController extends Controller
                 $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
                 $macscannerUrl = rtrim($baseUrl, '/') . '/scan-hostnames';
                 
+                // Asegurarnos de que los arrays se serializan correctamente
                 $payload = [
                     'aula' => $aula,
-                    'columnas' => $columnas,
-                    'filas' => $filas,
+                    'columnas' => array_values($columnas), // Asegurar índices numéricos
+                    'filas' => array_values($filas), // Asegurar índices numéricos
                     'dominio' => 'tierno.es'
                 ];
 
                 \Log::debug('Payload enviado al microservicio', [
-                    'payload' => $payload
+                    'payload' => $payload,
+                    'json_payload' => json_encode($payload) // Log del JSON exacto que se envía
                 ]);
 
                 $options = [
