@@ -390,94 +390,137 @@ class MonitorController extends Controller
             // Nuevo: Si el usuario selecciona escaneo por hostname
             if ($request->has('scan_by_hostname')) {
                 $aula = $request->input('aula');
-                $columnas = $request->input('columnas', ['A','B','C','D','E','F']);
-                $filas = $request->input('filas', range(1, 6));
+                // Asegurarnos de que columnas y filas son arrays
+                $columnas = is_array($request->input('columnas')) ? $request->input('columnas') : explode(',', $request->input('columnas', 'A,B,C,D,E,F'));
+                $filas = is_array($request->input('filas')) ? $request->input('filas') : explode(',', $request->input('filas', '1,2,3,4,5,6'));
                 $dominio = 'tierno.es';
                 $groupId = $request->input('group_id');
                 $forceRegister = $request->has('force_register');
 
+                \Log::info('Iniciando escaneo masivo por hostnames', [
+                    'aula' => $aula,
+                    'columnas' => $columnas,
+                    'filas' => $filas
+                ]);
+
                 $baseUrl = env('MACSCANNER_URL', 'http://172.20.0.6:5000');
                 $macscannerUrl = rtrim($baseUrl, '/') . '/scan-hostnames';
+                
                 $payload = [
                     'aula' => $aula,
                     'columnas' => $columnas,
                     'filas' => $filas,
                     'dominio' => $dominio
                 ];
+
                 $options = [
                     'http' => [
                         'header'  => "Content-type: application/json\r\n",
                         'method'  => 'POST',
                         'content' => json_encode($payload),
-                        'timeout' => 60
+                        'timeout' => 300 // 5 minutos de timeout
                     ]
                 ];
-                $context  = stream_context_create($options);
-                $result = file_get_contents($macscannerUrl, false, $context);
-                $data = json_decode($result, true);
-                if (!$data || !isset($data['success']) || !$data['success']) {
-                    return back()->with('error', 'Error al escanear hostnames');
+
+                $context = stream_context_create($options);
+                
+                // Intentar la conexión con el microservicio
+                $result = @file_get_contents($macscannerUrl, false, $context);
+                
+                if ($result === false) {
+                    \Log::error('No se pudo conectar al microservicio Python para escaneo masivo', [
+                        'url' => $macscannerUrl,
+                        'error' => error_get_last()
+                    ]);
+                    return back()->with('error', 'No se pudo conectar al servicio de escaneo. Por favor, intente más tarde.');
                 }
+
+                $data = json_decode($result, true);
+                
+                if (!$data || !isset($data['success'])) {
+                    \Log::error('Respuesta inválida del microservicio Python', [
+                        'response' => $result,
+                        'url' => $macscannerUrl
+                    ]);
+                    return back()->with('error', 'Error en la respuesta del servicio de escaneo.');
+                }
+
+                if (!$data['success']) {
+                    \Log::error('Error en el escaneo masivo', [
+                        'error' => $data['error'] ?? 'Error desconocido',
+                        'url' => $macscannerUrl
+                    ]);
+                    return back()->with('error', 'Error al escanear hostnames: ' . ($data['error'] ?? 'Error desconocido'));
+                }
+
+                if (!isset($data['hosts']) || empty($data['hosts'])) {
+                    \Log::warning('No se encontraron hosts en el escaneo', [
+                        'aula' => $aula,
+                        'columnas' => $columnas,
+                        'filas' => $filas
+                    ]);
+                    return back()->with('warning', 'No se encontraron hosts en el escaneo.');
+                }
+
                 $created = 0;
                 $updated = 0;
                 $errors = 0;
                 $duplicados = [];
+
+                \Log::info('Procesando hosts encontrados', [
+                    'total_hosts' => count($data['hosts'])
+                ]);
+
                 foreach ($data['hosts'] as $hostData) {
-                    $hostnameLimpio = preg_replace('/\.tierno\.es$/i', '', $hostData['hostname']);
-                    // Comprobar si ya existe un host con ese hostname
-                    $hostExistente = \App\Models\MonitorHost::where('hostname', $hostnameLimpio)->first();
-                    if ($hostExistente) {
-                        $duplicados[] = $hostnameLimpio;
-                        continue; // Saltar duplicados
-                    }
                     try {
+                        $hostnameLimpio = preg_replace('/\.tierno\.es$/i', '', $hostData['hostname']);
+                        
+                        // Comprobar si ya existe un host con ese hostname
+                        $hostExistente = \App\Models\MonitorHost::where('hostname', $hostnameLimpio)->first();
+                        
+                        if ($hostExistente) {
+                            if ($forceRegister) {
+                                // Actualizar host existente
+                                $hostExistente->ip_address = $hostData['ip'] ?? $hostExistente->ip_address;
+                                $hostExistente->mac_address = $hostData['mac'] ?? $hostExistente->mac_address;
+                                $hostExistente->status = 'online';
+                                $hostExistente->last_seen = now();
+                                if ($groupId) $hostExistente->group_id = $groupId;
+                                $hostExistente->save();
+                                $updated++;
+                            } else {
+                                $duplicados[] = $hostnameLimpio;
+                            }
+                            continue;
+                        }
+
+                        // Crear nuevo host
                         $host = new \App\Models\MonitorHost();
                         $host->hostname = $hostnameLimpio;
                         $host->created_by = \Auth::id() ?: 1;
-                        // Guardar IP del host
                         $host->ip_address = $hostData['ip'] ?? null;
-                        // Intentar obtener la MAC usando el hostname primero (más fiable con DHCP)
-                        $macObtenida = false;
-                        if (!empty($hostData['hostname'])) {
-                            $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?hostname=' . urlencode($hostData['hostname']);
-                            $scanResponse = @file_get_contents($pythonServiceUrl);
-                            if ($scanResponse !== false) {
-                                $scanData = json_decode($scanResponse, true);
-                                if (!empty($scanData['mac'])) {
-                                    $host->mac_address = $scanData['mac'];
-                                    $macObtenida = true;
-                                    \Log::info("MAC detectada para hostname {$hostData['hostname']}: {$scanData['mac']}");
-                                }
-                            }
-                        }
-                        if (!$macObtenida && !empty($host->ip_address)) {
-                            $pythonServiceUrl = rtrim($baseUrl, '/') . '/scan?ip=' . urlencode($host->ip_address);
-                            $scanResponse = @file_get_contents($pythonServiceUrl);
-                            if ($scanResponse !== false) {
-                                $scanData = json_decode($scanResponse, true);
-                                if (!empty($scanData['mac'])) {
-                                    $host->mac_address = $scanData['mac'];
-                                    $macObtenida = true;
-                                    \Log::info("MAC detectada para IP {$host->ip_address}: {$scanData['mac']}");
-                                }
-                            }
-                        }
-                        if (!$macObtenida) {
-                            $host->mac_address = $hostData['mac'] ?? null;
-                            if (!empty($host->mac_address)) {
-                                \Log::info("Usando MAC del escaneo original para {$hostData['hostname']}: {$host->mac_address}");
-                            }
-                        }
+                        $host->mac_address = $hostData['mac'] ?? null;
                         $host->status = 'online';
                         $host->last_seen = now();
                         if ($groupId) $host->group_id = $groupId;
                         $host->save();
                         $created++;
+
+                        \Log::info('Host creado exitosamente', [
+                            'hostname' => $hostnameLimpio,
+                            'ip' => $host->ip_address,
+                            'mac' => $host->mac_address
+                        ]);
+
                     } catch (\Exception $e) {
-                        \Log::error('Error guardando host en scanNetwork (hostname): ' . $e->getMessage());
+                        \Log::error('Error procesando host', [
+                            'hostname' => $hostData['hostname'] ?? 'unknown',
+                            'error' => $e->getMessage()
+                        ]);
                         $errors++;
                     }
                 }
+
                 $msg = "Escaneo por hostname completado. {$created} equipos nuevos, {$updated} actualizados, {$errors} errores.";
                 if (count($duplicados) > 0) {
                     $msg .= " Los siguientes hostnames ya existían y no se crearon: " . implode(', ', $duplicados);
