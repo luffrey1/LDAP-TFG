@@ -228,4 +228,23 @@
         });
     });
 </script>
-@endsection 
+@endsection
+
+@push('styles')
+<style>
+    .mensaje-contenido {
+        background: #fff !important;
+        color: #222 !important;
+        padding: 2rem 2.5rem;
+        border-radius: 10px;
+        font-size: 1.12rem;
+        line-height: 1.8;
+        box-shadow: 0 2px 12px #4e73df11;
+        margin-bottom: 1.5rem;
+        border: 1px solid #e3e6f0;
+    }
+    .mensaje-contenido * {
+        color: #222 !important;
+    }
+</style>
+@endpush 
