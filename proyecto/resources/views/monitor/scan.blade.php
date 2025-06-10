@@ -91,15 +91,29 @@
                                         <div class="col-md-4">
                                             <div class="form-group">
                                                 <label for="columnas" class="form-label text-white">Columnas</label>
-                                                <input type="text" class="form-control" name="columnas[]" value="A,B,C,D,E,F" placeholder="Ej: A,B,C,D,E,F" required>
-                                                <div class="form-text text-white">Separadas por coma</div>
+                                                <select name="columnas[]" id="columnas" class="form-select" multiple required>
+                                                    <option value="A" selected>A</option>
+                                                    <option value="B" selected>B</option>
+                                                    <option value="C" selected>C</option>
+                                                    <option value="D" selected>D</option>
+                                                    <option value="E" selected>E</option>
+                                                    <option value="F" selected>F</option>
+                                                </select>
+                                                <div class="form-text text-white">Mantenga Ctrl/Cmd presionado para seleccionar múltiples columnas</div>
                                             </div>
                                         </div>
                                         <div class="col-md-4">
                                             <div class="form-group">
                                                 <label for="filas" class="form-label text-white">Filas</label>
-                                                <input type="text" class="form-control" name="filas[]" value="1,2,3,4,5,6" placeholder="Ej: 1,2,3,4,5,6" required>
-                                                <div class="form-text text-white">Separadas por coma</div>
+                                                <select name="filas[]" id="filas" class="form-select" multiple required>
+                                                    <option value="1" selected>1</option>
+                                                    <option value="2" selected>2</option>
+                                                    <option value="3" selected>3</option>
+                                                    <option value="4" selected>4</option>
+                                                    <option value="5" selected>5</option>
+                                                    <option value="6" selected>6</option>
+                                                </select>
+                                                <div class="form-text text-white">Mantenga Ctrl/Cmd presionado para seleccionar múltiples filas</div>
                                             </div>
                                         </div>
                                     </div>
