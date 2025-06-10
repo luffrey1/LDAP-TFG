@@ -843,4 +843,33 @@ class MensajeController extends Controller
                 ->with('error', 'Error al acceder al archivo: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Buscar destinatarios para el autocompletado
+     */
+    public function buscarDestinatarios(Request $request)
+    {
+        try {
+            $query = $request->get('query');
+            
+            if (strlen($query) < 2) {
+                return response()->json([]);
+            }
+            
+            $usuarios = User::where(function($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%")
+                  ->orWhere('email', 'like', "%{$query}%");
+            })
+            ->select('id', 'name', 'email', 'role')
+            ->orderBy('name')
+            ->limit(10)
+            ->get();
+            
+            return response()->json($usuarios);
+            
+        } catch (\Exception $e) {
+            Log::error('Error al buscar destinatarios: ' . $e->getMessage());
+            return response()->json([], 500);
+        }
+    }
 } 
