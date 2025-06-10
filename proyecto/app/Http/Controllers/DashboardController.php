@@ -463,7 +463,7 @@ class DashboardController extends Controller
             
             // Obtener el recuento de usuarios
             try {
-                $usuariosCount = \DB::table('users')->where('active', true)->count();
+                $usuariosCount = \DB::table('users')->count();
                 if ($usuariosCount === 0) {
                     $usuariosCount = 1;
                 }
