@@ -215,25 +215,25 @@
                     @csrf
                     
                     <div class="form-group">
-                        <label class="form-label" for="titulo">Título del evento</label>
+                        <label class="form-label text-black" for="titulo">Título del evento</label>
                         <input type="text" id="titulo" name="titulo" class="form-control" required>
                     </div>
                     
                     <div class="form-group">
-                        <label class="form-label" for="descripcion">Descripción</label>
+                        <label class="form-label text-black" for="descripcion">Descripción</label>
                         <textarea id="descripcion" name="descripcion" class="form-control" rows="3"></textarea>
                     </div>
                     
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label class="form-label" for="fecha_inicio">Fecha inicio</label>
+                                <label class="form-label text-black" for="fecha_inicio">Fecha inicio</label>
                                 <input type="datetime-local" id="fecha_inicio" name="fecha_inicio" class="form-control" required>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label class="form-label" for="fecha_fin">Fecha fin</label>
+                                <label class="form-label text-black" for="fecha_fin">Fecha fin</label>
                                 <input type="datetime-local" id="fecha_fin" name="fecha_fin" class="form-control" required>
                             </div>
                         </div>
@@ -242,7 +242,7 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label class="form-label" for="color">Tipo de evento</label>
+                                <label class="form-label text-black" for="color">Tipo de evento</label>
                                 <select id="color" name="color" class="form-control">
                                     <option value="#3788d8">Reunión</option>
                                     <option value="#e74c3c">Fecha límite</option>
@@ -257,7 +257,7 @@
                                 <label class="form-label d-block">&nbsp;</label>
                                 <div class="custom-control custom-checkbox mt-2">
                                     <input type="checkbox" id="todo_el_dia" name="todo_el_dia" class="custom-control-input" value="1">
-                                    <label class="custom-control-label" for="todo_el_dia">Todo el día</label>
+                                    <label class="custom-control-label text-black" for="todo_el_dia">Todo el día</label>
                                 </div>
                             </div>
                         </div>
