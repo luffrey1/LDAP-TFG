@@ -826,18 +826,16 @@ class MensajeController extends Controller
             
             // Si es una imagen o PDF, mostrarla en el navegador
             if (strpos($mimeType, 'image/') === 0 || $mimeType === 'application/pdf') {
-                return response()->file(storage_path('app/public/' . $adjunto->ruta), [
+                return Storage::disk('public')->response($adjunto->ruta, $adjunto->nombre_original, [
                     'Content-Type' => $mimeType,
                     'Content-Disposition' => 'inline; filename="' . $adjunto->nombre_original . '"'
                 ]);
             }
             
             // Para otros tipos de archivo, forzar la descarga
-            return response()->download(
-                storage_path('app/public/' . $adjunto->ruta),
-                $adjunto->nombre_original,
-                ['Content-Type' => $mimeType]
-            );
+            return Storage::disk('public')->download($adjunto->ruta, $adjunto->nombre_original, [
+                'Content-Type' => $mimeType
+            ]);
             
         } catch (\Exception $e) {
             Log::error('Error al acceder al archivo adjunto: ' . $e->getMessage());

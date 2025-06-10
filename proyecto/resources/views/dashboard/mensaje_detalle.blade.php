@@ -119,8 +119,8 @@
                                     </div>
                                 </div>
                                 <div class="mt-2">
-                                    <a href="{{ asset('storage/' . $adjunto['ruta']) }}" class="btn btn-sm btn-outline-primary w-100" target="_blank" rel="noopener">
-                                        <i class="fas fa-eye mr-1"></i> Ver/Descargar
+                                    <a href="{{ route('dashboard.mensajes.adjunto', ['id' => $mensaje['id'], 'adjuntoId' => $adjunto['id']]) }}" class="btn btn-sm btn-outline-primary w-100" download="{{ $adjunto['nombre'] }}">
+                                        <i class="fas fa-download mr-1"></i> Descargar
                                     </a>
                                 </div>
                             </div>
