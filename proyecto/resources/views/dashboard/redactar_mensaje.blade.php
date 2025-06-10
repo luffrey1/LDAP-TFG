@@ -68,18 +68,39 @@
                         
                         <!-- Campo de búsqueda de destinatarios -->
                         <div class="form-group">
-                            <label for="destinatario">Para:</label>
-                            <div class="input-group">
-                                <input type="text" class="form-control" id="buscarDestinatario" placeholder="Buscar destinatario...">
-                                <div class="input-group-append">
-                                    <button class="btn btn-outline-secondary" type="button" id="btnLimpiarBusqueda">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div id="resultadosBusqueda" class="list-group mt-2" style="display: none; position: absolute; z-index: 1000; width: 100%; max-height: 200px; overflow-y: auto; background: white; border: 1px solid #ddd; border-radius: 4px;"></div>
-                            <input type="hidden" name="destinatario" id="destinatario" value="{{ $destinatario ?? '' }}">
-                            <div id="destinatarioSeleccionado" class="mt-2"></div>
+                            <label for="destinatario">Destinatario</label>
+                            <select class="form-control" id="destinatario" name="destinatario" required>
+                                <option value="">Seleccione un destinatario</option>
+                                <optgroup label="Grupos">
+                                    <option value="grupo_profesores">Todos los profesores</option>
+                                    <option value="grupo_alumnos">Todos los alumnos</option>
+                                    <option value="grupo_todos">Todos los usuarios</option>
+                                </optgroup>
+                                <optgroup label="Profesores">
+                                    @foreach($usuariosAgrupados['profesores'] as $profesor)
+                                        <option value="{{ $profesor->id }}">{{ $profesor->name }} ({{ $profesor->email }})</option>
+                                    @endforeach
+                                </optgroup>
+                                <optgroup label="Alumnos">
+                                    @foreach($usuariosAgrupados['alumnos'] as $alumno)
+                                        <option value="{{ $alumno->id }}">{{ $alumno->name }} ({{ $alumno->email }})</option>
+                                    @endforeach
+                                </optgroup>
+                                @if(!empty($usuariosAgrupados['admins']))
+                                <optgroup label="Administradores">
+                                    @foreach($usuariosAgrupados['admins'] as $admin)
+                                        <option value="{{ $admin->id }}">{{ $admin->name }} ({{ $admin->email }})</option>
+                                    @endforeach
+                                </optgroup>
+                                @endif
+                                @if(!empty($usuariosAgrupados['otros']))
+                                <optgroup label="Otros">
+                                    @foreach($usuariosAgrupados['otros'] as $otro)
+                                        <option value="{{ $otro->id }}">{{ $otro->name }} ({{ $otro->email }})</option>
+                                    @endforeach
+                                </optgroup>
+                                @endif
+                            </select>
                         </div>
 
                         <!-- CC -->
@@ -657,6 +678,11 @@ $(document).ready(function() {
             $('#error-adjuntos').hide();
         }
     });
+
+    // Si hay un destinatario predefinido (para respuestas o reenvíos)
+    @if(isset($destinatario))
+        $('#destinatario').val('{{ $destinatario }}');
+    @endif
 });
 
 // Función para remover destinatario
