@@ -108,7 +108,7 @@
                                                 <a href="#" class="btn btn-sm btn-outline-secondary" title="Ver" data-bs-toggle="modal" data-bs-target="#previewModal{{ $loop->index }}">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
-                                                <a href="{{ route('dashboard.mensajes.adjunto', ['id' => $mensaje['id'], 'adjuntoId' => $archivo['id']]) }}" class="btn btn-sm btn-outline-primary" title="Descargar" download>
+                                                <a href="{{ route('dashboard.mensajes.adjunto', ['id' => $mensaje['id'], 'adjuntoId' => $archivo['id']]) }}" class="btn btn-sm btn-outline-primary" title="Descargar" download="{{ $archivo['nombre'] }}">
                                                     <i class="fas fa-download"></i>
                                                 </a>
                                             </div>
@@ -143,7 +143,7 @@
                                         </div>
                                         <div class="modal-footer">
                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                                            <a href="{{ route('dashboard.mensajes.adjunto', ['id' => $mensaje['id'], 'adjuntoId' => $archivo['id']]) }}" class="btn btn-primary" download>Descargar</a>
+                                            <a href="{{ route('dashboard.mensajes.adjunto', ['id' => $mensaje['id'], 'adjuntoId' => $archivo['id']]) }}" class="btn btn-primary" download="{{ $archivo['nombre'] }}">Descargar</a>
                                         </div>
                                     </div>
                                 </div>
