@@ -62,7 +62,7 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
         Route::get('/', [MensajeController::class, 'index'])->name('dashboard.mensajes');
         Route::get('/nuevo', [MensajeController::class, 'create'])->name('dashboard.mensajes.nuevo');
         Route::post('/enviar', [MensajeController::class, 'store'])->name('dashboard.mensajes.enviar');
-        Route::get('/{id}', [MensajeController::class, 'show'])->name('dashboard.mensajes.ver');
+        Route::get('/{id}', [MensajeController::class, 'show'])->name('dashboard.mensajes.show');
         Route::delete('/{id}', [MensajeController::class, 'destroy'])->name('dashboard.mensajes.eliminar');
         Route::post('/{id}/restaurar', [MensajeController::class, 'restore'])->name('dashboard.mensajes.restaurar');
         Route::post('/{id}/destacar', [MensajeController::class, 'toggleStarred'])->name('dashboard.mensajes.destacar');

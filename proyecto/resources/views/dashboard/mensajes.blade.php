@@ -126,7 +126,7 @@
                     @if(count($mensajes) > 0)
                         <div class="list-group list-group-flush">
                             @foreach($mensajes as $mensaje)
-                                <a href="{{ route('dashboard.mensajes.ver', $mensaje['id']) }}" class="list-group-item list-group-item-action {{ !$mensaje['leido'] ? 'font-weight-bold bg-light' : '' }}">
+                                <a href="{{ route('dashboard.mensajes.show', $mensaje['id']) }}" class="list-group-item list-group-item-action {{ !$mensaje['leido'] ? 'font-weight-bold bg-light' : '' }}">
                                     <div class="d-flex w-100 justify-content-between align-items-center">
                                         <div class="d-flex align-items-center">
                                             @if(isset($mensaje['remitente']))
