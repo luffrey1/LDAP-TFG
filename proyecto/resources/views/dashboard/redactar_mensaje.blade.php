@@ -369,7 +369,9 @@ $(document).ready(function() {
     
     // Función para buscar destinatarios
     function buscarDestinatarios(query) {
+        console.log('Buscando destinatarios con query:', query);
         if (query.length < 2) {
+            console.log('Query demasiado corta');
             resultadosBusqueda.hide();
             return;
         }
@@ -379,7 +381,9 @@ $(document).ready(function() {
             method: 'GET',
             data: { query: query },
             success: function(response) {
+                console.log('Respuesta recibida:', response);
                 if (response && Array.isArray(response)) {
+                    console.log('Procesando resultados:', response.length);
                     resultadosBusqueda.empty();
                     response.forEach(function(usuario) {
                         resultadosBusqueda.append(`
@@ -395,11 +399,14 @@ $(document).ready(function() {
                     });
                     resultadosBusqueda.show();
                 } else {
+                    console.log('No hay resultados o respuesta inválida');
                     resultadosBusqueda.hide();
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error al buscar destinatarios:', error);
+                console.error('Error en la petición AJAX:', error);
+                console.error('Status:', status);
+                console.error('Response:', xhr.responseText);
                 resultadosBusqueda.hide();
             }
         });
@@ -407,6 +414,7 @@ $(document).ready(function() {
     
     // Evento de búsqueda con debounce
     $('#buscarDestinatario').on('input', function() {
+        console.log('Input detectado:', $(this).val());
         clearTimeout(timeoutId);
         timeoutId = setTimeout(() => {
             buscarDestinatarios($(this).val().trim());
