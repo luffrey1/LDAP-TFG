@@ -368,86 +368,69 @@ $(document).ready(function() {
     const destinatarioSeleccionado = $('#destinatarioSeleccionado');
     
     // Función para buscar destinatarios
-    function buscarDestinatarios(query) {
-        console.log('Buscando destinatarios con query:', query);
+    function buscarDestinatarios() {
+        const query = document.getElementById('destinatario').value.trim();
+        console.log('Input detectado:', query);
+        
         if (query.length < 2) {
-            console.log('Query demasiado corta');
-            resultadosBusqueda.hide();
+            document.getElementById('resultadosBusqueda').style.display = 'none';
             return;
         }
         
-        $.ajax({
-            url: '{{ route("dashboard.mensajes.buscar-destinatarios") }}',
+        console.log('Buscando destinatarios con query:', query);
+        
+        fetch(`{{ route('dashboard.mensajes.buscar-destinatarios') }}?query=${encodeURIComponent(query)}`, {
             method: 'GET',
-            data: { query: query },
             headers: {
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
-                'Accept': 'application/json'
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             },
-            success: function(response) {
-                console.log('Respuesta recibida:', response);
-                if (response && Array.isArray(response)) {
-                    console.log('Procesando resultados:', response.length);
-                    resultadosBusqueda.empty();
-                    
-                    if (response.length === 0) {
-                        resultadosBusqueda.append(`
-                            <div class="list-group-item text-muted">
-                                No se encontraron resultados
-                            </div>
-                        `);
-                    } else {
-                        response.forEach(function(usuario) {
-                            resultadosBusqueda.append(`
-                                <a href="#" class="list-group-item list-group-item-action" 
-                                   data-id="${usuario.id}" 
-                                   data-nombre="${usuario.name}">
-                                    <div class="user-info">
-                                        <div class="user-name">${usuario.name}</div>
-                                        <div class="user-email">${usuario.email}</div>
-                                    </div>
-                                </a>
-                            `);
-                        });
-                    }
-                    resultadosBusqueda.show();
-                } else if (response.error) {
-                    console.error('Error en la respuesta:', response.error);
-                    resultadosBusqueda.html(`
-                        <div class="list-group-item text-danger">
-                            <i class="fas fa-exclamation-circle mr-2"></i>
-                            ${response.error}
-                        </div>
-                    `).show();
-                } else {
-                    console.log('No hay resultados o respuesta inválida');
-                    resultadosBusqueda.html(`
-                        <div class="list-group-item text-muted">
-                            No se encontraron resultados
-                        </div>
-                    `).show();
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('Error en la petición AJAX:', error);
-                console.error('Status:', status);
-                console.error('Response:', xhr.responseText);
-                console.error('Status Code:', xhr.status);
-                
-                let errorMessage = 'Error al buscar destinatarios';
-                if (xhr.status === 401) {
-                    errorMessage = 'Sesión expirada. Por favor, recargue la página.';
-                } else if (xhr.responseJSON && xhr.responseJSON.error) {
-                    errorMessage = xhr.responseJSON.error;
-                }
-                
-                resultadosBusqueda.html(`
-                    <div class="list-group-item text-danger">
-                        <i class="fas fa-exclamation-circle mr-2"></i>
-                        ${errorMessage}
-                    </div>
-                `).show();
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            console.log('Status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Respuesta recibida:', data);
+            const resultadosDiv = document.getElementById('resultadosBusqueda');
+            
+            if (!Array.isArray(data)) {
+                console.error('Respuesta no es un array:', data);
+                resultadosDiv.innerHTML = '<div class="p-2 text-red-500">Error en el formato de respuesta</div>';
+                resultadosDiv.style.display = 'block';
+                return;
+            }
+            
+            if (data.length === 0) {
+                resultadosDiv.innerHTML = '<div class="p-2 text-gray-500">No se encontraron resultados</div>';
+                resultadosDiv.style.display = 'block';
+                return;
+            }
+            
+            let html = '';
+            data.forEach(usuario => {
+                html += `
+                    <div class="p-2 hover:bg-gray-100 cursor-pointer" 
+                         onclick="seleccionarDestinatario('${usuario.name}', '${usuario.email}')">
+                        <div class="font-medium">${usuario.name}</div>
+                        <div class="text-sm text-gray-500">${usuario.email}</div>
+                    </div>
+                `;
+            });
+            
+            resultadosDiv.innerHTML = html;
+            resultadosDiv.style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Error en la búsqueda:', error);
+            const resultadosDiv = document.getElementById('resultadosBusqueda');
+            resultadosDiv.innerHTML = '<div class="p-2 text-red-500">Error al buscar destinatarios</div>';
+            resultadosDiv.style.display = 'block';
         });
     }
     
@@ -456,7 +439,7 @@ $(document).ready(function() {
         console.log('Input detectado:', $(this).val());
         clearTimeout(timeoutId);
         timeoutId = setTimeout(() => {
-            buscarDestinatarios($(this).val().trim());
+            buscarDestinatarios();
         }, 300);
     });
     

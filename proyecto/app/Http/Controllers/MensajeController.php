@@ -850,14 +850,18 @@ class MensajeController extends Controller
     public function buscarDestinatarios(Request $request)
     {
         try {
-            // Verificar autenticación
-            if (!Auth::check() && !session('auth_user')) {
+            // Verificar autenticación de manera más robusta
+            $user = Auth::user() ?? session('auth_user');
+            if (!$user) {
                 Log::warning('Intento de búsqueda de destinatarios sin autenticación');
                 return response()->json(['error' => 'No autenticado'], 401);
             }
 
             $query = trim($request->get('query', ''));
-            Log::debug("Búsqueda de destinatarios iniciada", ['query' => $query]);
+            Log::debug("Búsqueda de destinatarios iniciada", [
+                'query' => $query,
+                'user_id' => $user['id'] ?? $user->id
+            ]);
             
             if (strlen($query) < 2) {
                 Log::debug("Query demasiado corta", ['query' => $query]);
@@ -876,7 +880,8 @@ class MensajeController extends Controller
             
             Log::info('Búsqueda de destinatarios exitosa', [
                 'query' => $query,
-                'resultados' => $usuarios->count()
+                'resultados' => $usuarios->count(),
+                'user_id' => $user['id'] ?? $user->id
             ]);
             
             return response()->json($usuarios->toArray());
