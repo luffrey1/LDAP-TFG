@@ -770,4 +770,26 @@ class MensajeController extends Controller
             return round($bytes / 1048576, 1) . ' MB';
         }
     }
+
+    /**
+     * Ver un archivo adjunto de un mensaje (verifica permisos y redirige)
+     */
+    public function verAdjunto($id, $adjuntoId)
+    {
+        $userId = session('auth_user')['id'] ?? Auth::id();
+        $mensaje = Mensaje::with('adjuntos')->findOrFail($id);
+        $adjunto = $mensaje->adjuntos()->findOrFail($adjuntoId);
+
+        // Permitir solo remitente, destinatario o admin
+        if (
+            $mensaje->destinatario_id != $userId &&
+            $mensaje->remitente_id != $userId &&
+            !$this->isAdmin()
+        ) {
+            abort(403, 'No tienes permiso para ver este archivo.');
+        }
+
+        // Redirigir al archivo público
+        return redirect()->to(asset('storage/' . $adjunto->ruta));
+    }
 } 
