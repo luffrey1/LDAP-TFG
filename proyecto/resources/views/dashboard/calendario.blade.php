@@ -6,12 +6,81 @@
 <!-- FullCalendar CSS -->
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.css" rel="stylesheet" />
 <style>
-    /* Hacer las celdas del calendario más altas */
-    .fc-daygrid-day {
-        height: 160px !important;
+    /* Estilos generales del calendario */
+    #calendar {
+        width: 100%;
+        min-height: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
-    /* Estilo base para todos los eventos */
+    /* Estilos de la barra de herramientas */
+    .fc-toolbar {
+        margin-bottom: 2em !important;
+        padding: 1em;
+        background: #f8fafc;
+        border-radius: 8px;
+    }
+
+    .fc-toolbar-title {
+        font-size: 1.5rem !important;
+        font-weight: 600 !important;
+        color: #1a202c;
+    }
+
+    .fc-button {
+        background-color: #4f46e5 !important;
+        border-color: #4f46e5 !important;
+        padding: 0.5em 1em !important;
+        font-weight: 500 !important;
+        text-transform: capitalize !important;
+        border-radius: 6px !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .fc-button:hover {
+        background-color: #3730a3 !important;
+        border-color: #3730a3 !important;
+        transform: translateY(-1px);
+    }
+
+    .fc-button-primary:not(:disabled).fc-button-active {
+        background-color: #3730a3 !important;
+        border-color: #3730a3 !important;
+    }
+
+    /* Estilos de la cuadrícula */
+    .fc-view-harness {
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .fc-daygrid-day {
+        height: 160px !important;
+        border: 1px solid #e2e8f0 !important;
+    }
+
+    .fc-daygrid-day-frame {
+        padding: 8px !important;
+    }
+
+    .fc-daygrid-day-top {
+        justify-content: center !important;
+        padding: 4px 0 !important;
+    }
+
+    .fc-daygrid-day-number {
+        font-size: 1.1em !important;
+        font-weight: 500 !important;
+        color: #4a5568 !important;
+        text-decoration: none !important;
+    }
+
+    /* Estilos de los eventos */
     .fc-event {
         cursor: pointer;
         min-height: 55px !important;
@@ -21,141 +90,94 @@
         border: none !important;
         background-color: var(--event-color, #4f46e5) !important;
         color: white !important;
-    }
-
-    /* Eventos en la vista de mes */
-    .fc-daygrid-event {
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: center !important;
-        padding: 10px 14px !important;
-        margin: 4px !important;
-        line-height: 1.4 !important;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-    }
-
-    /* Eventos que duran múltiples días */
-    .fc-daygrid-block-event {
-        min-height: 60px !important;
-        padding: 12px 14px !important;
-    }
-
-    /* Título del evento */
-    .fc-event-title {
-        font-weight: 500 !important;
-        font-size: 1em !important;
-        line-height: 1.5 !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-    }
-
-    /* Hora del evento */
-    .fc-event-time {
-        font-size: 0.9em !important;
-        opacity: 0.9 !important;
-        margin-bottom: 6px !important;
-    }
-
-    /* Efecto hover en eventos */
-    .fc-event:hover {
-        box-shadow: 0 6px 12px rgba(0,0,0,0.2) !important;
-        transform: translateY(-2px) !important;
         transition: all 0.2s ease !important;
     }
 
-    /* Colores específicos para tipos de eventos con gradientes más pronunciados */
-    .fc-event[style*="background-color: #3788d8"] {
-        background: linear-gradient(45deg, #3788d8, #5ca3e6) !important;
-    }
-    .fc-event[style*="background-color: #e74c3c"] {
-        background: linear-gradient(45deg, #e74c3c, #f16b5c) !important;
-    }
-    .fc-event[style*="background-color: #2ecc71"] {
-        background: linear-gradient(45deg, #2ecc71, #54d98c) !important;
-    }
-    .fc-event[style*="background-color: #9b59b6"] {
-        background: linear-gradient(45deg, #9b59b6, #b07cc6) !important;
-    }
-    .fc-event[style*="background-color: #f39c12"] {
-        background: linear-gradient(45deg, #f39c12, #f5b043) !important;
+    .fc-event:hover {
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+        transform: translateY(-2px) !important;
     }
 
-    /* Más espacio para los eventos en la vista de semana */
-    .fc-timegrid-event {
-        min-height: 50px !important;
-        padding: 8px 12px !important;
-        margin: 2px 0 !important;
+    .fc-event-title {
+        font-weight: 500 !important;
+        font-size: 0.95em !important;
+        line-height: 1.4 !important;
     }
 
-    /* Ajustar el contenedor de eventos para mostrar más */
-    .fc-daygrid-day-events {
-        margin-top: 6px !important;
-        padding: 3px !important;
-        min-height: 120px !important;
+    .fc-event-time {
+        font-size: 0.85em !important;
+        opacity: 0.9 !important;
+        margin-bottom: 4px !important;
     }
 
-    /* Estilo para el botón "más eventos" */
+    /* Estilos para el botón "más eventos" */
     .fc-daygrid-more-link {
         color: #4f46e5 !important;
         font-weight: 500 !important;
         background: #f8fafc !important;
         padding: 4px 8px !important;
         border-radius: 6px !important;
-        margin-top: 6px !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+        margin-top: 4px !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
     }
 
-    /* Ajustar el número del día para dar más espacio a los eventos */
-    .fc-daygrid-day-top {
-        margin-bottom: 4px !important;
+    /* Estilos para la vista de semana */
+    .fc-timegrid-event {
+        min-height: 50px !important;
+        padding: 8px 12px !important;
+        margin: 2px 0 !important;
     }
 
-    /* Resto de estilos sin cambios */
-    .fc-toolbar-title {
-        font-size: 1.5rem !important;
-        font-weight: bold;
+    /* Estilos para el encabezado de la semana */
+    .fc-col-header-cell {
+        padding: 10px 0 !important;
+        background: #f8fafc !important;
     }
 
-    .fc-button {
-        background-color: #4f46e5 !important;
-        border-color: #4f46e5 !important;
+    .fc-col-header-cell-cushion {
+        color: #4a5568 !important;
+        font-weight: 600 !important;
+        text-decoration: none !important;
     }
 
-    .fc-button:hover {
-        background-color: #3730a3 !important;
-        border-color: #3730a3 !important;
+    /* Estilos para el día actual */
+    .fc-day-today {
+        background-color: #f0f9ff !important;
     }
 
-    .event-tooltip {
-        background-color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 12px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        max-width: 300px;
+    .fc-day-today .fc-daygrid-day-number {
+        background: #4f46e5 !important;
+        color: white !important;
+        width: 30px !important;
+        height: 30px !important;
+        border-radius: 50% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin: 0 auto !important;
     }
 
-    .event-type-indicator {
-        display: inline-flex;
-        align-items: center;
-        margin-right: 15px;
-        margin-bottom: 10px;
-    }
-
-    .event-type-indicator .color-dot {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        margin-right: 8px;
-    }
-
-    #calendar {
-        width: 100%;
-        min-height: 800px;
-        margin: 0 auto;
-        background: white;
+    /* Estilos para el modal de eventos */
+    .event-modal-content {
         padding: 20px;
-        border-radius: 8px;
+    }
+
+    .form-label {
+        font-weight: 500;
+        color: #4a5568;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-control {
+        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+        padding: 0.5rem 0.75rem;
+    }
+
+    .form-control:focus {
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
     }
 </style>
 @endsection
