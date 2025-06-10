@@ -393,7 +393,14 @@ $(document).ready(function() {
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            return response.json();
+            return response.text().then(text => {
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('Error parsing JSON:', text);
+                    throw new Error('Invalid JSON response');
+                }
+            });
         })
         .then(data => {
             console.log('Respuesta recibida:', data);
@@ -429,7 +436,7 @@ $(document).ready(function() {
         .catch(error => {
             console.error('Error en la búsqueda:', error);
             const resultadosDiv = document.getElementById('resultadosBusqueda');
-            resultadosDiv.innerHTML = '<div class="p-2 text-red-500">Error al buscar destinatarios</div>';
+            resultadosDiv.innerHTML = '<div class="p-2 text-red-500">Error al buscar destinatarios: ' + error.message + '</div>';
             resultadosDiv.style.display = 'block';
         });
     }
