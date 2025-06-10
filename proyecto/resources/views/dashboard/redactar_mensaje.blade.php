@@ -381,7 +381,8 @@ $(document).ready(function() {
             method: 'GET',
             data: { query: query },
             headers: {
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+                'Accept': 'application/json'
             },
             success: function(response) {
                 console.log('Respuesta recibida:', response);
@@ -413,6 +414,7 @@ $(document).ready(function() {
                 console.error('Error en la petición AJAX:', error);
                 console.error('Status:', status);
                 console.error('Response:', xhr.responseText);
+                console.error('Status Code:', xhr.status);
                 resultadosBusqueda.hide();
             }
         });

@@ -852,6 +852,7 @@ class MensajeController extends Controller
         try {
             // Verificar autenticación
             if (!Auth::check() && !session('auth_user')) {
+                Log::warning('Intento de búsqueda de destinatarios sin autenticación');
                 return response()->json(['error' => 'No autenticado'], 401);
             }
 
@@ -870,6 +871,11 @@ class MensajeController extends Controller
             ->orderBy('name')
             ->limit(10)
             ->get();
+            
+            Log::info('Búsqueda de destinatarios exitosa', [
+                'query' => $query,
+                'resultados' => $usuarios->count()
+            ]);
             
             return response()->json($usuarios->toArray());
             
