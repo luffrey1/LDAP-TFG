@@ -857,8 +857,10 @@ class MensajeController extends Controller
             }
 
             $query = trim($request->get('query', ''));
+            Log::debug("Búsqueda de destinatarios iniciada", ['query' => $query]);
             
             if (strlen($query) < 2) {
+                Log::debug("Query demasiado corta", ['query' => $query]);
                 return response()->json([]);
             }
             
@@ -880,7 +882,10 @@ class MensajeController extends Controller
             return response()->json($usuarios->toArray());
             
         } catch (\Exception $e) {
-            Log::error('Error al buscar destinatarios: ' . $e->getMessage());
+            Log::error('Error al buscar destinatarios: ' . $e->getMessage(), [
+                'query' => $query ?? null,
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json(['error' => 'Error interno del servidor'], 500);
         }
     }

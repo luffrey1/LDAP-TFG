@@ -389,25 +389,43 @@ $(document).ready(function() {
                 if (response && Array.isArray(response)) {
                     console.log('Procesando resultados:', response.length);
                     resultadosBusqueda.empty();
-                    response.forEach(function(usuario) {
+                    
+                    if (response.length === 0) {
                         resultadosBusqueda.append(`
-                            <a href="#" class="list-group-item list-group-item-action" 
-                               data-id="${usuario.id}" 
-                               data-nombre="${usuario.name}">
-                                <div class="user-info">
-                                    <div class="user-name">${usuario.name}</div>
-                                    <div class="user-email">${usuario.email}</div>
-                                </div>
-                            </a>
+                            <div class="list-group-item text-muted">
+                                No se encontraron resultados
+                            </div>
                         `);
-                    });
+                    } else {
+                        response.forEach(function(usuario) {
+                            resultadosBusqueda.append(`
+                                <a href="#" class="list-group-item list-group-item-action" 
+                                   data-id="${usuario.id}" 
+                                   data-nombre="${usuario.name}">
+                                    <div class="user-info">
+                                        <div class="user-name">${usuario.name}</div>
+                                        <div class="user-email">${usuario.email}</div>
+                                    </div>
+                                </a>
+                            `);
+                        });
+                    }
                     resultadosBusqueda.show();
                 } else if (response.error) {
                     console.error('Error en la respuesta:', response.error);
-                    resultadosBusqueda.hide();
+                    resultadosBusqueda.html(`
+                        <div class="list-group-item text-danger">
+                            <i class="fas fa-exclamation-circle mr-2"></i>
+                            ${response.error}
+                        </div>
+                    `).show();
                 } else {
                     console.log('No hay resultados o respuesta inválida');
-                    resultadosBusqueda.hide();
+                    resultadosBusqueda.html(`
+                        <div class="list-group-item text-muted">
+                            No se encontraron resultados
+                        </div>
+                    `).show();
                 }
             },
             error: function(xhr, status, error) {
@@ -415,7 +433,20 @@ $(document).ready(function() {
                 console.error('Status:', status);
                 console.error('Response:', xhr.responseText);
                 console.error('Status Code:', xhr.status);
-                resultadosBusqueda.hide();
+                
+                let errorMessage = 'Error al buscar destinatarios';
+                if (xhr.status === 401) {
+                    errorMessage = 'Sesión expirada. Por favor, recargue la página.';
+                } else if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMessage = xhr.responseJSON.error;
+                }
+                
+                resultadosBusqueda.html(`
+                    <div class="list-group-item text-danger">
+                        <i class="fas fa-exclamation-circle mr-2"></i>
+                        ${errorMessage}
+                    </div>
+                `).show();
             }
         });
     }
