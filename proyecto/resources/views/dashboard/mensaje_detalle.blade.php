@@ -156,11 +156,16 @@
     .message-content {
         background: #fff !important;
         color: #222 !important;
-        padding: 1.5rem;
-        border-radius: 8px;
-        font-size: 1.08rem;
-        line-height: 1.7;
-        box-shadow: 0 1px 4px #4e73df11;
+        padding: 2rem 2.5rem;
+        border-radius: 10px;
+        font-size: 1.12rem;
+        line-height: 1.8;
+        box-shadow: 0 2px 12px #4e73df11;
+        margin-bottom: 1.5rem;
+        border: 1px solid #e3e6f0;
+    }
+    .message-content * {
+        color: #222 !important;
     }
     .message-header {
         border-bottom: 1px solid #4e73df33;
