@@ -57,20 +57,19 @@ Route::middleware(['web', 'App\Http\Middleware\LdapAuthMiddleware'])->group(func
         Route::delete('/gestion-documental/{id}', [DocumentoController::class, 'destroy'])->name('dashboard.gestion-documental.eliminar');
     });
     
-    // Rutas de mensajes
-    Route::prefix('mensajes')->name('dashboard.mensajes.')->group(function () {
-        Route::get('/', [MensajeController::class, 'index'])->name('index');
-        Route::get('/crear', [MensajeController::class, 'create'])->name('crear');
-        Route::post('/enviar', [MensajeController::class, 'store'])->name('enviar');
-        Route::get('/{id}', [MensajeController::class, 'show'])->name('ver');
-        Route::delete('/{id}', [MensajeController::class, 'destroy'])->name('eliminar');
-        Route::post('/{id}/leer', [MensajeController::class, 'toggleRead'])->name('toggle-read');
-        Route::post('/{id}/destacar', [MensajeController::class, 'toggleStarred'])->name('toggle-starred');
-        Route::post('/{id}/restaurar', [MensajeController::class, 'restore'])->name('restaurar');
-        Route::get('/{id}/responder', [MensajeController::class, 'reply'])->name('responder');
-        Route::get('/{id}/reenviar', [MensajeController::class, 'forward'])->name('reenviar');
-        Route::get('/{id}/adjunto/{adjuntoId}', [MensajeController::class, 'verAdjunto'])->name('ver-adjunto');
-        Route::get('/buscar-destinatarios', [MensajeController::class, 'buscarDestinatarios'])->name('buscar-destinatarios');
+    // Mensajería interna
+    Route::prefix('mensajes')->middleware(CheckModuleAccess::class.':mensajeria')->group(function () {
+        Route::get('/', [MensajeController::class, 'index'])->name('dashboard.mensajes');
+        Route::get('/nuevo', [MensajeController::class, 'create'])->name('dashboard.mensajes.nuevo');
+        Route::post('/enviar', [MensajeController::class, 'store'])->name('dashboard.mensajes.enviar');
+        Route::get('/{id}', [MensajeController::class, 'show'])->name('dashboard.mensajes.show');
+        Route::delete('/{id}', [MensajeController::class, 'destroy'])->name('dashboard.mensajes.eliminar');
+        Route::post('/{id}/restaurar', [MensajeController::class, 'restore'])->name('dashboard.mensajes.restaurar');
+        Route::post('/{id}/destacar', [MensajeController::class, 'toggleStarred'])->name('dashboard.mensajes.destacar');
+        Route::get('/{id}/responder', [MensajeController::class, 'reply'])->name('dashboard.mensajes.responder');
+        Route::get('/{id}/reenviar', [MensajeController::class, 'forward'])->name('dashboard.mensajes.reenviar');
+        Route::get('/{id}/adjunto/{adjuntoId}', [MensajeController::class, 'verAdjunto'])->name('dashboard.mensajes.adjunto');
+        Route::get('/buscar-destinatarios', [MensajeController::class, 'buscarDestinatarios'])->name('dashboard.mensajes.buscar-destinatarios');
     });
     
     // Calendario y eventos
