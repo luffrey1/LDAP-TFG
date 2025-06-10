@@ -795,26 +795,46 @@ class MensajeController extends Controller
      */
     public function verAdjunto($id, $adjuntoId)
     {
-        $mensaje = Mensaje::with('adjuntos')->findOrFail($id);
-        $adjunto = $mensaje->adjuntos()->findOrFail($adjuntoId);
-        
-        // Log para debug
-        $rutaArchivo = 'storage/' . $adjunto->ruta;
-        $rutaCompleta = public_path($rutaArchivo);
-        Log::info('Intentando acceder al archivo', [
-            'ruta_relativa' => $rutaArchivo,
-            'ruta_completa' => $rutaCompleta,
-            'existe' => file_exists($rutaCompleta),
-            'adjunto' => $adjunto->toArray()
-        ]);
-
-        // Verificar si el archivo existe
-        if (!file_exists($rutaCompleta)) {
-            Log::error('Archivo no encontrado', ['ruta' => $rutaCompleta]);
-            abort(404, 'El archivo no existe.');
+        try {
+            // Obtener el usuario autenticado
+            $userId = session('auth_user')['id'] ?? Auth::id();
+            
+            // Buscar el mensaje y el adjunto
+            $mensaje = Mensaje::with('adjuntos')->findOrFail($id);
+            $adjunto = $mensaje->adjuntos()->findOrFail($adjuntoId);
+            
+            // Verificar permiso para ver el archivo
+            if ($mensaje->destinatario_id != $userId && 
+                $mensaje->remitente_id != $userId && 
+                !$this->isAdmin()) {
+                return response()->json(['error' => 'No tienes permiso para ver este archivo'], 403);
+            }
+            
+            // Verificar si el archivo existe
+            $rutaArchivo = storage_path('app/public/' . $adjunto->ruta);
+            if (!file_exists($rutaArchivo)) {
+                return response()->json(['error' => 'El archivo no existe'], 404);
+            }
+            
+            // Obtener el tipo MIME del archivo
+            $mimeType = mime_content_type($rutaArchivo);
+            
+            // Si es una imagen o PDF, mostrarla en el navegador
+            if (strpos($mimeType, 'image/') === 0 || $mimeType === 'application/pdf') {
+                return response()->file($rutaArchivo, [
+                    'Content-Type' => $mimeType,
+                    'Content-Disposition' => 'inline; filename="' . $adjunto->nombre_original . '"'
+                ]);
+            }
+            
+            // Para otros tipos de archivo, forzar la descarga
+            return response()->download($rutaArchivo, $adjunto->nombre_original, [
+                'Content-Type' => $mimeType
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error al acceder al archivo adjunto: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al acceder al archivo'], 500);
         }
-        
-        // Redirigir al archivo público
-        return redirect()->to(asset($rutaArchivo));
     }
 } 

@@ -179,7 +179,9 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="replyModalLabel">Responder mensaje</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
             <form action="{{ route('dashboard.mensajes.enviar') }}" method="POST" enctype="multipart/form-data">
                 @csrf
@@ -198,7 +200,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Enviar respuesta</button>
                 </div>
             </form>
@@ -222,8 +224,7 @@
         const replyButtons = document.querySelectorAll('button[title="Responder"]');
         replyButtons.forEach(function(button) {
             button.addEventListener('click', function() {
-                const replyModal = new bootstrap.Modal(document.getElementById('replyModal'));
-                replyModal.show();
+                $('#replyModal').modal('show');
             });
         });
     });
