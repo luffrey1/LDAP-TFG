@@ -618,7 +618,7 @@
     </style>
     
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @yield('styles')
+    @stack('styles')
 </head>
 <body>
     @include('partials.access-attempts')
