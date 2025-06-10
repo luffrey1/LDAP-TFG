@@ -850,6 +850,11 @@ class MensajeController extends Controller
     public function buscarDestinatarios(Request $request)
     {
         try {
+            // Verificar autenticación
+            if (!Auth::check() && !session('auth_user')) {
+                return response()->json(['error' => 'No autenticado'], 401);
+            }
+
             $query = trim($request->get('query', ''));
             
             if (strlen($query) < 2) {
@@ -870,7 +875,7 @@ class MensajeController extends Controller
             
         } catch (\Exception $e) {
             Log::error('Error al buscar destinatarios: ' . $e->getMessage());
-            return response()->json([], 500);
+            return response()->json(['error' => 'Error interno del servidor'], 500);
         }
     }
 } 
