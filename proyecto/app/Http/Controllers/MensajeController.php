@@ -779,7 +779,23 @@ class MensajeController extends Controller
         $mensaje = Mensaje::with('adjuntos')->findOrFail($id);
         $adjunto = $mensaje->adjuntos()->findOrFail($adjuntoId);
         
-        // Redirigir directamente al archivo público
-        return redirect()->to(asset('storage/' . $adjunto->ruta));
+        // Log para debug
+        $rutaArchivo = 'storage/' . $adjunto->ruta;
+        $rutaCompleta = public_path($rutaArchivo);
+        Log::info('Intentando acceder al archivo', [
+            'ruta_relativa' => $rutaArchivo,
+            'ruta_completa' => $rutaCompleta,
+            'existe' => file_exists($rutaCompleta),
+            'adjunto' => $adjunto->toArray()
+        ]);
+
+        // Verificar si el archivo existe
+        if (!file_exists($rutaCompleta)) {
+            Log::error('Archivo no encontrado', ['ruta' => $rutaCompleta]);
+            abort(404, 'El archivo no existe.');
+        }
+        
+        // Redirigir al archivo público
+        return redirect()->to(asset($rutaArchivo));
     }
 } 
