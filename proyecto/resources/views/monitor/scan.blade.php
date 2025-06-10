@@ -62,7 +62,7 @@
                                                 <div class="form-text text-white">Escriba el nombre del aula (ej: B22, A27, C21) o seleccione uno de la lista</div>
                                             </div>
                                         </div>
-                                        <div class="col-md-4">Add commentMore actions
+                                        <div class="col-md-4">
                                             <div class="form-group">
                                                 <label for="aula_select" class="form-label text-white">O seleccione un aula</label>
                                                 <select name="aula_select" id="aula_select" class="form-select">
@@ -86,7 +86,7 @@
                                                     <option value="C25">C25</option>
                                                     <option value="C27">C27</option>
                                                 </select>
-                                            </div>Add commentMore actions
+                                            </div>
                                         </div>
                                         <div class="col-md-4">
                                             <div class="form-group">
