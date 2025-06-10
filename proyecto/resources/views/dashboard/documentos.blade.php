@@ -143,44 +143,64 @@
 
 <!-- Modal para subir documento -->
 <div class="modal fade" id="uploadDocumentModal" tabindex="-1" aria-labelledby="uploadDocumentModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="uploadDocumentModalLabel">Subir Documento</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="uploadDocumentModalLabel">
+                    <i class="fas fa-upload me-2"></i>Subir Documento
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form action="{{ route('dashboard.gestion-documental.subir') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-body">
-                    <div class="form-group">
-                        <label for="documentFile">Archivo:</label>
-                        <div class="custom-file">
-                            <input type="file" name="documento" class="custom-file-input" id="documentFile" required>
-                            <label class="custom-file-label" for="documentFile">Seleccionar archivo</label>
+                    <div class="row">
+                        <div class="col-md-12 mb-4">
+                            <div class="upload-area p-5 text-center border rounded bg-light">
+                                <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                                <h5 class="text-dark mb-3">Arrastra y suelta tu archivo aquí</h5>
+                                <p class="text-muted mb-3">o</p>
+                                <div class="custom-file">
+                                    <input type="file" name="documento" class="custom-file-input" id="documentFile" required>
+                                    <label class="btn btn-primary" for="documentFile">
+                                        <i class="fas fa-folder-open me-2"></i>Seleccionar archivo
+                                    </label>
+                                </div>
+                                <p class="text-muted mt-3 mb-0">Formatos permitidos: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, ZIP, RAR (Máximo 10MB)</p>
+                            </div>
                         </div>
-                        <small class="form-text text-muted">Formatos permitidos: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, ZIP, RAR (Máximo 10MB)</small>
                     </div>
-                    <div class="form-group">
-                        <label for="documentTitle">Título del documento:</label>
-                        <input type="text" name="nombre" class="form-control" id="documentTitle" placeholder="Título del documento" required>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="documentTitle" class="form-label text-dark fw-bold">Título del documento:</label>
+                            <input type="text" name="nombre" class="form-control" id="documentTitle" placeholder="Ingrese el título del documento" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="documentCategory" class="form-label text-dark fw-bold">Categoría:</label>
+                            <select name="categoria" id="documentCategory" class="form-select" required>
+                                <option value="">Seleccionar categoría</option>
+                                @foreach($folders as $folder)
+                                <option value="{{ $folder['clave'] }}">{{ $folder['nombre'] }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="documentCategory">Categoría:</label>
-                        <select name="categoria" id="documentCategory" class="form-control" required>
-                            <option value="">Seleccionar categoría</option>
-                            @foreach($folders as $folder)
-                            <option value="{{ $folder['clave'] }}">{{ $folder['nombre'] }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="documentDescription">Descripción (opcional):</label>
-                        <textarea name="descripcion" id="documentDescription" class="form-control" rows="3" placeholder="Descripción del documento"></textarea>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <label for="documentDescription" class="form-label text-dark fw-bold">Descripción (opcional):</label>
+                            <textarea name="descripcion" id="documentDescription" class="form-control" rows="3" placeholder="Ingrese una descripción del documento"></textarea>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Subir</button>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload me-2"></i>Subir Documento
+                    </button>
                 </div>
             </form>
         </div>
@@ -251,16 +271,59 @@
 @section('scripts')
 <script>
 $(document).ready(function() {
-    // Mostrar el nombre del archivo seleccionado en el input file
+    // Mostrar el nombre del archivo seleccionado
     $(".custom-file-input").on("change", function() {
         var fileName = $(this).val().split("\\").pop();
-        $(this).siblings(".custom-file-label").addClass("selected").html(fileName);
+        if (fileName) {
+            $(this).siblings(".btn").html('<i class="fas fa-file me-2"></i>' + fileName);
+        }
     });
     
-    // Asegurar que los modales funcionan correctamente
-    var documentModals = document.querySelectorAll('.modal');
-    documentModals.forEach(function(modal) {
-        new bootstrap.Modal(modal);
+    // Drag and drop functionality
+    const uploadArea = document.querySelector('.upload-area');
+    const fileInput = document.querySelector('#documentFile');
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight(e) {
+        uploadArea.classList.add('dragover');
+    }
+
+    function unhighlight(e) {
+        uploadArea.classList.remove('dragover');
+    }
+
+    uploadArea.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        fileInput.files = files;
+        
+        if (files.length > 0) {
+            const fileName = files[0].name;
+            document.querySelector('.btn').innerHTML = '<i class="fas fa-file me-2"></i>' + fileName;
+        }
+    }
+
+    // Click en el área de upload también abre el selector de archivos
+    uploadArea.addEventListener('click', () => {
+        fileInput.click();
     });
 });
 </script>
@@ -272,6 +335,62 @@ $(document).ready(function() {
     padding: 3rem;
     background-color: #f8f9fc;
     border-radius: 0.5rem;
+}
+
+.upload-area {
+    border: 2px dashed #dee2e6;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.upload-area:hover {
+    border-color: #4e73df;
+    background-color: #f8f9fc;
+}
+
+.upload-area.dragover {
+    border-color: #4e73df;
+    background-color: #e8f0fe;
+}
+
+.custom-file-input {
+    display: none;
+}
+
+.custom-file-label {
+    margin-bottom: 0;
+    cursor: pointer;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.form-control, .form-select {
+    border: 1px solid #e2e8f0;
+    padding: 0.5rem 1rem;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #4e73df;
+    box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+}
+
+.modal-content {
+    border: none;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+    border-bottom: 1px solid #e2e8f0;
+    border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.modal-footer {
+    border-top: 1px solid #e2e8f0;
+    border-radius: 0 0 0.5rem 0.5rem;
 }
 </style>
 @endsection 
