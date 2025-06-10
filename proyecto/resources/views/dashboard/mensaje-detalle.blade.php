@@ -34,7 +34,7 @@
                 {{ $mensaje['asunto'] }}
             </div>
             <div class="btn-group">
-                <button type="button" class="btn btn-sm btn-outline-primary" title="Responder">
+                <button type="button" class="btn btn-sm btn-outline-primary" title="Responder" data-bs-toggle="modal" data-bs-target="#replyModal">
                     <i class="fas fa-reply"></i>
                 </button>
                 <button type="button" class="btn btn-sm btn-outline-primary" title="Reenviar">
@@ -161,7 +161,7 @@
                     </button>
                 </div>
                 <div>
-                    <button type="button" class="btn btn-primary me-2">
+                    <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#replyModal">
                         <i class="fas fa-reply me-1"></i> Responder
                     </button>
                     <button type="button" class="btn btn-outline-primary">
@@ -217,14 +217,6 @@
         previewModals.forEach(function(element) {
             element.addEventListener('click', function(e) {
                 e.preventDefault();
-            });
-        });
-        
-        // Configurar botones de responder para abrir el modal
-        const replyButtons = document.querySelectorAll('button[title="Responder"]');
-        replyButtons.forEach(function(button) {
-            button.addEventListener('click', function() {
-                $('#replyModal').modal('show');
             });
         });
     });
