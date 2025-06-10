@@ -173,14 +173,18 @@
     @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
     </div>
     @endif
 
     @if(session('error'))
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
         {{ session('error') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
     </div>
     @endif
 
@@ -269,13 +273,6 @@
 @endsection
 
 @push('scripts')
-<!-- jQuery (necesario para Bootstrap) -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<!-- Bootstrap Bundle JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-<!-- FullCalendar JS -->
-<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js'></script>
-<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/locales/es.js'></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -303,19 +300,12 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         locale: 'es',
         events: {!! json_encode($eventosFormateados ?? []) !!},
-        height: 'auto',
+        height: 800,
         contentHeight: 800,
         aspectRatio: 1.5,
         editable: false,
         selectable: true,
         dayMaxEvents: true,
-        displayEventTime: true,
-        displayEventEnd: true,
-        eventTimeFormat: {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-        },
         dateClick: function(info) {
             // Abrir el modal para crear un nuevo evento
             $('#modalTitle').text('Nuevo Evento');
@@ -328,15 +318,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Mostrar el modal
             $('#eventoModal').modal('show');
-        },
-        eventDidMount: function(info) {
-            // Añadir tooltip a los eventos
-            $(info.el).tooltip({
-                title: info.event.title,
-                placement: 'top',
-                trigger: 'hover',
-                container: 'body'
-            });
         }
     });
     
@@ -367,21 +348,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-
-    // Función para mostrar notificaciones
-    function showNotification(message, type) {
-        var alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
-        var alert = $('<div class="alert ' + alertClass + ' alert-dismissible fade show" role="alert">' +
-            message +
-            '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
-            '</div>');
-        
-        $('.container-fluid').prepend(alert);
-        
-        setTimeout(function() {
-            alert.alert('close');
-        }, 5000);
-    }
 });
 </script>
 @endpush 
