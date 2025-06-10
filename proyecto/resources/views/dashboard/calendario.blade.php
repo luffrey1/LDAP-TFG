@@ -4,9 +4,9 @@
 
 @section('styles')
 <!-- FullCalendar CSS -->
-<link href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.10/main.min.css" rel="stylesheet" />
-<link href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.10/daygrid/main.min.css" rel="stylesheet" />
-<link href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.10/timegrid/main.min.css" rel="stylesheet" />
+<link href="https://unpkg.com/fullcalendar@6.1.10/main.min.css" rel="stylesheet" />
+<link href="https://unpkg.com/@fullcalendar/daygrid@6.1.10/main.min.css" rel="stylesheet" />
+<link href="https://unpkg.com/@fullcalendar/timegrid@6.1.10/main.min.css" rel="stylesheet" />
 <style>
     /* Hacer las celdas del calendario más altas */
     .fc-daygrid-day {

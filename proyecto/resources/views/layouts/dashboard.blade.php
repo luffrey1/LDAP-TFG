@@ -931,10 +931,10 @@
     </script>
     
     <!-- FullCalendar JS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.10/main.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.10/daygrid/main.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.10/timegrid/main.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.10/locales/es.js"></script>
+    <script src="https://unpkg.com/fullcalendar@6.1.10/index.global.min.js"></script>
+    <script src="https://unpkg.com/@fullcalendar/daygrid@6.1.10/index.global.min.js"></script>
+    <script src="https://unpkg.com/@fullcalendar/timegrid@6.1.10/index.global.min.js"></script>
+    <script src="https://unpkg.com/@fullcalendar/core@6.1.10/locales/es.global.min.js"></script>
     
     @section('js')
     <script>
