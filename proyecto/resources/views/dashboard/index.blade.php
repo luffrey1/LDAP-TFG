@@ -17,7 +17,7 @@
     @endphp
 
     <!-- Tarjetas de estadísticas -->
-    <div class="row">
+    <div class="row" id="dashboard-stats-row">
         <!-- Usuarios -->
         <div class="col-xl-3 col-md-6 mb-4" data-aos="fade-up" data-aos-delay="100">
             <div class="card border-left-primary shadow h-100 py-2 stat-card">
@@ -486,5 +486,19 @@
             });
         }
     });
+
+    function refrescarTarjetasDashboard() {
+        fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(res => res.text())
+            .then(html => {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+                const nuevasTarjetas = tempDiv.querySelector('#dashboard-stats-row');
+                if (nuevasTarjetas) {
+                    document.querySelector('#dashboard-stats-row').innerHTML = nuevasTarjetas.innerHTML;
+                }
+            });
+    }
+    setInterval(refrescarTarjetasDashboard, 5000);
 </script>
 @endsection 
