@@ -62,7 +62,32 @@
                                                 <div class="form-text text-white">Escriba el nombre del aula (ej: B22, A27, C21) o seleccione uno de la lista</div>
                                             </div>
                                         </div>
-                                       
+                                        <div class="col-md-4">Add commentMore actions
+                                            <div class="form-group">
+                                                <label for="aula_select" class="form-label text-white">O seleccione un aula</label>
+                                                <select name="aula_select" id="aula_select" class="form-select">
+                                                    <option value="">Seleccione un aula...</option>
+                                                    <option value="A21">A21</option>
+                                                    <option value="A22">A22</option>
+                                                    <option value="A23">A23</option>
+                                                    <option value="A24">A24</option>
+                                                    <option value="A25">A25</option>
+                                                    <option value="A27">A27</option>
+                                                    <option value="B21">B21</option>
+                                                    <option value="B22">B22</option>
+                                                    <option value="B23">B23</option>
+                                                    <option value="B24">B24</option>
+                                                    <option value="B25">B25</option>
+                                                    <option value="B27">B27</option>
+                                                    <option value="C21">C21</option>
+                                                    <option value="C22">C22</option>
+                                                    <option value="C23">C23</option>
+                                                    <option value="C24">C24</option>
+                                                    <option value="C25">C25</option>
+                                                    <option value="C27">C27</option>
+                                                </select>
+                                            </div>Add commentMore actions
+                                        </div>
                                         <div class="col-md-4">
                                             <div class="form-group">
                                                 <label for="columnas" class="form-label text-white">Columnas</label>
