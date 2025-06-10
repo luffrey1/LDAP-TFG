@@ -866,7 +866,7 @@ class MensajeController extends Controller
             ->limit(10)
             ->get();
             
-            return response()->json($usuarios);
+            return response()->json($usuarios->toArray());
             
         } catch (\Exception $e) {
             Log::error('Error al buscar destinatarios: ' . $e->getMessage());
