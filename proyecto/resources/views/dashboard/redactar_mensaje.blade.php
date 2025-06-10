@@ -441,34 +441,35 @@ $(document).ready(function() {
         });
     }
     
-    // Evento de búsqueda con debounce
-    $('#buscarDestinatario').on('input', function() {
-        console.log('Input detectado:', $(this).val());
+    // Manejar el evento de input con debounce
+    destinatarioInput.on('input', function() {
+        const currentValue = $(this).val();
+        console.log('Evento input detectado:', currentValue);
+        
         clearTimeout(timeoutId);
         timeoutId = setTimeout(() => {
-            buscarDestinatarios();
+            if (currentValue.trim().length >= 2) {
+                buscarDestinatarios();
+            } else {
+                resultadosBusqueda.hide();
+            }
         }, 300);
     });
-    
-    // Seleccionar destinatario
-    resultadosBusqueda.on('click', '.list-group-item', function(e) {
-        e.preventDefault();
-        const id = $(this).data('id');
-        const nombre = $(this).data('nombre');
-        
-        destinatarioInput.val(id);
-        destinatarioSeleccionado.html(`
-            <div class="destinatario-tag">
-                ${nombre}
-                <span class="remove" onclick="removerDestinatario()">
-                    <i class="fas fa-times"></i>
-                </span>
-            </div>
-        `);
-        
-        $('#buscarDestinatario').val('');
-        resultadosBusqueda.hide();
+
+    // Manejar el evento de blur
+    destinatarioInput.on('blur', function() {
+        // Pequeño retraso para permitir que el click en los resultados funcione
+        setTimeout(() => {
+            resultadosBusqueda.hide();
+        }, 200);
     });
+
+    // Función para seleccionar un destinatario
+    window.seleccionarDestinatario = function(nombre, email) {
+        destinatarioInput.val(nombre);
+        destinatarioSeleccionado.val(email);
+        resultadosBusqueda.hide();
+    };
     
     // Botón para limpiar búsqueda
     $('#btnLimpiarBusqueda').click(function() {
