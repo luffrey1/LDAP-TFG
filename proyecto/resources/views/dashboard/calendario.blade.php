@@ -21,8 +21,9 @@
         border-radius: 8px !important;
         margin: 3px 4px !important;
         border: none !important;
-        background-color: var(--event-color, #4f46e5) !important;
+        background-color: #1a365d !important; /* Azul más oscuro */
         color: white !important;
+        transition: all 0.3s ease !important;
     }
 
     /* Eventos en la vista de mes */
@@ -33,7 +34,7 @@
         padding: 10px 14px !important;
         margin: 4px !important;
         line-height: 1.4 !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
     }
 
     /* Eventos que duran múltiples días */
@@ -60,26 +61,26 @@
 
     /* Efecto hover en eventos */
     .fc-event:hover {
-        box-shadow: 0 6px 12px rgba(0,0,0,0.2) !important;
+        background-color: #2c5282 !important; /* Azul más claro al hover */
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
         transform: translateY(-2px) !important;
-        transition: all 0.2s ease !important;
     }
 
-    /* Colores específicos para tipos de eventos con gradientes más pronunciados */
+    /* Colores específicos para tipos de eventos */
     .fc-event[style*="background-color: #3788d8"] {
-        background: linear-gradient(45deg, #3788d8, #5ca3e6) !important;
+        background: linear-gradient(45deg, #1a365d, #2c5282) !important;
     }
     .fc-event[style*="background-color: #e74c3c"] {
-        background: linear-gradient(45deg, #e74c3c, #f16b5c) !important;
+        background: linear-gradient(45deg, #9b2c2c, #c53030) !important;
     }
     .fc-event[style*="background-color: #2ecc71"] {
-        background: linear-gradient(45deg, #2ecc71, #54d98c) !important;
+        background: linear-gradient(45deg, #22543d, #276749) !important;
     }
     .fc-event[style*="background-color: #9b59b6"] {
-        background: linear-gradient(45deg, #9b59b6, #b07cc6) !important;
+        background: linear-gradient(45deg, #553c9a, #6b46c1) !important;
     }
     .fc-event[style*="background-color: #f39c12"] {
-        background: linear-gradient(45deg, #f39c12, #f5b043) !important;
+        background: linear-gradient(45deg, #744210, #975a16) !important;
     }
 
     /* Más espacio para los eventos en la vista de semana */
@@ -306,22 +307,58 @@ document.addEventListener('DOMContentLoaded', function() {
         editable: false,
         selectable: true,
         dayMaxEvents: true,
+        eventClick: function(info) {
+            // Mostrar información del evento
+            var modal = new bootstrap.Modal(document.getElementById('eventoModal'));
+            $('#modalTitle').text('Detalles del Evento');
+            
+            // Rellenar el formulario con los datos del evento
+            $('#titulo').val(info.event.title);
+            $('#descripcion').val(info.event.extendedProps.description || '');
+            $('#fecha_inicio').val(info.event.start.toISOString().slice(0, 16));
+            $('#fecha_fin').val(info.event.end.toISOString().slice(0, 16));
+            $('#color').val(info.event.backgroundColor);
+            $('#todo_el_dia').prop('checked', info.event.allDay);
+            
+            // Deshabilitar los campos para solo lectura
+            $('#eventoForm input, #eventoForm textarea, #eventoForm select').prop('disabled', true);
+            $('.modal-footer').html('<button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>');
+            
+            modal.show();
+        },
         dateClick: function(info) {
-            // Abrir el modal para crear un nuevo evento
-            $('#modalTitle').text('Nuevo Evento');
-            $('#eventoForm')[0].reset();
-            
-            // Establecer la fecha seleccionada
-            var fechaSeleccionada = info.dateStr;
-            $('#fecha_inicio').val(fechaSeleccionada + 'T00:00');
-            $('#fecha_fin').val(fechaSeleccionada + 'T23:59');
-            
-            // Mostrar el modal
-            $('#eventoModal').modal('show');
+            abrirModalCrearEvento(info.dateStr);
         }
     });
     
     calendar.render();
+
+    // Función para abrir el modal de creación de evento
+    function abrirModalCrearEvento(fechaSeleccionada) {
+        $('#modalTitle').text('Nuevo Evento');
+        $('#eventoForm')[0].reset();
+        
+        // Establecer la fecha seleccionada
+        if (fechaSeleccionada) {
+            $('#fecha_inicio').val(fechaSeleccionada + 'T00:00');
+            $('#fecha_fin').val(fechaSeleccionada + 'T23:59');
+        }
+        
+        // Habilitar los campos
+        $('#eventoForm input, #eventoForm textarea, #eventoForm select').prop('disabled', false);
+        $('.modal-footer').html(`
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+        `);
+        
+        // Mostrar el modal
+        $('#eventoModal').modal('show');
+    }
+
+    // Manejar el clic en el botón de crear evento
+    document.getElementById('crearEvento').addEventListener('click', function() {
+        abrirModalCrearEvento();
+    });
 
     // Manejar el envío del formulario
     $('#eventoForm').on('submit', function(e) {
