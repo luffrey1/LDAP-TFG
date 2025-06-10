@@ -348,7 +348,7 @@
                                             @endif
                                         </p>
                                         @if($evento['descripcion'])
-                                            <p class="text-muted mt-2">{{ Str::limit($evento['descripcion'], 100) }}</p>
+                                            <p class="text-muted mt-2">{{ \Illuminate\Support\Str::limit($evento['descripcion'], 100) }}</p>
                                         @endif
                                     </div>
                                 </div>
