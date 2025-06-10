@@ -850,7 +850,7 @@ class MensajeController extends Controller
     public function buscarDestinatarios(Request $request)
     {
         try {
-            $query = $request->get('query');
+            $query = trim($request->get('query', ''));
             
             if (strlen($query) < 2) {
                 return response()->json([]);
@@ -860,6 +860,7 @@ class MensajeController extends Controller
                 $q->where('name', 'like', "%{$query}%")
                   ->orWhere('email', 'like', "%{$query}%");
             })
+            ->where('active', true)
             ->select('id', 'name', 'email', 'role')
             ->orderBy('name')
             ->limit(10)
