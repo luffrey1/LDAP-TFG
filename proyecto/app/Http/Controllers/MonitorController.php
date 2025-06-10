@@ -390,12 +390,22 @@ class MonitorController extends Controller
             // Nuevo: Si el usuario selecciona escaneo por hostname
             if ($request->has('scan_by_hostname')) {
                 $aula = $request->input('aula');
-                // Asegurarnos de que columnas y filas son arrays
-                $columnas = is_array($request->input('columnas')) ? $request->input('columnas') : explode(',', $request->input('columnas', 'A,B,C,D,E,F'));
-                $filas = is_array($request->input('filas')) ? $request->input('filas') : explode(',', $request->input('filas', '1,2,3,4,5,6'));
-                $dominio = 'tierno.es';
-                $groupId = $request->input('group_id');
-                $forceRegister = $request->has('force_register');
+                
+                // Asegurarnos de que columnas y filas son arrays individuales
+                $columnasInput = $request->input('columnas', 'A,B,C,D,E,F');
+                $filasInput = $request->input('filas', '1,2,3,4,5,6');
+                
+                // Convertir a arrays individuales
+                $columnas = is_array($columnasInput) ? $columnasInput : array_map('trim', explode(',', $columnasInput));
+                $filas = is_array($filasInput) ? $filasInput : array_map('trim', explode(',', $filasInput));
+                
+                // Asegurarnos de que no hay elementos vacíos
+                $columnas = array_filter($columnas);
+                $filas = array_filter($filas);
+                
+                // Si no hay elementos, usar valores por defecto
+                if (empty($columnas)) $columnas = ['A', 'B', 'C', 'D', 'E', 'F'];
+                if (empty($filas)) $filas = ['1', '2', '3', '4', '5', '6'];
 
                 \Log::info('Iniciando escaneo masivo por hostnames', [
                     'aula' => $aula,
@@ -410,8 +420,12 @@ class MonitorController extends Controller
                     'aula' => $aula,
                     'columnas' => $columnas,
                     'filas' => $filas,
-                    'dominio' => $dominio
+                    'dominio' => 'tierno.es'
                 ];
+
+                \Log::debug('Payload enviado al microservicio', [
+                    'payload' => $payload
+                ]);
 
                 $options = [
                     'http' => [
