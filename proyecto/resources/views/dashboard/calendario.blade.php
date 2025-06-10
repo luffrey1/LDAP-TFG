@@ -4,8 +4,7 @@
 
 @section('styles')
 <!-- FullCalendar CSS -->
-<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.css' rel='stylesheet' />
-
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.css" rel="stylesheet" />
 <style>
     /* Hacer las celdas del calendario más altas */
     .fc-daygrid-day {
@@ -273,7 +272,6 @@
 @endsection
 
 @push('scripts')
-
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Verificar que FullCalendar está disponible
