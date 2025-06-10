@@ -155,8 +155,7 @@ class MensajeController extends Controller
                 
                 // Enviar mensaje a cada usuario del grupo
                 foreach ($usuariosGrupo as $userId) {
-                    // Crear el mensaje
-                    Mensaje::create([
+                    $mensaje = Mensaje::create([
                         'remitente_id' => $remitenteId,
                         'destinatario_id' => $userId,
                         'asunto' => $request->asunto,
@@ -167,8 +166,25 @@ class MensajeController extends Controller
                         'eliminado_remitente' => false,
                         'eliminado_destinatario' => false
                     ]);
+                    // Guardar adjuntos para cada mensaje
+                    if ($request->hasFile('adjuntos')) {
+                        if (!Storage::disk('public')->exists('adjuntos/mensajes')) {
+                            Storage::disk('public')->makeDirectory('adjuntos/mensajes');
+                        }
+                        foreach ($request->file('adjuntos') as $file) {
+                            $path = $file->store('adjuntos/mensajes', 'public');
+                            MensajeAdjunto::create([
+                                'mensaje_id' => $mensaje->id,
+                                'nombre' => $file->getClientOriginalName(),
+                                'nombre_original' => $file->getClientOriginalName(),
+                                'extension' => $file->getClientOriginalExtension(),
+                                'tipo' => $file->getClientMimeType(),
+                                'tamaño' => $file->getSize(),
+                                'ruta' => $path,
+                            ]);
+                        }
+                    }
                 }
-                
                 Log::info('Mensaje enviado por usuario ' . $remitenteId . ' al grupo ' . $tipoGrupo . ' (' . count($usuariosGrupo) . ' destinatarios)');
             } else {
                 // Mensaje individual
