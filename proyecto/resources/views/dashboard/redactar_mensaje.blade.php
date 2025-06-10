@@ -379,7 +379,7 @@ $(document).ready(function() {
             method: 'GET',
             data: { query: query },
             success: function(response) {
-                if (response && response.length > 0) {
+                if (response && Array.isArray(response)) {
                     resultadosBusqueda.empty();
                     response.forEach(function(usuario) {
                         resultadosBusqueda.append(`
