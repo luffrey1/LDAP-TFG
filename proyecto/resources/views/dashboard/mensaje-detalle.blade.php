@@ -181,7 +181,7 @@
                 <h5 class="modal-title" id="replyModalLabel">Responder mensaje</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ route('mensajes.store') }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ route('dashboard.mensajes.enviar') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="respuesta_a" value="{{ $mensaje['id'] }}">
                 <input type="hidden" name="destinatario" value="{{ $mensaje['remitente_id'] }}">

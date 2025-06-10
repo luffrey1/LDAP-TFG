@@ -127,7 +127,11 @@ class MensajeController extends Controller
                 $usuariosGrupo = [];
                 
                 if ($tipoGrupo === 'profesores') {
-                    $usuariosGrupo = User::where('role', 'profesor')->pluck('id')->toArray();
+                    $usuariosGrupo = User::where(function($query) {
+                        $query->where('role', 'profesor')
+                              ->orWhere('role', 'admin')
+                              ->orWhere('is_admin', true);
+                    })->pluck('id')->toArray();
                 } elseif ($tipoGrupo === 'alumnos') {
                     // Ignoramos la validación por tipo de rol y simplemente enviamos a todos los usuarios
                     // que no son el remitente actual ni profesores
